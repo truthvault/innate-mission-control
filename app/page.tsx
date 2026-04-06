@@ -39,15 +39,39 @@ async function getProjects(): Promise<Project[]> {
   return projects;
 }
 
+const sectionIcons: Record<string, React.ReactNode> = {
+  "Needs Attention": (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+  "On Track": (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  Parked: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="10" y1="15" x2="10" y2="9" />
+      <line x1="14" y1="15" x2="14" y2="9" />
+    </svg>
+  ),
+};
+
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div className="col-span-1 lg:col-span-2 pt-0 pb-1">
-      <p
-        className="section-header uppercase"
-        style={{ fontSize: 10, letterSpacing: "0.1em", color: "#9a9088" }}
+    <div className="col-span-1 lg:col-span-2 pt-0 pb-1.5">
+      <div
+        className="section-header"
+        style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}
       >
-        {label}
-      </p>
+        {sectionIcons[label]}
+        <span>{label}</span>
+      </div>
     </div>
   );
 }
@@ -73,7 +97,7 @@ export default async function Page() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-header text-white">
+      <header className="bg-header text-white app-header">
         <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6">
           <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
             Mission Control
@@ -84,7 +108,7 @@ export default async function Page() {
         </div>
       </header>
 
-      <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6">
+      <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4" style={{ paddingTop: 36, paddingBottom: 24 }}>
         {/* Focus Now strip */}
         {focusProject && (
           <section className="mb-7">
@@ -101,7 +125,7 @@ export default async function Page() {
         {/* Sectioned grid */}
         <main className="space-y-7">
           {needsAttention.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 6 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 8 }}>
               <SectionHeader label="Needs Attention" />
               {needsAttention.map((p) => (
                 <ProjectCard key={p.id} project={p} />
@@ -110,7 +134,7 @@ export default async function Page() {
           )}
 
           {onTrack.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 6 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 8 }}>
               <SectionHeader label="On Track" />
               {onTrack.map((p) => (
                 <ProjectCard key={p.id} project={p} />
@@ -119,7 +143,7 @@ export default async function Page() {
           )}
 
           {parked.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 6 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 8 }}>
               <SectionHeader label="Parked" />
               {parked.map((p) => (
                 <ProjectCard key={p.id} project={p} variant="compact" />
