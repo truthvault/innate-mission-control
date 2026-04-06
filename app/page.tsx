@@ -67,7 +67,7 @@ function SectionHeader({ label }: { label: string }) {
     <div className="col-span-1 lg:col-span-2 pt-0 pb-1.5">
       <div
         className="section-header"
-        style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}
+        style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--text-muted)", textTransform: "uppercase" }}
       >
         {sectionIcons[label]}
         <span>{label}</span>
@@ -97,24 +97,30 @@ export default async function Page() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-header text-white app-header">
-        <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6">
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
-            Mission Control
-          </h1>
-          <p className="text-white/50 text-sm mt-1">
+      <header className="app-header">
+        <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4" style={{ padding: "18px 16px 16px" }}>
+          <h1 className="header-title">Mission Control</h1>
+          <p className="header-sub">
             {projects.length} project{projects.length !== 1 && "s"} tracked
           </p>
         </div>
       </header>
 
-      <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4" style={{ paddingTop: 36, paddingBottom: 24 }}>
+      <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4" style={{ paddingTop: 40, paddingBottom: 24 }}>
         {/* Focus Now strip */}
         {focusProject && (
-          <section className="mb-7">
+          <section style={{ marginBottom: 36 }}>
             <p
-              className="uppercase pb-2"
-              style={{ fontSize: 9, letterSpacing: "0.12em", color: "#c8a96e" }}
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 11,
+                fontWeight: 400,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase" as unknown as undefined,
+                color: "var(--accent)",
+                paddingBottom: 10,
+              }}
+              className="uppercase"
             >
               Focus Now
             </p>

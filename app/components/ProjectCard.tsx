@@ -15,11 +15,26 @@ export interface Project {
   blockedBy: string;
 }
 
-const statusColor: Record<string, string> = {
+/* ── Status: colour for dots + strip, tonal for pills ── */
+const statusDot: Record<string, string> = {
   Active: "var(--color-active)",
   "In Progress": "var(--color-in-progress)",
   Planned: "var(--color-planned)",
   Parked: "var(--color-parked)",
+};
+
+const statusPillBg: Record<string, string> = {
+  Active: "rgba(46,125,50,0.09)",
+  "In Progress": "rgba(21,101,192,0.09)",
+  Planned: "rgba(180,83,9,0.09)",
+  Parked: "rgba(120,113,108,0.08)",
+};
+
+const statusPillText: Record<string, string> = {
+  Active: "#1b5e20",
+  "In Progress": "#0d47a1",
+  Planned: "#92400e",
+  Parked: "#57534e",
 };
 
 function daysAgo(isoDate: string): number {
@@ -28,10 +43,10 @@ function daysAgo(isoDate: string): number {
   );
 }
 
-function stripColor(stale: number, color: string): string {
+function stripColor(stale: number, dotColor: string): string {
   if (stale >= 7) return "var(--stale-hot)";
   if (stale >= 3) return "var(--stale-warm)";
-  return color;
+  return dotColor;
 }
 
 function staleBg(stale: number): string | undefined {
@@ -48,9 +63,11 @@ export default function ProjectCard({
   variant?: "focus" | "normal" | "compact";
 }) {
   const [open, setOpen] = useState(false);
-  const color = statusColor[project.status] ?? "var(--color-parked)";
+  const dot = statusDot[project.status] ?? "var(--color-parked)";
+  const pillBg = statusPillBg[project.status] ?? "rgba(120,113,108,0.08)";
+  const pillText = statusPillText[project.status] ?? "#57534e";
   const stale = project.lastModifiedTime ? daysAgo(project.lastModifiedTime) : 0;
-  const strip = stripColor(stale, color);
+  const strip = stripColor(stale, dot);
   const isFocus = variant === "focus";
   const isCompact = variant === "compact";
 
@@ -81,7 +98,7 @@ export default function ProjectCard({
         className="flex items-center justify-between gap-3"
         style={{
           padding: isFocus
-            ? "18px 24px 10px"
+            ? "20px 24px 10px"
             : isCompact
               ? "10px 12px 6px"
               : "14px 16px 8px",
@@ -90,15 +107,16 @@ export default function ProjectCard({
         <div className="flex items-center gap-2.5 min-w-0">
           <span
             className="shrink-0 rounded-full"
-            style={{ width: 7, height: 7, background: color }}
+            style={{ width: 6, height: 6, background: dot }}
           />
           <h2
             className="truncate"
             style={{
-              fontSize: isFocus ? 20 : 15,
+              fontSize: isFocus ? 22 : 15,
               fontWeight: 600,
-              lineHeight: 1.3,
+              lineHeight: 1.25,
               color: "var(--text-main)",
+              letterSpacing: isFocus ? "-0.01em" : undefined,
             }}
           >
             {project.name}
@@ -112,19 +130,20 @@ export default function ProjectCard({
               style={{
                 fontSize: 10,
                 padding: "2px 7px",
-                background: stale > 14 ? "#fee2e2" : "#fff3e0",
-                color: stale > 14 ? "#dc2626" : "#e65100",
+                background: stale > 14 ? "rgba(220,38,38,0.08)" : "rgba(217,119,6,0.08)",
+                color: stale > 14 ? "var(--stale-hot)" : "var(--stale-warm)",
               }}
             >
-              {stale}d ago
+              {stale}d
             </span>
           )}
           <span
-            className="status-pill font-medium rounded-full text-white"
+            className="status-pill font-medium rounded-full"
             style={{
               fontSize: 10,
               padding: "2px 8px",
-              background: color,
+              background: pillBg,
+              color: pillText,
               transition: "transform 0.15s ease",
             }}
           >
@@ -141,7 +160,7 @@ export default function ProjectCard({
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            strokeWidth={2}
+            strokeWidth={1.5}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
@@ -150,8 +169,13 @@ export default function ProjectCard({
 
       {/* ── Focus: next action hero ────────────── */}
       {isFocus && !open && project.nextAction && (
-        <div style={{ padding: "0 24px 14px" }}>
-          <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.45, color: "var(--text-main)" }}>
+        <div style={{ padding: "2px 24px 16px" }}>
+          <p style={{
+            fontSize: 16,
+            fontWeight: 500,
+            lineHeight: 1.45,
+            color: "var(--text-secondary)",
+          }}>
             {project.nextAction}
           </p>
         </div>
@@ -159,18 +183,18 @@ export default function ProjectCard({
 
       {/* ── Progress bar (hidden on compact) ───── */}
       {!isCompact && project.progress > 0 && (
-        <div style={{ padding: isFocus ? "0 24px 14px" : "0 16px 12px" }}>
+        <div style={{ padding: isFocus ? "0 24px 16px" : "0 16px 12px" }}>
           <div
             className="overflow-hidden"
-            style={{ height: 3, borderRadius: 2, background: "rgba(15,23,42,0.04)" }}
+            style={{ height: 3, borderRadius: 2, background: "rgba(28,25,23,0.04)" }}
           >
             <div
               className="h-full progress-fill"
               style={{
                 width: `${Math.round(project.progress * 100)}%`,
                 borderRadius: 2,
-                background: project.status === "Planned" ? "var(--color-planned)" : "var(--accent)",
-                opacity: 0.7,
+                background: "var(--accent)",
+                opacity: 0.6,
               }}
             />
           </div>
@@ -185,7 +209,7 @@ export default function ProjectCard({
         <div style={{ padding: "0 16px 12px" }}>
           <p
             className="truncate"
-            style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: "var(--text-main)" }}
+            style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: "var(--text-secondary)" }}
           >
             {project.nextAction}
           </p>
@@ -215,7 +239,7 @@ export default function ProjectCard({
             className="card-body-inner"
             style={{
               padding: isFocus ? "14px 24px 22px" : "12px 16px 16px",
-              borderTop: "1px solid rgba(0,0,0,0.04)",
+              borderTop: "1px solid rgba(28,25,23,0.05)",
               display: "flex",
               flexDirection: "column",
               gap: 14,
@@ -223,7 +247,7 @@ export default function ProjectCard({
           >
             {project.summary && (
               <div>
-                <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 3 }}>
+                <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--text-faint)", marginBottom: 3 }}>
                   Summary
                 </p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, color: "var(--text-muted)" }}>
@@ -233,7 +257,7 @@ export default function ProjectCard({
             )}
             {project.nextAction && (
               <div>
-                <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 3 }}>
+                <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--text-faint)", marginBottom: 3 }}>
                   Next Action
                 </p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, color: "var(--text-muted)" }}>
@@ -243,7 +267,7 @@ export default function ProjectCard({
             )}
             {project.notes && (
               <div>
-                <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)", marginBottom: 3 }}>
+                <p style={{ fontSize: 10, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase" as const, color: "var(--text-faint)", marginBottom: 3 }}>
                   Notes
                 </p>
                 <p style={{ fontSize: 12, lineHeight: 1.6, color: "var(--text-muted)", whiteSpace: "pre-line" }}>
