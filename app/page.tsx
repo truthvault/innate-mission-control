@@ -46,7 +46,7 @@ export default async function Page() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="bg-header text-white">
-        <div className="max-w-[720px] mx-auto px-4 py-6">
+        <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6">
           <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
             Mission Control
           </h1>
@@ -57,20 +57,20 @@ export default async function Page() {
       </header>
 
       {/* Card list */}
-      <main className="max-w-[720px] mx-auto px-4 py-6 space-y-3">
+      <main className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
 
         {projects.length === 0 && (
-          <p className="text-center text-black/40 py-12">
+          <p className="text-center text-black/40 py-12 col-span-2">
             No projects found.
           </p>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="max-w-[720px] mx-auto px-4 py-8 text-center">
+      <footer className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-8 text-center">
         <p className="text-xs text-black/30">
           Innate Mission Control — refreshed on each load
         </p>

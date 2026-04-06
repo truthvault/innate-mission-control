@@ -39,7 +39,7 @@ export default function ProjectCard({ project }: { project: Project }) {
       className="w-full text-left bg-white rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-shadow"
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
+      <div className="flex items-center justify-between gap-3 px-4 py-3.5 lg:px-3 lg:py-2.5">
         <div className="flex items-center gap-3 min-w-0">
           <span
             className="shrink-0 w-2.5 h-2.5 rounded-full"
@@ -81,7 +81,7 @@ export default function ProjectCard({ project }: { project: Project }) {
 
       {/* Progress bar */}
       {project.progress > 0 && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
           <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
             <div
               className="h-full rounded-full transition-all"
@@ -100,7 +100,7 @@ export default function ProjectCard({ project }: { project: Project }) {
 
       {/* Next action preview (collapsed) */}
       {!open && project.nextAction && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
           <p
             className="text-[11px] leading-snug px-2 py-1 rounded-md truncate"
             style={{ background: "#f5f0e8", color: "#5c4b28" }}
@@ -112,7 +112,7 @@ export default function ProjectCard({ project }: { project: Project }) {
 
       {/* Blocked by indicator (collapsed) */}
       {!open && project.status === "Parked" && project.blockedBy && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
           <p className="text-[11px] text-black/40 truncate">
             Waiting on: {project.blockedBy}
           </p>
@@ -122,13 +122,13 @@ export default function ProjectCard({ project }: { project: Project }) {
       {/* Expandable body */}
       <div className={`card-body ${open ? "open" : ""}`}>
         <div>
-          <div className="px-4 pb-4 space-y-3 border-t border-black/5 pt-3">
+          <div className="px-4 pb-4 space-y-3 border-t border-black/5 pt-3 lg:px-3 lg:pb-3 lg:pt-2 lg:space-y-2">
             {project.summary && (
               <div>
                 <p className="text-[11px] uppercase tracking-wider text-black/40 mb-0.5">
                   Summary
                 </p>
-                <p className="text-sm text-black/70 leading-relaxed">
+                <p className="text-sm lg:text-[13px] text-black/70 leading-relaxed">
                   {project.summary}
                 </p>
               </div>
@@ -138,7 +138,7 @@ export default function ProjectCard({ project }: { project: Project }) {
                 <p className="text-[11px] uppercase tracking-wider text-black/40 mb-0.5">
                   Next Action
                 </p>
-                <p className="text-sm text-black/70 leading-relaxed">
+                <p className="text-sm lg:text-[13px] text-black/70 leading-relaxed">
                   {project.nextAction}
                 </p>
               </div>
@@ -148,7 +148,7 @@ export default function ProjectCard({ project }: { project: Project }) {
                 <p className="text-[11px] uppercase tracking-wider text-black/40 mb-0.5">
                   Notes
                 </p>
-                <p className="text-sm text-black/70 leading-relaxed whitespace-pre-line">
+                <p className="text-sm lg:text-[13px] text-black/70 leading-relaxed whitespace-pre-line">
                   {project.notes}
                 </p>
               </div>
