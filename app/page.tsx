@@ -39,8 +39,31 @@ async function getProjects(): Promise<Project[]> {
   return projects;
 }
 
+function SectionHeader({ label }: { label: string }) {
+  return (
+    <p className="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wider font-semibold text-black/40 pt-4 pb-1">
+      {label}
+    </p>
+  );
+}
+
 export default async function Page() {
   const projects = await getProjects();
+
+  // Change 1: Pull the first High-priority project out as Focus
+  const focusProject = projects.find((p) => p.priority === "High");
+  const rest = focusProject
+    ? projects.filter((p) => p.id !== focusProject.id)
+    : projects;
+
+  // Change 2: Group remaining into sections
+  const needsAttention = rest.filter(
+    (p) => p.status === "Active" || p.status === "In Progress"
+  );
+  const onTrack = rest.filter((p) => p.status === "Planned");
+  const parked = rest.filter(
+    (p) => p.status === "Parked" || !["Active", "In Progress", "Planned"].includes(p.status)
+  );
 
   return (
     <div className="min-h-screen">
@@ -56,18 +79,53 @@ export default async function Page() {
         </div>
       </header>
 
-      {/* Card list */}
-      <main className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
-        {projects.map((project) => (
-          <ProjectCard key={project.id} project={project} />
-        ))}
-
-        {projects.length === 0 && (
-          <p className="text-center text-black/40 py-12 col-span-2">
-            No projects found.
-          </p>
+      <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6">
+        {/* Focus Now strip */}
+        {focusProject && (
+          <section className="mb-6">
+            <p className="text-[11px] uppercase tracking-wider font-semibold text-black/40 pb-2">
+              Focus Now
+            </p>
+            <ProjectCard project={focusProject} variant="focus" />
+          </section>
         )}
-      </main>
+
+        {/* Sectioned grid */}
+        <main className="space-y-0">
+          {needsAttention.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <SectionHeader label="Needs Attention" />
+              {needsAttention.map((p) => (
+                <ProjectCard key={p.id} project={p} />
+              ))}
+            </div>
+          )}
+
+          {onTrack.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <SectionHeader label="On Track" />
+              {onTrack.map((p) => (
+                <ProjectCard key={p.id} project={p} />
+              ))}
+            </div>
+          )}
+
+          {parked.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <SectionHeader label="Parked" />
+              {parked.map((p) => (
+                <ProjectCard key={p.id} project={p} variant="compact" />
+              ))}
+            </div>
+          )}
+
+          {projects.length === 0 && (
+            <p className="text-center text-black/40 py-12">
+              No projects found.
+            </p>
+          )}
+        </main>
+      </div>
 
       {/* Footer */}
       <footer className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-8 text-center">

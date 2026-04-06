@@ -28,15 +28,36 @@ function daysAgo(isoDate: string): number {
   );
 }
 
-export default function ProjectCard({ project }: { project: Project }) {
+function borderColor(stale: number, color: string): string {
+  if (stale >= 14) return "#DC2626";
+  if (stale >= 7) return "#EA580C";
+  if (stale >= 3) return "#F59E0B";
+  return color;
+}
+
+export default function ProjectCard({
+  project,
+  variant = "normal",
+}: {
+  project: Project;
+  variant?: "focus" | "normal" | "compact";
+}) {
   const [open, setOpen] = useState(false);
   const color = statusColor[project.status] ?? "var(--color-parked)";
   const stale = project.lastModifiedTime ? daysAgo(project.lastModifiedTime) : 0;
+  const leftBorder = borderColor(stale, color);
+  const isFocus = variant === "focus";
+  const isCompact = variant === "compact";
 
   return (
     <button
       onClick={() => setOpen(!open)}
-      className="w-full text-left bg-white rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-shadow"
+      className="w-full text-left rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-shadow"
+      style={{
+        borderLeft: `${isFocus ? 5 : 3}px solid ${leftBorder}`,
+        background: isFocus ? "#fdf8f0" : "white",
+        opacity: isCompact ? 0.7 : 1,
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-4 py-3.5 lg:px-3 lg:py-2.5">
@@ -45,7 +66,10 @@ export default function ProjectCard({ project }: { project: Project }) {
             className="shrink-0 w-2.5 h-2.5 rounded-full"
             style={{ background: color }}
           />
-          <h2 className="font-semibold text-[15px] truncate">
+          <h2
+            className="font-semibold truncate"
+            style={{ fontSize: isFocus ? 20 : 15 }}
+          >
             {project.name}
           </h2>
         </div>
@@ -79,8 +103,17 @@ export default function ProjectCard({ project }: { project: Project }) {
         </div>
       </div>
 
-      {/* Progress bar */}
-      {project.progress > 0 && (
+      {/* Focus: next action prominent */}
+      {isFocus && !open && project.nextAction && (
+        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
+          <p className="text-[16px] font-bold leading-snug text-black/85">
+            {project.nextAction}
+          </p>
+        </div>
+      )}
+
+      {/* Progress bar (hidden on compact) */}
+      {!isCompact && project.progress > 0 && (
         <div className="px-4 pb-3 lg:px-3 lg:pb-2">
           <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
             <div
@@ -98,8 +131,8 @@ export default function ProjectCard({ project }: { project: Project }) {
         </div>
       )}
 
-      {/* Next action preview (collapsed) */}
-      {!open && project.nextAction && (
+      {/* Next action preview (collapsed, non-focus) */}
+      {!isFocus && !open && !isCompact && project.nextAction && (
         <div className="px-4 pb-3 lg:px-3 lg:pb-2">
           <p
             className="text-[11px] leading-snug px-2 py-1 rounded-md truncate"
@@ -111,8 +144,8 @@ export default function ProjectCard({ project }: { project: Project }) {
       )}
 
       {/* Blocked by indicator (collapsed) */}
-      {!open && project.status === "Parked" && project.blockedBy && (
-        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
+      {!open && project.blockedBy && (isCompact || project.status === "Parked") && (
+        <div className={`px-4 pb-3 lg:px-3 lg:pb-2 ${isCompact ? "pt-0" : ""}`}>
           <p className="text-[11px] text-black/40 truncate">
             Waiting on: {project.blockedBy}
           </p>
