@@ -11,6 +11,8 @@ export interface Project {
   summary: string;
   nextAction: string;
   notes: string;
+  lastModifiedTime: string;
+  blockedBy: string;
 }
 
 const statusColor: Record<string, string> = {
@@ -20,9 +22,16 @@ const statusColor: Record<string, string> = {
   Parked: "var(--color-parked)",
 };
 
+function daysAgo(isoDate: string): number {
+  return Math.floor(
+    (Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24)
+  );
+}
+
 export default function ProjectCard({ project }: { project: Project }) {
   const [open, setOpen] = useState(false);
   const color = statusColor[project.status] ?? "var(--color-parked)";
+  const stale = project.lastModifiedTime ? daysAgo(project.lastModifiedTime) : 0;
 
   return (
     <button
@@ -41,6 +50,17 @@ export default function ProjectCard({ project }: { project: Project }) {
           </h2>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
+          {stale > 7 && (
+            <span
+              className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+              style={{
+                background: stale > 14 ? "#fee2e2" : "#fff3e0",
+                color: stale > 14 ? "#dc2626" : "#e65100",
+              }}
+            >
+              Updated {stale}d ago
+            </span>
+          )}
           <span
             className="text-xs font-medium px-2 py-0.5 rounded-full text-white"
             style={{ background: color }}
@@ -74,6 +94,27 @@ export default function ProjectCard({ project }: { project: Project }) {
           </div>
           <p className="text-[11px] text-black/40 mt-1 text-right">
             {Math.round(project.progress * 100)}%
+          </p>
+        </div>
+      )}
+
+      {/* Next action preview (collapsed) */}
+      {!open && project.nextAction && (
+        <div className="px-4 pb-3">
+          <p
+            className="text-[11px] leading-snug px-2 py-1 rounded-md truncate"
+            style={{ background: "#f5f0e8", color: "#5c4b28" }}
+          >
+            {project.nextAction}
+          </p>
+        </div>
+      )}
+
+      {/* Blocked by indicator (collapsed) */}
+      {!open && project.status === "Parked" && project.blockedBy && (
+        <div className="px-4 pb-3">
+          <p className="text-[11px] text-black/40 truncate">
+            Waiting on: {project.blockedBy}
           </p>
         </div>
       )}

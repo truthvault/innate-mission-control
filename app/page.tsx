@@ -27,6 +27,8 @@ async function getProjects(): Promise<Project[]> {
     summary: (r.get("Summary") as string) ?? "",
     nextAction: (r.get("Next Action") as string) ?? "",
     notes: (r.get("Notes") as string) ?? "",
+    lastModifiedTime: (r.get("Last Modified") as string) ?? "",
+    blockedBy: (r.get("Blocked By") as string) ?? "",
   }));
 
   projects.sort(
