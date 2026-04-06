@@ -66,14 +66,14 @@ export default function ProjectCard({ project }: { project: Project }) {
             <div
               className="h-full rounded-full transition-all"
               style={{
-                width: `${project.progress}%`,
+                width: `${Math.round(project.progress * 100)}%`,
                 background: color,
                 opacity: 0.7,
               }}
             />
           </div>
           <p className="text-[11px] text-black/40 mt-1 text-right">
-            {project.progress}%
+            {Math.round(project.progress * 100)}%
           </p>
         </div>
       )}
