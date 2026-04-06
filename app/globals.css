@@ -20,7 +20,51 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Expandable card animation */
+/* ── Card base ─────────────────────────────── */
+.card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.card:hover {
+  background: #fefcf9 !important;
+}
+
+.card:hover .status-pill {
+  transform: scale(1.02);
+}
+
+/* ── Card variants ─────────────────────────── */
+.card-normal {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.card-normal:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  transform: translateY(-1px);
+}
+.card-normal.card-open {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.card-focus {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.card-focus:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.card-focus.card-open {
+  box-shadow: 0 8px 28px rgba(0,0,0,0.1);
+}
+
+.card-compact {
+  box-shadow: none;
+}
+.card-compact:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  opacity: 0.8 !important;
+}
+
+/* ── Expandable card animation ─────────────── */
 .card-body {
   display: grid;
   grid-template-rows: 0fr;
@@ -33,4 +77,32 @@ body {
 
 .card-body > div {
   overflow: hidden;
+}
+
+.card-body-inner {
+  opacity: 0;
+  transition: opacity 0.2s ease 0.05s;
+}
+
+.card-body.open .card-body-inner {
+  opacity: 1;
+}
+
+/* ── Progress bar fill animation ───────────── */
+.progress-fill {
+  transition: width 0.8s ease-out;
+}
+
+/* ── Section divider line ──────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-header::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(0,0,0,0.08);
 }

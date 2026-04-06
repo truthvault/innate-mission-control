@@ -35,6 +35,12 @@ function borderColor(stale: number, color: string): string {
   return color;
 }
 
+function staleBg(stale: number): string | undefined {
+  if (stale >= 14) return "rgba(220,38,38,0.04)";
+  if (stale >= 7) return "rgba(245,158,11,0.03)";
+  return undefined;
+}
+
 export default function ProjectCard({
   project,
   variant = "normal",
@@ -49,31 +55,47 @@ export default function ProjectCard({
   const isFocus = variant === "focus";
   const isCompact = variant === "compact";
 
+  const baseBg = isFocus ? "#fdfaf5" : isCompact ? "white" : (staleBg(stale) ?? "white");
+
+  const cardClass = [
+    "card",
+    "w-full text-left rounded-xl border-0",
+    isFocus ? "card-focus" : isCompact ? "card-compact" : "card-normal",
+    open ? "card-open" : "",
+  ].join(" ");
+
   return (
     <button
       onClick={() => setOpen(!open)}
-      className="w-full text-left rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-shadow"
+      className={cardClass}
       style={{
         borderLeft: `${isFocus ? 5 : 3}px solid ${leftBorder}`,
-        background: isFocus ? "#fdf8f0" : "white",
-        opacity: isCompact ? 0.7 : 1,
+        borderTop: isFocus ? "2px solid #c8a96e" : undefined,
+        background: baseBg,
+        opacity: isCompact ? 0.55 : 1,
+        padding: 0,
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5 lg:px-3 lg:py-2.5">
-        <div className="flex items-center gap-3 min-w-0">
+      <div
+        className="flex items-center justify-between gap-3"
+        style={{
+          padding: isFocus ? "16px 24px 8px" : isCompact ? "10px 12px 6px" : "12px 16px 8px",
+        }}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
           <span
-            className="shrink-0 w-2.5 h-2.5 rounded-full"
+            className="shrink-0 w-2 h-2 rounded-full"
             style={{ background: color }}
           />
           <h2
             className="font-semibold truncate"
-            style={{ fontSize: isFocus ? 20 : 15 }}
+            style={{ fontSize: isFocus ? 20 : 15, lineHeight: 1.3 }}
           >
             {project.name}
           </h2>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {stale > 7 && (
             <span
               className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
@@ -82,17 +104,17 @@ export default function ProjectCard({
                 color: stale > 14 ? "#dc2626" : "#e65100",
               }}
             >
-              Updated {stale}d ago
+              {stale}d ago
             </span>
           )}
           <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full text-white"
+            className="status-pill text-[11px] font-medium px-2 py-0.5 rounded-full text-white transition-transform"
             style={{ background: color }}
           >
             {project.status}
           </span>
           <svg
-            className={`w-4 h-4 text-black/30 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`w-3.5 h-3.5 text-black/25 transition-transform ${open ? "rotate-180" : ""}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -105,8 +127,11 @@ export default function ProjectCard({
 
       {/* Focus: next action prominent */}
       {isFocus && !open && project.nextAction && (
-        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
-          <p className="text-[16px] font-bold leading-snug text-black/85">
+        <div style={{ padding: "0 24px 12px" }}>
+          <p
+            className="font-semibold leading-snug"
+            style={{ fontSize: 15, color: "rgba(0,0,0,0.82)" }}
+          >
             {project.nextAction}
           </p>
         </div>
@@ -114,29 +139,48 @@ export default function ProjectCard({
 
       {/* Progress bar (hidden on compact) */}
       {!isCompact && project.progress > 0 && (
-        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
-          <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
+        <div
+          style={{
+            padding: isFocus ? "0 24px 12px" : "0 16px 10px",
+          }}
+        >
+          <div
+            className="overflow-hidden"
+            style={{
+              height: 3,
+              borderRadius: 2,
+              background: "rgba(0,0,0,0.04)",
+            }}
+          >
             <div
-              className="h-full rounded-full transition-all"
+              className="h-full progress-fill"
               style={{
                 width: `${Math.round(project.progress * 100)}%`,
+                borderRadius: 2,
                 background: color,
-                opacity: 0.7,
+                opacity: 0.65,
               }}
             />
           </div>
-          <p className="text-[11px] text-black/40 mt-1 text-right">
+          <p
+            className="text-right"
+            style={{ fontSize: 10, color: "rgba(0,0,0,0.32)", marginTop: 3 }}
+          >
             {Math.round(project.progress * 100)}%
           </p>
         </div>
       )}
 
-      {/* Next action preview (collapsed, non-focus) */}
+      {/* Next action preview (collapsed, non-focus, non-compact) */}
       {!isFocus && !open && !isCompact && project.nextAction && (
-        <div className="px-4 pb-3 lg:px-3 lg:pb-2">
+        <div style={{ padding: "0 16px 10px" }}>
           <p
-            className="text-[11px] leading-snug px-2 py-1 rounded-md truncate"
-            style={{ background: "#f5f0e8", color: "#5c4b28" }}
+            className="leading-snug truncate"
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "rgba(0,0,0,0.55)",
+            }}
           >
             {project.nextAction}
           </p>
@@ -145,8 +189,19 @@ export default function ProjectCard({
 
       {/* Blocked by indicator (collapsed) */}
       {!open && project.blockedBy && (isCompact || project.status === "Parked") && (
-        <div className={`px-4 pb-3 lg:px-3 lg:pb-2 ${isCompact ? "pt-0" : ""}`}>
-          <p className="text-[11px] text-black/40 truncate">
+        <div
+          style={{
+            padding: isCompact ? "0 12px 10px" : "0 16px 10px",
+          }}
+        >
+          <p
+            className="truncate"
+            style={{
+              fontSize: isCompact ? 10 : 11,
+              fontStyle: isCompact ? "italic" : "normal",
+              color: "rgba(0,0,0,0.35)",
+            }}
+          >
             Waiting on: {project.blockedBy}
           </p>
         </div>
@@ -155,33 +210,57 @@ export default function ProjectCard({
       {/* Expandable body */}
       <div className={`card-body ${open ? "open" : ""}`}>
         <div>
-          <div className="px-4 pb-4 space-y-3 border-t border-black/5 pt-3 lg:px-3 lg:pb-3 lg:pt-2 lg:space-y-2">
+          <div
+            className="card-body-inner space-y-3"
+            style={{
+              padding: isFocus ? "12px 24px 20px" : "10px 16px 16px",
+              borderTop: "1px solid rgba(0,0,0,0.05)",
+            }}
+          >
             {project.summary && (
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-black/40 mb-0.5">
+                <p
+                  className="uppercase tracking-wider"
+                  style={{ fontSize: 10, color: "rgba(0,0,0,0.35)", marginBottom: 2 }}
+                >
                   Summary
                 </p>
-                <p className="text-sm lg:text-[13px] text-black/70 leading-relaxed">
+                <p
+                  className="leading-relaxed"
+                  style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}
+                >
                   {project.summary}
                 </p>
               </div>
             )}
             {project.nextAction && (
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-black/40 mb-0.5">
+                <p
+                  className="uppercase tracking-wider"
+                  style={{ fontSize: 10, color: "rgba(0,0,0,0.35)", marginBottom: 2 }}
+                >
                   Next Action
                 </p>
-                <p className="text-sm lg:text-[13px] text-black/70 leading-relaxed">
+                <p
+                  className="leading-relaxed"
+                  style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}
+                >
                   {project.nextAction}
                 </p>
               </div>
             )}
             {project.notes && (
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-black/40 mb-0.5">
+                <p
+                  className="uppercase tracking-wider"
+                  style={{ fontSize: 10, color: "rgba(0,0,0,0.35)", marginBottom: 2 }}
+                >
                   Notes
                 </p>
-                <p className="text-sm lg:text-[13px] text-black/70 leading-relaxed whitespace-pre-line">
+                <p
+                  className="leading-relaxed whitespace-pre-line"
+                  style={{ fontSize: 12, color: "rgba(0,0,0,0.55)" }}
+                >
                   {project.notes}
                 </p>
               </div>

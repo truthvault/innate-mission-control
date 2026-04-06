@@ -41,9 +41,14 @@ async function getProjects(): Promise<Project[]> {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <p className="col-span-1 lg:col-span-2 text-[11px] uppercase tracking-wider font-semibold text-black/40 pt-4 pb-1">
-      {label}
-    </p>
+    <div className="col-span-1 lg:col-span-2 pt-0 pb-1">
+      <p
+        className="section-header uppercase"
+        style={{ fontSize: 10, letterSpacing: "0.1em", color: "#9a9088" }}
+      >
+        {label}
+      </p>
+    </div>
   );
 }
 
@@ -82,8 +87,11 @@ export default async function Page() {
       <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4 py-6">
         {/* Focus Now strip */}
         {focusProject && (
-          <section className="mb-6">
-            <p className="text-[11px] uppercase tracking-wider font-semibold text-black/40 pb-2">
+          <section className="mb-7">
+            <p
+              className="uppercase pb-2"
+              style={{ fontSize: 9, letterSpacing: "0.12em", color: "#c8a96e" }}
+            >
               Focus Now
             </p>
             <ProjectCard project={focusProject} variant="focus" />
@@ -91,9 +99,9 @@ export default async function Page() {
         )}
 
         {/* Sectioned grid */}
-        <main className="space-y-0">
+        <main className="space-y-7">
           {needsAttention.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 6 }}>
               <SectionHeader label="Needs Attention" />
               {needsAttention.map((p) => (
                 <ProjectCard key={p.id} project={p} />
@@ -102,7 +110,7 @@ export default async function Page() {
           )}
 
           {onTrack.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 6 }}>
               <SectionHeader label="On Track" />
               {onTrack.map((p) => (
                 <ProjectCard key={p.id} project={p} />
@@ -111,7 +119,7 @@ export default async function Page() {
           )}
 
           {parked.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 6 }}>
               <SectionHeader label="Parked" />
               {parked.map((p) => (
                 <ProjectCard key={p.id} project={p} variant="compact" />
