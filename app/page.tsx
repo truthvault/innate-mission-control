@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Airtable from "airtable";
+import Link from "next/link";
 import ProjectCard, { type Project } from "./components/ProjectCard";
 
 const priorityOrder: Record<string, number> = {
@@ -98,11 +99,14 @@ export default async function Page() {
     <div className="min-h-screen">
       {/* Header */}
       <header className="app-header">
-        <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4" style={{ padding: "18px 16px 16px" }}>
-          <h1 className="header-title">Mission Control</h1>
-          <p className="header-sub">
-            {projects.length} project{projects.length !== 1 && "s"} tracked
-          </p>
+        <div className="max-w-[720px] lg:max-w-[1200px] mx-auto px-4" style={{ padding: "18px 16px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h1 className="header-title">Mission Control</h1>
+            <p className="header-sub">
+              {projects.length} project{projects.length !== 1 && "s"} tracked
+            </p>
+          </div>
+          <Link href="/production" style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.5)", textDecoration: "none", fontFamily: "var(--font-sans)" }}>Production →</Link>
         </div>
       </header>
 
