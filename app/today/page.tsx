@@ -5,10 +5,15 @@ const tasks = [
 ];
 
 function formatDate() {
-  const d = new Date();
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+  const fmt = new Intl.DateTimeFormat("en-NZ", {
+    timeZone: "Pacific/Auckland",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+  const parts = fmt.formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${get("weekday")} ${get("day")} ${get("month")}`;
 }
 
 export default function TodayPage() {
