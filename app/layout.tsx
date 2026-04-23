@@ -13,8 +13,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Mission Control — Innate",
-  description: "Live project dashboard for Innate",
+  title: "Production Command Centre — Innate",
+  description: "Live production tracker for Innate",
 };
 
 export default function RootLayout({

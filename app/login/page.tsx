@@ -7,7 +7,7 @@ async function login(formData: FormData) {
   if (password === process.env.SITE_PASSWORD) {
     (await cookies()).set("innate-auth", "authenticated", {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 30, // 30 days
     });
@@ -30,7 +30,7 @@ export default async function LoginPage({
         action={login}
         className="bg-white rounded-xl shadow-sm border border-black/5 p-8 w-full max-w-sm space-y-4"
       >
-        <h1 className="font-semibold text-lg text-center">Mission Control</h1>
+        <h1 className="font-semibold text-lg text-center">Production Command Centre</h1>
         {error && (
           <p className="text-red-500 text-sm text-center">Wrong password.</p>
         )}

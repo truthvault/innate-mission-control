@@ -10,5 +10,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|_next/static|_next/image|favicon.ico).*)"],
+  // Exclude: login page, Next internals, favicon, and the Monday webhook
+  // (must be callable by Monday.com with no cookie). Note: /api/monday/refresh
+  // IS still matched and stays gated by the auth cookie.
+  matcher: ["/((?!login|_next/static|_next/image|favicon.ico|api/monday/webhook).*)"],
 };

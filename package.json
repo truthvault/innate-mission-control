@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:mutations": "bash scripts/check-no-monday-mutations.sh"
   },
   "dependencies": {
+    "@vercel/blob": "^2.3.3",
     "airtable": "^0.12.2",
     "next": "16.2.2",
     "react": "19.2.4",
