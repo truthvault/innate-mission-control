@@ -31,6 +31,7 @@ type PersonTask = {
   how: string;
   done: boolean;
   priority: Priority;
+  notes?: string;
 };
 
 type BoardTask = {
@@ -117,13 +118,13 @@ const milestones: Milestone[] = [
         id: 'hero-product',
         label: 'Confirm first hero product',
         why: 'Keeps the prototype focused enough to ship.',
-        done: false,
+        done: true,
       },
       {
         id: 'length-pricing',
         label: 'Confirm length/pricing increments',
         why: 'Lets the configurator feel commercially real instead of like a pretty toy.',
-        done: false,
+        done: true,
       },
       {
         id: 'r3f-prototype',
@@ -167,18 +168,20 @@ const personTasks: PersonTask[] = [
     owner: 'Guido',
     title: 'Choose the first public configurator product',
     why: 'The build needs one hero path. Choice paralysis is not a business model, sadly.',
-    how: 'Pick Totara Crossroads for brand impact, or Reverse Angled Steel if you want the most commercially common option first.',
-    done: false,
+    how: 'Use Totara Crossroads as the first public hero configurator product. This is now decided.',
+    done: true,
     priority: 'High',
+    notes: 'Decision made: first product is Totara Crossroads / Crossroads.'
   },
   {
     id: 'guido-pricing',
     owner: 'Guido',
-    title: 'Confirm length and pricing logic',
-    why: 'The configurator needs to answer “roughly what does this cost?” or it becomes decorative furniture cosplay.',
-    how: 'Write min, max, default length, increments, and either a price formula or price bands.',
-    done: false,
+    title: 'Use current website listing pricing',
+    why: 'The prototype should reflect the pricing customers already see instead of inventing a new formula.',
+    how: 'Use the current website listings as the source of truth for Crossroads pricing logic. Pull exact values from the live product/listing data when wiring the configurator.',
+    done: true,
     priority: 'High',
+    notes: 'Pricing source confirmed: current website listings. Do not use an invented formula.'
   },
   {
     id: 'guido-cta',
@@ -188,6 +191,7 @@ const personTasks: PersonTask[] = [
     how: 'Use “Start custom quote” as primary unless you strongly prefer “Book a design chat”.',
     done: true,
     priority: 'Medium',
+    notes: 'Approved Start custom quote'
   },
   {
     id: 'guido-proof',
@@ -197,6 +201,7 @@ const personTasks: PersonTask[] = [
     how: 'Find one hero photo, one close-up, one customer home shot, one strong review, and one timber/provenance image if available.',
     done: false,
     priority: 'Medium',
+    notes: ''
   },
   {
     id: 'dylan-model',
@@ -206,6 +211,7 @@ const personTasks: PersonTask[] = [
     how: 'Create or clean the frame/table model using real proportions. Do not spend the afternoon inventing timber variants from vibes.',
     done: false,
     priority: 'High',
+    notes: ''
   },
   {
     id: 'dylan-naming',
@@ -215,6 +221,7 @@ const personTasks: PersonTask[] = [
     how: 'Use names like table_top, table_sides, frame_reverse_angled_steel, feet.',
     done: false,
     priority: 'High',
+    notes: ''
   },
   {
     id: 'dylan-dimensions',
@@ -224,6 +231,7 @@ const personTasks: PersonTask[] = [
     how: 'Record default length, width, height, top thickness, frame dimensions, frame position from ends, and whether frame position changes with length.',
     done: false,
     priority: 'High',
+    notes: ''
   },
   {
     id: 'dylan-export',
@@ -233,6 +241,7 @@ const personTasks: PersonTask[] = [
     how: 'Export Reverse_Angled_Steel_MASTER.glb and WEB.glb, plus front, side, underside/frame, and top screenshots.',
     done: false,
     priority: 'Medium',
+    notes: ''
   },
 ];
 
@@ -252,8 +261,8 @@ const boardTasks: BoardTask[] = [
     priority: 'High',
   },
   {
-    title: 'Length + pricing truth',
-    description: 'Guido confirms min/max/default lengths, increments, and rough price logic for the MVP.',
+    title: 'Length + pricing source',
+    description: 'Pricing source is the current website listings. Next coding step is to pull exact Crossroads values into the prototype.',
     owner: 'Guido',
     lane: 'Now',
     priority: 'High',
@@ -357,7 +366,9 @@ function CheckboxCard({
   how,
   checked,
   priority,
+  notes,
   onToggle,
+  onNotesChange,
 }: {
   id: string;
   title: string;
@@ -365,39 +376,49 @@ function CheckboxCard({
   how?: string;
   checked: boolean;
   priority?: Priority;
+  notes?: string;
   onToggle: (id: string) => void;
+  onNotesChange: (id: string, notes: string) => void;
 }) {
   return (
-    <label
-      className={`group block cursor-pointer rounded-3xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-xl ${
+    <article
+      className={`group rounded-2xl border p-4 shadow-sm transition hover:shadow-lg ${
         checked ? 'border-[#d9c8ad] bg-[#f5ead7]' : 'border-[#e6d8c2] bg-white/90'
       }`}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3">
         <input
           type="checkbox"
           checked={checked}
           onChange={() => onToggle(id)}
-          className="mt-1 h-5 w-5 rounded border-[#8b5a2b] text-[#8b5a2b] focus:ring-[#c48a3a]"
+          aria-label={title}
+          className="mt-1 h-5 w-5 shrink-0 rounded border-[#8b5a2b] text-[#8b5a2b] focus:ring-[#c48a3a]"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h4 className={`text-base font-black ${checked ? 'text-stone-500 line-through' : 'text-[#241b16]'}`}>{title}</h4>
             {priority ? <Pill tone={priority === 'High' ? 'red' : priority === 'Medium' ? 'amber' : 'stone'}>{priority}</Pill> : null}
           </div>
-          <p className="mt-3 text-sm leading-6 text-stone-700">
+          <p className="mt-2 text-sm leading-5 text-stone-700">
             <span className="font-black text-[#6f4320]">Why: </span>
             {why}
           </p>
           {how ? (
-            <p className="mt-2 text-sm leading-6 text-stone-700">
+            <p className="mt-1.5 text-sm leading-5 text-stone-700">
               <span className="font-black text-[#6f4320]">How: </span>
               {how}
             </p>
           ) : null}
+          <textarea
+            value={notes || ''}
+            onChange={(event) => onNotesChange(id, event.target.value)}
+            placeholder="Add working notes here…"
+            className="mt-3 w-full resize-y rounded-xl border border-[#d9c8ad] bg-white p-3 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#c48a3a]"
+            rows={2}
+          />
         </div>
       </div>
-    </label>
+    </article>
   );
 }
 
@@ -415,11 +436,30 @@ export default function ConfiguratorDashboard() {
       return {};
     }
   });
+
+  const [notesState, setNotesState] = useState<Record<string, string>>(() => {
+    if (typeof window === 'undefined') return {};
+    
+    const saved = window.localStorage.getItem('innate-configurator-dashboard-notes');
+    if (!saved) return {};
+    
+    try {
+      return JSON.parse(saved) as Record<string, string>;
+    } catch {
+      window.localStorage.removeItem('innate-configurator-dashboard-notes');
+      return {};
+    }
+  });
+
   const lanes = useMemo<Lane[]>(() => ['Now', 'Next', 'Later', 'Blocked / Decisions'], []);
 
   useEffect(() => {
     window.localStorage.setItem('innate-configurator-dashboard-checks', JSON.stringify(checkedOverrides));
   }, [checkedOverrides]);
+
+  useEffect(() => {
+    window.localStorage.setItem('innate-configurator-dashboard-notes', JSON.stringify(notesState));
+  }, [notesState]);
 
   function isChecked(id: string, defaultValue: boolean) {
     return checkedOverrides[keyFor(id)] ?? defaultValue;
@@ -431,6 +471,10 @@ export default function ConfiguratorDashboard() {
       const defaultValue = [...milestones.flatMap((milestone) => milestone.checklist), ...personTasks].find((item) => item.id === id)?.done ?? false;
       return { ...current, [fullKey]: !(current[fullKey] ?? defaultValue) };
     });
+  }
+
+  function handleNotesChange(id: string, notes: string) {
+    setNotesState(prev => ({ ...prev, [id]: notes }));
   }
 
   const milestoneProgress = milestones.map((milestone) => {
@@ -452,41 +496,69 @@ export default function ConfiguratorDashboard() {
   const overallProgress = percent(completedOverall, allProgressItems.length);
   const nextUp = personTasks.filter((task) => !isChecked(task.id, task.done) && task.priority === 'High').slice(0, 3);
 
+  function getNoteValue(id: string, defaultNote?: string) {
+    return notesState[id] ?? defaultNote ?? '';
+  }
+
   return (
     <main className="min-h-screen bg-[#f3eadc] text-[#241b16]">
       <section className="relative overflow-hidden border-b border-[#d1b98f] bg-[#1f1712] text-[#f8ead5]">
         <div className="absolute inset-0 opacity-25 [background:radial-gradient(circle_at_20%_15%,#a66a2d,transparent_32%),radial-gradient(circle_at_78%_0%,#e0af58,transparent_28%),linear-gradient(135deg,#1f1712,#3a281d_55%,#17100d)]" />
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative mx-auto flex w-full flex-col gap-5 px-4 py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-4xl">
-            <div className="mb-5 flex flex-wrap gap-2">
+            <div className="mb-3 flex flex-wrap gap-2">
               <Pill tone="amber">Innate Mission Control</Pill>
               <Pill tone="green">Live dashboard</Pill>
               <Pill tone="charcoal">Dining table configurator</Pill>
             </div>
-            <p className="mb-3 text-sm font-bold uppercase tracking-[0.35em] text-[#e0b15b]">Clear next actions · real assets · lead-gen first</p>
-            <h1 className="text-4xl font-black tracking-tight md:text-7xl">Build the configurator without losing the plot.</h1>
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-[#e7d2b7]">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-[#e0b15b]">Clear next actions · real assets · lead-gen first</p>
+            <h1 className="text-2xl font-black tracking-tight md:text-4xl lg:text-3xl">Build the configurator without losing the plot.</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#e7d2b7]">
               A warm little command centre for the table configurator: what matters next, why it matters, who owns it, and how close we are.
             </p>
           </div>
-          <div className="w-full rounded-[2rem] border border-[#7c5734] bg-[#2b2018]/90 p-6 shadow-2xl lg:max-w-sm">
+          <div className="w-full rounded-[2rem] border border-[#7c5734] bg-[#2b2018]/90 p-4 shadow-2xl lg:max-w-xs">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#d1a65a]">Overall progress</p>
-                <p className="mt-2 text-6xl font-black text-[#f3c66f]">{overallProgress}%</p>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#d1a65a]">Overall progress</p>
+                <p className="mt-1 text-4xl font-black text-[#f3c66f]">{overallProgress}%</p>
               </div>
               <Pill tone="amber">{completedOverall}/{allProgressItems.length}</Pill>
             </div>
-            <div className="mt-5">
+            <div className="mt-3">
               <ProgressBar value={overallProgress} large />
             </div>
-            <p className="mt-4 text-sm leading-6 text-[#e7d2b7]">Ticks update this number instantly and save on this browser. Shared Guido/Dylan syncing is the next upgrade if useful.</p>
+            <p className="mt-2 text-xs leading-5 text-[#e7d2b7]">Ticks update this number instantly and save on this browser. Shared Guido/Dylan syncing is the next upgrade if useful.</p>
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl space-y-10 px-6 py-10">
-        <section className="grid gap-4 md:grid-cols-4">
+      <div className="mx-auto w-full space-y-6 px-4 py-6 lg:px-8">
+        {/* Top command section */}
+        <section className="rounded-[2rem] border border-[#d8c3a0] bg-[#fffaf1] p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">First product</p>
+              <p className="mt-1 text-lg font-black text-[#241b16]">Crossroads/Totara Crossroads</p>
+            </div>
+            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">Pricing</p>
+              <p className="mt-1 text-lg font-black text-[#241b16]">Current website listings</p>
+            </div>
+            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">Crossroads chosen</p>
+              <p className="mt-1 text-lg font-black text-[#241b16]">Yes</p>
+            </div>
+            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">Next up</p>
+              <p className="mt-1 text-lg font-black text-[#241b16]">
+                {nextUp.length > 0 ? nextUp[0].title : 'All done!'}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2">
           {[
             ['Core strategy', 'Lead-gen first'],
             ['Hero asset', 'Totara Crossroads'],
@@ -537,6 +609,8 @@ export default function ConfiguratorDashboard() {
                       priority={task.priority}
                       checked={isChecked(task.id, task.done)}
                       onToggle={toggle}
+                      notes={getNoteValue(task.id, task.notes)}
+                      onNotesChange={handleNotesChange}
                     />
                   ))}
                 </div>
@@ -594,6 +668,8 @@ export default function ConfiguratorDashboard() {
                         why={item.why}
                         checked={isChecked(item.id, item.done)}
                         onToggle={toggle}
+                        notes={getNoteValue(item.id)}
+                        onNotesChange={handleNotesChange}
                       />
                     ))}
                   </div>

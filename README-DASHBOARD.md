@@ -21,11 +21,12 @@ https://innate-mission-control.vercel.app/configurator
 
 - Overall progress is calculated live from ticked milestone items plus Guido/Dylan to-dos.
 - Each milestone calculates its own percentage from its checklist.
-- The “This afternoon” section has two clear columns:
+- The "This afternoon" section has two clear columns:
   - Guido: product choice, pricing/length rules, CTA, proof assets
   - Dylan: Reverse Angled Steel model, object naming, dimensions, exports/screenshots
 - Guido and Dylan columns each show their own progress percentage.
 - Ticks persist in the same browser via `localStorage`. They are not shared live between Guido and Dylan yet.
+- Each task now supports editable notes area for capturing additional information.
 
 ## What this dashboard is for
 
@@ -37,6 +38,13 @@ https://innate-mission-control.vercel.app/configurator
   - length/pricing truth
   - lead-gen-first page strategy
   - procedural tabletop + GLB frame approach
+
+## Key facts updated
+
+- First product chosen: Totara Crossroads
+- Pricing logic: current website listings
+- Crossroads selected: Yes
+- Next up: Prototype configurator using Crossroads and current website pricing
 
 ## Known asset facts shown
 
