@@ -2703,6 +2703,7 @@ function SortablePlanTaskCard({
   planTaskLinks,
   resolveTaskOrderId,
   onTaskSelect,
+  onTaskOpen,
   isNextTask = false,
 }: {
   task: DraggablePlanTask;
@@ -2710,6 +2711,7 @@ function SortablePlanTaskCard({
   planTaskLinks: PlanTaskLinks;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   onTaskSelect?: (task: DraggablePlanTask) => void;
+  onTaskOpen?: (task: DraggablePlanTask) => void;
   isNextTask?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -2744,7 +2746,7 @@ function SortablePlanTaskCard({
       : isNextTask && !isUnlinkedTask
         ? "0 2px 8px rgba(110,138,106,0.08)"
         : "0 1px 2px rgba(0,0,0,0.025)";
-  const taskBadge = isUnlinkedTask ? "Assign" : isSelectedOrderTask ? "This order" : assignedOrderId ? "Linked" : null;
+  const taskBadge = isUnlinkedTask ? "Assign" : assignedOrderId ? "Linked" : null;
 
   return (
     <div
@@ -2755,6 +2757,11 @@ function SortablePlanTaskCard({
       role="button"
       tabIndex={0}
       onClick={() => onTaskSelect?.(task)}
+      onDoubleClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onTaskOpen?.(task);
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -2787,9 +2794,6 @@ function SortablePlanTaskCard({
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
-          {isSelectedOrderTask && (
-            <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(190,137,24,0.34)", background: "rgba(255,246,199,0.96)", color: "#8a5d08", borderRadius: 999, padding: "1px 7px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Reviewing this order</span>
-          )}
           {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
             <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Start here</span>
           )}
@@ -2857,7 +2861,9 @@ function MonthWeekSection({
   planTaskLinks = {},
   resolveTaskOrderId,
   onTaskSelect,
+  onTaskOpen,
   onAppTaskSelect,
+  onAppTaskOpen,
   personFilter = "all",
   weekHeaderControl,
 }: {
@@ -2869,7 +2875,9 @@ function MonthWeekSection({
   planTaskLinks?: PlanTaskLinks;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   onTaskSelect?: (task: DraggablePlanTask) => void;
+  onTaskOpen?: (task: DraggablePlanTask) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
+  onAppTaskOpen?: (task: AppPlanTask) => void;
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
 }) {
@@ -3072,6 +3080,7 @@ function MonthWeekSection({
                                 planTaskLinks={planTaskLinks}
                                 resolveTaskOrderId={resolveTaskOrderId}
                                 onTaskSelect={onTaskSelect}
+                                onTaskOpen={onTaskOpen}
                                 isNextTask={laneIndex === 0}
                               />
                               {showDropSlot(task.id, true) && dropSlot}
@@ -3084,6 +3093,11 @@ function MonthWeekSection({
                               role="button"
                               tabIndex={0}
                               onClick={() => onAppTaskSelect?.(task)}
+                              onDoubleClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onAppTaskOpen?.(task);
+                              }}
                               onKeyDown={(event) => {
                                 if (event.key === "Enter" || event.key === " ") {
                                   event.preventDefault();
@@ -3111,7 +3125,6 @@ function MonthWeekSection({
                             >
                               <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
                                 <div style={{ minWidth: 0 }}>
-                                  <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(190,137,24,0.34)", background: "rgba(255,246,199,0.96)", color: "#8a5d08", borderRadius: 999, padding: "1px 7px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Reviewing this order</span>
                                   <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 980, lineHeight: 1.2, overflowWrap: "anywhere", textDecoration: task.done ? "line-through" : "none" }}>{task.title}</div>
                                   {selectedOrder && <div style={{ marginTop: 3, fontSize: 9, color: DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedOrder.customer}</div>}
                                 </div>
@@ -3319,12 +3332,37 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   function selectOrderForPlanTask(task: AssignablePlanTask) {
     const orderId = resolveOrderIdForPlanTask(task);
     if (orderId) {
+      if (selectedOrderId === orderId) {
+        setSelectedAssignmentTask(null);
+        setSelectedWorkflow(null);
+        setSelectedOrderId(null);
+        return;
+      }
       selectOrder(orderId);
       return;
     }
     setSelectedWorkflow(null);
     setSelectedOrderId(null);
     setSelectedAssignmentTask(task);
+  }
+
+  function openOrderForPlanTask(task: AssignablePlanTask) {
+    const orderId = resolveOrderIdForPlanTask(task);
+    if (orderId) {
+      openOrderOverview(orderId);
+      return;
+    }
+    selectOrderForPlanTask(task);
+  }
+
+  function selectOrderForAppTask(task: AppPlanTask) {
+    if (selectedOrderId === task.orderId) {
+      setSelectedAssignmentTask(null);
+      setSelectedWorkflow(null);
+      setSelectedOrderId(null);
+      return;
+    }
+    selectOrder(task.orderId);
   }
 
   function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number) {
@@ -3436,7 +3474,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         </summary>
         <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 40, width: isRailNarrow ? "min(90vw, 360px)" : "min(860px, calc(100vw - 420px))", maxHeight: "70vh", overflowY: "auto", padding: 10, background: "rgba(255,253,249,0.96)", border: `1px solid ${DT.border}`, borderRadius: 12, boxShadow: "0 18px 44px rgba(44,37,32,0.14)", display: "flex", flexDirection: "column", gap: 12 }}>
           {previous.map((week) => (
-            <MonthWeekSection key={week.id} week={week} selectedOrder={selectedOrder} appTasks={selectedAppTasks} planTaskLinks={planTaskLinks} personFilter={personFilter} resolveTaskOrderId={resolveOrderIdForPlanTask} onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })} onAppTaskSelect={(task) => selectOrder(task.orderId)} />
+            <MonthWeekSection key={week.id} week={week} selectedOrder={selectedOrder} appTasks={selectedAppTasks} planTaskLinks={planTaskLinks} personFilter={personFilter} resolveTaskOrderId={resolveOrderIdForPlanTask} onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })} onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })} onAppTaskSelect={selectOrderForAppTask} onAppTaskOpen={(task) => openOrderOverview(task.orderId)} />
           ))}
         </div>
       </details>
@@ -3484,7 +3522,9 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       personFilter={personFilter}
       resolveTaskOrderId={resolveOrderIdForPlanTask}
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
-      onAppTaskSelect={(task) => selectOrder(task.orderId)}
+      onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+      onAppTaskSelect={selectOrderForAppTask}
+      onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
       weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
     />
   ));
