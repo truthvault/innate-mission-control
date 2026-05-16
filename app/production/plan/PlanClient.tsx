@@ -183,7 +183,6 @@ type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type PersonFilter = "all" | Person;
 type RailFilter = "all" | "blocked" | "thisWeek" | "materials" | "noDate";
 type RailSort = "soonest" | "latest" | "customer";
-type PlanMode = "workshop" | "planning";
 type OrderWorkflowState = {
   orderId: number;
   xeroInvoiceNumber?: string | null;
@@ -3143,41 +3142,8 @@ function MonthWeekSection({
 }
 
 
-function PlanModeToggle({ mode, onModeChange }: { mode: PlanMode; onModeChange: (mode: PlanMode) => void }) {
-  const options: Array<{ id: PlanMode; label: string }> = [
-    { id: "workshop", label: "Workshop" },
-    { id: "planning", label: "Planning" },
-  ];
-  return (
-    <div style={{ display: "inline-flex", padding: 3, border: `1px solid rgba(110,138,106,0.18)`, borderRadius: 999, background: "rgba(255,255,255,0.68)", boxShadow: "0 1px 2px rgba(0,0,0,0.03)", gap: 3 }}>
-      {options.map((option) => {
-        const active = mode === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onModeChange(option.id)}
-            style={{ border: "none", borderRadius: 999, background: active ? "linear-gradient(135deg, rgba(220,191,124,0.92), rgba(110,138,106,0.74))" : "transparent", color: active ? DT.textPrimary : DT.textMuted, padding: "7px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer", boxShadow: active ? "0 2px 8px rgba(44,37,32,0.10)" : "none" }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function PlanHeaderAccessory({ mode, onModeChange, orders }: { mode: PlanMode; onModeChange: (mode: PlanMode) => void; orders: UiOrder[] }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-      {mode === "planning" && <OrderHealthStrip orders={orders} />}
-      <PlanModeToggle mode={mode} onModeChange={onModeChange} />
-    </div>
-  );
-}
-
-function MonthView({ weeks, newOrder, orders, mode }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; orders: UiOrder[]; mode: PlanMode }) {
-  return <MonthViewState key={`${newOrder?.id ?? "none"}-${mode}`} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} mode={mode} />;
+function MonthView({ weeks, newOrder, orders }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; orders: UiOrder[] }) {
+  return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} />;
 }
 
 function WorkshopFocusBar({
@@ -3217,10 +3183,8 @@ function WorkshopFocusBar({
   );
 }
 
-function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[]; mode: PlanMode }) {
+function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
-  const isWorkshopMode = mode === "workshop";
-  const visibleWeeks = isWorkshopMode ? currentAndUpcoming.slice(0, 1) : currentAndUpcoming;
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [showNewOrder, setShowNewOrder] = useState(false);
   const baseSuggestedSteps = useMemo(() => buildSuggestedPlanForOrder(newOrder), [newOrder]);
@@ -3331,7 +3295,6 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: Pla
       openOrderOverview(orderId);
       return;
     }
-    if (isWorkshopMode) return;
     setSelectedWorkflow(null);
     setSelectedOrderId(null);
     setSelectedAssignmentTask(task);
@@ -3439,7 +3402,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: Pla
     return summaries;
   }, [currentAndUpcoming, suggestedWeekIndex, editableSteps]);
 
-  const historyControl = !isWorkshopMode && previous.length > 0 ? (
+  const historyControl = previous.length > 0 ? (
       <details style={{ position: "relative" }}>
         <summary style={{ listStyle: "none", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", color: DT.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}>
           History · {previous.length}
@@ -3456,7 +3419,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: Pla
     <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
   );
 
-  const newOrderPanel = !isWorkshopMode && showNewOrder ? (
+  const newOrderPanel = showNewOrder ? (
     <NewOrderHalo
       order={newOrder}
       suggestions={editableSteps}
@@ -3471,7 +3434,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: Pla
     />
   ) : null;
 
-  const railNewOrderCard = !isWorkshopMode ? (
+  const railNewOrderCard = (
     <NewOrderRailCard
       order={newOrder}
       showingInMonth={showTasksInMonth || approvedSteps}
@@ -3480,13 +3443,13 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: Pla
       onToggleMonthTasks={toggleNewOrderTasksInSchedule}
       onApprove={approveNewOrderTasks}
     />
-  ) : null;
+  );
 
-  const weekSections = visibleWeeks.map((week, index) => (
+  const weekSections = currentAndUpcoming.map((week, index) => (
     <MonthWeekSection
       key={week.id}
       week={week}
-      suggestedSteps={!isWorkshopMode && (showTasksInMonth || approvedSteps) && index === suggestedWeekIndex ? editableSteps : []}
+      suggestedSteps={(showTasksInMonth || approvedSteps) && index === suggestedWeekIndex ? editableSteps : []}
       approvedSuggestions={approvedSteps}
       selectedOrder={selectedOrder}
       appTasks={selectedAppTasks}
@@ -3522,12 +3485,12 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, mode }: { weeks: Pla
     />
   );
 
-  if (isRailNarrow || isWorkshopMode) {
+  if (isRailNarrow) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: isWorkshopMode ? 10 : 14 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {newOrderPanel}
         {weekSections}
-        {!isWorkshopMode && orderRail}
+        {orderRail}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     );
@@ -3568,7 +3531,6 @@ export default function PlanClient({
   mondayError,
 }: PlanClientProps) {
   const [hasMounted, setHasMounted] = useState(false);
-  const [mode, setMode] = useState<PlanMode>("workshop");
   useEffect(() => {
     const id = window.setTimeout(() => setHasMounted(true), 0);
     return () => window.clearTimeout(id);
@@ -3589,7 +3551,7 @@ export default function PlanClient({
       syncedAt={syncedAt}
       source={source}
       mondayError={mondayError}
-      pageTitleAccessory={hasMounted ? <PlanHeaderAccessory mode={mode} onModeChange={setMode} orders={orders} /> : undefined}
+      pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} /> : undefined}
     >
         {rows.length === 0 ? (
           <div
@@ -3616,7 +3578,7 @@ export default function PlanClient({
             Loading Production Plan...
           </div>
         ) : (
-          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} mode={mode} />
+          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} />
         )}
     </MissionControlShell>
   );
