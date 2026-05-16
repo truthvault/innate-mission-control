@@ -107,19 +107,24 @@ assert.ok(approvedDraft.every((task) => task.noWriteLabel === 'Approved plan'));
 
 const capacityOk = summarizeLaneCapacity({ existingTaskCount: 1, draftHours: 2 });
 assert.equal(capacityOk.status, 'ok');
-assert.equal(capacityOk.totalHours, 4);
-assert.equal(capacityOk.label, '4h / 7h');
-assert.match(capacityOk.detail, /1 existing.*2h draft/i);
+assert.equal(capacityOk.totalHours, 3);
+assert.equal(capacityOk.label, '3h / 7h');
+assert.match(capacityOk.detail, /1 existing.*~1h.*2h draft/i);
 
-const capacityWatch = summarizeLaneCapacity({ existingTaskCount: 2, draftHours: 3 });
+const fiveExistingPlaceholders = summarizeLaneCapacity({ existingTaskCount: 5, draftHours: 0 });
+assert.equal(fiveExistingPlaceholders.status, 'ok');
+assert.equal(fiveExistingPlaceholders.totalHours, 5);
+assert.equal(fiveExistingPlaceholders.label, '5h / 7h');
+
+const capacityWatch = summarizeLaneCapacity({ existingTaskCount: 4, draftHours: 3 });
 assert.equal(capacityWatch.status, 'watch');
 assert.equal(capacityWatch.totalHours, 7);
 assert.equal(capacityWatch.label, '7h / 7h');
 
-const capacityOver = summarizeLaneCapacity({ existingTaskCount: 2, draftHours: 8 });
+const capacityOver = summarizeLaneCapacity({ existingTaskCount: 4, draftHours: 4 });
 assert.equal(capacityOver.status, 'over');
-assert.equal(capacityOver.totalHours, 12);
-assert.equal(capacityOver.label, '12h / 7h');
+assert.equal(capacityOver.totalHours, 8);
+assert.equal(capacityOver.label, '8h / 7h');
 assert.match(capacityOver.detail, /Over capacity/i);
 
 console.log('new-order-planning tests passed');

@@ -29,7 +29,7 @@ export type ApprovedSuggestedPlanTask = {
 };
 
 export const DAILY_PERSON_CAPACITY_HOURS = 7;
-export const EXISTING_PLAN_TASK_ESTIMATED_HOURS = 2;
+export const EXISTING_PLAN_TASK_ESTIMATED_HOURS = 1;
 
 export type LaneCapacitySummary = {
   existingTaskCount: number;
