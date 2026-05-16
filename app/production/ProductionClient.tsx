@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useTransition, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { MissionControlShell } from "@/components/mission-control-shell";
 import type { UiOrder } from "@/lib/monday/mapping";
 
 const DT = {
@@ -24,33 +23,33 @@ const DT = {
 type Step = { key: string; label: string; who: string | null; wait: boolean; waitLabel?: string };
 
 const TABLE_STEPS: Step[] = [
-  {key:"confirmed",label:"Order Confirmed",who:"Nick",wait:false},
-  {key:"pos",label:"POs Sent",who:"Nick",wait:false},
-  {key:"timber",label:"Timber Pulled",who:"Dylan",wait:false},
+  {key:"confirmed",label:"Order Confirmed",who:"Workshop",wait:false},
+  {key:"pos",label:"POs Sent",who:"Workshop",wait:false},
+  {key:"timber",label:"Timber Pulled",who:"Workshop",wait:false},
   {key:"matWait",label:"Materials Wait",who:null,wait:true,waitLabel:"~2 weeks"},
-  {key:"received",label:"Materials Received",who:"Dylan",wait:false},
-  {key:"stress",label:"Stress Cuts",who:"Dylan",wait:false},
-  {key:"sand",label:"Sand",who:"Dylan",wait:false},
-  {key:"coat1",label:"1st Coat",who:"Dylan",wait:false},
-  {key:"coat2",label:"2nd Coat",who:"Dylan",wait:false},
+  {key:"received",label:"Materials Received",who:"Workshop",wait:false},
+  {key:"stress",label:"Stress Cuts",who:"Workshop",wait:false},
+  {key:"sand",label:"Sand",who:"Workshop",wait:false},
+  {key:"coat1",label:"1st Coat",who:"Workshop",wait:false},
+  {key:"coat2",label:"2nd Coat",who:"Workshop",wait:false},
   {key:"cure",label:"Curing",who:null,wait:true,waitLabel:"~1 week"},
-  {key:"qc",label:"QC + Photos",who:"Dylan",wait:false},
-  {key:"assemble",label:"Assemble / Box",who:"Dylan",wait:false},
-  {key:"freight",label:"Book Freight",who:"Dylan",wait:false},
+  {key:"qc",label:"QC + Photos",who:"Workshop",wait:false},
+  {key:"assemble",label:"Assemble / Box",who:"Workshop",wait:false},
+  {key:"freight",label:"Book Freight",who:"Workshop",wait:false},
 ];
 
 const PANEL_STEPS: Step[] = [
-  {key:"confirmed",label:"Order Confirmed",who:"Nick",wait:false},
-  {key:"pos",label:"POs Sent",who:"Nick",wait:false},
+  {key:"confirmed",label:"Order Confirmed",who:"Workshop",wait:false},
+  {key:"pos",label:"POs Sent",who:"Workshop",wait:false},
   {key:"matWait",label:"Materials Wait",who:null,wait:true,waitLabel:"~2 weeks"},
-  {key:"received",label:"Materials Received",who:"Dylan",wait:false},
-  {key:"cut",label:"CNC / Cut",who:"Dylan",wait:false},
-  {key:"sand",label:"Sand",who:"Dylan",wait:false},
-  {key:"coat1",label:"1st Coat",who:"Dylan",wait:false},
-  {key:"coat2",label:"2nd Coat",who:"Dylan",wait:false},
+  {key:"received",label:"Materials Received",who:"Workshop",wait:false},
+  {key:"cut",label:"CNC / Cut",who:"Workshop",wait:false},
+  {key:"sand",label:"Sand",who:"Workshop",wait:false},
+  {key:"coat1",label:"1st Coat",who:"Workshop",wait:false},
+  {key:"coat2",label:"2nd Coat",who:"Workshop",wait:false},
   {key:"cure",label:"Curing",who:null,wait:true,waitLabel:"~1 week"},
-  {key:"qc",label:"QC",who:"Dylan",wait:false},
-  {key:"wrap",label:"Wrap + Ship",who:"Dylan",wait:false},
+  {key:"qc",label:"QC",who:"Workshop",wait:false},
+  {key:"wrap",label:"Wrap + Dispatch",who:"Workshop",wait:false},
 ];
 
 const STEPS_BY_KEY: Record<string, Step[]> = {
@@ -126,6 +125,100 @@ function progressPct(o: DisplayOrder){
   return Math.min(100,Math.round((o.currentStep/Math.max(1,o.steps.length-1))*100));
 }
 function sortByShipDate(a: DisplayOrder,b: DisplayOrder){if(!a.shipDate&&!b.shipDate)return 0;if(!a.shipDate)return 1;if(!b.shipDate)return -1;return new Date(a.shipDate).getTime()-new Date(b.shipDate).getTime();}
+
+type TrackLevel = "onTrack" | "watch" | "blocked";
+
+function daysUntil(d: string | null){
+  if(!d) return null;
+  const due=new Date(d);
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.ceil((due.getTime()-today.getTime())/864e5);
+}
+
+function trackState(order: DisplayOrder, pct=progressPct(order)): {level: TrackLevel; label: string; reason: string; bg: string; color: string; border: string}{
+  const diff=daysUntil(order.shipDate);
+  if(!order.shipDate) return {level:"watch",label:"Watch",reason:"No due date",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
+  if(diff!==null&&diff<0) return {level:"blocked",label:"Blocked",reason:"Past due",bg:"#fee2e2",color:"#991b1b",border:"rgba(153,27,27,0.24)"};
+  if(diff===0&&!isComplete(order)) return {level:"blocked",label:"Blocked",reason:"Due today: needs truth check",bg:"#fee2e2",color:"#991b1b",border:"rgba(153,27,27,0.24)"};
+  if(order.rawMondayStatus==="Materials Ordered"&&diff!==null&&diff<=7) return {level:"blocked",label:"Blocked",reason:"Materials not ready and due soon",bg:"#fee2e2",color:"#991b1b",border:"rgba(153,27,27,0.24)"};
+  if(order.rawMondayStatus==="Materials Ordered") return {level:"watch",label:"Watch",reason:"Waiting on materials",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
+  if(order.rawMondayStatus==="To Process"&&diff!==null&&diff<=14) return {level:"watch",label:"Watch",reason:"Not started inside 2 weeks",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
+  if(diff!==null&&diff<=7&&pct<60) return {level:"watch",label:"Watch",reason:"Due soon for current progress",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
+  if(diff!==null&&diff<=14&&pct<30) return {level:"watch",label:"Watch",reason:"Low progress for next fortnight",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
+  return {level:"onTrack",label:"On track",reason:"No obvious schedule flag",bg:"rgba(21,128,61,0.08)",color:DT.green,border:"rgba(21,128,61,0.18)"};
+}
+
+function nextStepText(order: DisplayOrder){
+  const diff=daysUntil(order.shipDate);
+  if(!order.shipDate) return "Set / confirm the due date on the order.";
+  if(diff!==null&&diff<=0) return "Confirm the real stage today, then flag whether a customer update is needed.";
+  if(order.rawMondayStatus==="Materials Ordered") return "Confirm material ETA / arrival, then mark Materials Ready when physically true.";
+  if(order.rawMondayStatus==="To Process") return "Add the next useful production step and owner in the Production Plan.";
+  if(order.rawMondayStatus==="In production"&&order.rawMondayTopPanel==null) return "Update the current production step so the card has a real next step.";
+  const current=order.stepNote||order.steps[Math.min(order.currentStep,order.steps.length-1)]?.label||"current step";
+  return `Confirm “${current}” is still true. If not, update the order to the next real step.`;
+}
+
+function nextStepDoneStorageKey(order: DisplayOrder, stepText: string) {
+  return `mission-control:production:next-step-done:${order.id}:${stepText}`;
+}
+
+
+type FeedbackLabel = "Useful" | "Check" | "Add detail" | "Workshop input" | "Decision needed" | "Better wording";
+const FEEDBACK_LABELS: FeedbackLabel[] = ["Useful", "Check", "Add detail", "Workshop input", "Decision needed", "Better wording"];
+
+function feedbackStorageKey(scope: string, id: string | number) {
+  return `tuesday:feedback:${scope}:${id}`;
+}
+
+function FeedbackButtons({ scope, id }: { scope: string; id: string | number }) {
+  const key = feedbackStorageKey(scope, id);
+  const [selected, setSelected] = useState<FeedbackLabel[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(window.localStorage.getItem(key) || "[]") as FeedbackLabel[];
+    } catch {
+      return [];
+    }
+  });
+  function toggle(label: FeedbackLabel) {
+    const next = selected.includes(label) ? selected.filter((x) => x !== label) : [...selected, label];
+    setSelected(next);
+    if (typeof window !== "undefined") window.localStorage.setItem(key, JSON.stringify(next));
+  }
+  return (
+    <details onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%" }}>
+      <summary style={{ listStyle: "none", cursor: "pointer", color: DT.textMuted, fontSize: 10, fontFamily: DT.sans, fontWeight: 850 }}>
+        Local feedback{selected.length ? ` · ${selected.length}` : ""}
+      </summary>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }} aria-label="Local job feedback">
+        {FEEDBACK_LABELS.map((label) => {
+          const active = selected.includes(label);
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => toggle(label)}
+              style={{
+                border: `1px solid ${active ? "rgba(79,95,168,0.30)" : "rgba(0,0,0,0.07)"}`,
+                background: active ? DT.tealSoft : DT.cardBg,
+                color: active ? DT.teal : DT.textMuted,
+                borderRadius: 999,
+                padding: "4px 8px",
+                fontSize: 10,
+                fontFamily: DT.sans,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {active ? "✓ " : ""}{label}
+            </button>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
 
 // ━━━ VERTICAL STEP TIMELINE ("Where's my table?") ━━━━━━━━━━━
 function StepTimeline({steps,currentStep,repair}: {steps: Step[], currentStep: number, repair?: boolean}){
@@ -212,16 +305,32 @@ function OrderCard({order}: {order: DisplayOrder}){
   const [open,setOpen]=useState(false);
   const comp=isComplete(order);
   const pct=progressPct(order);
+  const track=trackState(order,pct);
   const colors=jc(order.customer);
-  const borderColor=comp?"rgba(0,0,0,0.08)":colors.border;
+  const borderColor=comp?"rgba(0,0,0,0.08)":track.level==="blocked"?"#991b1b":track.level==="watch"?"#d97706":colors.border;
   const barColor=comp?DT.green:DT.teal;
   const cardBg=comp?DT.cardBg:`linear-gradient(135deg, ${colors.bg}44 0%, ${DT.cardBg} 60%)`;
   const currentStepLabel=order.steps[Math.min(order.currentStep,order.steps.length-1)]?.label;
-  const rawTooltip = `Monday raw: Status=${order.rawMondayStatus ?? "—"}, Top/Panel=${order.rawMondayTopPanel ?? "—"}, Legs=${order.rawMondayLegs ?? "—"}`;
+  const rawTooltip = `Source status: Status=${order.rawMondayStatus ?? "—"}, Top/Panel=${order.rawMondayTopPanel ?? "—"}, Legs=${order.rawMondayLegs ?? "—"}`;
+  const nextStep = nextStepText(order);
+  const nextStepStorageKey = nextStepDoneStorageKey(order, nextStep);
+  const [nextStepDone, setNextStepDone] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(nextStepStorageKey) === "done";
+  });
+  function toggleNextStepDone(done: boolean) {
+    setNextStepDone(done);
+    if (typeof window === "undefined") return;
+    if (done) {
+      window.localStorage.setItem(nextStepStorageKey, "done");
+    } else {
+      window.localStorage.removeItem(nextStepStorageKey);
+    }
+  }
 
   return(
-    <div onClick={()=>setOpen(!open)}
-      style={{background:cardBg,border:`1px solid ${DT.border}`,borderLeft:`4px solid ${borderColor}`,borderRadius:DT.radius,padding:"16px 20px",cursor:"pointer",boxShadow:DT.shadow,transition:"box-shadow 0.2s",opacity:comp?0.5:1}}
+    <div id={`order-${order.id}`} onClick={()=>setOpen(!open)}
+      style={{background:cardBg,border:`1px solid ${DT.border}`,borderLeft:`4px solid ${borderColor}`,borderRadius:DT.radius,padding:"15px 18px",cursor:"pointer",boxShadow:DT.shadow,transition:"box-shadow 0.2s",opacity:comp?0.5:1}}
       onMouseEnter={e=>{e.currentTarget.style.boxShadow=DT.shadowHover;}}
       onMouseLeave={e=>{e.currentTarget.style.boxShadow=DT.shadow;}}>
 
@@ -232,6 +341,7 @@ function OrderCard({order}: {order: DisplayOrder}){
             <span style={{fontSize:15,fontWeight:600,color:DT.textPrimary,fontFamily:DT.sans}}>{order.customer}</span>
             <ProductTag product={order.product} raw={order.rawMondayItem}/>
             <StatusPill status={order.status}/>
+            {!comp&&<span title={track.reason} style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:800,background:track.bg,color:track.color,border:`1px solid ${track.border}`,fontFamily:DT.sans,whiteSpace:"nowrap"}}>{track.label}</span>}
           </div>
         </div>
         <div style={{flexShrink:0,display:"flex",alignItems:"flex-start",gap:8}}>
@@ -268,98 +378,47 @@ function OrderCard({order}: {order: DisplayOrder}){
         <span style={{fontSize:14,color:DT.textFaint,transition:"transform 0.2s",transform:open?"rotate(180deg)":"rotate(0deg)",lineHeight:1,marginLeft:"auto"}}>▾</span>
       </div>
 
-      <div style={{maxHeight:open?600:0,overflow:"hidden",transition:"max-height 0.35s ease, opacity 0.2s",opacity:open?1:0}}>
+      {!comp&&(
+        <div style={{marginTop:10,marginLeft:15,padding:"8px 10px",borderRadius:10,background:nextStepDone?"rgba(21,128,61,0.06)":track.bg,border:`1px solid ${nextStepDone?"rgba(21,128,61,0.18)":track.border}`,fontFamily:DT.sans,color:DT.textSecondary}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <label onClick={e=>e.stopPropagation()} style={{display:"inline-flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:10,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.08em",color:nextStepDone?DT.green:track.color}}>
+              <input
+                type="checkbox"
+                checked={nextStepDone}
+                onChange={e=>toggleNextStepDone(e.currentTarget.checked)}
+                aria-label={`Mark next step done for ${order.customer}`}
+                style={{width:14,height:14,accentColor:DT.green,cursor:"pointer"}}
+              />
+              Next step
+            </label>
+            <span style={{fontSize:11,color:nextStepDone?DT.green:track.color,fontWeight:700}}>{nextStepDone?"Done in app":track.reason}</span>
+          </div>
+          <div style={{marginTop:3,fontSize:12,lineHeight:1.35,color:DT.textSecondary,textDecoration:nextStepDone?"line-through":"none",textDecorationColor:"rgba(21,128,61,0.45)"}}>{nextStep}</div>
+        </div>
+      )}
+
+      <div style={{maxHeight:open?720:0,overflow:"hidden",transition:"max-height 0.35s ease, opacity 0.2s",opacity:open?1:0}}>
         <div style={{marginTop:16,paddingTop:16,paddingLeft:15,borderTop:`1px solid ${DT.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:12,padding:"8px 10px",background:"rgba(255,255,255,0.62)",border:`1px solid ${DT.border}`,borderRadius:10}}>
+            <div style={{fontSize:10,color:DT.textFaint,fontFamily:DT.sans,lineHeight:1.5}}>
+              <strong style={{color:DT.textMuted}}>Trust check:</strong> order detail · flagged because {track.reason.toLowerCase()} · confirm the real workshop state before changing production truth.
+            </div>
+            <FeedbackButtons scope="orders" id={order.id} />
+          </div>
           {!comp&&order.steps.length>0&&(
             <div style={{marginBottom:16}}>
               <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:DT.textFaint,fontFamily:DT.sans,marginBottom:10}}>
-                Production Progress — step {Math.min(order.currentStep+1, order.steps.length)} of {order.steps.length}
+                Customer order detail · production progress — step {Math.min(order.currentStep+1, order.steps.length)} of {order.steps.length}
               </div>
               <StepTimeline steps={order.steps} currentStep={order.currentStep} repair={order.repair}/>
             </div>
           )}
           {order.notes&&<p style={{fontSize:13,color:DT.textSecondary,lineHeight:1.6,margin:"0 0 14px",fontFamily:DT.sans,padding:"8px 12px",background:"rgba(0,0,0,0.015)",borderRadius:8,border:`1px solid ${DT.border}`}}>{order.notes}</p>}
           <div style={{fontSize:10,color:DT.textFaint,fontFamily:DT.sans,padding:"6px 10px",background:"rgba(0,0,0,0.02)",borderRadius:6,lineHeight:1.5}}>
-            <strong style={{color:DT.textMuted}}>Monday raw:</strong> Item={order.rawMondayItem ?? "—"} · Status={order.rawMondayStatus ?? "—"} · Top/Panel={order.rawMondayTopPanel ?? "—"} · Legs={order.rawMondayLegs ?? "—"}
+            <strong style={{color:DT.textMuted}}>Source status:</strong> Item={order.rawMondayItem ?? "—"} · Status={order.rawMondayStatus ?? "—"} · Top/Panel={order.rawMondayTopPanel ?? "—"} · Legs={order.rawMondayLegs ?? "—"}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ━━━ KPIs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function KpiStrip({orders}: {orders: DisplayOrder[]}){
-  const active=orders.filter(o=>!isComplete(o));
-  const { thisMon, nextMon, twoMon } = weekBoundaries();
-  const today = new Date(); today.setHours(0,0,0,0);
-  const dueThis=active.filter(o=>{if(!o.shipDate)return false;const d=new Date(o.shipDate);return d>=thisMon&&d<nextMon;}).length;
-  const dueNext=active.filter(o=>{if(!o.shipDate)return false;const d=new Date(o.shipDate);return d>=nextMon&&d<twoMon;}).length;
-  const overdue=active.filter(o=>{if(!o.shipDate)return false;return new Date(o.shipDate)<today;}).length;
-  return(
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:10,marginBottom:4}}>
-      {[{l:"Active Orders",v:active.length},{l:"Due This Week",v:dueThis},{l:"Due Next Week",v:dueNext},{l:"Overdue",v:overdue}].map(k=>(
-        <div key={k.l} style={{padding:"14px 16px",background:DT.cardBg,borderRadius:DT.radius,border:`1px solid ${DT.border}`,boxShadow:DT.shadow}}>
-          <div style={{fontSize:10,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",color:DT.textFaint,fontFamily:DT.sans}}>{k.l}</div>
-          <div style={{fontSize:22,fontWeight:700,color:DT.textPrimary,fontFamily:DT.serif,marginTop:2,lineHeight:1.1}}>{k.v}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ━━━ READ-ONLY BADGE + REFRESH BUTTON ━━━━━━━━━━━━━━━━━━━━━━
-function relativeAge(syncedAt: string): string {
-  const ms = Date.now() - new Date(syncedAt).getTime();
-  const min = Math.floor(ms / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const d = Math.floor(hr / 24);
-  return `${d}d ago`;
-}
-
-function SourceIndicator({ syncedAt, source, mondayError }: { syncedAt: string; source: string; mondayError?: string }) {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  // tick is used to force re-render for age refresh
-  void tick;
-  const age = relativeAge(syncedAt);
-  const stale = source === "snapshot";
-  return (
-    <div title={mondayError ? `Monday error: ${mondayError}` : `Synced at ${syncedAt}`}
-      style={{fontSize:10,color:stale?"#d97706":DT.gold,fontFamily:DT.sans,marginTop:1,lineHeight:1.3}}>
-      Read-only mirror · Source: Monday.com · {stale ? "⚠ Stale — " : "Synced "}{age}
-    </div>
-  );
-}
-
-function RefreshButton() {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [err, setErr] = useState<string | null>(null);
-  const onClick = async () => {
-    setErr(null);
-    try {
-      const res = await fetch("/api/monday/refresh", { method: "POST", credentials: "include" });
-      const body = await res.json();
-      if (!body.ok) throw new Error(body.error || "Refresh failed");
-      startTransition(() => router.refresh());
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    }
-  };
-  return (
-    <div style={{display:"flex",alignItems:"center",gap:8}}>
-      {err && <span style={{fontSize:10,color:"#fca5a5",fontFamily:DT.sans}} title={err}>Refresh error</span>}
-      <button onClick={onClick} disabled={isPending}
-        style={{padding:"5px 12px",borderRadius:6,background:DT.gold,color:DT.headerBg,border:"none",fontWeight:700,fontSize:11,cursor:isPending?"wait":"pointer",fontFamily:DT.sans,letterSpacing:"0.02em",opacity:isPending?0.6:1}}>
-        {isPending ? "Refreshing…" : "Refresh from Monday"}
-      </button>
     </div>
   );
 }
@@ -376,41 +435,29 @@ export default function ProductionClient({ orders, syncedAt, source, mondayError
   const [showComplete, setShowComplete] = useState(false);
 
   const display = orders.map(toDisplayOrder);
-  // Single active list sorted by soonest ship date. Status (In Production /
+  // Single active list sorted by soonest due date. Status (In Production /
   // Not Started) is still visible per card via the StatusPill, but order is
   // driven purely by urgency so the most urgent job is always at the top.
   const active = display.filter((o) => !isComplete(o)).sort(sortByShipDate);
   const complete = display.filter(isComplete).sort(sortByShipDate);
 
   return (
-    <div style={{minHeight:"100vh",background:DT.pageBg,fontFamily:DT.sans}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet"/>
-      <header style={{position:"sticky",top:0,zIndex:100}}>
-        <div style={{background:DT.headerBg,padding:"0 24px",height:64,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div>
-            <div style={{fontSize:18,fontWeight:700,color:"#fff",fontFamily:DT.serif,lineHeight:1.2}}>Production Command Centre</div>
-            <div style={{fontSize:11,color:DT.gold,fontFamily:DT.sans,marginTop:1}}>{active.length} active orders</div>
-            <SourceIndicator syncedAt={syncedAt} source={source} mondayError={mondayError}/>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <Link href="/production/plan" style={{fontSize:11,color:"rgba(255,255,255,0.6)",textDecoration:"none",fontFamily:DT.sans,fontWeight:500}}>Plan →</Link>
-            <RefreshButton/>
-          </div>
-        </div>
-        <div style={{height:1,background:`linear-gradient(90deg, transparent 0%, ${DT.gold} 30%, ${DT.gold} 70%, transparent 100%)`,opacity:0.35}}/>
-      </header>
-      <main style={{maxWidth:1200,margin:"0 auto",padding:"20px 20px"}}>
-        <KpiStrip orders={display}/>
-        {active.length>0&&(<><SectionHeader icon="◉" label="Active · sorted by soonest ship date"/><div style={{display:"flex",flexDirection:"column",gap:10}}>{active.map(o=><OrderCard key={o.id} order={o}/>)}</div></>)}
-        {complete.length>0&&(<div style={{marginTop:24}}>
-          <button onClick={()=>setShowComplete(!showComplete)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,width:"100%"}}>
-            <span style={{fontSize:12,opacity:0.5}}>✓</span><span style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:DT.textFaint,fontFamily:DT.sans}}>{complete.length} completed</span><div style={{flex:1,height:1,background:"rgba(0,0,0,0.04)"}}/><span style={{fontSize:11,color:DT.textFaint,fontFamily:DT.sans,fontWeight:500}}>{showComplete?"Hide":"Show"}</span><span style={{fontSize:12,color:DT.textFaint,transition:"transform 0.2s",transform:showComplete?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
-          </button>
-          {showComplete&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:10}}>{complete.map(o=><OrderCard key={o.id} order={o}/>)}</div>}
-        </div>)}
-        {display.length===0&&<div style={{padding:"60px 20px",textAlign:"center",fontSize:13,color:DT.textFaint,fontFamily:DT.sans}}>No orders available. {mondayError && `(${mondayError})`}</div>}
-      </main>
-      <footer style={{textAlign:"center",padding:"20px",fontSize:10,color:"#ccc",fontFamily:DT.sans}}>Innate Production Command Centre · Monday.com data</footer>
-    </div>
+    <MissionControlShell
+      section="orders"
+      pageTitle="Orders"
+      pageSubtitle={`${active.length} active orders sorted by soonest due date`}
+      syncedAt={syncedAt}
+      source={source}
+      mondayError={mondayError}
+    >
+      {active.length>0&&(<><SectionHeader icon="◉" label="Active · sorted by soonest due date"/><div style={{display:"flex",flexDirection:"column",gap:10}}>{active.map(o=><OrderCard key={o.id} order={o}/>)}</div></>)}
+      {complete.length>0&&(<div style={{marginTop:24}}>
+        <button onClick={()=>setShowComplete(!showComplete)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0,width:"100%"}}>
+          <span style={{fontSize:12,opacity:0.5}}>✓</span><span style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.1em",color:DT.textFaint,fontFamily:DT.sans}}>{complete.length} completed</span><div style={{flex:1,height:1,background:"rgba(0,0,0,0.04)"}}/><span style={{fontSize:11,color:DT.textFaint,fontFamily:DT.sans,fontWeight:500}}>{showComplete?"Hide":"Show"}</span><span style={{fontSize:12,color:DT.textFaint,transition:"transform 0.2s",transform:showComplete?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+        </button>
+        {showComplete&&<div style={{marginTop:10,display:"flex",flexDirection:"column",gap:10}}>{complete.map(o=><OrderCard key={o.id} order={o}/>)}</div>}
+      </div>)}
+      {display.length===0&&<div style={{padding:"60px 20px",textAlign:"center",fontSize:13,color:DT.textFaint,fontFamily:DT.sans}}>No orders available. {mondayError && `(${mondayError})`}</div>}
+    </MissionControlShell>
   );
 }

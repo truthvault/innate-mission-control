@@ -1,5 +1,3 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import {
   buildDiningFreightPackages,
   roundCustomerFreightEstimate,
@@ -11,6 +9,7 @@ import {
   requestMainfreightRate,
   type MainfreightDestinationAddress,
 } from "@/lib/freight/mainfreightRate";
+import { writeQuoteEvent } from "@/lib/freight/quoteLog";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,8 +20,48 @@ const ALLOWED_ORIGINS = new Set([
   "https://innate-furniture.myshopify.com",
 ]);
 
-const LOG_DIR = path.join(process.cwd(), "data", "freight-estimates");
-const LOG_PATH = path.join(LOG_DIR, "quote-events.jsonl");
+const PINPOINT_LOCAL_DELIVERY_AREAS = [
+  {
+    area: "Area 4",
+    label: "Outer Canterbury local delivery",
+    customerPriceInclGst: 290,
+    places: ["rakaia", "methven", "hororata", "darfield", "sheffield", "oxford", "amberley"],
+  },
+  {
+    area: "Area 3",
+    label: "Canterbury local delivery",
+    customerPriceInclGst: 210,
+    places: ["diamond harbour", "southbridge", "south bridge", "leeston", "west melton", "kirwee", "cust", "leithfield"],
+  },
+  {
+    area: "Area 2",
+    label: "Greater Christchurch local delivery",
+    customerPriceInclGst: 170,
+    places: [
+      "lyttelton",
+      "lyttleton",
+      "corsair bay",
+      "corsia bay",
+      "cass bay",
+      "rapaki",
+      "governors bay",
+      "governers bay",
+      "tai tapu",
+      "lincoln",
+      "rolleston",
+      "ohoka",
+      "rangiora",
+      "pegasus",
+      "kaiapoi",
+    ],
+  },
+] as const;
+
+const PINPOINT_CHRISTCHURCH_METRO = {
+  area: "Area 1",
+  label: "Christchurch metro local delivery",
+  customerPriceInclGst: 150,
+} as const;
 
 type EstimateRequestBody = {
   productHandle?: unknown;
@@ -36,6 +75,8 @@ type EstimateRequestBody = {
   variantId?: unknown;
   variantTitle?: unknown;
   source?: unknown;
+  addressEntered?: unknown;
+  formattedAddress?: unknown;
 };
 
 type EstimateResult = {
@@ -129,12 +170,31 @@ function parseDestination(value: unknown): MainfreightDestinationAddress {
   };
 }
 
-function isChristchurchDestination(destination: MainfreightDestinationAddress): boolean {
-  const haystack = `${destination.city || ""} ${destination.suburb || ""} ${destination.postCode || ""}`.toLowerCase();
-  if (haystack.includes("christchurch")) return true;
+function normaliseLocation(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function getPinpointLocalDelivery(destination: MainfreightDestinationAddress):
+  | { area: string; label: string; customerPriceInclGst: number }
+  | undefined {
+  const haystack = normaliseLocation(`${destination.suburb || ""} ${destination.city || ""} ${destination.postCode || ""}`);
+
+  for (const localArea of PINPOINT_LOCAL_DELIVERY_AREAS) {
+    if (localArea.places.some((place) => haystack.includes(normaliseLocation(place)))) {
+      return {
+        area: localArea.area,
+        label: localArea.label,
+        customerPriceInclGst: localArea.customerPriceInclGst,
+      };
+    }
+  }
 
   const postcode = destination.postCode ? Number(destination.postCode) : NaN;
-  return Number.isFinite(postcode) && postcode >= 8000 && postcode <= 8999;
+  if (haystack.includes("christchurch") || (Number.isFinite(postcode) && postcode >= 8000 && postcode <= 8099)) {
+    return PINPOINT_CHRISTCHURCH_METRO;
+  }
+
+  return undefined;
 }
 
 function publicPackageLines(lines: ReturnType<typeof buildDiningFreightPackages>["lines"]) {
@@ -151,13 +211,8 @@ function publicPackageLines(lines: ReturnType<typeof buildDiningFreightPackages>
   }));
 }
 
-async function logQuoteEvent(event: Record<string, unknown>) {
-  try {
-    await fs.mkdir(LOG_DIR, { recursive: true });
-    await fs.appendFile(LOG_PATH, `${JSON.stringify({ timestamp: new Date().toISOString(), ...event })}\n`, "utf8");
-  } catch (err) {
-    console.warn("[freight] quote-event logging failed", err);
-  }
+async function logQuoteEvent(event: Parameters<typeof writeQuoteEvent>[0]) {
+  await writeQuoteEvent(event);
 }
 
 async function estimateFromBody(body: EstimateRequestBody, request: Request, started: number): Promise<EstimateResult> {
@@ -168,15 +223,21 @@ async function estimateFromBody(body: EstimateRequestBody, request: Request, sta
   const baseFamily = parseBaseFamily(body.baseFamily);
   const destination = parseDestination(body.destination);
   const dryRun = body.dryRun === true || body.dryRun === "true";
-  const isChristchurch = isChristchurchDestination(destination);
+  const localDelivery = getPinpointLocalDelivery(destination);
+  const isChristchurch = Boolean(localDelivery);
+  const formattedAddress = optionalString(body.formattedAddress);
+  const addressEntered = optionalString(body.addressEntered) || formattedAddress;
+  const logDestination: MainfreightDestinationAddress & { formattedAddress?: string } = { ...destination };
+  if (formattedAddress) logDestination.formattedAddress = formattedAddress;
   const requestMeta = {
     productHandle,
     tableLengthMm,
     tableWidthMm,
     benchCount,
     baseFamily,
-    destination,
+    destination: logDestination,
     source: optionalString(body.source),
+    addressEntered,
     pageUrl: optionalString(body.pageUrl),
     variantId: optionalString(body.variantId),
     variantTitle: optionalString(body.variantTitle),
@@ -206,6 +267,29 @@ async function estimateFromBody(body: EstimateRequestBody, request: Request, sta
       elapsedMs: Date.now() - started,
     };
     await logQuoteEvent({ ...requestMeta, status: "dry_run", result });
+    return { status: 200, body: result };
+  }
+
+  if (localDelivery) {
+    const result = {
+      ok: true,
+      label: localDelivery.label,
+      estimateInclGst: localDelivery.customerPriceInclGst,
+      currency: "NZD",
+      caveat: `${localDelivery.area} flat-rate delivery via Pinpoint / local delivery.`,
+      manualCheckOffered: false,
+      rawMainfreightInclGst: null,
+      rawMainfreightExGst: null,
+      localDeliveryProvider: "Pinpoint / local delivery",
+      localDeliveryArea: localDelivery.area,
+      isChristchurch,
+      productHandle,
+      destination,
+      packageLines: publicPackageLines(packageResult.lines),
+      totals: packageResult.totals,
+      elapsedMs: Date.now() - started,
+    };
+    await logQuoteEvent({ ...requestMeta, status: "estimated", result });
     return { status: 200, body: result };
   }
 
@@ -283,6 +367,8 @@ function bodyFromSearchParams(url: URL): EstimateRequestBody {
     variantId: url.searchParams.get("variantId") || undefined,
     variantTitle: url.searchParams.get("variantTitle") || undefined,
     source: url.searchParams.get("source") || "shopify_theme_jsonp",
+    addressEntered: url.searchParams.get("addressEntered") || undefined,
+    formattedAddress: url.searchParams.get("formattedAddress") || undefined,
     destination,
   };
 }
@@ -326,7 +412,10 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const callback = safeCallbackName(url.searchParams.get("callback"));
     const result = await estimateFromBody(bodyFromSearchParams(url), request, started);
-    return javascriptResponse(`${callback}(${JSON.stringify(result.body)});`, result.status);
+    // JSONP script tags fire `onerror` on non-2xx statuses, which hides the
+    // useful manual-check message from the storefront. Always return 200 for
+    // JSONP transport and put success/failure in the payload.
+    return javascriptResponse(`${callback}(${JSON.stringify(result.body)});`, 200);
   } catch (err) {
     const callback = "innateFreightEstimateCallback";
     const body = {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
-type Owner = 'Guido' | 'Dylan';
+type Owner = 'Commercial' | 'Asset pipeline';
 type Lane = 'Now' | 'Next' | 'Later' | 'Blocked / Decisions';
 type Priority = 'High' | 'Medium' | 'Low';
 type Tone = 'stone' | 'amber' | 'green' | 'red' | 'charcoal';
@@ -54,7 +54,7 @@ const milestones: Milestone[] = [
     id: 'mission-control',
     title: 'Visual mission control',
     eyebrow: 'Dashboard',
-    description: 'A beautiful control board Guido can actually use, not another markdown crypt full of TODO bones.',
+    description: 'A practical control board the team can actually use, not another markdown crypt full of TODO bones.',
     checklist: [
       {
         id: 'dashboard-route',
@@ -65,7 +65,7 @@ const milestones: Milestone[] = [
       {
         id: 'dashboard-live',
         label: 'Deploy dashboard to Vercel',
-        why: 'Lets Dylan and Guido use the same visual plan without new software.',
+        why: 'Lets the team use the same visual plan without new software.',
         done: true,
       },
       {
@@ -164,8 +164,8 @@ const milestones: Milestone[] = [
 
 const personTasks: PersonTask[] = [
   {
-    id: 'guido-product-choice',
-    owner: 'Guido',
+    id: 'commercial-product-choice',
+    owner: 'Commercial',
     title: 'Choose the first public configurator product',
     why: 'The build needs one hero path. Choice paralysis is not a business model, sadly.',
     how: 'Use Totara Crossroads as the first public hero configurator product. This is now decided.',
@@ -174,8 +174,8 @@ const personTasks: PersonTask[] = [
     notes: 'Decision made: first product is Totara Crossroads / Crossroads.'
   },
   {
-    id: 'guido-pricing',
-    owner: 'Guido',
+    id: 'commercial-pricing',
+    owner: 'Commercial',
     title: 'Use current website listing pricing',
     why: 'The prototype should reflect the pricing customers already see instead of inventing a new formula.',
     how: 'Use the current website listings as the source of truth for Crossroads pricing logic. Pull exact values from the live product/listing data when wiring the configurator.',
@@ -184,8 +184,8 @@ const personTasks: PersonTask[] = [
     notes: 'Pricing source confirmed: current website listings. Do not use an invented formula.'
   },
   {
-    id: 'guido-cta',
-    owner: 'Guido',
+    id: 'commercial-cta',
+    owner: 'Commercial',
     title: 'Approve the primary CTA',
     why: 'The first page should generate leads, not pretend custom dining tables are one-click commodities.',
     how: 'Use “Start custom quote” as primary unless you strongly prefer “Book a design chat”.',
@@ -194,8 +194,8 @@ const personTasks: PersonTask[] = [
     notes: 'Approved Start custom quote'
   },
   {
-    id: 'guido-proof',
-    owner: 'Guido',
+    id: 'commercial-proof',
+    owner: 'Commercial',
     title: 'Pick 3–5 proof assets',
     why: 'Beautiful 3D without trust proof is just a shiny screensaver.',
     how: 'Find one hero photo, one close-up, one customer home shot, one strong review, and one timber/provenance image if available.',
@@ -204,8 +204,8 @@ const personTasks: PersonTask[] = [
     notes: ''
   },
   {
-    id: 'dylan-model',
-    owner: 'Dylan',
+    id: 'asset-model',
+    owner: 'Asset pipeline',
     title: 'Model/clean Reverse Angled Steel frame',
     why: 'This is the most useful second leg style while timber texture photos are still missing.',
     how: 'Create or clean the frame/table model using real proportions. Do not spend the afternoon inventing timber variants from vibes.',
@@ -214,8 +214,8 @@ const personTasks: PersonTask[] = [
     notes: ''
   },
   {
-    id: 'dylan-naming',
-    owner: 'Dylan',
+    id: 'asset-naming',
+    owner: 'Asset pipeline',
     title: 'Use web-friendly object names',
     why: 'Clean names make future code/configuration easier and stop the GLB becoming haunted spaghetti.',
     how: 'Use names like table_top, table_sides, frame_reverse_angled_steel, feet.',
@@ -224,8 +224,8 @@ const personTasks: PersonTask[] = [
     notes: ''
   },
   {
-    id: 'dylan-dimensions',
-    owner: 'Dylan',
+    id: 'asset-dimensions',
+    owner: 'Asset pipeline',
     title: 'Record real dimensions and frame rules',
     why: 'The configurator needs actual dimensions to scale length properly and not lie to customers.',
     how: 'Record default length, width, height, top thickness, frame dimensions, frame position from ends, and whether frame position changes with length.',
@@ -234,8 +234,8 @@ const personTasks: PersonTask[] = [
     notes: ''
   },
   {
-    id: 'dylan-export',
-    owner: 'Dylan',
+    id: 'asset-export',
+    owner: 'Asset pipeline',
     title: 'Export GLB and screenshots',
     why: 'Hermes can inspect, validate, optimise, and wire the asset only once there is a clean export.',
     how: 'Export Reverse_Angled_Steel_MASTER.glb and WEB.glb, plus front, side, underside/frame, and top screenshots.',
@@ -247,7 +247,7 @@ const personTasks: PersonTask[] = [
 
 const boardTasks: BoardTask[] = [
   {
-    title: 'This afternoon: Guido + Dylan task columns',
+    title: 'This afternoon: two clear task lanes',
     description: 'Ticking tasks updates personal and overall progress. Local state for now; shared persistence can come next.',
     owner: 'Hermes',
     lane: 'Now',
@@ -255,35 +255,35 @@ const boardTasks: BoardTask[] = [
   },
   {
     title: 'Reverse Angled Steel asset',
-    description: 'Dylan creates the second frame style with clean object names, dimensions, screenshots, and GLB export notes.',
-    owner: 'Dylan',
+    description: 'Prepare the second frame style with clean object names, dimensions, screenshots, and GLB export notes.',
+    owner: 'Asset pipeline',
     lane: 'Now',
     priority: 'High',
   },
   {
     title: 'Length + pricing source',
     description: 'Pricing source is the current website listings. Next coding step is to pull exact Crossroads values into the prototype.',
-    owner: 'Guido',
+    owner: 'Commercial',
     lane: 'Now',
     priority: 'High',
   },
   {
     title: 'Prototype 3D configurator',
     description: 'Build procedural tabletop + GLB frame/base with a length slider, estimate, and quote CTA.',
-    owner: 'Hermes / Qwen / Codex',
+    owner: 'Build support',
     lane: 'Next',
     priority: 'High',
   },
   {
     title: 'Timber variants',
     description: 'Park until better timber photography/textures exist. Otherwise we are painting the dragon before owning a horse.',
-    owner: 'Dylan',
+    owner: 'Asset pipeline',
     lane: 'Later',
     priority: 'Low',
   },
   {
     title: 'Shared task persistence',
-    description: 'If Guido and Dylan need shared live checkboxes, add a tiny database/API next. Current ticks are browser-local.',
+    description: 'If the team needs shared live checkboxes, add a tiny database/API next. Current ticks are browser-local.',
     owner: 'Decision',
     lane: 'Blocked / Decisions',
     priority: 'Medium',
@@ -300,12 +300,12 @@ const decisions: Decision[] = [
   {
     title: 'Procedural tabletop + GLB frame/base',
     chosen: 'Hybrid 3D approach',
-    why: 'A GLB alone is not parametric. Procedural tabletop geometry lets length change properly while reusing Dylan’s frame assets.',
+    why: 'A GLB alone is not parametric. Procedural tabletop geometry lets length change properly while reusing the frame assets.',
     next: 'Prototype one length slider with a real frame model and repeatable timber texture behaviour.',
   },
   {
     title: 'Reverse Angled Steel next',
-    chosen: 'Dylan works on the frame, not more timbers',
+    chosen: 'Frame asset first, not more timbers',
     why: 'Other timber variants are blocked by missing photos/textures. A second leg style is useful immediately.',
     next: 'Export clean GLB + source file + screenshots + dimensions.',
   },
@@ -482,7 +482,7 @@ export default function ConfiguratorDashboard() {
     return { ...milestone, completed, total: milestone.checklist.length, progress: percent(completed, milestone.checklist.length) };
   });
 
-  const people = (['Guido', 'Dylan'] as Owner[]).map((owner) => {
+  const people = (['Commercial', 'Asset pipeline'] as Owner[]).map((owner) => {
     const tasks = personTasks.filter((task) => task.owner === owner);
     const completed = tasks.filter((task) => isChecked(task.id, task.done)).length;
     return { owner, tasks, completed, total: tasks.length, progress: percent(completed, tasks.length) };
@@ -507,7 +507,7 @@ export default function ConfiguratorDashboard() {
         <div className="relative mx-auto flex w-full flex-col gap-5 px-4 py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-4xl">
             <div className="mb-3 flex flex-wrap gap-2">
-              <Pill tone="amber">Innate Mission Control</Pill>
+              <Pill tone="amber">Tuesday</Pill>
               <Pill tone="green">Live dashboard</Pill>
               <Pill tone="charcoal">Dining table configurator</Pill>
             </div>
@@ -528,7 +528,7 @@ export default function ConfiguratorDashboard() {
             <div className="mt-3">
               <ProgressBar value={overallProgress} large />
             </div>
-            <p className="mt-2 text-xs leading-5 text-[#e7d2b7]">Ticks update this number instantly and save on this browser. Shared Guido/Dylan syncing is the next upgrade if useful.</p>
+            <p className="mt-2 text-xs leading-5 text-[#e7d2b7]">Ticks update this number instantly and save on this browser. Shared team syncing is the next upgrade if useful.</p>
           </div>
         </div>
       </section>
@@ -562,7 +562,7 @@ export default function ConfiguratorDashboard() {
           {[
             ['Core strategy', 'Lead-gen first'],
             ['Hero asset', 'Totara Crossroads'],
-            ['Dylan focus', 'Reverse Angled Steel'],
+            ['Asset focus', 'Reverse Angled Steel'],
             ['Tech bet', 'Procedural top + GLB frame'],
           ].map(([label, value]) => (
             <div key={label} className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-5 shadow-sm backdrop-blur">
@@ -576,7 +576,7 @@ export default function ConfiguratorDashboard() {
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-[#9a6a2e]">This afternoon</p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">Two clear lanes: Guido and Dylan</h2>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">Two clear lanes: commercial and asset pipeline</h2>
               <p className="mt-3 max-w-3xl text-stone-700">Tick these as you go. Each column has its own progress, and every tick contributes to the overall project progress.</p>
             </div>
             <Pill tone="amber">Next best work, not busywork</Pill>
@@ -589,7 +589,7 @@ export default function ConfiguratorDashboard() {
                   <div>
                     <h3 className="text-2xl font-black">{person.owner}</h3>
                     <p className="mt-1 text-sm font-semibold text-stone-600">
-                      {person.owner === 'Guido' ? 'Decisions, pricing, proof, sales truth.' : '3D asset pipeline and clean Reverse Angled Steel export.'}
+                      {person.owner === 'Commercial' ? 'Decisions, pricing, proof, sales truth.' : '3D asset pipeline and clean Reverse Angled Steel export.'}
                     </p>
                   </div>
                   <div className="text-right">

@@ -1,15 +1,16 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { AUTH_COOKIE_MAX_AGE_SECONDS, AUTH_COOKIE_NAME, createAuthCookieValue } from "@/lib/tuesday/auth";
 
 async function login(formData: FormData) {
   "use server";
   const password = formData.get("password") as string;
   if (password === process.env.SITE_PASSWORD) {
-    (await cookies()).set("innate-auth", "authenticated", {
+    (await cookies()).set(AUTH_COOKIE_NAME, await createAuthCookieValue(), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
     });
     redirect("/");
   } else {
@@ -25,12 +26,15 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
+    <div className="min-h-screen flex items-center justify-center bg-[#f8f5ee]">
       <form
         action={login}
-        className="bg-white rounded-xl shadow-sm border border-black/5 p-8 w-full max-w-sm space-y-4"
+        className="bg-[#fffdf9] rounded-2xl shadow-sm border border-[#2c2520]/10 p-8 w-full max-w-sm space-y-4"
       >
-        <h1 className="font-semibold text-lg text-center">Production Command Centre</h1>
+        <div className="text-center space-y-1">
+          <h1 className="font-bold text-2xl tracking-[-0.04em] text-[#2c2520]">Tuesday</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#81766c]">by Innate</p>
+        </div>
         {error && (
           <p className="text-red-500 text-sm text-center">Wrong password.</p>
         )}
@@ -40,11 +44,11 @@ export default async function LoginPage({
           placeholder="Password"
           autoFocus
           required
-          className="w-full px-3 py-2 rounded-lg border border-black/10 text-sm focus:outline-none focus:ring-2 focus:ring-black/20"
+          className="w-full px-3 py-2 rounded-xl border border-[#2c2520]/10 text-sm focus:outline-none focus:ring-2 focus:ring-[#4f5fa8]/25"
         />
         <button
           type="submit"
-          className="w-full py-2 rounded-lg bg-[#1a1a1a] text-white text-sm font-medium hover:bg-black transition-colors"
+          className="w-full py-2 rounded-xl bg-[#4f5fa8] text-white text-sm font-semibold hover:bg-[#465493] transition-colors"
         >
           Enter
         </button>

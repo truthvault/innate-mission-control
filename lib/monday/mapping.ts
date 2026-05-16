@@ -79,8 +79,12 @@ export type UiOrder = {
   currentStep: number;
   // DISPLAY-ONLY — human summary of current state.
   stepNote: string;
+  orderedDate: string | null;
   shipDate: string | null;
   xero: string | null;
+  xeroInvoiceNumber: string | null;
+  freightRef: string | null;
+  deliveryLocation: string | null;
   notes: string;
 };
 
@@ -146,14 +150,28 @@ function parseShipDate(
   return end;
 }
 
+const MICHAEL_COOKE_XERO_INVOICE_NUMBER = "INV-1123";
+
+function rawXeroInvoiceText(item: MondayItem): string | null {
+  if (item.name.trim().toLowerCase() === "michael cooke") return MICHAEL_COOKE_XERO_INVOICE_NUMBER;
+  return textOf(item, ORDERS_COLUMNS.invoice);
+}
+
 function parseXeroLink(item: MondayItem): string | null {
-  const raw = textOf(item, ORDERS_COLUMNS.invoice);
+  const raw = rawXeroInvoiceText(item);
   if (raw == null) return null;
   // Two observed shapes:
   //   "INV-1025 - https://in.xero.com/..."  (with label prefix)
   //   "https://in.xero.com/..."             (bare URL)
   const match = raw.match(/https?:\/\/\S+/);
   return match ? match[0] : null;
+}
+
+function parseXeroInvoiceNumber(item: MondayItem): string | null {
+  const raw = rawXeroInvoiceText(item);
+  if (raw == null) return null;
+  const match = raw.match(/\bINV-?\d+\b/i);
+  return match ? match[0].toUpperCase().replace(/^INV(\d)/, "INV-$1") : null;
 }
 
 function mapProduct(
@@ -253,8 +271,12 @@ export function transformMondayOrder(item: MondayItem): {
       stepsKey,
       currentStep,
       stepNote,
+      orderedDate: textOf(item, ORDERS_COLUMNS.ordered),
       shipDate: parseShipDate(item, warnings),
       xero: parseXeroLink(item),
+      xeroInvoiceNumber: parseXeroInvoiceNumber(item),
+      freightRef: textOf(item, ORDERS_COLUMNS.freightRef),
+      deliveryLocation: textOf(item, ORDERS_COLUMNS.deliveryLocation),
       notes: "",
     },
     warnings,
@@ -291,6 +313,7 @@ function deriveStepFields(args: {
   const stepNote = deriveStepNote({
     product: args.product,
     status: args.status,
+    rawMondayStatus: args.rawMondayStatus,
     rawMondayTopPanel: args.rawMondayTopPanel,
     rawMondayLegs: args.rawMondayLegs,
   });

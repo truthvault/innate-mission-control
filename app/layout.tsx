@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { Figtree, Poppins } from "next/font/google";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const figtree = Figtree({
   subsets: ["latin"],
   variable: "--font-sans",
 });
 
-const fraunces = Fraunces({
+const poppins = Poppins({
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
   variable: "--font-display",
 });
 
 export const metadata: Metadata = {
-  title: "Production Command Centre — Innate",
-  description: "Live production tracker for Innate",
+  title: "Tuesday — Innate",
+  description: "A calmer read-only production mirror for Innate",
 };
 
 export default function RootLayout({
@@ -23,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
+    <html lang="en" className={`${figtree.variable} ${poppins.variable}`}>
       <body>{children}</body>
     </html>
   );

@@ -43,7 +43,7 @@ const cachedFetch = unstable_cache(
     const result = await fetchAndTransform();
     return { ...result, source: "cache" };
   },
-  ["monday-orders-v1"],
+  ["monday-orders-v2"],
   {
     tags: [ORDERS_CACHE_TAG],
     revalidate: CACHE_REVALIDATE_SECONDS,

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME, isValidAuthCookie } from "@/lib/tuesday/auth";
 
-export function middleware(request: NextRequest) {
-  const auth = request.cookies.get("innate-auth")?.value;
-  if (auth === "authenticated") {
+export async function middleware(request: NextRequest) {
+  const auth = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  if (await isValidAuthCookie(auth)) {
     return NextResponse.next();
   }
   const loginUrl = new URL("/login", request.url);

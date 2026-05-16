@@ -12,6 +12,15 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+
+    // Local agent/runtime and audit artifacts. They are kept out of Vercel
+    // deployments too, and should not influence app lint health.
+    ".hermes/**",
+    "backups/**",
+    "reference/**",
+    "seo/**",
+    "tmp_*.js",
+    "tmp_*.py",
   ]),
 ]);
 

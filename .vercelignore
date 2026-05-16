@@ -1,0 +1,27 @@
+# Keep production deployments focused on the Next.js app.
+# Vercel also respects some default ignores, but these make the boundary explicit.
+
+# Local agent/runtime state
+.hermes/
+.vercel/
+
+# Local caches
+.next/
+node_modules/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.tsbuildinfo
+.DS_Store
+
+# Environment/secrets
+.env
+.env.*
+*.pem
+
+# One-off local audit/proof/backup artifacts
+tmp_*.js
+tmp_*.py
+backups/
+reference/
+seo/

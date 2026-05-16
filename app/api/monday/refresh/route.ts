@@ -13,14 +13,15 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getOrdersFresh, ORDERS_CACHE_TAG } from "@/lib/monday/fetch-orders";
 import { getPlanFresh, PLAN_CACHE_TAG } from "@/lib/monday/fetch-plan";
+import { getSampleStockFresh, SAMPLE_STOCK_CACHE_TAG } from "@/lib/monday/fetch-sample-stock";
 
 export const dynamic = "force-dynamic";
 
-type Scope = "orders" | "plan" | "all";
+type Scope = "orders" | "plan" | "samples" | "all";
 
 function parseScope(url: URL): Scope {
   const raw = url.searchParams.get("scope");
-  if (raw === "orders" || raw === "plan") return raw;
+  if (raw === "orders" || raw === "plan" || raw === "samples") return raw;
   return "all";
 }
 
@@ -43,12 +44,14 @@ export async function GET(request: Request) {
   try {
     const wantOrders = scope === "orders" || scope === "all";
     const wantPlan = scope === "plan" || scope === "all";
+    const wantSamples = scope === "samples" || scope === "all";
 
-    const [orders, plan] = await Promise.all([
+    const [orders, plan, samples] = await Promise.all([
       wantOrders
         ? getOrdersFresh({ writeSnapshot: false })
         : Promise.resolve(null),
       wantPlan ? getPlanFresh({ writeSnapshot: false }) : Promise.resolve(null),
+      wantSamples ? getSampleStockFresh({ writeSnapshot: false }) : Promise.resolve(null),
     ]);
 
     return Response.json({
@@ -67,6 +70,15 @@ export async function GET(request: Request) {
         syncedAt: plan.syncedAt,
         rowCount: plan.rows.length,
         rows: plan.rows,
+      },
+      samples: samples && {
+        syncedAt: samples.syncedAt,
+        boardId: samples.board?.boardId,
+        cellCount: samples.board?.cells.length ?? 0,
+        total: samples.board?.summary.total ?? 0,
+        outCount: samples.board?.summary.outCount ?? 0,
+        lowCount: samples.board?.summary.lowCount ?? 0,
+        board: samples.board,
       },
     });
   } catch (err) {
@@ -90,10 +102,12 @@ export async function POST(request: Request) {
   try {
     const wantOrders = scope === "orders" || scope === "all";
     const wantPlan = scope === "plan" || scope === "all";
+    const wantSamples = scope === "samples" || scope === "all";
 
-    const [orders, plan] = await Promise.all([
+    const [orders, plan, samples] = await Promise.all([
       wantOrders ? getOrdersFresh({ writeSnapshot: true }) : Promise.resolve(null),
       wantPlan ? getPlanFresh({ writeSnapshot: true }) : Promise.resolve(null),
+      wantSamples ? getSampleStockFresh({ writeSnapshot: true }) : Promise.resolve(null),
     ]);
 
     if (wantOrders) {
@@ -104,11 +118,15 @@ export async function POST(request: Request) {
       revalidateTag(PLAN_CACHE_TAG, "max");
       revalidatePath("/production/plan");
     }
+    if (wantSamples) {
+      revalidateTag(SAMPLE_STOCK_CACHE_TAG, "max");
+      revalidatePath("/production/samples");
+    }
 
     console.log(
       `[monday] Manual refresh complete — scope=${scope} orders=${
         orders?.items.length ?? "skip"
-      } plan=${plan?.rows.length ?? "skip"} elapsed=${Date.now() - started}ms`
+      } plan=${plan?.rows.length ?? "skip"} samples=${samples?.board?.cells.length ?? "skip"} elapsed=${Date.now() - started}ms`
     );
 
     return Response.json({
@@ -123,6 +141,14 @@ export async function POST(request: Request) {
       plan: plan && {
         syncedAt: plan.syncedAt,
         rowCount: plan.rows.length,
+      },
+      samples: samples && {
+        syncedAt: samples.syncedAt,
+        boardId: samples.board?.boardId,
+        cellCount: samples.board?.cells.length ?? 0,
+        total: samples.board?.summary.total ?? 0,
+        outCount: samples.board?.summary.outCount ?? 0,
+        lowCount: samples.board?.summary.lowCount ?? 0,
       },
     });
   } catch (err) {

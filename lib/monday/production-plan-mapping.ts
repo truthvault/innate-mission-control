@@ -19,19 +19,21 @@ export const PLAN_COLUMNS = {
   notes: "long_text_mkwe3bs4",
   linkedOrders: "connect_boards__1",
   lastUpdated: "pulse_updated_mm0wzeh7",
-  // 4 days × 2 people, each cell a free-text column.
+  // 5 days × 2 people, each cell a free-text column.
   days: {
     monday: { nick: "text_mkwexq19", dylan: "text_mkwe44bc" },
     tuesday: { nick: "text_mkwe54gw", dylan: "text_mkwe2vqg" },
     wednesday: { nick: "text_mky6fdym", dylan: "text_mky67jq5" },
     thursday: { nick: "text_mkyejh95", dylan: "text_mkye6mpw" },
+    // Friday has no source columns on the current board yet. Keep it visible in the app so the week view matches the workshop week.
+    friday: { nick: null, dylan: null },
   },
 } as const;
 
 export type DayKey = keyof typeof PLAN_COLUMNS.days;
 export type Person = "nick" | "dylan";
 
-export const DAYS: readonly DayKey[] = ["monday", "tuesday", "wednesday", "thursday"];
+export const DAYS: readonly DayKey[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 export const PEOPLE: readonly Person[] = ["nick", "dylan"];
 
 /** A `connect_boards__1` entry as returned by Monday. */
@@ -57,9 +59,11 @@ export type PlanRow = {
   /**
    * True when at least one linked order's board matches MONDAY_ORDERS_BOARD_ID
    * (i.e. it IS in our Phase 1 sync). Used to decide whether to render as a
-   * clickable cross-link or plain text per Guido's rule.
+   * clickable cross-link or plain text when safe.
    */
   hasAppLinkedOrder: boolean;
+  /** The linked Orders-board row when it is part of Mission Control's Orders sync. */
+  appLinkedOrder: PlanLinkedOrder | null;
 };
 
 export type DayTask = {
@@ -75,7 +79,8 @@ export type DayTask = {
 
 export type PlanGrid = Record<DayKey, Record<Person, DayTask[]>>;
 
-function columnText(item: MondayItem, columnId: string): string | null {
+function columnText(item: MondayItem, columnId: string | null): string | null {
+  if (!columnId) return null;
   const col = item.column_values.find((c) => c.id === columnId);
   const raw = col?.text?.trim();
   return raw ? raw : null;
@@ -95,9 +100,10 @@ export function transformPlanItem(
 ): PlanRow {
   const linkedOrders = linkedByItemId.get(item.id) ?? [];
   const ordersBoardId = process.env.MONDAY_ORDERS_BOARD_ID;
-  const hasAppLinkedOrder = ordersBoardId
-    ? linkedOrders.some((l) => l.boardId === ordersBoardId)
-    : false;
+  const appLinkedOrder = ordersBoardId
+    ? linkedOrders.find((l) => l.boardId === ordersBoardId) ?? null
+    : null;
+  const hasAppLinkedOrder = Boolean(appLinkedOrder);
 
   const dayTasks: PlanRow["dayTasks"] = {
     monday: {
@@ -116,6 +122,10 @@ export function transformPlanItem(
       nick: columnText(item, PLAN_COLUMNS.days.thursday.nick),
       dylan: columnText(item, PLAN_COLUMNS.days.thursday.dylan),
     },
+    friday: {
+      nick: columnText(item, PLAN_COLUMNS.days.friday.nick),
+      dylan: columnText(item, PLAN_COLUMNS.days.friday.dylan),
+    },
   };
 
   return {
@@ -131,11 +141,12 @@ export function transformPlanItem(
     dayTasks,
     linkedOrders,
     hasAppLinkedOrder,
+    appLinkedOrder,
   };
 }
 
 /**
- * Collapse a flat list of PlanRows for a single week into a 4-days × 2-people grid
+ * Collapse a flat list of PlanRows for a single week into a 5-days × 2-people week view
  * of DayTasks. Rows without any day-column content are not represented in the grid
  * (they remain visible only in the list view).
  */
@@ -146,6 +157,7 @@ export function derivePlanGrid(rowsForOneWeek: PlanRow[]): PlanGrid {
     tuesday: { nick: [], dylan: [] },
     wednesday: { nick: [], dylan: [] },
     thursday: { nick: [], dylan: [] },
+    friday: { nick: [], dylan: [] },
   };
 
   for (const row of rowsForOneWeek) {

@@ -53,7 +53,7 @@ export default function TodayPage() {
           color: "var(--text-main)",
           marginBottom: 28,
         }}>
-          Dylan&apos;s tasks
+          Workshop tasks
         </h1>
 
         {/* Task cards */}

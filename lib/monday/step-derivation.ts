@@ -7,7 +7,7 @@
  * underlying state is always inspectable.
  *
  * The source of truth is Monday.com. This function is a best-effort translation
- * into the existing app's step-timeline UI so Dylan/Nick get a clean visual.
+ * into the existing app's step-timeline UI so the workshop gets a clean visual.
  * When derivation is ambiguous, the function picks a safe default and logs a
  * warning via the onUnknown callback.
  */
@@ -100,12 +100,16 @@ function computePanelStep(args: DeriveArgs): number {
 export function deriveStepNote(args: {
   product: "Table" | "Panel" | "Other";
   status: "Not Started" | "In Production" | "Finished" | "Collected";
+  rawMondayStatus: string | null;
   rawMondayTopPanel: string | null;
   rawMondayLegs: string | null;
 }): string {
   if (args.status === "Collected") return "Collected";
   if (args.status === "Finished") return "Shipped";
-  if (args.status === "Not Started") return "Awaiting order confirmation";
+  if (args.rawMondayStatus === "Materials Ordered") return "Waiting on materials";
+  if (args.rawMondayStatus === "To Process") return "Ready to process";
+  if (args.rawMondayStatus === "Quoting") return "Quote / order not yet confirmed";
+  if (args.status === "Not Started") return "Waiting to start";
 
   const top = args.rawMondayTopPanel;
   if (top === "Repair") return "In repair";
