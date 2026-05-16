@@ -92,6 +92,28 @@ const DAY_LABELS: Record<DayKey, string> = {
 };
 const PERSON_LABELS: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_SHORT: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
+const PERSON_VISUALS: Record<Person, { stripe: string; stripeMuted: string; text: string; laneBg: string; laneBorder: string; taskBg: string; taskBorder: string; taskSoft: string }> = {
+  nick: {
+    stripe: "#b8893d",
+    stripeMuted: "#c6a978",
+    text: "#7b5a24",
+    laneBg: "rgba(200,169,110,0.085)",
+    laneBorder: "rgba(184,137,61,0.30)",
+    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(200,169,110,0.095))",
+    taskBorder: "rgba(184,137,61,0.22)",
+    taskSoft: "rgba(200,169,110,0.12)",
+  },
+  dylan: {
+    stripe: "#2f8f8a",
+    stripeMuted: "#8fbebb",
+    text: "#287572",
+    laneBg: "rgba(12,124,122,0.075)",
+    laneBorder: "rgba(12,124,122,0.28)",
+    taskBg: "linear-gradient(135deg, rgba(247,251,250,0.98), rgba(12,124,122,0.10))",
+    taskBorder: "rgba(12,124,122,0.20)",
+    taskSoft: "rgba(12,124,122,0.11)",
+  },
+};
 const CAPACITY_STYLES = {
   ok: { color: "#3f6f3f", bg: "rgba(63,111,63,0.09)", border: "rgba(63,111,63,0.22)", label: "OK" },
   watch: { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
@@ -833,7 +855,7 @@ function NewOrderRailCard({
 }) {
   if (!order) return null;
   return (
-    <div style={{ marginBottom: 8, border: `1px solid ${newOrderPalette.clayBorder}`, borderLeft: `4px solid ${newOrderPalette.clayStripe}`, background: newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: "0 1px 4px rgba(154,82,49,0.06)" }}>
+    <div style={{ marginBottom: 8, border: `1px solid ${newOrderPalette.clayBorder}`, borderLeft: "4px solid " + newOrderPalette.clayStripe, background: newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: "0 1px 4px rgba(154,82,49,0.06)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: newOrderPalette.clayAccent }}>New order</div>
@@ -2317,7 +2339,7 @@ function NewOrderHalo({
               <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: newOrderPalette.clayAccentDark }}>Editable task suggestions</div>
               <div style={{ display: "grid", gap: 6, marginTop: 7 }}>
                 {suggestions.map((step, index) => (
-                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, border: `1px solid ${newOrderPalette.clayBorderStrong}`, borderLeft: `4px solid ${newOrderPalette.clayStripe}`, background: newOrderPalette.clayTaskBg }}>
+                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, border: `1px solid ${newOrderPalette.clayBorderStrong}`, borderLeft: "4px solid " + PERSON_VISUALS[step.person].stripe, background: newOrderPalette.clayTaskBg }}>
                     <div style={{ width: 22, height: 22, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.70)", color: newOrderPalette.clayAccentDark, fontSize: 10, fontWeight: 900 }}>{index + 1}</div>
                     <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "subgrid", gridColumn: isNarrow ? undefined : "2 / -1", gap: 7, alignItems: "center" }}>
                       <input
@@ -2661,8 +2683,9 @@ function shouldInsertAfterOver(event: Pick<DragOverEvent, "active" | "over">) {
 }
 
 function PlanTaskDragCard({ task }: { task: DraggablePlanTask }) {
+  const personVisual = PERSON_VISUALS[task.person];
   return (
-    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", border: "1px solid rgba(110,138,106,0.36)", borderLeft: "4px solid #6e8a6a", background: "rgba(255,253,249,0.98)", borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
+    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", border: "1px solid " + personVisual.taskBorder, borderLeft: "6px solid " + personVisual.stripe, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
@@ -2698,23 +2721,22 @@ function SortablePlanTaskCard({
   const assignedOrderId = assignedOrderIdForTask(task, planTaskLinks);
   const isSelectedOrderTask = selectedOrder ? effectiveOrderIds.includes(selectedOrder.id) || planTaskMatchesOrder(task, selectedOrder) : false;
   const isUnlinkedTask = effectiveOrderIds.length === 0;
+  const personVisual = PERSON_VISUALS[task.person];
   const taskBackground = isSelectedOrderTask
     ? "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
     : isNextTask && !isUnlinkedTask
       ? "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(110,138,106,0.12))"
       : isUnlinkedTask
         ? "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(232,230,224,0.52))"
-        : task.person === "nick"
-          ? "rgba(255,253,249,0.90)"
-          : "rgba(247,251,250,0.88)";
+        : personVisual.taskBg;
   const taskBorder = isSelectedOrderTask
     ? "rgba(190,137,24,0.92)"
     : isNextTask && !isUnlinkedTask
       ? "rgba(110,138,106,0.30)"
       : isUnlinkedTask
         ? "rgba(125,122,115,0.24)"
-        : "rgba(0,0,0,0.075)";
-  const taskStripe = isSelectedOrderTask ? "#d39a23" : isUnlinkedTask ? "#aaa49b" : isNextTask ? DT.sage : undefined;
+        : personVisual.taskBorder;
+  const taskStripe = isUnlinkedTask ? personVisual.stripeMuted : personVisual.stripe;
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
@@ -2751,7 +2773,7 @@ function SortablePlanTaskCard({
         color: isUnlinkedTask ? "#4f4b46" : DT.textPrimary,
         background: taskBackground,
         border: `${isSelectedOrderTask ? 2 : 1}px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
-        borderLeft: taskStripe ? `${isSelectedOrderTask ? 7 : 4}px solid ${taskStripe}` : undefined,
+        borderLeft: (isSelectedOrderTask ? "7px solid " : "5px solid ") + taskStripe,
         borderRadius: 8,
         padding: isSelectedOrderTask ? "8px 8px" : isNextTask ? "7px 7px" : "5px 6px",
         cursor: isDragging ? "grabbing" : "grab",
@@ -2805,15 +2827,16 @@ function DroppablePlanLane({
   children: ReactNode;
 }) {
   const { setNodeRef } = useDroppable({ id, data: { type: "plan-lane", day, person } });
+  const personVisual = PERSON_VISUALS[person];
   const capacityStyle = CAPACITY_STYLES[capacity.status];
   const capacityText = capacity.status === "ok" ? capacity.label : `${capacityStyle.label} · ${capacity.label}`;
   return (
     <div
       ref={setNodeRef}
-      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, border: `1px dashed ${isDropTarget ? "rgba(110,138,106,0.62)" : isTodayColumn ? "rgba(12,124,122,0.34)" : "rgba(0,0,0,0.09)"}`, background: isDropTarget ? "rgba(110,138,106,0.085)" : isTodayColumn ? "rgba(12,124,122,0.045)" : "rgba(255,255,255,0.34)", transition: "background 160ms ease, border-color 160ms ease" }}
+      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, border: "1px dashed " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder), borderLeft: "3px solid " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
     >
       <div style={{ marginBottom: 5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap", minWidth: 0 }}>
-        <span style={{ fontSize: 9, color: person === "nick" ? "#8a6d3b" : DT.teal, fontFamily: DT.sans, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{PERSON_LABELS[person]}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9, color: personVisual.text, fontFamily: DT.sans, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: "0 0 0 3px " + personVisual.taskSoft, flex: "0 0 auto" }} />{PERSON_LABELS[person]}</span>
         <span title={capacity.detail} style={{ border: `1px solid ${capacityStyle.border}`, background: capacityStyle.bg, color: capacityStyle.color, borderRadius: 999, padding: "2px 5px", fontSize: 8, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {capacityText}
         </span>
@@ -3077,7 +3100,7 @@ function MonthWeekSection({
                                 color: DT.textPrimary,
                                 background: "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))",
                                 border: "2px solid rgba(190,137,24,0.86)",
-                                borderLeft: "7px solid #d39a23",
+                                borderLeft: "7px solid " + PERSON_VISUALS[person].stripe,
                                 borderRadius: 8,
                                 padding: "8px 8px",
                                 cursor: onAppTaskSelect ? "pointer" : "default",
@@ -3296,7 +3319,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   function selectOrderForPlanTask(task: AssignablePlanTask) {
     const orderId = resolveOrderIdForPlanTask(task);
     if (orderId) {
-      openOrderOverview(orderId);
+      selectOrder(orderId);
       return;
     }
     setSelectedWorkflow(null);
