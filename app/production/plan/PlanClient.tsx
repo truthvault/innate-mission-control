@@ -2699,7 +2699,7 @@ function SortablePlanTaskCard({
   const isSelectedOrderTask = selectedOrder ? effectiveOrderIds.includes(selectedOrder.id) || planTaskMatchesOrder(task, selectedOrder) : false;
   const isUnlinkedTask = effectiveOrderIds.length === 0;
   const taskBackground = isSelectedOrderTask
-    ? "linear-gradient(135deg, rgba(12,124,122,0.17), rgba(255,255,255,0.88))"
+    ? "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
     : isNextTask && !isUnlinkedTask
       ? "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(110,138,106,0.12))"
       : isUnlinkedTask
@@ -2708,21 +2708,21 @@ function SortablePlanTaskCard({
           ? "rgba(255,253,249,0.90)"
           : "rgba(247,251,250,0.88)";
   const taskBorder = isSelectedOrderTask
-    ? "rgba(12,124,122,0.55)"
+    ? "rgba(190,137,24,0.92)"
     : isNextTask && !isUnlinkedTask
       ? "rgba(110,138,106,0.30)"
       : isUnlinkedTask
         ? "rgba(125,122,115,0.24)"
         : "rgba(0,0,0,0.075)";
-  const taskStripe = isSelectedOrderTask ? DT.teal : isUnlinkedTask ? "#aaa49b" : isNextTask ? DT.sage : undefined;
+  const taskStripe = isSelectedOrderTask ? "#d39a23" : isUnlinkedTask ? "#aaa49b" : isNextTask ? DT.sage : undefined;
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
-      ? "0 0 0 3px rgba(12,124,122,0.10), 0 5px 14px rgba(12,124,122,0.10)"
+      ? "0 0 0 3px rgba(211,154,35,0.28), 0 0 0 7px rgba(12,124,122,0.08), 0 8px 20px rgba(80,57,20,0.16)"
       : isNextTask && !isUnlinkedTask
         ? "0 2px 8px rgba(110,138,106,0.08)"
         : "0 1px 2px rgba(0,0,0,0.025)";
-  const taskBadge = isUnlinkedTask ? "Assign" : isSelectedOrderTask ? "Selected" : assignedOrderId ? "Linked" : null;
+  const taskBadge = isUnlinkedTask ? "Assign" : isSelectedOrderTask ? "This order" : assignedOrderId ? "Linked" : null;
 
   return (
     <div
@@ -2750,10 +2750,10 @@ function SortablePlanTaskCard({
         textDecoration: "none",
         color: isUnlinkedTask ? "#4f4b46" : DT.textPrimary,
         background: taskBackground,
-        border: `1px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
-        borderLeft: taskStripe ? `4px solid ${taskStripe}` : undefined,
+        border: `${isSelectedOrderTask ? 2 : 1}px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
+        borderLeft: taskStripe ? `${isSelectedOrderTask ? 7 : 4}px solid ${taskStripe}` : undefined,
         borderRadius: 8,
-        padding: isNextTask ? "7px 7px" : "5px 6px",
+        padding: isSelectedOrderTask ? "8px 8px" : isNextTask ? "7px 7px" : "5px 6px",
         cursor: isDragging ? "grabbing" : "grab",
         opacity: isDragging ? 0.28 : 1,
         boxShadow: taskShadow,
@@ -2765,16 +2765,19 @@ function SortablePlanTaskCard({
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
-          {isNextTask && !isUnlinkedTask && (
+          {isSelectedOrderTask && (
+            <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(190,137,24,0.34)", background: "rgba(255,246,199,0.96)", color: "#8a5d08", borderRadius: 999, padding: "1px 7px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Reviewing this order</span>
+          )}
+          {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
             <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Start here</span>
           )}
-          <div style={{ fontSize: isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
+          <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
           <div style={{ marginTop: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
           <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>1h</span>
           {taskBadge && (
-            <span style={{ color: isUnlinkedTask ? "#7d7a73" : DT.teal, background: isUnlinkedTask ? "rgba(125,122,115,0.08)" : DT.tealSoft, border: `1px solid ${isUnlinkedTask ? "rgba(125,122,115,0.16)" : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{taskBadge}</span>
+            <span style={{ color: isSelectedOrderTask ? "#8a5d08" : isUnlinkedTask ? "#7d7a73" : DT.teal, background: isSelectedOrderTask ? "rgba(255,246,199,0.96)" : isUnlinkedTask ? "rgba(125,122,115,0.08)" : DT.tealSoft, border: `1px solid ${isSelectedOrderTask ? "rgba(190,137,24,0.34)" : isUnlinkedTask ? "rgba(125,122,115,0.16)" : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{taskBadge}</span>
           )}
         </div>
       </div>
@@ -3072,20 +3075,21 @@ function MonthWeekSection({
                                 boxSizing: "border-box",
                                 overflow: "hidden",
                                 color: DT.textPrimary,
-                                background: "linear-gradient(135deg, rgba(12,124,122,0.15), rgba(255,255,255,0.90))",
-                                border: "1px solid rgba(12,124,122,0.48)",
-                                borderLeft: `4px solid ${DT.teal}`,
+                                background: "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))",
+                                border: "2px solid rgba(190,137,24,0.86)",
+                                borderLeft: "7px solid #d39a23",
                                 borderRadius: 8,
-                                padding: "6px 7px",
+                                padding: "8px 8px",
                                 cursor: onAppTaskSelect ? "pointer" : "default",
                                 opacity: task.done ? 0.55 : 1,
-                                boxShadow: "0 0 0 3px rgba(12,124,122,0.08), 0 4px 12px rgba(12,124,122,0.08)",
+                                boxShadow: "0 0 0 3px rgba(211,154,35,0.24), 0 0 0 7px rgba(12,124,122,0.08), 0 8px 20px rgba(80,57,20,0.14)",
                                 outline: "none",
                               }}
                             >
                               <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
                                 <div style={{ minWidth: 0 }}>
-                                  <div style={{ fontSize: 11, fontFamily: DT.sans, fontWeight: 880, lineHeight: 1.2, overflowWrap: "anywhere", textDecoration: task.done ? "line-through" : "none" }}>{task.title}</div>
+                                  <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(190,137,24,0.34)", background: "rgba(255,246,199,0.96)", color: "#8a5d08", borderRadius: 999, padding: "1px 7px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Reviewing this order</span>
+                                  <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 980, lineHeight: 1.2, overflowWrap: "anywhere", textDecoration: task.done ? "line-through" : "none" }}>{task.title}</div>
                                   {selectedOrder && <div style={{ marginTop: 3, fontSize: 9, color: DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedOrder.customer}</div>}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
