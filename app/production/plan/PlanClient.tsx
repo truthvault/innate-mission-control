@@ -114,6 +114,15 @@ const PERSON_VISUALS: Record<Person, { stripe: string; stripeMuted: string; text
     taskSoft: "rgba(12,124,122,0.11)",
   },
 };
+const REVIEW_GLOW = {
+  color: "#8a5d08",
+  border: "rgba(190,137,24,0.62)",
+  borderStrong: "rgba(190,137,24,0.86)",
+  bg: "linear-gradient(135deg, rgba(255,246,199,0.78), rgba(255,253,249,0.96) 54%, rgba(255,255,255,0.98))",
+  bgSoft: "linear-gradient(135deg, rgba(255,246,199,0.46), rgba(255,255,255,0.88))",
+  shadow: "0 0 0 3px rgba(211,154,35,0.18), 0 0 0 8px rgba(211,154,35,0.08), 0 16px 34px rgba(80,57,20,0.10)",
+  modalShadow: "0 0 0 4px rgba(211,154,35,0.20), 0 0 0 12px rgba(211,154,35,0.09), 0 28px 78px rgba(34,32,26,0.26)",
+};
 const CAPACITY_STYLES = {
   ok: { color: "#3f6f3f", bg: "rgba(63,111,63,0.09)", border: "rgba(63,111,63,0.22)", label: "OK" },
   watch: { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
@@ -708,9 +717,9 @@ function OrderRail({
         overflow: "hidden",
         transition: "box-shadow 1000ms ease, border-color 1000ms ease",
         background: "rgba(255,255,255,0.84)",
-        border: `1px solid ${selectedOrder ? "rgba(12,124,122,0.24)" : DT.border}`,
+        border: "1px solid " + (selectedOrder ? REVIEW_GLOW.border : DT.border),
         borderRadius: DT.radius,
-        boxShadow: selectedOrder ? "0 10px 28px rgba(12,124,122,0.07), 0 2px 10px rgba(0,0,0,0.03)" : DT.shadow,
+        boxShadow: selectedOrder ? REVIEW_GLOW.shadow : DT.shadow,
         backdropFilter: "blur(12px)",
       }}
     >
@@ -728,7 +737,7 @@ function OrderRail({
       `}</style>
       <div style={{ padding: "12px 12px 10px", borderBottom: `1px solid ${DT.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans }}>Orders</div>
+          <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: selectedOrder ? REVIEW_GLOW.color : DT.textFaint, fontFamily: DT.sans }}>Orders</div>
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1 }}>{assignmentTask ? "Assign task" : selectedOrder ? "Job command" : `${filteredOrders.length} active`}</div>
         </div>
         {(selectedOrder || assignmentTask) && (
@@ -988,7 +997,7 @@ function OrderRailDetail({ order, planTasks, onWorkflowChange, onOpen }: { order
 
   return (
     <div style={{ padding: 10, animation: "orderRailIn 1000ms ease both", maxHeight: "calc(100vh - 96px)", overflowY: "auto" }}>
-      <div style={{ border: `1px solid ${health.border}`, background: health.bg, borderRadius: 10, padding: 10 }}>
+      <div style={{ border: "1px solid " + REVIEW_GLOW.borderStrong, background: REVIEW_GLOW.bg, borderRadius: 10, padding: 10, boxShadow: REVIEW_GLOW.shadow }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
           <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.04, color: DT.textPrimary }}>{order.customer}</h3>
           <span style={{ flex: "0 0 auto", border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</span>
@@ -1003,13 +1012,13 @@ function OrderRailDetail({ order, planTasks, onWorkflowChange, onOpen }: { order
         <button
           type="button"
           onClick={onOpen}
-          style={{ marginTop: 9, width: "100%", border: `1px solid rgba(12,124,122,0.22)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+          style={{ marginTop: 9, width: "100%", border: "1px solid " + REVIEW_GLOW.borderStrong, background: REVIEW_GLOW.color, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 20px rgba(190,137,24,0.18)" }}
         >
           Open order
         </button>
         {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
       </div>
-      <NextActionCard order={order} nextJobTask={nextJobTask} nextPlanTask={nextPlanTask} openJobTaskCount={openJobTasks.length} planTaskCount={planTasks.length} qcDone={qcDone} qcTotal={dispatchQcItems(order).length} />
+      <NextActionCard order={order} nextJobTask={nextJobTask} nextPlanTask={nextPlanTask} openJobTaskCount={openJobTasks.length} planTaskCount={planTasks.length} qcDone={qcDone} qcTotal={dispatchQcItems(order).length} reviewGlow />
     </div>
   );
 }
@@ -1079,16 +1088,16 @@ function OrderOverviewOverlay({
           maxHeight: isNarrow ? undefined : "calc(100vh - 60px)",
           overflowY: "auto",
           borderRadius: isNarrow ? 0 : 18,
-          border: isNarrow ? "none" : `1px solid ${DT.border}`,
-          background: `linear-gradient(135deg, ${health.bg}, rgba(255,253,249,0.98) 34%, ${DT.cardBg} 100%)`,
-          boxShadow: "0 24px 70px rgba(34,32,26,0.24)",
+          border: isNarrow ? "none" : "1px solid " + REVIEW_GLOW.borderStrong,
+          background: "linear-gradient(135deg, rgba(255,246,199,0.50), rgba(255,253,249,0.98) 34%, " + DT.cardBg + " 100%)",
+          boxShadow: REVIEW_GLOW.modalShadow,
         }}
       >
-        <div style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(255,253,249,0.92)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "14px 14px 12px" : "18px 22px 14px" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 1, background: "linear-gradient(135deg, rgba(255,246,199,0.58), rgba(255,253,249,0.94))", backdropFilter: "blur(16px)", borderBottom: "1px solid " + REVIEW_GLOW.border, boxShadow: "0 8px 22px rgba(190,137,24,0.08)", padding: isNarrow ? "14px 14px 12px" : "18px 22px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start" }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ width: 8, height: 8, borderRadius: 999, background: health.color, flex: "0 0 auto" }} />
+                <span style={{ width: 9, height: 9, borderRadius: 999, background: REVIEW_GLOW.color, boxShadow: "0 0 0 4px rgba(211,154,35,0.16)", flex: "0 0 auto" }} />
                 <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 27 : 34, lineHeight: 1.02, color: DT.textPrimary }}>{order.customer}</h2>
                 <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", color: DT.textMuted, borderRadius: 7, padding: "3px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.05em" }}>{orderItemLabel(order)}</span>
                 <span style={{ border: `1px solid ${health.border}`, background: health.bg, color: health.color, borderRadius: 999, padding: "4px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{health.label}</span>
@@ -1110,7 +1119,7 @@ function OrderOverviewOverlay({
           </div>
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ flex: 1, height: 5, background: "rgba(0,0,0,0.045)", borderRadius: 999, overflow: "hidden" }}>
-              <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: DT.teal, transition: "width 450ms ease" }} />
+              <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: REVIEW_GLOW.color, transition: "width 450ms ease" }} />
             </div>
             <span style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textMuted, minWidth: 34, textAlign: "right" }}>{progress}%</span>
           </div>
@@ -1120,7 +1129,7 @@ function OrderOverviewOverlay({
         </div>
         <div style={{ padding: isNarrow ? 14 : 22, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(320px, 0.86fr) minmax(420px, 1.14fr)", gap: isNarrow ? 12 : 18 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <NextActionCard order={order} nextJobTask={nextJobTask} nextPlanTask={nextPlanTask} openJobTaskCount={openJobTasks.length} planTaskCount={planTasks.length} qcDone={qcDone} qcTotal={dispatchQcItems(order).length} />
+            <NextActionCard order={order} nextJobTask={nextJobTask} nextPlanTask={nextPlanTask} openJobTaskCount={openJobTasks.length} planTaskCount={planTasks.length} qcDone={qcDone} qcTotal={dispatchQcItems(order).length} reviewGlow />
             <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 12, padding: 12 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Production progress</div>
               <div style={{ marginTop: 10 }}>
@@ -1272,6 +1281,7 @@ function NextActionCard({
   planTaskCount,
   qcDone,
   qcTotal,
+  reviewGlow = false,
 }: {
   order: UiOrder;
   nextJobTask: WorkflowTask | null;
@@ -1280,11 +1290,12 @@ function NextActionCard({
   planTaskCount: number;
   qcDone: number;
   qcTotal: number;
+  reviewGlow?: boolean;
 }) {
   const action = nextActionForOrder({ order, nextJobTask, nextPlanTask, qcDone, qcTotal });
-  const tone = action.tone === "health" ? HEALTH_META[orderHealth(order)] : { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.22)" };
+  const tone = reviewGlow ? { color: REVIEW_GLOW.color, bg: "rgba(255,246,199,0.42)", border: REVIEW_GLOW.borderStrong } : action.tone === "health" ? HEALTH_META[orderHealth(order)] : { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.22)" };
   return (
-    <div style={{ marginTop: 8, border: `1px solid ${tone.border}`, background: `linear-gradient(135deg, ${tone.bg}, rgba(255,255,255,0.82))`, borderRadius: 10, padding: "9px 10px" }}>
+    <div style={{ marginTop: 8, border: "1px solid " + tone.border, background: reviewGlow ? REVIEW_GLOW.bgSoft : "linear-gradient(135deg, " + tone.bg + ", rgba(255,255,255,0.82))", borderRadius: 10, padding: "9px 10px", boxShadow: reviewGlow ? REVIEW_GLOW.shadow : undefined }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
         <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: tone.color }}>Next Action</div>
         <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>{action.label}</div>
