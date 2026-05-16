@@ -33,6 +33,14 @@ const MAINFREIGHT_RATE_URL = "https://api.mainfreight.com/transport/1.0/customer
 const DEFAULT_ACCOUNT_CODE = "INNATE2H84";
 const DEFAULT_SERVICE_LEVEL = "M2H";
 
+function resolveMainfreightAccountCode(value?: string): string {
+  const accountCode = (value || "").trim().toUpperCase();
+  // Customer-facing dining freight estimates must use the Mainfreight 2 Home
+  // account. Plain INNATE prices materially higher and should never leak into
+  // the website estimator, even if a stale env var or caller passes it in.
+  return accountCode === DEFAULT_ACCOUNT_CODE ? DEFAULT_ACCOUNT_CODE : DEFAULT_ACCOUNT_CODE;
+}
+
 function numberOrUndefined(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -171,7 +179,7 @@ export async function requestMainfreightRate(params: {
   };
 
   const payload = {
-    account: { code: params.accountCode || getServerSecret("MAINFREIGHT_ACCOUNT_CODE") || DEFAULT_ACCOUNT_CODE },
+    account: { code: resolveMainfreightAccountCode(params.accountCode || getServerSecret("MAINFREIGHT_ACCOUNT_CODE")) },
     serviceLevel: { code: params.serviceLevel || getServerSecret("MAINFREIGHT_SERVICE_LEVEL") || DEFAULT_SERVICE_LEVEL },
     origin: {
       freightRequiredDateTime: tomorrowAtTenNzIsoLike(),
