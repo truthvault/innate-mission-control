@@ -2700,26 +2700,28 @@ function SortablePlanTaskCard({
   const isUnlinkedTask = effectiveOrderIds.length === 0;
   const taskBackground = isSelectedOrderTask
     ? "linear-gradient(135deg, rgba(12,124,122,0.17), rgba(255,255,255,0.88))"
-    : isUnlinkedTask
-      ? "linear-gradient(135deg, rgba(255,255,255,0.92), rgba(232,230,224,0.62))"
-      : task.person === "nick"
-        ? DT.goldSoft
-        : DT.tealSoft;
+    : isNextTask && !isUnlinkedTask
+      ? "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(110,138,106,0.12))"
+      : isUnlinkedTask
+        ? "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(232,230,224,0.52))"
+        : task.person === "nick"
+          ? "rgba(255,253,249,0.90)"
+          : "rgba(247,251,250,0.88)";
   const taskBorder = isSelectedOrderTask
     ? "rgba(12,124,122,0.55)"
-    : isUnlinkedTask
-      ? "rgba(125,122,115,0.28)"
-      : task.person === "nick"
-        ? "rgba(200,169,110,0.18)"
-        : "rgba(12,124,122,0.14)";
-  const taskStripe = isSelectedOrderTask ? DT.teal : isUnlinkedTask ? "#a4a09a" : undefined;
+    : isNextTask && !isUnlinkedTask
+      ? "rgba(110,138,106,0.30)"
+      : isUnlinkedTask
+        ? "rgba(125,122,115,0.24)"
+        : "rgba(0,0,0,0.075)";
+  const taskStripe = isSelectedOrderTask ? DT.teal : isUnlinkedTask ? "#aaa49b" : isNextTask ? DT.sage : undefined;
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
       ? "0 0 0 3px rgba(12,124,122,0.10), 0 5px 14px rgba(12,124,122,0.10)"
-      : isUnlinkedTask
-        ? "0 0 0 2px rgba(125,122,115,0.045), 0 1px 2px rgba(0,0,0,0.02)"
-        : "0 1px 2px rgba(0,0,0,0.03)";
+      : isNextTask && !isUnlinkedTask
+        ? "0 2px 8px rgba(110,138,106,0.08)"
+        : "0 1px 2px rgba(0,0,0,0.025)";
   const taskBadge = isUnlinkedTask ? "Assign" : isSelectedOrderTask ? "Selected" : assignedOrderId ? "Linked" : null;
 
   return (
@@ -2750,8 +2752,8 @@ function SortablePlanTaskCard({
         background: taskBackground,
         border: `1px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
         borderLeft: taskStripe ? `4px solid ${taskStripe}` : undefined,
-        borderRadius: 7,
-        padding: "5px 6px",
+        borderRadius: 8,
+        padding: isNextTask ? "7px 7px" : "5px 6px",
         cursor: isDragging ? "grabbing" : "grab",
         opacity: isDragging ? 0.28 : 1,
         boxShadow: taskShadow,
@@ -2763,10 +2765,10 @@ function SortablePlanTaskCard({
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
-          {isNextTask && (
-            <span style={{ display: "inline-flex", marginBottom: 3, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Next</span>
+          {isNextTask && !isUnlinkedTask && (
+            <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Start here</span>
           )}
-          <div style={{ fontSize: 12, fontFamily: DT.sans, fontWeight: isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
+          <div style={{ fontSize: isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
           <div style={{ marginTop: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
@@ -2801,15 +2803,16 @@ function DroppablePlanLane({
 }) {
   const { setNodeRef } = useDroppable({ id, data: { type: "plan-lane", day, person } });
   const capacityStyle = CAPACITY_STYLES[capacity.status];
+  const capacityText = capacity.status === "ok" ? capacity.label : `${capacityStyle.label} · ${capacity.label}`;
   return (
     <div
       ref={setNodeRef}
-      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, border: `1px dashed ${isDropTarget ? "rgba(110,138,106,0.62)" : isTodayColumn ? "rgba(12,124,122,0.40)" : person === "nick" ? "rgba(200,169,110,0.30)" : "rgba(12,124,122,0.26)"}`, background: isDropTarget ? "rgba(110,138,106,0.085)" : isTodayColumn ? "rgba(12,124,122,0.055)" : person === "nick" ? "rgba(200,169,110,0.045)" : "rgba(12,124,122,0.035)", transition: "background 160ms ease, border-color 160ms ease" }}
+      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, border: `1px dashed ${isDropTarget ? "rgba(110,138,106,0.62)" : isTodayColumn ? "rgba(12,124,122,0.34)" : "rgba(0,0,0,0.09)"}`, background: isDropTarget ? "rgba(110,138,106,0.085)" : isTodayColumn ? "rgba(12,124,122,0.045)" : "rgba(255,255,255,0.34)", transition: "background 160ms ease, border-color 160ms ease" }}
     >
       <div style={{ marginBottom: 5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap", minWidth: 0 }}>
         <span style={{ fontSize: 9, color: person === "nick" ? "#8a6d3b" : DT.teal, fontFamily: DT.sans, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{PERSON_LABELS[person]}</span>
         <span title={capacity.detail} style={{ border: `1px solid ${capacityStyle.border}`, background: capacityStyle.bg, color: capacityStyle.color, borderRadius: 999, padding: "2px 5px", fontSize: 8, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {capacityStyle.label} · {capacity.label}
+          {capacityText}
         </span>
       </div>
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
@@ -3121,7 +3124,7 @@ function MonthWeekSection({
                             </div>
                           ))}
                           {laneTasks.length === 0 && laneAppTasks.length === 0 && laneSuggestions.length === 0 && (
-                            <div style={{ padding: "8px 4px", borderRadius: 6, color: DT.textFaint, fontSize: 10, fontFamily: DT.sans, fontStyle: "italic", textAlign: "center" }}>Drop here</div>
+                            <div style={{ padding: "6px 4px", borderRadius: 6, color: "rgba(124,116,107,0.54)", fontSize: 9, fontFamily: DT.sans, fontStyle: "italic", textAlign: "center" }}>Drop task</div>
                           )}
                         </DroppablePlanLane>
                       );
