@@ -83,7 +83,7 @@ assert.deepEqual(
 assert.equal(suggestions[0].dateLabel, '18 May');
 assert.equal(suggestions[0].dateIso, '2026-05-18');
 assert.match(suggestions[0].title, /Material/i);
-assert.ok(suggestions.every((s) => s.noWriteLabel === 'Suggested plan · no writes yet'));
+assert.ok(suggestions.every((s) => s.noWriteLabel === 'Suggested plan'));
 assert.deepEqual(
   suggestions.map((s) => s.estimatedHours),
   [1, 1, 1, 1, 1],
@@ -103,7 +103,7 @@ assert.deepEqual(
   'approved draft keeps edited day/person/title/hour values for placement into the plan grid'
 );
 assert.ok(approvedDraft.every((task) => task.rowName === 'Newest New'));
-assert.ok(approvedDraft.every((task) => task.noWriteLabel === 'Approved draft · no external writes yet'));
+assert.ok(approvedDraft.every((task) => task.noWriteLabel === 'Approved plan'));
 
 const capacityOk = summarizeLaneCapacity({ existingTaskCount: 1, draftHours: 2 });
 assert.equal(capacityOk.status, 'ok');
