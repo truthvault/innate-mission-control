@@ -29,14 +29,7 @@ function scopeFor(section: MissionControlSection): string {
   return "orders";
 }
 
-function sourceLabel(section: MissionControlSection): string {
-  if (section === "samples") return "sample stock feed";
-  if (section === "plan") return "source production plan";
-  if (section === "test") return "Tuesday stress-test plan";
-  return "orders feed";
-}
-
-function SyncBadge({ syncedAt, source, mondayError, section, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; section: MissionControlSection; isNarrow?: boolean }) {
+function SyncBadge({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
   const [tick, setTick] = useState(0);
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -64,7 +57,7 @@ function SyncBadge({ syncedAt, source, mondayError, section, isNarrow = false }:
         textOverflow: isNarrow ? "clip" : "ellipsis",
       }}
     >
-      Read-only · {sourceLabel(section)} · {stale ? "Stale - " : "Synced "}{ageLabel}
+      {stale ? "Stale · " : "Synced "}{ageLabel}
     </div>
   );
 }
@@ -118,16 +111,15 @@ function TuesdayMark() {
   );
 }
 
-function TuesdayBrand({ syncedAt, source, mondayError, section, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; section: MissionControlSection; isNarrow?: boolean }) {
+function TuesdayBrand({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 11, width: isNarrow ? "100%" : 300, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 0 300px" }}>
       <TuesdayMark />
       <div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
           <div style={{ fontSize: 23, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(255,255,255,0.52)", fontFamily: DT.sans, letterSpacing: "0.10em", textTransform: "uppercase" }}>by Innate</div>
         </div>
-        <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} section={section} isNarrow={isNarrow} />
+        <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
       </div>
     </div>
   );
@@ -210,7 +202,7 @@ export function MissionControlShell({
     <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
       <header style={{ position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "10px 12px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "300px minmax(620px, 1fr) 150px", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflowX: "hidden" }}>
-          <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} section={section} isNarrow={isNarrow} />
+          <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           <nav style={{ display: "flex", alignItems: "center", justifyContent: isNarrow ? "flex-start" : "center", gap: 6, flexWrap: "nowrap", overflowX: isNarrow ? "auto" : "visible", paddingBottom: isNarrow ? 2 : 0, WebkitOverflowScrolling: "touch" }} aria-label="Mission Control sections">
             {NAV.map((item) => {
               const active = item.section === section || pathname === item.href;
@@ -253,7 +245,7 @@ export function MissionControlShell({
         </div>
         {children}
       </main>
-      <footer style={{ textAlign: "center", padding: 20, fontSize: 10, color: DT.textFaint, fontFamily: DT.sans }}>Tuesday · Read-only production view for Innate</footer>
+      <footer style={{ textAlign: "center", padding: 20, fontSize: 10, color: DT.textFaint, fontFamily: DT.sans }}>Tuesday</footer>
     </div>
   );
 }

@@ -1689,6 +1689,16 @@ function formatXeroQuantity(value: number | null | undefined) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+function parseXeroLineItem(description: string) {
+  const lines = description.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const dimensionLines = lines.filter((line) => /\d{2,5}\s*[x×]\s*\d{2,5}/i.test(line));
+  const colourLine = lines.find((line) => /colo[u]?r|finish|stain|wash|clear|black|natural|oil/i.test(line));
+  const itemLine = lines.find((line) => !dimensionLines.includes(line) && line !== colourLine && !/^delivered to:?$/i.test(line) && !/^additions?:/i.test(line)) || lines[0] || "Invoice item";
+  const colour = colourLine ? colourLine.replace(/^colo[u]?r\s*:\s*/i, "") : "-";
+  const notes = lines.filter((line) => line !== itemLine && !dimensionLines.includes(line) && line !== colourLine);
+  return { item: itemLine, dimensions: dimensionLines.join(", ") || "-", colour, notes };
+}
+
 function WorkshopSpec({
   order,
   packLabel,
@@ -1829,16 +1839,25 @@ function WorkshopSpec({
             </div>
             <div style={{ marginTop: 6, display: "grid", gap: 6, maxHeight: prominent ? 310 : 200, overflowY: "auto", paddingRight: 3 }}>
               {xeroProof.loading && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted }}>Loading invoice details...</div>}
-              {!xeroProof.loading && lineItems.map((line, index) => (
+              {!xeroProof.loading && lineItems.map((line, index) => { const parsed = parseXeroLineItem(line.description); return (
                 <div key={`${index}-${line.description.slice(0, 24)}`} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "7px 8px", display: "grid", gridTemplateColumns: prominent ? "minmax(0, 1fr) 58px 72px 82px" : "1fr", gap: prominent ? 8 : 5, alignItems: "start" }}>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: DT.textPrimary, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{line.description}</div>
+                    <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.22, color: DT.textPrimary, fontWeight: 950, overflowWrap: "anywhere" }}>{parsed.item}</div>
+                    <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: prominent ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: 5 }}>
+                      <MiniFact label="Dimensions" value={parsed.dimensions} />
+                      <MiniFact label="Colour" value={parsed.colour} />
+                    </div>
+                    {parsed.notes.length > 0 && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, lineHeight: 1.35, color: DT.textMuted }}>{parsed.notes.join(" · ")}</div>}
+                    <details style={{ marginTop: 5 }}>
+                      <summary style={{ listStyle: "none", cursor: "pointer", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Exact invoice text</summary>
+                      <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, lineHeight: 1.35, color: DT.textMuted, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{line.description}</div>
+                    </details>
                   </div>
                   <MiniFact label="Qty" value={formatXeroQuantity(line.quantity)} />
                   <MiniFact label="Unit" value={formatXeroMoney(line.unitAmount)} />
                   <MiniFact label="Line" value={formatXeroMoney(line.lineAmount)} />
                 </div>
-              ))}
+              ); })}
               {!xeroProof.loading && lineItems.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted }}>No line item text returned from Xero yet.</div>}
             </div>
           </div>
@@ -3023,7 +3042,6 @@ function MonthWeekSection({
         <div style={{ padding: "10px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: weekHeaderControl ? "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(110,138,106,0.055))" : undefined }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, lineHeight: 1 }}>{displayWeekTitle(week.title)}</h2>
-            {weekHeaderControl && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.sage }}>Workshop view · Today at a glance</div>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
             {weekHeaderControl}
@@ -3248,6 +3266,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   const [selectedAssignmentTask, setSelectedAssignmentTask] = useState<AssignablePlanTask | null>(null);
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
   const [assignmentStatus, setAssignmentStatus] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
   const isRailNarrow = useIsNarrow(1040);
   const selectedOrder = useMemo(
     () => ordersForHealth.find((order) => order.id === selectedOrderId) ?? null,
@@ -3479,16 +3498,13 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }, [currentAndUpcoming, suggestedWeekIndex, editableSteps]);
 
   const historyControl = previous.length > 0 ? (
-      <details style={{ position: "relative" }}>
-        <summary style={{ listStyle: "none", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", color: DT.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}>
-          History · {previous.length}
-        </summary>
-        <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", zIndex: 40, width: isRailNarrow ? "min(90vw, 360px)" : "min(860px, calc(100vw - 420px))", maxHeight: "70vh", overflowY: "auto", padding: 10, background: "rgba(255,253,249,0.96)", border: `1px solid ${DT.border}`, borderRadius: 12, boxShadow: "0 18px 44px rgba(44,37,32,0.14)", display: "flex", flexDirection: "column", gap: 12 }}>
-          {previous.map((week) => (
-            <MonthWeekSection key={week.id} week={week} selectedOrder={selectedOrder} appTasks={selectedAppTasks} planTaskLinks={planTaskLinks} personFilter={personFilter} resolveTaskOrderId={resolveOrderIdForPlanTask} onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })} onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })} onAppTaskSelect={selectOrderForAppTask} onAppTaskOpen={(task) => openOrderOverview(task.orderId)} />
-          ))}
-        </div>
-      </details>
+    <button
+      type="button"
+      onClick={() => setShowHistory((current) => !current)}
+      style={{ border: `1px solid ${showHistory ? "rgba(110,138,106,0.26)" : DT.border}`, background: showHistory ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.68)", color: showHistory ? DT.sage : DT.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
+    >
+      {showHistory ? "Hide history" : `History · ${previous.length}`}
+    </button>
   ) : null;
 
   const workshopHeaderControl = (
@@ -3540,6 +3556,27 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     />
   ));
 
+  const historySections = showHistory ? (
+    <section style={{ border: "1px solid " + DT.border, borderRadius: DT.radius, background: "rgba(255,253,249,0.72)", boxShadow: DT.shadow, padding: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ padding: "2px 4px 0", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Previous weeks</div>
+      {previous.map((week) => (
+        <MonthWeekSection
+          key={week.id}
+          week={week}
+          selectedOrder={selectedOrder}
+          appTasks={selectedAppTasks}
+          planTaskLinks={planTaskLinks}
+          personFilter={personFilter}
+          resolveTaskOrderId={resolveOrderIdForPlanTask}
+          onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+          onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+          onAppTaskSelect={selectOrderForAppTask}
+          onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
+        />
+      ))}
+    </section>
+  ) : null;
+
   const orderRail = (
     <OrderRail
       orders={ordersForHealth}
@@ -3568,6 +3605,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {newOrderPanel}
         {weekSections}
+        {historySections}
         {orderRail}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
@@ -3586,6 +3624,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
         {newOrderPanel}
         {weekSections}
+        {historySections}
       </div>
       {orderRail}
       {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
@@ -3630,6 +3669,7 @@ export default function PlanClient({
       source={source}
       mondayError={mondayError}
       pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} /> : undefined}
+      maxWidth={1500}
     >
         {rows.length === 0 ? (
           <div
