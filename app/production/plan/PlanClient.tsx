@@ -2371,7 +2371,7 @@ function splitPlanWeeks(weeks: PlanWeek[], now = new Date()) {
   const visibleStart = planningVisibleStart(now);
   const sorted = [...weeks].sort((a, b) => weekStartTime(a, now) - weekStartTime(b, now));
   const previous = sorted.filter((week) => weekEndTime(week, now) < visibleStart.getTime()).reverse();
-  const currentAndUpcoming = sorted.filter((week) => weekEndTime(week, now) >= visibleStart.getTime()).slice(0, 9);
+  const currentAndUpcoming = sorted.filter((week) => weekEndTime(week, now) >= visibleStart.getTime()).slice(0, 6);
   return { currentAndUpcoming, previous };
 }
 
@@ -3245,6 +3245,7 @@ function MonthWeekSection({
   onSuggestedStepMove,
   personFilter = "all",
   weekHeaderControl,
+  forcePlanningLanes = false,
 }: {
   week: PlanWeek;
   suggestedSteps?: SuggestedOrderPlanStep[];
@@ -3260,6 +3261,7 @@ function MonthWeekSection({
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
+  forcePlanningLanes?: boolean;
 }) {
   const sourceTasks = useMemo(() => sourceTasksForWeek(week.rows), [week.rows]);
   const weekAppTasks = useMemo(() => appTasks.filter((task) => appTaskFallsInWeek(task, week)), [appTasks, week]);
@@ -3281,6 +3283,7 @@ function MonthWeekSection({
   const lastPreviewRef = useRef<string | null>(null);
   const visibleTaskCount = monthTaskCount(week.rows);
   const hasVisibleTasks = visibleTaskCount > 0 || weekAppTasks.length > 0 || suggestedSteps.length > 0;
+  const showPlanningLanes = forcePlanningLanes || hasVisibleTasks;
   const activeTask = activeTaskId ? tasks.find((task) => task.id === activeTaskId) ?? null : null;
   const activeSuggestedStep = activeSuggestedStepId ? suggestedSteps.find((step) => step.id === activeSuggestedStepId) ?? null : null;
   const sensors = useSensors(
@@ -3455,12 +3458,12 @@ function MonthWeekSection({
             const isTodayColumn = isCurrentWeek && todayKey === day;
             const dateOption = suggestedDateOptionForWeekDay(week, day);
             return (
-              <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: hasVisibleTasks ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.08), rgba(255,255,255,0))" : undefined }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, marginBottom: hasVisibleTasks ? 7 : 0 }}>
+              <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: showPlanningLanes ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.08), rgba(255,255,255,0))" : undefined }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, marginBottom: showPlanningLanes ? 7 : 0 }}>
                   <span style={{ fontSize: 10, fontWeight: 900, color: isTodayColumn ? DT.teal : DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: DT.sans }}>{DAY_LABELS[day]}</span>
                   {isTodayColumn && <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Today</span>}
                 </div>
-                {hasVisibleTasks && (
+                {showPlanningLanes && (
                   <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     {visiblePeople.map((person) => {
                       const laneTasks = tasks.filter((task) => task.day === day && task.person === person);
@@ -3626,7 +3629,7 @@ function WorkshopFocusBar({
 
 function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
-  const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 9), [currentAndUpcoming]);
+  const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [showNewOrder, setShowNewOrder] = useState(false);
   const baseSuggestedSteps = useMemo(() => buildSuggestedPlanForOrder(newOrder), [newOrder]);
@@ -3961,6 +3964,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
       onSuggestedStepMove={moveSuggestedStep}
       weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
+      forcePlanningLanes
     />
   ));
 
