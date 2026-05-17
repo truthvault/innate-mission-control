@@ -72,6 +72,7 @@ export type UiOrder = {
   rawMondayTopPanel: string | null;
   rawMondayLegs: string | null;
   value: number | null;
+  quantity: number | null;
   status: "Not Started" | "In Production" | "Finished" | "Collected";
   // Which step-list applies. Resolved in the UI to TABLE_STEPS or PANEL_STEPS.
   stepsKey: "TABLE_STEPS" | "PANEL_STEPS" | null;
@@ -113,8 +114,13 @@ function textOf(item: MondayItem, columnId: string): string | null {
   return raw ? raw : null;
 }
 
-function parseValue(item: MondayItem, warnings: TransformWarning[]): number | null {
-  const raw = textOf(item, ORDERS_COLUMNS.value);
+function parseNumberColumn(
+  item: MondayItem,
+  columnId: string,
+  warnings: TransformWarning[],
+  label: string
+): number | null {
+  const raw = textOf(item, columnId);
   if (raw == null) return null;
   const n = parseFloat(raw);
   if (Number.isNaN(n)) {
@@ -122,11 +128,19 @@ function parseValue(item: MondayItem, warnings: TransformWarning[]): number | nu
       itemId: item.id,
       customer: item.name,
       kind: "malformed_value",
-      detail: `Could not parse Value "${raw}" as number`,
+      detail: `Could not parse ${label} "${raw}" as number`,
     });
     return null;
   }
   return n;
+}
+
+function parseValue(item: MondayItem, warnings: TransformWarning[]): number | null {
+  return parseNumberColumn(item, ORDERS_COLUMNS.value, warnings, "Value");
+}
+
+function parseQuantity(item: MondayItem, warnings: TransformWarning[]): number | null {
+  return parseNumberColumn(item, ORDERS_COLUMNS.qty, warnings, "Quantity");
 }
 
 function parseShipDate(
@@ -267,6 +281,7 @@ export function transformMondayOrder(item: MondayItem): {
       rawMondayTopPanel,
       rawMondayLegs,
       value: parseValue(item, warnings),
+      quantity: parseQuantity(item, warnings),
       status,
       stepsKey,
       currentStep,
