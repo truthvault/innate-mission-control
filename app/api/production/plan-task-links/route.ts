@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { isMissingBlobToken, readEncryptedBlob, writeEncryptedBlob } from "@/lib/tuesday/encrypted-blob-store";
 import { getOrdersWithFallback } from "@/lib/monday/fetch-orders";
 
+type PlanTaskPlacement = {
+  mode: "start" | "end" | "before" | "after";
+  anchorTaskId?: string;
+};
+
+type PlanTaskLinkValue = number | { orderId: number; placement?: PlanTaskPlacement };
+
 type PlanTaskLinksState = {
-  links: Record<string, number>;
+  links: Record<string, PlanTaskLinkValue>;
   updatedAt: string;
 };
 
@@ -11,6 +18,22 @@ const PATH = "production-plan-task-links/current.json";
 
 function defaultState(): PlanTaskLinksState {
   return { links: {}, updatedAt: new Date().toISOString() };
+}
+
+function cleanPlacement(value: unknown): PlanTaskPlacement | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const source = value as { mode?: unknown; anchorTaskId?: unknown };
+  if (source.mode !== "start" && source.mode !== "end" && source.mode !== "before" && source.mode !== "after") return undefined;
+  const placement: PlanTaskPlacement = { mode: source.mode };
+  if ((source.mode === "before" || source.mode === "after") && typeof source.anchorTaskId === "string" && source.anchorTaskId.trim()) {
+    placement.anchorTaskId = source.anchorTaskId.trim();
+  }
+  if ((source.mode === "before" || source.mode === "after") && !placement.anchorTaskId) return undefined;
+  return placement;
+}
+
+function linkValueForOrder(orderId: number, placement?: PlanTaskPlacement): PlanTaskLinkValue {
+  return placement ? { orderId, placement } : orderId;
 }
 
 async function readState() {
@@ -31,10 +54,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null } | null;
+  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown } | null;
   const taskId = typeof body?.taskId === "string" ? body.taskId.trim() : "";
   const legacyTaskId = typeof body?.legacyTaskId === "string" ? body.legacyTaskId.trim() : "";
   const orderId = typeof body?.orderId === "number" && Number.isFinite(body.orderId) ? body.orderId : null;
+  const placement = cleanPlacement(body?.placement);
   if (!taskId) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
 
   try {
@@ -48,7 +72,7 @@ export async function POST(request: NextRequest) {
     const current = await readState();
     const links = { ...current.links };
     if (orderId) {
-      links[taskId] = orderId;
+      links[taskId] = linkValueForOrder(orderId, placement);
       if (legacyTaskId && legacyTaskId !== taskId) delete links[legacyTaskId];
     } else {
       delete links[taskId];

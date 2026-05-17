@@ -176,6 +176,11 @@ type CapacityByLane = Partial<Record<`${DayKey}:${Person}`, LaneCapacitySummary>
 const laneCapacityKey = (day: DayKey, person: Person): `${DayKey}:${Person}` => `${day}:${person}`;
 
 type OrderHealthLevel = "onTrack" | "watch" | "blocked";
+type PlanTaskPlacement = {
+  mode: "start" | "end" | "before" | "after";
+  anchorTaskId?: string;
+};
+type PlanTaskLinkValue = number | { orderId: number; placement?: PlanTaskPlacement };
 type WorkshopTask = {
   id: string;
   rowId: string;
@@ -186,6 +191,8 @@ type WorkshopTask = {
   text: string;
   notes: string | null;
   sourceRowUrl: string;
+  placement?: PlanTaskPlacement;
+  assignedViaTuesday?: boolean;
 };
 type OrderPhoto = { url: string; pathname: string; uploadedAt?: string; size?: number };
 type Carrier = "" | "Pinpoint" | "Mainfreight" | "Customer";
@@ -209,7 +216,7 @@ type AppPlanTask = {
   person: Person;
   done: boolean;
 };
-type PlanTaskLinks = Record<string, number>;
+type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type PersonFilter = "all" | Person;
 type RailFilter = "all" | "blocked" | "thisWeek" | "materials" | "noDate";
@@ -428,9 +435,30 @@ function planTaskMatchesOrder(task: DraggablePlanTask, order: UiOrder | null) {
   return task.linkedOrders.some((linked) => orderNameMatchScore(order, linked.name, task.rowName) >= 2);
 }
 
-function assignedOrderIdForTask(task: DraggablePlanTask, links: PlanTaskLinks) {
-  const orderId = links[planTaskLinkKey(task)] ?? links[task.id];
-  return typeof orderId === "number" && Number.isFinite(orderId) ? orderId : null;
+function orderIdFromPlanTaskLink(value: PlanTaskLinkValue | undefined) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (value && typeof value === "object" && typeof value.orderId === "number" && Number.isFinite(value.orderId)) return value.orderId;
+  return null;
+}
+
+function placementFromPlanTaskLink(value: PlanTaskLinkValue | undefined) {
+  return value && typeof value === "object" ? value.placement : undefined;
+}
+
+function linkValueForPlanTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
+  return links[planTaskLinkKey(task)] ?? links[task.id];
+}
+
+function assignedOrderIdForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
+  return orderIdFromPlanTaskLink(linkValueForPlanTask(task, links));
+}
+
+function placementForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
+  return placementFromPlanTaskLink(linkValueForPlanTask(task, links));
+}
+
+function linkValueForPlanTaskSave(orderId: number, placement?: PlanTaskPlacement): PlanTaskLinkValue {
+  return placement ? { orderId, placement } : orderId;
 }
 
 function effectiveTaskOrderIds(task: DraggablePlanTask, links: PlanTaskLinks) {
@@ -476,31 +504,61 @@ function orderNameMatchScore(order: UiOrder, ...candidates: Array<string | null 
   return best;
 }
 
-function planTasksForOrder(weeks: PlanWeek[], order: UiOrder | null): WorkshopTask[] {
+function orderWorkshopTasksByPlacement(tasks: WorkshopTask[]) {
+  const placedIds = new Set(tasks.filter((task) => task.placement).map((task) => task.id));
+  const ordered = tasks.filter((task) => !placedIds.has(task.id));
+  const placed = tasks.filter((task) => task.placement);
+
+  for (const task of placed.filter((item) => item.placement?.mode === "start").reverse()) {
+    ordered.unshift(task);
+  }
+  for (const task of placed.filter((item) => item.placement?.mode === "before" || item.placement?.mode === "after")) {
+    const anchorId = task.placement?.anchorTaskId;
+    const anchorIndex = anchorId ? ordered.findIndex((item) => item.id === anchorId) : -1;
+    if (anchorIndex === -1) {
+      ordered.push(task);
+      continue;
+    }
+    ordered.splice(task.placement?.mode === "before" ? anchorIndex : anchorIndex + 1, 0, task);
+  }
+  for (const task of placed.filter((item) => item.placement?.mode === "end")) {
+    ordered.push(task);
+  }
+  return ordered;
+}
+
+function planTasksForOrder(weeks: PlanWeek[], order: UiOrder | null, links: PlanTaskLinks = {}): WorkshopTask[] {
   if (!order) return [];
-  return weeks.flatMap((week) =>
-    week.rows.flatMap((row) => {
-      if (!planRowMatchesOrder(row, order)) return [];
-      return DAYS.flatMap((day) =>
+  const tasks = weeks.flatMap((week) =>
+    week.rows.flatMap((row) =>
+      DAYS.flatMap((day) =>
         PEOPLE.flatMap((person) => {
           const text = row.dayTasks[day][person];
-          return text
-            ? [{
-                id: `${row.id}:${day}:${person}`,
-                rowId: row.id,
-                rowName: row.name,
-                weekTitle: displayWeekTitle(week.title),
-                day,
-                person,
-                text,
-                notes: row.notes,
-                sourceRowUrl: row.mondayUrl,
-              }]
-            : [];
+          if (!text) return [];
+          const task: WorkshopTask = {
+            id: `${row.id}:${day}:${person}`,
+            rowId: row.id,
+            rowName: row.name,
+            weekTitle: displayWeekTitle(week.title),
+            day,
+            person,
+            text,
+            notes: row.notes,
+            sourceRowUrl: row.mondayUrl,
+          };
+          const assignedOrderId = assignedOrderIdForTask(task, links);
+          const matchesOrder = planRowMatchesOrder(row, order);
+          if (!matchesOrder && assignedOrderId !== order.id) return [];
+          return [{
+            ...task,
+            placement: placementForTask(task, links),
+            assignedViaTuesday: assignedOrderId === order.id && !matchesOrder,
+          }];
         })
-      );
-    })
+      )
+    )
   );
+  return orderWorkshopTasksByPlacement(tasks);
 }
 
 function defaultWorkflowState(orderId: number): OrderWorkflowState {
@@ -656,13 +714,14 @@ function OrderRail({
   isNarrow,
   canRemoveAssignmentLink,
   newOrderCard,
+  tasksForOrder,
 }: {
   orders: UiOrder[];
   selectedOrder: UiOrder | null;
   selectedOrderTasks: WorkshopTask[];
   assignmentTask: AssignablePlanTask | null;
   assignmentStatus: string;
-  onAssignTask: (task: AssignablePlanTask, orderId: number) => void;
+  onAssignTask: (task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) => void;
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onSelect: (id: number) => void;
@@ -671,6 +730,7 @@ function OrderRail({
   isNarrow: boolean;
   canRemoveAssignmentLink: boolean;
   newOrderCard?: ReactNode;
+  tasksForOrder: (order: UiOrder) => WorkshopTask[];
 }) {
   const activeOrders = useMemo(() => orders.filter((order) => !isCompleteOrder(order)), [orders]);
   const [query, setQuery] = useState("");
@@ -751,7 +811,7 @@ function OrderRail({
         )}
       </div>
       {assignmentTask ? (
-        <TaskAssignmentPanel key={`assign-${assignmentTask.id}`} task={assignmentTask} orders={activeOrders} status={assignmentStatus} onAssign={onAssignTask} onRemove={onRemoveTaskLink} canRemoveLink={canRemoveAssignmentLink} />
+        <TaskAssignmentPanel key={`assign-${assignmentTask.id}`} task={assignmentTask} orders={activeOrders} status={assignmentStatus} onAssign={onAssignTask} onRemove={onRemoveTaskLink} canRemoveLink={canRemoveAssignmentLink} tasksForOrder={tasksForOrder} />
       ) : selectedOrder ? (
         <OrderRailDetail key={`detail-${selectedOrder.id}`} order={selectedOrder} planTasks={selectedOrderTasks} onWorkflowChange={onWorkflowChange} onOpen={() => onOpenOrder(selectedOrder.id)} />
       ) : (
@@ -907,22 +967,59 @@ function TaskAssignmentPanel({
   onAssign,
   onRemove,
   canRemoveLink,
+  tasksForOrder,
 }: {
   task: AssignablePlanTask;
   orders: UiOrder[];
   status: string;
-  onAssign: (task: AssignablePlanTask, orderId: number) => void;
+  onAssign: (task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) => void;
   onRemove: (task: AssignablePlanTask) => void;
   canRemoveLink: boolean;
+  tasksForOrder: (order: UiOrder) => WorkshopTask[];
 }) {
   const [query, setQuery] = useState("");
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [placementMode, setPlacementMode] = useState<PlanTaskPlacement["mode"]>("end");
+  const [anchorTaskId, setAnchorTaskId] = useState("");
   const normalizedQuery = normalizeOrderText(query);
   const filteredOrders = useMemo(() => {
     if (!normalizedQuery) return orders.slice(0, 18);
     return orders
-      .filter((order) => normalizeOrderText(`${order.customer} ${orderItemLabel(order)} ${orderStatusLabel(order)}`).includes(normalizedQuery))
+      .filter((order) => normalizeOrderText(`${order.customer} ${orderItemLabel(order)} ${orderStatusLabel(order)} ${order.deliveryLocation ?? ""}`).includes(normalizedQuery))
       .slice(0, 18);
   }, [orders, normalizedQuery]);
+  const selectedOrder = useMemo(() => orders.find((order) => order.id === selectedOrderId) ?? null, [orders, selectedOrderId]);
+  const selectedOrderTasks = useMemo(() => selectedOrder ? tasksForOrder(selectedOrder) : [], [selectedOrder, tasksForOrder]);
+  const needsAnchor = placementMode === "before" || placementMode === "after";
+
+  function chooseOrder(order: UiOrder) {
+    setSelectedOrderId(order.id);
+    setQuery(order.customer);
+    const existingTasks = tasksForOrder(order);
+    if (existingTasks.length > 0) {
+      setPlacementMode("after");
+      setAnchorTaskId(existingTasks[existingTasks.length - 1]?.id ?? "");
+    } else {
+      setPlacementMode("end");
+      setAnchorTaskId("");
+    }
+  }
+
+  function assignHere(mode = placementMode, anchorId = anchorTaskId) {
+    if (!selectedOrder) return;
+    const placement: PlanTaskPlacement = mode === "before" || mode === "after"
+      ? { mode, anchorTaskId: anchorId || selectedOrderTasks[0]?.id }
+      : { mode };
+    if ((placement.mode === "before" || placement.mode === "after") && !placement.anchorTaskId) return;
+    onAssign(task, selectedOrder.id, placement);
+  }
+
+  function placementText() {
+    if (placementMode === "start") return "Start of job";
+    if (placementMode === "end") return "End of job";
+    const anchor = selectedOrderTasks.find((existingTask) => existingTask.id === anchorTaskId);
+    return `${placementMode === "before" ? "Before" : "After"} ${anchor?.text ?? "selected task"}`;
+  }
 
   return (
     <div style={{ padding: 10, animation: "orderRailIn 1000ms ease both", maxHeight: "calc(100vh - 96px)", overflowY: "auto" }}>
@@ -940,8 +1037,11 @@ function TaskAssignmentPanel({
         </label>
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search customer or item"
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setSelectedOrderId(null);
+          }}
+          placeholder="Search customer, item, or address"
           style={{ marginTop: 7, width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "7px 8px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
         />
         {status && <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{status}</div>}
@@ -956,15 +1056,89 @@ function TaskAssignmentPanel({
             </button>
           </div>
         )}
+        {selectedOrder && (
+          <div style={{ marginTop: 8, border: `1px solid ${REVIEW_GLOW.border}`, background: REVIEW_GLOW.bg, borderRadius: 10, padding: 9, boxShadow: "0 5px 16px rgba(190,137,24,0.08)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: REVIEW_GLOW.color }}>Selected order</div>
+                <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedOrder.customer}</div>
+                <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{orderItemLabel(selectedOrder)} · Due {formatShortDate(selectedOrder.shipDate)}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedOrderId(null)}
+                style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer" }}
+              >
+                Change
+              </button>
+            </div>
+            <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+              {(["start", "end", "before", "after"] as Array<PlanTaskPlacement["mode"]>).map((mode) => {
+                const disabled = (mode === "before" || mode === "after") && selectedOrderTasks.length === 0;
+                const active = placementMode === mode;
+                return (
+                  <button
+                    type="button"
+                    key={mode}
+                    disabled={disabled}
+                    onClick={() => {
+                      setPlacementMode(mode);
+                      if ((mode === "before" || mode === "after") && !anchorTaskId) setAnchorTaskId(selectedOrderTasks[0]?.id ?? "");
+                    }}
+                    style={{ border: `1px solid ${active ? REVIEW_GLOW.borderStrong : DT.border}`, background: active ? "rgba(255,247,218,0.84)" : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? REVIEW_GLOW.color : DT.textMuted, borderRadius: 999, padding: "6px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}
+                  >
+                    {mode === "start" ? "At start" : mode === "end" ? "At end" : mode === "before" ? "Before task" : "After task"}
+                  </button>
+                );
+              })}
+            </div>
+            {needsAnchor && selectedOrderTasks.length > 0 && (
+              <select
+                value={anchorTaskId}
+                onChange={(event) => setAnchorTaskId(event.target.value)}
+                style={{ marginTop: 7, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "7px 8px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
+              >
+                {selectedOrderTasks.map((existingTask) => (
+                  <option key={existingTask.id} value={existingTask.id}>{existingTask.text} · {DAY_LABELS[existingTask.day]} {PERSON_LABELS[existingTask.person]}</option>
+                ))}
+              </select>
+            )}
+            {selectedOrderTasks.length > 0 && (
+              <div style={{ marginTop: 8, display: "grid", gap: 5 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Current job task order</div>
+                {selectedOrderTasks.slice(0, 8).map((existingTask, index) => (
+                  <div key={existingTask.id} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 6, alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", borderRadius: 8, padding: "6px 7px" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{index + 1}. {existingTask.text}</div>
+                      <div style={{ marginTop: 1, fontFamily: DT.sans, fontSize: 9, fontWeight: 750, color: DT.textMuted }}>{DAY_LABELS[existingTask.day]} · {PERSON_LABELS[existingTask.person]}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button type="button" onClick={() => assignHere("before", existingTask.id)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer" }}>Before</button>
+                      <button type="button" onClick={() => assignHere("after", existingTask.id)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer" }}>After</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => assignHere()}
+              style={{ marginTop: 9, width: "100%", border: `1px solid ${REVIEW_GLOW.borderStrong}`, background: REVIEW_GLOW.color, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 18px rgba(190,137,24,0.18)" }}
+            >
+              Assign here · {placementText()}
+            </button>
+          </div>
+        )}
         <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
           {filteredOrders.map((order) => {
             const health = HEALTH_META[orderHealth(order)];
+            const active = selectedOrderId === order.id;
             return (
               <button
                 type="button"
                 key={order.id}
-                onClick={() => onAssign(task, order.id)}
-                style={{ width: "100%", minWidth: 0, textAlign: "left", border: `1px solid ${DT.border}`, borderLeft: `4px solid ${health.color}`, background: DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.025)" }}
+                onClick={() => chooseOrder(order)}
+                style={{ width: "100%", minWidth: 0, textAlign: "left", border: `1px solid ${active ? REVIEW_GLOW.borderStrong : DT.border}`, borderLeft: `4px solid ${active ? REVIEW_GLOW.color : health.color}`, background: active ? REVIEW_GLOW.bg : DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: active ? REVIEW_GLOW.shadow : "0 1px 4px rgba(0,0,0,0.025)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ minWidth: 0 }}>
@@ -1404,6 +1578,15 @@ function CollectionControl({
   );
 }
 
+function planTaskPlacementLabel(task: WorkshopTask) {
+  if (task.placement?.mode === "start") return "Placed at start";
+  if (task.placement?.mode === "end") return "Placed at end";
+  if (task.placement?.mode === "before") return "Placed before another task";
+  if (task.placement?.mode === "after") return "Placed after another task";
+  if (task.assignedViaTuesday) return "Tuesday link";
+  return "";
+}
+
 function WorkshopTasks({ tasks }: { tasks: WorkshopTask[] }) {
   return (
     <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.66)", borderRadius: 9, padding: "8px 9px" }}>
@@ -1419,7 +1602,10 @@ function WorkshopTasks({ tasks }: { tasks: WorkshopTask[] }) {
             <div key={task.id} style={{ display: "grid", gridTemplateColumns: "58px minmax(0, 1fr)", gap: 7, alignItems: "start", borderTop: "1px solid rgba(0,0,0,0.045)", paddingTop: 5 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 9, color: DT.teal, fontWeight: 950, lineHeight: 1.25 }}>{DAY_LABELS[task.day]}<br />{PERSON_LABELS[task.person]}</div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 850, lineHeight: 1.22 }}>{task.text}</div>
+                <div style={{ display: "flex", gap: 5, alignItems: "center", minWidth: 0 }}>
+                  <div style={{ minWidth: 0, fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 850, lineHeight: 1.22, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.text}</div>
+                  {planTaskPlacementLabel(task) && <span style={{ flex: "0 0 auto", border: `1px solid ${REVIEW_GLOW.border}`, background: REVIEW_GLOW.bg, color: REVIEW_GLOW.color, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{planTaskPlacementLabel(task)}</span>}
+                </div>
                 <div style={{ marginTop: 1, fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.weekTitle} · {task.rowName}</div>
               </div>
             </div>
@@ -3277,12 +3463,12 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     [ordersForHealth, openOrderId]
   );
   const openOrderTasks = useMemo(
-    () => planTasksForOrder(weeks, openOrder),
-    [weeks, openOrder]
+    () => planTasksForOrder(weeks, openOrder, planTaskLinks),
+    [weeks, openOrder, planTaskLinks]
   );
   const selectedOrderTasks = useMemo(
-    () => planTasksForOrder(weeks, selectedOrder),
-    [weeks, selectedOrder]
+    () => planTasksForOrder(weeks, selectedOrder, planTaskLinks),
+    [weeks, selectedOrder, planTaskLinks]
   );
   const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
   const keepOverlayWorkflow = useCallback((workflow: OrderWorkflowState | null) => {
@@ -3395,14 +3581,15 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     selectOrder(task.orderId);
   }
 
-  function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number) {
+  function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) {
     const taskKey = planTaskLinkKey(task);
-    setPlanTaskLinks((current) => ({ ...current, [taskKey]: orderId }));
+    const linkValue = linkValueForPlanTaskSave(orderId, placement);
+    setPlanTaskLinks((current) => ({ ...current, [taskKey]: linkValue }));
     setAssignmentStatus("Saving link...");
     fetch("/api/production/plan-task-links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId }),
+      body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId, placement }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
       .then((data: { state?: { links?: PlanTaskLinks } }) => {
@@ -3597,6 +3784,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         setSelectedOrderId(null);
       }}
       isNarrow={isRailNarrow}
+      tasksForOrder={(order) => planTasksForOrder(weeks, order, planTaskLinks)}
     />
   );
 
