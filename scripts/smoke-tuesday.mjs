@@ -43,19 +43,19 @@ const checks = [
   {
     path: "/production",
     label: "production default",
-    expect: ["Production Plan", "Tuesday", "Read-only"],
+    expect: ["Production Plan", "Tuesday", "Synced"],
     auth: true,
   },
   {
     path: "/production/plan",
     label: "plan",
-    expect: ["Production Plan", "Tuesday", "Read-only"],
+    expect: ["Production Plan", "Tuesday", "Synced"],
     auth: true,
   },
   {
     path: "/production/samples",
     label: "samples",
-    expect: ["Sample Stock", "Tuesday", "Read-only"],
+    expect: ["Sample Stock", "Tuesday", "Synced"],
     auth: true,
   },
 ];
