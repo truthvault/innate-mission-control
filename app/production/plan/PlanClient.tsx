@@ -923,38 +923,42 @@ function NewOrderRailCard({
   onApprove: () => void;
 }) {
   if (!order) return null;
+  const reviewActive = showingInMonth || approved;
+  const actionButtonStyle = {
+    border: `1px solid ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder}`,
+    background: reviewActive ? "rgba(255,255,255,0.84)" : "rgba(255,255,255,0.68)",
+    color: reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayAccentDark,
+    borderRadius: 999,
+    padding: "7px 8px",
+    fontFamily: DT.sans,
+    fontSize: 10,
+    fontWeight: 950,
+    cursor: "pointer",
+  };
   return (
-    <div style={{ marginBottom: 8, border: `1px solid ${newOrderPalette.clayBorder}`, borderLeft: "4px solid " + newOrderPalette.clayStripe, background: newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: "0 1px 4px rgba(154,82,49,0.06)" }}>
+    <div style={{ marginBottom: 8, border: `1px solid ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder}`, borderLeft: `5px solid ${reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayStripe}`, background: reviewActive ? REVIEW_GLOW.bg : newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? REVIEW_GLOW.shadow : "0 1px 4px rgba(154,82,49,0.06)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: newOrderPalette.clayAccent }}>New order</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayAccent }}>New order</div>
           <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{order.customer}</div>
           <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{order.product || "Order"} · Ordered {formatOrderedDate(order.orderedDate)}</div>
         </div>
-        {approved && <span style={{ flex: "0 0 auto", border: `1px solid ${newOrderPalette.clayBorderStrong}`, color: newOrderPalette.clayAccentDark, background: "rgba(255,255,255,0.62)", borderRadius: 999, padding: "3px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>Approved</span>}
+        {reviewActive && <span style={{ flex: "0 0 auto", border: `1px solid ${REVIEW_GLOW.borderStrong}`, color: REVIEW_GLOW.color, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "3px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{approved ? "Approved" : "Tasks shown"}</span>}
       </div>
       <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <button
-          type="button"
-          onClick={onToggleMonthTasks}
-          style={{ border: `1px solid ${newOrderPalette.clayBorder}`, background: "rgba(255,255,255,0.68)", color: newOrderPalette.clayAccentDark, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
-        >
+        <button type="button" onClick={onToggleMonthTasks} style={actionButtonStyle}>
           {showingInMonth ? "Hide tasks" : "Show tasks"}
         </button>
-        <button
-          type="button"
-          onClick={onApprove}
-          style={{ border: `1px solid ${newOrderPalette.clayBorderStrong}`, background: approved ? "rgba(255,255,255,0.62)" : newOrderPalette.clayAccent, color: approved ? newOrderPalette.clayAccentDark : "#fff", borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
-        >
-          {approved ? "Approved" : "Approve"}
+        <button type="button" onClick={onOpen} style={actionButtonStyle}>
+          Open full task list
         </button>
       </div>
       <button
         type="button"
-        onClick={onOpen}
-        style={{ marginTop: 6, width: "100%", border: "none", background: "transparent", color: newOrderPalette.clayAccentDark, padding: "2px 0", textAlign: "left", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}
+        onClick={onApprove}
+        style={{ marginTop: 6, width: "100%", border: `1px solid ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorderStrong}`, background: approved ? "rgba(255,255,255,0.68)" : reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayAccent, color: approved ? REVIEW_GLOW.color : "#fff", borderRadius: 999, padding: "7px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", boxShadow: reviewActive && !approved ? "0 8px 18px rgba(190,137,24,0.16)" : undefined }}
       >
-        Open full task list
+        {approved ? "Approved" : "Approve"}
       </button>
     </div>
   );
@@ -3362,16 +3366,16 @@ function MonthWeekSection({
                                 overflow: "hidden",
                                 textDecoration: "none",
                                 color: DT.textPrimary,
-                                background: newOrderPalette.clayTaskBg,
-                                border: `1px solid ${newOrderPalette.clayBorderStrong}`,
-                                borderLeft: `4px solid ${newOrderPalette.clayStripe}`,
+                                background: REVIEW_GLOW.bg,
+                                border: `1px solid ${REVIEW_GLOW.borderStrong}`,
+                                borderLeft: `5px solid ${REVIEW_GLOW.color}`,
                                 borderRadius: 8,
                                 padding: "6px 7px",
-                                boxShadow: `0 0 0 3px ${newOrderPalette.clayBg}, 0 2px 6px rgba(0,0,0,0.04)`,
+                                boxShadow: REVIEW_GLOW.shadow,
                               }}
                             >
                               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap" }}>
-                                <span style={{ fontSize: 9, color: newOrderPalette.clayAccent, fontFamily: DT.sans, fontWeight: 950 }}>{approvedSuggestions ? "✓ Approved plan" : "New order draft"}</span>
+                                <span style={{ fontSize: 9, color: REVIEW_GLOW.color, fontFamily: DT.sans, fontWeight: 950 }}>{approvedSuggestions ? "Approved plan" : "New order draft"}</span>
                                 <span style={{ fontSize: 9, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 850 }}>{step.dateLabel} · {step.estimatedHours}h</span>
                               </div>
                               <div style={{ marginTop: 2, fontSize: 11, fontFamily: DT.sans, fontWeight: 800, lineHeight: 1.25, overflowWrap: "anywhere" }}>{step.title}</div>
