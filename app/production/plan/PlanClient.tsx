@@ -34,10 +34,6 @@ import {
   type SuggestedOrderPlanStep,
 } from "@/lib/production/new-order-planning";
 import {
-  dropTargetFromOverId,
-  planLaneId,
-  planLayoutsEqual,
-  reorderPlanTask,
   type DraggablePlanTask,
 } from "@/lib/production/plan-drag";
 import {
@@ -2334,9 +2330,36 @@ function weekRangeFromTitle(title: string, now = new Date()) {
 }
 
 type PlanWeek = { id: string; title: string; rows: PlanRow[] };
+type BoardPlanTask = DraggablePlanTask & { weekId: string };
+type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
+type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
 
 function isoDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatPlanningWeekTitle(start: Date) {
+  const end = addDays(start, 4);
+  const startMonth = start.toLocaleDateString("en-NZ", { month: "long" });
+  const endMonth = end.toLocaleDateString("en-NZ", { month: "long" });
+  return startMonth === endMonth
+    ? `${startMonth} ${start.getDate()}–${end.getDate()}`
+    : `${startMonth} ${start.getDate()}–${endMonth} ${end.getDate()}`;
+}
+
+function planningWeekId(start: Date) {
+  return `planning-${isoDateFromDate(start)}`;
+}
+
+function planningWeekStartKey(week: PlanWeek, now = new Date()) {
+  const start = weekRangeFromTitle(week.title, now)?.start;
+  return start ? isoDateFromDate(start) : null;
 }
 
 function suggestedDateOptionForWeekDay(week: PlanWeek, day: DayKey): SuggestedDateOption | null {
@@ -2371,19 +2394,17 @@ function splitPlanWeeks(weeks: PlanWeek[], now = new Date()) {
   const visibleStart = planningVisibleStart(now);
   const sorted = [...weeks].sort((a, b) => weekStartTime(a, now) - weekStartTime(b, now));
   const previous = sorted.filter((week) => weekEndTime(week, now) < visibleStart.getTime()).reverse();
-  const currentAndUpcoming = sorted.filter((week) => weekEndTime(week, now) >= visibleStart.getTime()).slice(0, 6);
+  const realWeeksByStart = new Map<string, PlanWeek>();
+  for (const week of sorted) {
+    const key = planningWeekStartKey(week, now);
+    if (key && weekEndTime(week, now) >= visibleStart.getTime()) realWeeksByStart.set(key, week);
+  }
+  const currentAndUpcoming = Array.from({ length: 6 }, (_, index) => {
+    const start = addDays(visibleStart, index * 7);
+    const key = isoDateFromDate(start);
+    return realWeeksByStart.get(key) ?? { id: planningWeekId(start), title: formatPlanningWeekTitle(start), rows: [] };
+  });
   return { currentAndUpcoming, previous };
-}
-
-function monthTaskCount(rows: PlanRow[]): number {
-  return rows.reduce(
-    (count, row) =>
-      count + DAYS.reduce(
-        (dayCount, day) => dayCount + PEOPLE.filter((person) => row.dayTasks[day][person]).length,
-        0
-      ),
-    0
-  );
 }
 
 function planTaskFingerprint(value: string) {
@@ -2422,9 +2443,62 @@ function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
   );
 }
 
-function loadDraftTasks(weekId: string, sourceTasks: DraggablePlanTask[]) {
-  void weekId;
-  return sourceTasks;
+function sourceTasksForBoardWeeks(weeks: PlanWeek[]): BoardPlanTask[] {
+  return weeks.flatMap((week) => sourceTasksForWeek(week.rows).map((task) => ({ ...task, weekId: week.id })));
+}
+
+function boardPlanLaneId(weekId: string, day: DayKey, person: Person) {
+  return `${weekId}::${day}:${person}`;
+}
+
+function parseBoardPlanLane(value: string): { weekId: string; day: DayKey; person: Person } | null {
+  const [weekId, lane] = value.split("::");
+  if (!weekId || !lane) return null;
+  const parsedLane = parsePlanLane(lane);
+  return parsedLane ? { weekId, ...parsedLane } : null;
+}
+
+function boardDropTargetFromOverId(current: BoardPlanTask[], overId: string): BoardDropTarget | null {
+  const lane = parseBoardPlanLane(overId);
+  if (lane) return lane;
+  const overTask = current.find((task) => task.id === overId);
+  return overTask ? { weekId: overTask.weekId, day: overTask.day, person: overTask.person, overTaskId: overTask.id } : null;
+}
+
+function boardPlanLayoutsEqual(left: BoardPlanTask[], right: BoardPlanTask[]) {
+  if (left.length !== right.length) return false;
+  return left.every((task, index) => {
+    const other = right[index];
+    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person;
+  });
+}
+
+function reorderBoardPlanTask(
+  current: BoardPlanTask[],
+  taskId: string,
+  weekId: string,
+  day: DayKey,
+  person: Person,
+  overTaskId?: string,
+  insertAfter = false
+) {
+  const moving = current.find((task) => task.id === taskId);
+  if (!moving) return current;
+  const withoutMoving = current.filter((task) => task.id !== taskId);
+  const nextTask = { ...moving, weekId, day, person };
+  let insertAt = withoutMoving.length;
+  if (overTaskId && overTaskId !== taskId) {
+    const overIndex = withoutMoving.findIndex((task) => task.id === overTaskId);
+    if (overIndex >= 0) insertAt = overIndex + (insertAfter ? 1 : 0);
+  } else {
+    const laneIndexes = withoutMoving
+      .map((task, index) => ({ task, index }))
+      .filter(({ task }) => task.weekId === weekId && task.day === day && task.person === person);
+    insertAt = laneIndexes.length > 0 ? laneIndexes[laneIndexes.length - 1].index + 1 : withoutMoving.length;
+  }
+  const next = [...withoutMoving];
+  next.splice(insertAt, 0, nextTask);
+  return boardPlanLayoutsEqual(current, next) ? current : next;
 }
 
 function saveDraftTasks(weekId: string, tasks: DraggablePlanTask[]) {
@@ -2960,21 +3034,6 @@ function parsePlanLane(value: string): { day: DayKey; person: Person } | null {
   return null;
 }
 
-function SuggestedStepDragCard({ step }: { step: SuggestedOrderPlanStep }) {
-  return (
-    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `6px solid ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bg, borderRadius: 8, padding: "7px 8px", boxShadow: REVIEW_GLOW.shadow, fontFamily: DT.sans }}>
-      <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 9, fontWeight: 950, color: REVIEW_GLOW.color }}>New order draft</div>
-          <div style={{ marginTop: 2, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{step.title}</div>
-          <div style={{ marginTop: 3, fontSize: 10, fontWeight: 750, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{DAY_LABELS[step.day]} · {PERSON_LABELS[step.person]}</div>
-        </div>
-        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontWeight: 950 }}>{step.estimatedHours}h</span>
-      </div>
-    </div>
-  );
-}
-
 function shouldInsertAfterOver(event: Pick<DragOverEvent, "active" | "over">) {
   const overRect = event.over?.rect;
   const activeRect = event.active.rect.current.translated ?? event.active.rect.current.initial;
@@ -3261,12 +3320,19 @@ function DroppablePlanLane({
 
 function MonthWeekSection({
   week,
+  tasks = [],
   suggestedSteps = [],
   approvedSuggestions = false,
   selectedOrder = null,
   appTasks = [],
   planTaskLinks = {},
   resolveTaskOrderId,
+  activeTaskId = null,
+  activeSuggestedStepId = null,
+  dropPreview = null,
+  isDraftChanged = false,
+  showDraftControls = false,
+  onResetDraftLayout,
   onTaskSelect,
   onTaskOpen,
   onAppTaskSelect,
@@ -3280,12 +3346,19 @@ function MonthWeekSection({
   forcePlanningLanes = false,
 }: {
   week: PlanWeek;
+  tasks?: BoardPlanTask[];
   suggestedSteps?: SuggestedOrderPlanStep[];
   approvedSuggestions?: boolean;
   selectedOrder?: UiOrder | null;
   appTasks?: AppPlanTask[];
   planTaskLinks?: PlanTaskLinks;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
+  activeTaskId?: string | null;
+  activeSuggestedStepId?: string | null;
+  dropPreview?: BoardDropPreview | null;
+  isDraftChanged?: boolean;
+  showDraftControls?: boolean;
+  onResetDraftLayout?: () => void;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
@@ -3298,7 +3371,6 @@ function MonthWeekSection({
   weekHeaderControl?: ReactNode;
   forcePlanningLanes?: boolean;
 }) {
-  const sourceTasks = useMemo(() => sourceTasksForWeek(week.rows), [week.rows]);
   const weekAppTasks = useMemo(() => appTasks.filter((task) => appTaskFallsInWeek(task, week)), [appTasks, week]);
   const isNarrow = useIsNarrow();
   const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
@@ -3309,168 +3381,22 @@ function MonthWeekSection({
   const now = new Date();
   const visibleStart = planningVisibleStart(now);
   const isCurrentWeek = Boolean(weekRange && weekRange.start.getTime() === visibleStart.getTime());
-  const [tasks, setTasks] = useState<DraggablePlanTask[]>(() => loadDraftTasks(week.id, sourceTasks));
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [activeSuggestedStepId, setActiveSuggestedStepId] = useState<string | null>(null);
-  const [dropPreview, setDropPreview] = useState<{ day: DayKey; person: Person; overId?: string; insertAfter?: boolean } | null>(null);
-  const undoLayoutsRef = useRef<DraggablePlanTask[][]>([]);
-  const dragStartTasksRef = useRef<DraggablePlanTask[] | null>(null);
-  const lastPreviewRef = useRef<string | null>(null);
-  const visibleTaskCount = monthTaskCount(week.rows);
-  const hasVisibleTasks = visibleTaskCount > 0 || weekAppTasks.length > 0 || suggestedSteps.length > 0;
+  const hasVisibleTasks = tasks.length > 0 || weekAppTasks.length > 0 || suggestedSteps.length > 0;
   const showPlanningLanes = forcePlanningLanes || hasVisibleTasks;
-  const activeTask = activeTaskId ? tasks.find((task) => task.id === activeTaskId) ?? null : null;
-  const activeSuggestedStep = activeSuggestedStepId ? suggestedSteps.find((step) => step.id === activeSuggestedStepId) ?? null : null;
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-  const isDraftChanged = tasks.some((task, index) => {
-    const original = sourceTasks.find((source) => source.id === task.id);
-    return original && (original.day !== task.day || original.person !== task.person || sourceTasks[index]?.id !== task.id);
-  });
-
-  function dropTargetFromOverIdWithSuggestions(overId: string) {
-    const lane = parsePlanLane(overId);
-    if (lane) return { ...lane, overId: undefined as string | undefined, overTaskId: undefined as string | undefined, overSuggestedId: undefined as string | undefined };
-    const planTarget = dropTargetFromOverId(tasks, overId);
-    if (planTarget) return { ...planTarget, overId: planTarget.overTaskId, overSuggestedId: undefined as string | undefined };
-    const suggestedId = suggestedStepIdFromDragId(overId);
-    const step = suggestedId ? suggestedSteps.find((item) => item.id === suggestedId) : null;
-    return step ? { day: step.day, person: step.person, overId, overTaskId: undefined as string | undefined, overSuggestedId: step.id } : null;
-  }
-
-  function previewTaskMove(event: DragOverEvent) {
-    const overId = event.over?.id ? String(event.over.id) : null;
-    const activeId = String(event.active.id);
-    if (!overId) return;
-
-    const target = dropTargetFromOverIdWithSuggestions(overId);
-    if (!target) return;
-
-    const insertAfter = target.overId ? shouldInsertAfterOver(event) : true;
-    const previewKey = [activeId, target.day, target.person, target.overId ?? "lane", insertAfter ? "after" : "before"].join(":");
-    if (lastPreviewRef.current === previewKey) return;
-
-    lastPreviewRef.current = previewKey;
-    setDropPreview({ day: target.day, person: target.person, overId: target.overId, insertAfter });
-  }
-
-  function handleDragStart(event: DragStartEvent) {
-    const activeId = String(event.active.id);
-    const suggestedId = suggestedStepIdFromDragId(activeId);
-    lastPreviewRef.current = null;
-    if (suggestedId) {
-      const step = suggestedSteps.find((current) => current.id === suggestedId);
-      setActiveTaskId(null);
-      setActiveSuggestedStepId(suggestedId);
-      if (step) setDropPreview({ day: step.day, person: step.person, overId: activeId, insertAfter: true });
-      return;
-    }
-    dragStartTasksRef.current = tasks;
-    setActiveSuggestedStepId(null);
-    setActiveTaskId(activeId);
-    const task = tasks.find((current) => current.id === activeId);
-    if (task) setDropPreview({ day: task.day, person: task.person, insertAfter: true });
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    const activeId = String(event.active.id);
-    const suggestedId = suggestedStepIdFromDragId(activeId);
-    const original = dragStartTasksRef.current;
-    const overId = event.over?.id ? String(event.over.id) : null;
-    if (!overId) {
-      if (original) setTasks(original);
-      clearDragState();
-      return;
-    }
-
-    const target = dropTargetFromOverIdWithSuggestions(overId);
-    if (suggestedId) {
-      if (target) {
-        const dateOption = suggestedDateOptionForWeekDay(week, target.day);
-        onSuggestedStepMove?.(suggestedId, target.day, target.person, dateOption?.dateIso, dateOption?.dateLabel, target.overSuggestedId, target.overId ? shouldInsertAfterOver(event) : true);
-      }
-      clearDragState();
-      return;
-    }
-
-    setTasks((current) => {
-      const finalLayout = target
-        ? reorderPlanTask(current, activeId, target.day, target.person, target.overTaskId, target.overTaskId ? shouldInsertAfterOver(event) : true)
-        : current;
-      const undoLayout = original ?? current;
-      if (!planLayoutsEqual(undoLayout, finalLayout)) {
-        undoLayoutsRef.current = [undoLayout, ...undoLayoutsRef.current].slice(0, 12);
-        saveDraftTasks(week.id, finalLayout);
-      }
-      return finalLayout;
-    });
-    clearDragState();
-  }
-
-  function handleDragCancel() {
-    if (dragStartTasksRef.current) setTasks(dragStartTasksRef.current);
-    clearDragState();
-  }
-
-  function clearDragState() {
-    dragStartTasksRef.current = null;
-    lastPreviewRef.current = null;
-    setActiveTaskId(null);
-    setActiveSuggestedStepId(null);
-    setDropPreview(null);
-  }
-
-  function resetDraftLayout() {
-    undoLayoutsRef.current = [tasks, ...undoLayoutsRef.current].slice(0, 12);
-    setTasks(sourceTasks);
-    saveDraftTasks(week.id, sourceTasks);
-  }
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      const target = event.target as HTMLElement | null;
-      const isTyping = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT" || target?.isContentEditable;
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !isTyping && undoLayoutsRef.current.length > 0) {
-        event.preventDefault();
-        const [previous, ...rest] = undoLayoutsRef.current;
-        undoLayoutsRef.current = rest;
-        setTasks(previous);
-        saveDraftTasks(week.id, previous);
-      }
-      if (event.key === "Escape" && (activeTaskId || activeSuggestedStepId)) {
-        event.preventDefault();
-        handleDragCancel();
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-    // The undo stack and drag snapshot live in refs; this listener only needs to refresh when the active drag/week changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTaskId, activeSuggestedStepId, week.id]);
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={previewTaskMove}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
-      <section style={{ background: DT.cardBg, border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.05), 0 2px 12px rgba(0,0,0,0.04)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
+    <section style={{ background: DT.cardBg, border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.05), 0 2px 12px rgba(0,0,0,0.04)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
         <div style={{ padding: "10px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: weekHeaderControl ? "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(110,138,106,0.055))" : undefined }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, lineHeight: 1 }}>{displayWeekTitle(week.title)}</h2>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
             {weekHeaderControl}
-            {isDraftChanged && <Chip label="Draft layout changed" tone="amber" />}
-            {isDraftChanged && (
+            {showDraftControls && isDraftChanged && <Chip label="Draft layout changed" tone="amber" />}
+            {showDraftControls && isDraftChanged && (
               <button
                 type="button"
-                onClick={resetDraftLayout}
+                onClick={onResetDraftLayout}
                 style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 800, cursor: "pointer" }}
               >
                 Reset
@@ -3501,14 +3427,14 @@ function MonthWeekSection({
                 {showPlanningLanes && (
                   <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     {visiblePeople.map((person) => {
-                      const laneTasks = tasks.filter((task) => task.day === day && task.person === person);
+                      const laneTasks = tasks.filter((task) => task.weekId === week.id && task.day === day && task.person === person);
                       const laneAppTasks = weekAppTasks.filter((task) => task.day === day && task.person === person);
                       const laneOpenAppTasks = laneAppTasks.filter((task) => !task.done);
                       const laneSuggestions = suggestedSteps.filter((step) => step.day === day && step.person === person);
                       const laneDraftHours = laneSuggestions.reduce((sum, step) => sum + Number(step.estimatedHours || 0), 0);
                       const capacity = summarizeLaneCapacity({ existingTaskCount: laneTasks.length, draftHours: laneDraftHours + laneOpenAppTasks.length });
-                      const laneId = planLaneId(day, person);
-                      const isDropTarget = Boolean((activeTaskId || activeSuggestedStepId) && dropPreview?.day === day && dropPreview.person === person);
+                      const laneId = boardPlanLaneId(week.id, day, person);
+                      const isDropTarget = Boolean((activeTaskId || activeSuggestedStepId) && dropPreview?.weekId === week.id && dropPreview.day === day && dropPreview.person === person);
                       const showDropSlot = (itemId?: string, insertAfter = false) => Boolean(isDropTarget && dropPreview?.overId === itemId && Boolean(dropPreview?.insertAfter) === insertAfter);
                       const dropSlot = <div aria-hidden="true" style={{ height: 7, borderRadius: 999, background: "rgba(110,138,106,0.42)", boxShadow: "0 0 0 3px rgba(110,138,106,0.10)", margin: "1px 2px" }} />;
                       return (
@@ -3617,9 +3543,7 @@ function MonthWeekSection({
             );
           })}
         </div>
-      </section>
-      <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : activeSuggestedStep ? <SuggestedStepDragCard step={activeSuggestedStep} /> : null}</DragOverlay>
-    </DndContext>
+    </section>
   );
 }
 
@@ -3668,7 +3592,11 @@ function WorkshopFocusBar({
 function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
   const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
+  const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks), [visibleProductionWeeks]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
+  const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const baseSuggestedSteps = useMemo(() => buildSuggestedPlanForOrder(newOrder), [newOrder]);
   const [editableSteps, setEditableSteps] = useState<SuggestedOrderPlanStep[]>(baseSuggestedSteps);
@@ -3681,7 +3609,14 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
   const [assignmentStatus, setAssignmentStatus] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
+  const dragStartBoardTasksRef = useRef<BoardPlanTask[] | null>(null);
+  const lastBoardPreviewRef = useRef<string | null>(null);
   const isRailNarrow = useIsNarrow(1040);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const selectedOrder = useMemo(
     () => ordersForHealth.find((order) => order.id === selectedOrderId) ?? null,
     [ordersForHealth, selectedOrderId]
@@ -3699,6 +3634,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     [weeks, selectedOrder, planTaskLinks]
   );
   const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
+  const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
+  const isDraftChanged = !boardPlanLayoutsEqual(sourceBoardTasks, boardTasks);
   const keepOverlayWorkflow = useCallback((workflow: OrderWorkflowState | null) => {
     if (workflow) setSelectedWorkflow(workflow);
   }, []);
@@ -3720,6 +3657,15 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       dylan: tasks.filter((task) => task.day === today && task.person === "dylan").length,
     };
   }, [visibleProductionWeeks]);
+
+  useEffect(() => {
+    setBoardTasks(sourceBoardTasks);
+    undoBoardLayoutsRef.current = [];
+    dragStartBoardTasksRef.current = null;
+    lastBoardPreviewRef.current = null;
+    setActiveTaskId(null);
+    setDropPreview(null);
+  }, [sourceBoardTasks]);
 
   function resolveOrderIdForPlanTask(task: DraggablePlanTask) {
     const assignedId = assignedOrderIdForTask(task, planTaskLinks);
@@ -3768,6 +3714,24 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       setOpenOrderId(null);
       setSelectedAssignmentTask(null);
       setShowNewOrder(false);
+      if (activeTaskId) handleBoardDragCancel();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTaskId]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const isTyping = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT" || target?.isContentEditable;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z" && !isTyping && undoBoardLayoutsRef.current.length > 0) {
+        event.preventDefault();
+        const [previous, ...rest] = undoBoardLayoutsRef.current;
+        undoBoardLayoutsRef.current = rest;
+        setBoardTasks(previous);
+        saveDraftTasks("six-week-board", previous);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -3813,6 +3777,80 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   function openNewOrderOverview() {
     if (!newOrder) return;
     openOrderOverview(newOrder.id);
+  }
+
+  function clearBoardDragState() {
+    dragStartBoardTasksRef.current = null;
+    lastBoardPreviewRef.current = null;
+    setActiveTaskId(null);
+    setDropPreview(null);
+  }
+
+  function handleBoardDragStart(event: DragStartEvent) {
+    const activeId = String(event.active.id);
+    if (suggestedStepIdFromDragId(activeId)) return;
+    const task = boardTasks.find((current) => current.id === activeId);
+    if (!task) return;
+    dragStartBoardTasksRef.current = boardTasks;
+    lastBoardPreviewRef.current = null;
+    setActiveTaskId(activeId);
+    setDropPreview({ weekId: task.weekId, day: task.day, person: task.person, insertAfter: true });
+  }
+
+  function boardDropTargetFromOverIdWithSuggestions(overId: string) {
+    const target = boardDropTargetFromOverId(boardTasks, overId);
+    if (target) return { ...target, overId: target.overTaskId, overSuggestedId: undefined as string | undefined };
+    const suggestedId = suggestedStepIdFromDragId(overId);
+    const step = suggestedId ? editableSteps.find((item) => item.id === suggestedId) : null;
+    const week = step ? visibleProductionWeeks.find((candidate) => suggestedStepFallsInWeek(step, candidate)) : null;
+    return step && week ? { weekId: week.id, day: step.day, person: step.person, overId, overTaskId: undefined as string | undefined, overSuggestedId: step.id } : null;
+  }
+
+  function previewBoardTaskMove(event: DragOverEvent) {
+    const activeId = String(event.active.id);
+    const overId = event.over?.id ? String(event.over.id) : null;
+    if (!overId || !activeTaskId) return;
+    const target = boardDropTargetFromOverIdWithSuggestions(overId);
+    if (!target) return;
+    const insertAfter = target.overId ? shouldInsertAfterOver(event) : true;
+    const previewKey = [activeId, target.weekId, target.day, target.person, target.overId ?? "lane", insertAfter ? "after" : "before"].join(":");
+    if (lastBoardPreviewRef.current === previewKey) return;
+    lastBoardPreviewRef.current = previewKey;
+    setDropPreview({ weekId: target.weekId, day: target.day, person: target.person, overId: target.overId, insertAfter });
+  }
+
+  function handleBoardDragEnd(event: DragEndEvent) {
+    const activeId = String(event.active.id);
+    const original = dragStartBoardTasksRef.current;
+    const overId = event.over?.id ? String(event.over.id) : null;
+    if (!overId || !original) {
+      if (original) setBoardTasks(original);
+      clearBoardDragState();
+      return;
+    }
+    const target = boardDropTargetFromOverIdWithSuggestions(overId);
+    setBoardTasks((current) => {
+      const finalLayout = target
+        ? reorderBoardPlanTask(current, activeId, target.weekId, target.day, target.person, target.overTaskId, target.overTaskId ? shouldInsertAfterOver(event) : true)
+        : current;
+      if (!boardPlanLayoutsEqual(original, finalLayout)) {
+        undoBoardLayoutsRef.current = [original, ...undoBoardLayoutsRef.current].slice(0, 12);
+        saveDraftTasks("six-week-board", finalLayout);
+      }
+      return finalLayout;
+    });
+    clearBoardDragState();
+  }
+
+  function handleBoardDragCancel() {
+    if (dragStartBoardTasksRef.current) setBoardTasks(dragStartBoardTasksRef.current);
+    clearBoardDragState();
+  }
+
+  function resetBoardDraftLayout() {
+    undoBoardLayoutsRef.current = [boardTasks, ...undoBoardLayoutsRef.current].slice(0, 12);
+    setBoardTasks(sourceBoardTasks);
+    saveDraftTasks("six-week-board", sourceBoardTasks);
   }
 
   function selectOrderForAppTask(task: AppPlanTask) {
@@ -3941,7 +3979,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   const capacityByLane = useMemo<CapacityByLane>(() => {
     const summaries: CapacityByLane = {};
     for (const week of visibleProductionWeeks) {
-      const existingTasks = sourceTasksForWeek(week.rows);
+      const existingTasks = boardTasks.filter((task) => task.weekId === week.id);
       for (const day of DAYS) {
         const option = suggestedDateOptionForWeekDay(week, day);
         if (!option) continue;
@@ -3956,7 +3994,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       }
     }
     return summaries;
-  }, [visibleProductionWeeks, editableSteps]);
+  }, [visibleProductionWeeks, editableSteps, boardTasks]);
 
   const historyControl = previous.length > 0 ? (
     <button
@@ -4005,11 +4043,17 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     <MonthWeekSection
       key={week.id}
       week={week}
+      tasks={boardTasks}
       suggestedSteps={(showTasksInMonth || approvedSteps) ? editableSteps.filter((step) => suggestedStepFallsInWeek(step, week)) : []}
       approvedSuggestions={approvedSteps}
       selectedOrder={selectedOrder}
       appTasks={selectedAppTasks}
       planTaskLinks={planTaskLinks}
+      activeTaskId={activeTaskId}
+      dropPreview={dropPreview}
+      isDraftChanged={isDraftChanged}
+      showDraftControls={index === 0}
+      onResetDraftLayout={resetBoardDraftLayout}
       personFilter={personFilter}
       resolveTaskOrderId={resolveOrderIdForPlanTask}
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
@@ -4032,6 +4076,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         <MonthWeekSection
           key={week.id}
           week={week}
+          tasks={sourceTasksForBoardWeeks([week])}
           selectedOrder={selectedOrder}
           appTasks={selectedAppTasks}
           planTaskLinks={planTaskLinks}
@@ -4045,6 +4090,24 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       ))}
     </section>
   ) : null;
+
+  const planningBoard = (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleBoardDragStart}
+      onDragOver={previewBoardTaskMove}
+      onDragEnd={handleBoardDragEnd}
+      onDragCancel={handleBoardDragCancel}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+        {newOrderPanel}
+        {weekSections}
+        {historySections}
+      </div>
+      <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : null}</DragOverlay>
+    </DndContext>
+  );
 
   const orderRail = (
     <OrderRail
@@ -4073,9 +4136,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   if (isRailNarrow) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {newOrderPanel}
-        {weekSections}
-        {historySections}
+        {planningBoard}
         {orderRail}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
@@ -4091,11 +4152,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         alignItems: "start",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-        {newOrderPanel}
-        {weekSections}
-        {historySections}
-      </div>
+      {planningBoard}
       {orderRail}
       {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
