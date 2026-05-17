@@ -980,7 +980,7 @@ function NewOrderRailCard({
         onClick={(event) => { event.stopPropagation(); onApprove(); }}
         style={{ marginTop: 6, width: "100%", border: `1px solid ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorderStrong}`, background: approved ? "rgba(255,255,255,0.68)" : reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayAccent, color: approved ? REVIEW_GLOW.color : "#fff", borderRadius: 999, padding: "7px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", boxShadow: reviewActive && !approved ? "0 8px 18px rgba(190,137,24,0.16)" : undefined }}
       >
-        {approved ? "Approved" : "Approve"}
+        {approved ? "Draft approved" : "Approve draft plan"}
       </button>
     </div>
   );
@@ -3046,7 +3046,7 @@ function SortablePlanTaskCard({
       : isNextTask && !isUnlinkedTask
         ? "0 2px 8px rgba(110,138,106,0.08)"
         : "0 1px 2px rgba(0,0,0,0.025)";
-  const taskBadge = isUnlinkedTask ? "Assign" : assignedOrderId ? "Linked" : null;
+  const taskBadge = isUnlinkedTask ? "Assign" : assignedOrderId ? "Tuesday" : task.linkedOrderIds.length > 0 ? "Monday" : null;
 
   return (
     <div
@@ -3115,39 +3115,63 @@ function SortablePlanTaskCard({
 function SortableSuggestedStepCard({
   step,
   approved,
+  customer,
   onMove,
+  onSelect,
+  onOpen,
 }: {
   step: SuggestedOrderPlanStep;
   approved: boolean;
-  onMove?: (id: string, day: DayKey, person: Person, dateIso: string, dateLabel: string) => void;
+  customer?: string;
+  onMove?: (id: string, day: DayKey, person: Person, dateIso: string, dateLabel: string, overStepId?: string, insertAfter?: boolean) => void;
+  onSelect?: () => void;
+  onOpen?: () => void;
 }) {
   const [isDragging, setIsDragging] = useState(false);
 
   function handleDragEnd(event: DragEvent<HTMLDivElement>) {
     setIsDragging(false);
     if (approved) return;
-    const target = document
-      .elementFromPoint(event.clientX, event.clientY)
-      ?.closest("[data-plan-lane-day]") as HTMLElement | null;
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    const targetStep = hit?.closest("[data-suggested-step-id]") as HTMLElement | null;
+    const target = hit?.closest("[data-plan-lane-day]") as HTMLElement | null;
     const day = target?.dataset.planLaneDay as DayKey | undefined;
     const person = target?.dataset.planLanePerson as Person | undefined;
     const dateIso = target?.dataset.planLaneDateIso;
     const dateLabel = target?.dataset.planLaneDateLabel;
     if (!day || !person || !dateIso || !dateLabel) return;
-    onMove?.(step.id, day, person, dateIso, dateLabel);
+    const overStepId = targetStep?.dataset.suggestedStepId;
+    const rect = targetStep?.getBoundingClientRect();
+    const insertAfter = rect ? event.clientY > rect.top + rect.height / 2 : true;
+    onMove?.(step.id, day, person, dateIso, dateLabel, overStepId, insertAfter);
   }
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       draggable={!approved}
+      data-suggested-step-id={step.id}
+      onClick={() => onSelect?.()}
+      onDoubleClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpen?.();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onSelect?.();
+        }
+      }}
       onDragStart={(event) => {
         if (approved) return;
         setIsDragging(true);
         event.dataTransfer.effectAllowed = "move";
-        event.dataTransfer.setData("text/plain", step.id);
+        event.dataTransfer.setData("text/plain", suggestedStepDragId(step.id));
       }}
       onDragEnd={handleDragEnd}
-      title="Drag to move this suggested task before approval"
+      title="Click to review this order, double-click to open it, or drag to plan it"
       style={{
         display: "block",
         width: "100%",
@@ -3163,19 +3187,24 @@ function SortableSuggestedStepCard({
         borderRadius: 8,
         padding: "6px 7px",
         boxShadow: REVIEW_GLOW.shadow,
-        cursor: approved ? "default" : isDragging ? "grabbing" : "grab",
-        opacity: isDragging ? 0.3 : 1,
-        transition: "opacity 120ms ease, box-shadow 120ms ease",
+        cursor: approved ? "pointer" : isDragging ? "grabbing" : "grab",
+        opacity: isDragging ? 0.28 : 1,
+        outline: "none",
+        transition: "opacity 120ms ease, box-shadow 120ms ease, transform 120ms ease",
         touchAction: "none",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 9, color: REVIEW_GLOW.color, fontFamily: DT.sans, fontWeight: 950 }}>{approved ? "Approved plan" : "New order draft"}</span>
-        <span style={{ fontSize: 9, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 850 }}>{step.dateLabel} · {step.estimatedHours}h</span>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, marginBottom: 2 }}>
+            <span style={{ flex: "0 0 auto", fontSize: 8, color: REVIEW_GLOW.color, fontFamily: DT.sans, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.04em" }}>{approved ? "Approved draft" : "Draft"}</span>
+            <span style={{ minWidth: 0, fontSize: 9, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 850, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.dateLabel}</span>
+          </div>
+          <div style={{ fontSize: 12, fontFamily: DT.sans, fontWeight: 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{step.title}</div>
+          <div style={{ marginTop: 3, fontSize: 10, color: DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{customer ?? step.noWriteLabel}</div>
+        </div>
+        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{Number(step.estimatedHours || 1)}h</span>
       </div>
-      <div style={{ marginTop: 2, fontSize: 11, fontFamily: DT.sans, fontWeight: 800, lineHeight: 1.25, overflowWrap: "anywhere" }}>{step.title}</div>
-      <div style={{ marginTop: 2, fontSize: 9, color: DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere" }}>{step.noWriteLabel}</div>
-      {!approved && <div style={{ marginTop: 4, display: "inline-flex", border: `1px solid ${REVIEW_GLOW.border}`, background: "rgba(255,255,255,0.70)", color: REVIEW_GLOW.color, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Drag to plan</div>}
     </div>
   );
 }
@@ -3243,6 +3272,9 @@ function MonthWeekSection({
   onAppTaskSelect,
   onAppTaskOpen,
   onSuggestedStepMove,
+  onSuggestedStepSelect,
+  onSuggestedStepOpen,
+  suggestedStepCustomer,
   personFilter = "all",
   weekHeaderControl,
   forcePlanningLanes = false,
@@ -3259,6 +3291,9 @@ function MonthWeekSection({
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
+  onSuggestedStepSelect?: () => void;
+  onSuggestedStepOpen?: () => void;
+  suggestedStepCustomer?: string;
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
   forcePlanningLanes?: boolean;
@@ -3561,7 +3596,10 @@ function MonthWeekSection({
                                 <SortableSuggestedStepCard
                                   step={step}
                                   approved={approvedSuggestions}
-                                  onMove={(id, targetDay, targetPerson, dateIso, dateLabel) => onSuggestedStepMove?.(id, targetDay, targetPerson, dateIso, dateLabel)}
+                                  customer={suggestedStepCustomer ?? selectedOrder?.customer}
+                                  onMove={(id, targetDay, targetPerson, dateIso, dateLabel, overStepId, insertAfter) => onSuggestedStepMove?.(id, targetDay, targetPerson, dateIso, dateLabel, overStepId, insertAfter)}
+                                  onSelect={onSuggestedStepSelect}
+                                  onOpen={onSuggestedStepOpen}
                                 />
                                 {showDropSlot(dragId, true) && dropSlot}
                               </div>
@@ -3759,6 +3797,22 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       return;
     }
     selectOrderForPlanTask(task);
+  }
+
+  function selectNewOrderReview() {
+    if (!newOrder) return;
+    if (selectedOrderId === newOrder.id) {
+      setSelectedAssignmentTask(null);
+      setSelectedWorkflow(null);
+      setSelectedOrderId(null);
+      return;
+    }
+    selectOrder(newOrder.id);
+  }
+
+  function openNewOrderOverview() {
+    if (!newOrder) return;
+    openOrderOverview(newOrder.id);
   }
 
   function selectOrderForAppTask(task: AppPlanTask) {
@@ -3963,6 +4017,9 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onAppTaskSelect={selectOrderForAppTask}
       onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
       onSuggestedStepMove={moveSuggestedStep}
+      onSuggestedStepSelect={selectNewOrderReview}
+      onSuggestedStepOpen={openNewOrderOverview}
+      suggestedStepCustomer={newOrder?.customer}
       weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
       forcePlanningLanes
     />
