@@ -11,6 +11,7 @@
 - Added missing-env, read-error, and empty-table states for leads. No write routes or external mutations were added.
 - Updated `/production/plan` to open on the workshop board by default, with warmer copy for Nick: “This is just the workshop board.”
 - Made the Production Plan board labels/cards larger and plainer so Nick can read it as a simple workshop board rather than a new system.
+- Stabilisation pass added a small `Leads` link in the production header so Guido can reach `/leads` without guessing the URL.
 
 ## Not changed
 - Did not push, deploy, open PR, send messages, or touch Monday/Xero/Shopify.
@@ -23,13 +24,14 @@
 ## Checks / proof
 - `npm install` completed because dependencies were not installed in the worktree.
 - `npm run lint` passed with 2 pre-existing/custom-font warnings in production pages, 0 errors.
-- `READ_ONLY_MONDAY_SYNC=true npm run build` passed.
+- `READ_ONLY_MONDAY_SYNC=true npm run build` passed after the stabilisation pass.
   - Build confirms `/leads` is dynamic (`ƒ /leads`) so Supabase env is read at runtime.
   - Build produced expected local warnings about missing Monday/Blob env while falling back during prerender.
 - `npm run check:mutations` passed: no Monday mutation operations found.
-- Smoke test against production server passed with auth cookie:
+- Local dev smoke on port 3017 passed:
   - `/leads` → HTTP 200
   - `/production/plan` → HTTP 200
+- `next start` smoke on port 3017 was attempted first but this local Next 16 build lacked `.next/server/middleware-manifest.json`; dev-server smoke was used instead. The production build itself passed.
 
 ## Conflicts / risks
 - Parallel worktree `/private/tmp/innate-leads-polish-deploy` also has untracked leads work under `/app/leads`, `/app/api/leads`, and `/lib/leads`; this branch intentionally keeps a smaller read-only `/leads` surface to minimise conflict.

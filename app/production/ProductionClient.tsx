@@ -393,6 +393,7 @@ export default function ProductionClient({ orders, syncedAt, source, mondayError
             <SourceIndicator syncedAt={syncedAt} source={source} mondayError={mondayError}/>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <Link href="/leads" style={{fontSize:11,color:"rgba(255,255,255,0.6)",textDecoration:"none",fontFamily:DT.sans,fontWeight:500}}>Leads</Link>
             <Link href="/production/plan" style={{fontSize:11,color:"rgba(255,255,255,0.6)",textDecoration:"none",fontFamily:DT.sans,fontWeight:500}}>Plan →</Link>
             <RefreshButton/>
           </div>
