@@ -371,8 +371,7 @@ function GridView({ rows, weekTitle }: { rows: PlanRow[]; weekTitle: string }) {
           marginBottom: 10,
         }}
       >
-        Grid for {weekTitle} · {rows.length} row{rows.length === 1 ? "" : "s"} ·
-        tasks derived from day-columns (empty days/people are hidden only when completely empty)
+        Workshop board for {weekTitle} · {rows.length} plan row{rows.length === 1 ? "" : "s"} · big lanes, plain task cards
       </div>
       {!anyTasks && (
         <div
@@ -391,15 +390,15 @@ function GridView({ rows, weekTitle }: { rows: PlanRow[]; weekTitle: string }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "60px 1fr 1fr",
-            gap: 3,
+            gridTemplateColumns: "82px 1fr 1fr",
+            gap: 6,
           }}
         >
           <div />
           <div
             style={{
-              fontSize: 9,
-              fontWeight: 700,
+              fontSize: 11,
+              fontWeight: 800,
               color: DT.textFaint,
               textAlign: "center",
               textTransform: "uppercase",
@@ -412,8 +411,8 @@ function GridView({ rows, weekTitle }: { rows: PlanRow[]; weekTitle: string }) {
           </div>
           <div
             style={{
-              fontSize: 9,
-              fontWeight: 700,
+              fontSize: 11,
+              fontWeight: 800,
               color: DT.textFaint,
               textAlign: "center",
               textTransform: "uppercase",
@@ -445,8 +444,8 @@ function GridRow({
       <div style={{ paddingTop: 6 }}>
         <div
           style={{
-            fontSize: 11,
-            fontWeight: 600,
+            fontSize: 14,
+            fontWeight: 800,
             color: DT.textMuted,
             fontFamily: DT.sans,
           }}
@@ -461,11 +460,11 @@ function GridRow({
             background: DT.cardBg,
             borderRadius: 6,
             border: `1px solid ${DT.border}`,
-            padding: 4,
+            padding: 6,
             display: "flex",
             flexDirection: "column",
-            gap: 3,
-            minHeight: 28,
+            gap: 6,
+            minHeight: 58,
           }}
         >
           {grid[day][person].map((t, i) => {
@@ -478,9 +477,9 @@ function GridRow({
                 rel="noopener noreferrer"
                 style={{
                   display: "block",
-                  padding: "4px 6px",
-                  borderRadius: 4,
-                  background: "rgba(12,124,122,0.05)",
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: "rgba(12,124,122,0.06)",
                   border: `1px solid ${DT.border}`,
                   textDecoration: "none",
                   color: DT.textPrimary,
@@ -489,8 +488,8 @@ function GridRow({
               >
                 <div
                   style={{
-                    fontSize: 11,
-                    fontWeight: 600,
+                    fontSize: 13,
+                    fontWeight: 750,
                     lineHeight: 1.3,
                     fontStyle: isToday ? "italic" : "normal",
                     color: isToday ? DT.textFaint : DT.textPrimary,
@@ -500,9 +499,9 @@ function GridRow({
                 </div>
                 <div
                   style={{
-                    fontSize: 9,
+                    fontSize: 11,
                     color: DT.textFaint,
-                    marginTop: 1,
+                    marginTop: 3,
                   }}
                 >
                   {t.sourceRowName}
@@ -529,7 +528,7 @@ export default function PlanClient({
   source,
   mondayError,
 }: PlanClientProps) {
-  const [view, setView] = useState<"list" | "grid">("list");
+  const [view, setView] = useState<"list" | "grid">("grid");
   const weeks = useMemo(() => groupPlanRowsByWeek(rows), [rows]);
   const [selectedWeekId, setSelectedWeekId] = useState<string>(() =>
     weeks[0]?.id ?? ""
@@ -569,8 +568,7 @@ export default function PlanClient({
               Production Plan
             </div>
             <div style={{ fontSize: 11, color: DT.gold, fontFamily: DT.sans, marginTop: 1 }}>
-              {rows.length} row{rows.length === 1 ? "" : "s"} across {weeks.length} week
-              {weeks.length === 1 ? "" : "s"}
+              Workshop board · simple read-only view for Nick · {rows.length} row{rows.length === 1 ? "" : "s"}
             </div>
             <SourceIndicator syncedAt={syncedAt} source={source} mondayError={mondayError} />
           </div>
@@ -599,6 +597,23 @@ export default function PlanClient({
         />
       </header>
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 20px" }}>
+        <section
+          style={{
+            background: "linear-gradient(135deg, rgba(255,255,255,0.92), rgba(200,169,110,0.08))",
+            border: `1px solid ${DT.border}`,
+            borderRadius: DT.radius,
+            padding: "14px 16px",
+            marginBottom: 16,
+            boxShadow: DT.shadow,
+          }}
+        >
+          <div style={{ fontFamily: DT.serif, fontSize: 20, fontWeight: 700, color: DT.textPrimary }}>
+            This is just the workshop board
+          </div>
+          <p style={{ margin: "6px 0 0", color: DT.textSecondary, fontSize: 13, lineHeight: 1.45, maxWidth: 780 }}>
+            Pick the week, then read across the days. Nick and Dylan each have a lane; each card is the plain task text from the Production Plan. Nothing here writes back to Monday unless Guido explicitly approves a refresh.
+          </p>
+        </section>
         <div
           style={{
             display: "flex",
@@ -623,7 +638,7 @@ export default function PlanClient({
                 fontFamily: DT.sans,
               }}
             >
-              {v === "list" ? "List" : "Grid"}
+              {v === "list" ? "Row list" : "Workshop board"}
             </button>
           ))}
           {view === "grid" && weeks.length > 0 && (
