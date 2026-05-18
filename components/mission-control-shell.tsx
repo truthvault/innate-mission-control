@@ -5,9 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "plan" | "samples" | "dispatch" | "test";
+export type MissionControlSection = "orders" | "leads" | "plan" | "samples" | "dispatch" | "test";
 
 const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
+  { section: "leads", label: "Leads", href: "/leads" },
   { section: "plan", label: "Production Plan", href: "/production/plan" },
   { section: "samples", label: "Samples", href: "/production/samples" },
 ];
@@ -23,6 +24,7 @@ function relativeAge(iso: string): string {
 }
 
 function scopeFor(section: MissionControlSection): string {
+  if (section === "leads") return "leads";
   if (section === "plan") return "plan";
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
@@ -136,6 +138,12 @@ function RefreshButton({ section }: { section: MissionControlSection }) {
     setRefreshed(false);
     try {
       const scope = scopeFor(section);
+      if (scope === "leads") {
+        setRefreshed(true);
+        window.setTimeout(() => setRefreshed(false), 5000);
+        startTransition(() => router.refresh());
+        return;
+      }
       const url = scope === "orders" ? "/api/monday/refresh" : `/api/monday/refresh?scope=${scope}`;
       const res = await fetch(url, { method: "POST", credentials: "include" });
       const body = await res.json();

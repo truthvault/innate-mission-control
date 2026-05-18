@@ -41,6 +41,12 @@ const checks = [
     auth: false,
   },
   {
+    path: "/leads",
+    label: "leads",
+    expect: ["Leads", "Tuesday"],
+    auth: true,
+  },
+  {
     path: "/production",
     label: "production default",
     expect: ["Production Plan", "Tuesday", "Synced"],

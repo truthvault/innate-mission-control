@@ -1,0 +1,19 @@
+import { NextRequest, NextResponse } from "next/server";
+import { updateLead } from "@/lib/leads/write-leads";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid lead payload" }, { status: 400 });
+  try {
+    const lead = await updateLead(id, body);
+    return NextResponse.json({ ok: true, lead });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Lead update failed";
+    const status = /disabled/.test(message) ? 403 : /required|Invalid|must be|No supported/.test(message) ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
