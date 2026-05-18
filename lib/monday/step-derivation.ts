@@ -52,8 +52,8 @@ function computeTableStep(args: DeriveArgs): number {
 
   // Coating progression — Top drives.
   if (top === "Bottom coat" || top === "1st coat" || top === "1st Colour") return 7;
-  if (top === "2nd Colour" || top === "coated-check over") return 8;
-  if (top === "Final coat") return 9;
+  if (top === "2nd coat" || top === "2nd Colour" || top === "coated-check over" || top === "coated -check over") return 8;
+  if (top === "3rd coat" || top === "Final coat") return 9;
   if (top === "Repair") return 10;
 
   // Post-coating.
@@ -82,8 +82,8 @@ function computePanelStep(args: DeriveArgs): number {
 
   // Coating progression — panels have no Legs.
   if (top === "Bottom coat" || top === "1st coat" || top === "1st Colour") return 6;
-  if (top === "2nd Colour" || top === "coated-check over") return 7;
-  if (top === "Final coat") return 8;
+  if (top === "2nd coat" || top === "2nd Colour" || top === "coated-check over" || top === "coated -check over") return 7;
+  if (top === "3rd coat" || top === "Final coat") return 8;
 
   if (top === "Done / NA" && status === "Booked") return 10;
   if (top === "Done / NA" && status === "In production") return 9;
@@ -113,11 +113,11 @@ export function deriveStepNote(args: {
 
   const top = args.rawMondayTopPanel;
   if (top === "Repair") return "In repair";
-  if (top === "Final coat") return "Curing final coat";
+  if (top === "3rd coat" || top === "Final coat") return "Curing final coat";
   if (top === "1st coat" || top === "Bottom coat" || top === "1st Colour") {
     return "1st coat applied";
   }
-  if (top === "2nd Colour" || top === "coated-check over") return "2nd coat applied";
+  if (top === "2nd coat" || top === "2nd Colour" || top === "coated-check over" || top === "coated -check over") return "2nd coat applied";
   if (top === "Unstarted") {
     return args.product === "Panel" ? "Materials ready, starting CNC" : "Materials ready, starting build";
   }

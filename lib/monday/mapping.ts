@@ -34,6 +34,7 @@ export const ORDERS_COLUMNS = {
 export const PRODUCT_TYPE_MAP: Record<string, "Table" | "Panel" | "Other"> = {
   Table: "Table",
   "Table + bench": "Table",
+  Bench: "Table",
   Console: "Table",
   Chair: "Table",
   Sample: "Table",
