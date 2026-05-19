@@ -207,7 +207,7 @@ export function MissionControlShell({
   const pathname = usePathname();
   const isNarrow = useIsNarrow();
   return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
+    <div style={{ minHeight: "100vh", width: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
       <header style={{ position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "10px 12px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "300px minmax(620px, 1fr) 150px", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflowX: "hidden" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />

@@ -26,6 +26,19 @@ type LeadSort = "priority" | "follow_up_asc" | "follow_up_desc" | "value_desc" |
 
 type Warning = { label: string; tone: "red" | "amber" | "grey" | "teal" | "green" };
 
+function leadNameParts(lead: Lead) {
+  const rawName = lead.customerName.trim();
+  const [first, ...rest] = rawName.split(/\s+-\s+/);
+  const suffix = rest.join(" - ").trim();
+  const contact = lead.contactName?.trim();
+  const category = lead.productCategory?.trim();
+  const productHint = /(table|desk|bench|top|tops|panel|panels|boardroom|dining|coffee|shelf|shelves|cabinet|decking|bean bag|bean bags|ferry terminal)/i;
+  const title = suffix ? first.trim() : rawName;
+  const suffixLooksLikeItem = Boolean(suffix && suffix !== contact && (productHint.test(suffix) || (category && suffix.toLowerCase().includes(category.toLowerCase()))));
+  const item = suffixLooksLikeItem ? suffix : category || lead.sampleSpecies || lead.source || "General enquiry";
+  return { title, item };
+}
+
 function daysSince(value?: string) {
   const key = dateKey(value);
   if (!key) return undefined;
@@ -313,18 +326,24 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
         <Chip label={`${queue.length} today`} tone="amber" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))", gap: 8 }}>
-        {queue.map((lead) => (
+        {queue.map((lead) => {
+          const name = leadNameParts(lead);
+          return (
           <button key={lead.id} type="button" onClick={() => onSelect(lead)} style={{ textAlign: "left", border: `1px solid ${DT.border}`, borderRadius: DT.radiusSm, background: DT.cardBg, padding: 10, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start" }}>
-              <strong title={lead.customerName} style={{ fontFamily: DT.serif, fontSize: 16, color: DT.textPrimary, lineHeight: 1.1 }}>{lead.customerName}</strong>
-              <span style={{ fontFamily: DT.sans, color: lead.estimatedValue ? DT.textSecondary : DT.textFaint, fontWeight: 900, fontSize: 11 }}>{lead.estimatedValue ? money(lead.estimatedValue) : "No value"}</span>
+              <div style={{ minWidth: 0 }}>
+                <strong title={lead.customerName} style={{ display: "block", fontFamily: DT.serif, fontSize: 16, color: DT.textPrimary, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name.title}</strong>
+                <div title={name.item} style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.2, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name.item}</div>
+              </div>
+              <span style={{ fontFamily: DT.sans, color: lead.estimatedValue ? DT.textSecondary : DT.textFaint, fontWeight: 900, fontSize: 11, whiteSpace: "nowrap" }}>{lead.estimatedValue ? money(lead.estimatedValue) : "No value"}</span>
             </div>
-            <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, lineHeight: 1.3 }}>{whyNow(lead)}</div>
+            <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, lineHeight: 1.3 }}>{whyNow(lead)}</div>
             <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
               {leadWarnings(lead).slice(0, 2).map((warning) => <Chip key={warning.label} label={warning.label} tone={warning.tone} />)}
             </div>
           </button>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
