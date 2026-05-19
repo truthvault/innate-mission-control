@@ -14,6 +14,9 @@ Create a Tuesday Freight tab for quoting, booking, tracking, and reconciling fre
 - Add a top tab for Freight.
 - This does not currently exist in Monday in the same way.
 - It may cover freight, bookings, quote-vs-actual, tracking, and related logistics.
+- Keep website freight quote logs as a deliberate Tuesday data source.
+- The quote log should record the addresses/details people put into the freight calculator, product/table details, estimate shown, raw carrier result where available, and manual-check prompts.
+- `/freight-quotes` is the current seed of the future Freight / Shipping tab.
 
 ## Core jobs-to-be-done
 - Estimate freight for quotes/orders.
@@ -42,8 +45,11 @@ Create a Tuesday Freight tab for quoting, booking, tracking, and reconciling fre
 - Notes
 
 ## Source of truth
-- Likely local Tuesday table first, with supporting data from Shopify/orders, Monday/jobs, Xero bills, and existing freight estimator work.
-- Existing reference: `reference/supabase-freight-schema-2026-05-17.sql` may be relevant before build.
+- Local Tuesday/Supabase table first, with supporting data from Shopify/orders, Monday/jobs, Xero bills, and existing freight estimator work.
+- Freight quote calculator events should write to Supabase `freight_quote_events` when `FREIGHT_QUOTE_LOGGING_ENABLED=true` and Supabase service env is configured.
+- Existing schema: `reference/supabase-freight-schema-2026-05-17.sql`.
+- Raw visitor IP should not be stored; only a salted hash may be stored for internal/test filtering.
+- Airtable is legacy fallback only, not the preferred long-term store.
 
 ## Actions/buttons to consider
 - New freight quote
@@ -75,6 +81,7 @@ Create a Tuesday Freight tab for quoting, booking, tracking, and reconciling fre
 
 
 ## Open questions
-- Should Freight be the first custom Tuesday-owned table?
-- Which carriers and estimator logic are v1?
-- Does this tab include incoming supplier freight as well as outgoing customer freight?
+- Should Freight include incoming supplier freight as well as outgoing customer freight?
+- What retention period should apply to freight quote event addresses and metadata?
+- Who besides Guido should be able to see internal/test calculator entries?
+- When approved for production, set `FREIGHT_QUOTE_LOGGING_ENABLED=true` and confirm the Supabase schema/env before deploy.
