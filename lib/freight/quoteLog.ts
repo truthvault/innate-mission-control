@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export type FreightQuoteLogStatus =
   | "estimated"
   | "dry_run"
@@ -27,6 +29,8 @@ export type FreightQuoteLogEvent = {
   variantTitle?: string;
   userAgent?: string;
   referer?: string;
+  clientIp?: string;
+  internalTestMarker?: string;
   result?: Record<string, unknown>;
 };
 
@@ -55,11 +59,54 @@ export type FreightQuoteRow = {
   referer: string;
   userAgent: string;
   packageSummary: string;
+  isInternalTest?: boolean;
+  internalTestReasons?: string[];
+  clientIpHash?: string;
 };
 
 const AIRTABLE_API_URL = "https://api.airtable.com/v0";
 const DEFAULT_BASE_ID = "apphs7DnsHiLGdNbc";
 const DEFAULT_TABLE_ID = "tbl1OixNuxTBFWMsd";
+const DEFAULT_LOG_TIMEOUT_MS = 1500;
+
+function supabaseConfig() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+  if (!url || !serviceKey) return null;
+  return { url: url.replace(/\/$/, ""), serviceKey };
+}
+
+function freightQuoteLoggingEnabled() {
+  return process.env.FREIGHT_QUOTE_LOGGING_ENABLED === "true";
+}
+
+function airtableFallbackEnabled() {
+  return process.env.FREIGHT_QUOTE_LOG_AIRTABLE_FALLBACK === "true";
+}
+
+function quoteLogTimeoutMs() {
+  const value = Number(process.env.FREIGHT_QUOTE_LOG_TIMEOUT_MS);
+  return Number.isFinite(value) && value > 0 ? Math.min(value, 5000) : DEFAULT_LOG_TIMEOUT_MS;
+}
+
+async function fetchQuoteLog(url: string, init: RequestInit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), quoteLogTimeoutMs());
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export function getFreightQuoteLogStatus() {
+  return {
+    loggingEnabled: freightQuoteLoggingEnabled(),
+    supabaseConfigured: Boolean(supabaseConfig()),
+    airtableConfigured: Boolean(airtableConfig()),
+    airtableFallbackEnabled: airtableFallbackEnabled(),
+  };
+}
 
 function airtableConfig() {
   const apiKey = process.env.AIRTABLE_API_KEY;
@@ -84,6 +131,44 @@ function booleanOrFalse(value: unknown): boolean {
   return value === true;
 }
 
+function normaliseIp(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const first = value.split(",")[0]?.trim();
+  return first || undefined;
+}
+
+function hashClientIp(value: string | undefined): string | undefined {
+  const ip = normaliseIp(value);
+  const salt = process.env.FREIGHT_IP_HASH_SALT;
+  if (!ip || !salt) return undefined;
+  return createHash("sha256").update(`${salt}:${ip}`).digest("hex");
+}
+
+function configuredInternalIpHashes(): Set<string> {
+  return new Set(
+    (process.env.FREIGHT_INTERNAL_IP_HASHES || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+  );
+}
+
+function internalTestReasons(event: FreightQuoteLogEvent, clientIpHash: string | undefined): string[] {
+  const reasons: string[] = [];
+  const source = (event.source || "").toLowerCase();
+  const marker = (event.internalTestMarker || "").toLowerCase();
+  const pageUrl = (event.pageUrl || "").toLowerCase();
+  const status = (event.status || "").toLowerCase();
+
+  if (clientIpHash && configuredInternalIpHashes().has(clientIpHash)) reasons.push("internal_ip_hash");
+  if (marker && marker === process.env.FREIGHT_INTERNAL_TEST_TOKEN?.toLowerCase()) reasons.push("internal_test_token");
+  if (/internal|test|debug|preview/.test(source)) reasons.push("source_marker");
+  if (/freighttest=|internaltest=|testfreight=/.test(pageUrl)) reasons.push("url_test_marker");
+  if (status === "dry_run") reasons.push("dry_run");
+
+  return Array.from(new Set(reasons));
+}
+
 function packageSummaryFromResult(result: Record<string, unknown> | undefined): string | undefined {
   const lines = Array.isArray(result?.packageLines) ? result.packageLines : [];
   if (!lines.length) return undefined;
@@ -99,6 +184,69 @@ function packageSummaryFromResult(result: Record<string, unknown> | undefined): 
     })
     .filter(Boolean)
     .join("; ");
+}
+
+function productArea(event: FreightQuoteLogEvent): string {
+  const handle = (event.productHandle || "").toLowerCase();
+  const page = (event.pageUrl || event.referer || "").toLowerCase();
+  const source = (event.source || "").toLowerCase();
+  if (/bench|benchtop|panel/.test(handle) || /bench|benchtop|panel/.test(page) || /bench|benchtop|panel/.test(source)) return "benchtop";
+  if (/dining|table|crossroads|asterix|homestead|oval/.test(handle) || /dining/.test(source)) return "dining";
+  if (/outdoor|alfresco/.test(handle) || /outdoor|alfresco/.test(page)) return "outdoor";
+  return "unknown";
+}
+
+function jsonOrNull(value: unknown): unknown | null {
+  return value === undefined ? null : value;
+}
+
+function supabaseRow(event: FreightQuoteLogEvent) {
+  const result = event.result || {};
+  const totals = result.totals && typeof result.totals === "object" ? (result.totals as Record<string, unknown>) : {};
+  const destination = event.destination || {};
+  const clientIpHash = hashClientIp(event.clientIp);
+  const reasons = internalTestReasons(event, clientIpHash);
+  const addressEntered = event.addressEntered || destination.formattedAddress || [destination.suburb, destination.city, destination.postCode].filter(Boolean).join(", ");
+
+  return {
+    created_at: event.timestamp || new Date().toISOString(),
+    status: event.status || null,
+    product_area: productArea(event),
+    configurator_type: result.configuratorType || null,
+    product_handle: event.productHandle || null,
+    variant_title: event.variantTitle || null,
+    variant_id: event.variantId || null,
+    table_length_mm: numberOrUndefined(event.tableLengthMm) ?? null,
+    table_width_mm: numberOrUndefined(event.tableWidthMm) ?? null,
+    bench_count: numberOrUndefined(event.benchCount) ?? null,
+    base_family: event.baseFamily || null,
+    address_entered: addressEntered || null,
+    suburb: destination.suburb || null,
+    city: destination.city || null,
+    postcode: destination.postCode || null,
+    country_code: destination.countryCode || "NZ",
+    client_ip_hash: clientIpHash || null,
+    is_internal_test: reasons.length > 0,
+    internal_test_reasons: reasons,
+    source: event.source || null,
+    page_url: event.pageUrl || null,
+    referer: event.referer || null,
+    user_agent: event.userAgent || null,
+    estimate_incl_gst: numberOrUndefined(result.estimateInclGst) ?? null,
+    raw_mainfreight_incl_gst: numberOrUndefined(result.rawMainfreightInclGst) ?? null,
+    raw_mainfreight_ex_gst: numberOrUndefined(result.rawMainfreightExGst) ?? null,
+    manual_check_offered: booleanOrFalse(result.manualCheckOffered),
+    package_items: numberOrUndefined(totals.items) ?? null,
+    total_cubic_metres: numberOrUndefined(totals.cubicMetres) ?? null,
+    total_weight_kg: numberOrUndefined(totals.weightKg) ?? null,
+    package_summary: packageSummaryFromResult(result) || null,
+    package_lines: Array.isArray(result.packageLines) ? result.packageLines : null,
+    selected_options_json: jsonOrNull(result.selectedOptions),
+    destination_json: destination,
+    result_json: result,
+    raw_carrier_quote_json: jsonOrNull(result.rawCarrierQuote),
+    source_system: "mission_control",
+  };
 }
 
 function eventId(event: FreightQuoteLogEvent, timestamp: string) {
@@ -153,20 +301,59 @@ function compactFields(fields: Record<string, unknown>) {
 }
 
 export async function writeQuoteEvent(event: FreightQuoteLogEvent) {
+  if (!freightQuoteLoggingEnabled()) {
+    return { ok: false, skipped: true, reason: "freight_quote_logging_disabled" };
+  }
+
+  const stampedEvent = { timestamp: new Date().toISOString(), ...event };
+  const supabase = supabaseConfig();
+  if (supabase) {
+    try {
+      const response = await fetchQuoteLog(`${supabase.url}/rest/v1/freight_quote_events`, {
+        method: "POST",
+        headers: {
+          apikey: supabase.serviceKey,
+          Authorization: `Bearer ${supabase.serviceKey}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(supabaseRow(stampedEvent)),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.warn(`[freight] quote-event Supabase write failed: HTTP ${response.status} ${text.slice(0, 500)}`);
+        if (!airtableFallbackEnabled()) {
+          return { ok: false, status: response.status, store: "supabase", fallbackSkipped: true };
+        }
+      } else {
+        const body = (await response.json()) as Array<{ id?: string }>;
+        return { ok: true, id: body[0]?.id, store: "supabase" };
+      }
+    } catch (err) {
+      console.warn("[freight] quote-event Supabase write failed", err);
+      if (!airtableFallbackEnabled()) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err), store: "supabase", fallbackSkipped: true };
+      }
+    }
+  }
+
+  // Legacy fallback only. Airtable remains available for old envs, but new
+  // Mission Control logging should use Supabase.
   const config = airtableConfig();
   if (!config) {
-    console.warn("[freight] quote-event Airtable logging skipped: missing config");
-    return { ok: false, skipped: true, reason: "missing_airtable_config" };
+    console.warn("[freight] quote-event logging skipped: missing Supabase/Airtable config");
+    return { ok: false, skipped: true, reason: "missing_quote_log_config" };
   }
 
   try {
-    const response = await fetch(`${AIRTABLE_API_URL}/${config.baseId}/${config.tableId}`, {
+    const response = await fetchQuoteLog(`${AIRTABLE_API_URL}/${config.baseId}/${config.tableId}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ fields: compactFields(airtableFields({ timestamp: new Date().toISOString(), ...event })) }),
+      body: JSON.stringify({ fields: compactFields(airtableFields(stampedEvent)) }),
     });
 
     if (!response.ok) {
@@ -176,7 +363,7 @@ export async function writeQuoteEvent(event: FreightQuoteLogEvent) {
     }
 
     const body = (await response.json()) as { id?: string };
-    return { ok: true, id: body.id };
+    return { ok: true, id: body.id, store: "airtable" };
   } catch (err) {
     console.warn("[freight] quote-event Airtable write failed", err);
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -225,9 +412,73 @@ function rowFromRecord(record: { id: string; fields?: Record<string, unknown> })
   };
 }
 
-export async function listQuoteEvents(limit = 50): Promise<{ rows: FreightQuoteRow[]; error?: string }> {
+function rowFromSupabase(record: Record<string, unknown>): FreightQuoteRow {
+  return {
+    id: asString(record.id),
+    timestamp: asString(record.created_at),
+    status: asString(record.status),
+    productHandle: asString(record.product_handle),
+    variantTitle: asString(record.variant_title),
+    variantId: asString(record.variant_id),
+    tableLengthMm: asNumber(record.table_length_mm),
+    tableWidthMm: asNumber(record.table_width_mm),
+    benchCount: asNumber(record.bench_count),
+    addressEntered: asString(record.address_entered),
+    suburb: asString(record.suburb),
+    city: asString(record.city),
+    postCode: asString(record.postcode),
+    estimateInclGst: asNumber(record.estimate_incl_gst),
+    rawMainfreightInclGst: asNumber(record.raw_mainfreight_incl_gst),
+    manualCheckOffered: asBool(record.manual_check_offered),
+    packageItems: asNumber(record.package_items),
+    totalCubicMetres: asNumber(record.total_cubic_metres),
+    totalWeightKg: asNumber(record.total_weight_kg),
+    source: asString(record.source),
+    pageUrl: asString(record.page_url),
+    referer: asString(record.referer),
+    userAgent: asString(record.user_agent),
+    packageSummary: asString(record.package_summary),
+    isInternalTest: asBool(record.is_internal_test),
+    internalTestReasons: Array.isArray(record.internal_test_reasons) ? record.internal_test_reasons.map(String) : [],
+    clientIpHash: asString(record.client_ip_hash),
+  };
+}
+
+export async function listQuoteEvents(
+  limit = 50,
+  options: { includeInternal?: boolean; productArea?: string } = {},
+): Promise<{ rows: FreightQuoteRow[]; error?: string }> {
+  const supabase = supabaseConfig();
+  if (supabase) {
+    const params = new URLSearchParams({
+      select: "*",
+      order: "created_at.desc",
+      limit: String(Math.max(1, Math.min(limit, 100))),
+    });
+    if (!options.includeInternal) params.set("is_internal_test", "eq.false");
+    if (options.productArea) params.set("product_area", `eq.${options.productArea}`);
+
+    try {
+      const response = await fetch(`${supabase.url}/rest/v1/freight_quote_events?${params}`, {
+        headers: {
+          apikey: supabase.serviceKey,
+          Authorization: `Bearer ${supabase.serviceKey}`,
+        },
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        return { rows: [], error: `Supabase read failed: HTTP ${response.status} ${text.slice(0, 300)}` };
+      }
+      const body = (await response.json()) as Record<string, unknown>[];
+      return { rows: body.map(rowFromSupabase) };
+    } catch (err) {
+      return { rows: [], error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
   const config = airtableConfig();
-  if (!config) return { rows: [], error: "Missing Airtable quote log config" };
+  if (!config) return { rows: [], error: "Missing Supabase/Airtable quote log config" };
 
   const params = new URLSearchParams({
     maxRecords: String(Math.max(1, Math.min(limit, 100))),
@@ -248,7 +499,9 @@ export async function listQuoteEvents(limit = 50): Promise<{ rows: FreightQuoteR
     }
 
     const body = (await response.json()) as { records?: Array<{ id: string; fields?: Record<string, unknown> }> };
-    return { rows: (body.records || []).map(rowFromRecord) };
+    let rows = (body.records || []).map(rowFromRecord);
+    if (!options.includeInternal) rows = rows.filter((row) => !/internal|test|debug|preview/.test(row.source.toLowerCase()));
+    return { rows };
   } catch (err) {
     return { rows: [], error: err instanceof Error ? err.message : String(err) };
   }

@@ -77,6 +77,7 @@ type EstimateRequestBody = {
   source?: unknown;
   addressEntered?: unknown;
   formattedAddress?: unknown;
+  internalTestMarker?: unknown;
 };
 
 type EstimateResult = {
@@ -170,6 +171,15 @@ function parseDestination(value: unknown): MainfreightDestinationAddress {
   };
 }
 
+function clientIpFromRequest(request: Request): string | undefined {
+  return (
+    request.headers.get("x-forwarded-for") ||
+    request.headers.get("x-real-ip") ||
+    request.headers.get("cf-connecting-ip") ||
+    undefined
+  );
+}
+
 function normaliseLocation(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -241,6 +251,8 @@ async function estimateFromBody(body: EstimateRequestBody, request: Request, sta
     pageUrl: optionalString(body.pageUrl),
     variantId: optionalString(body.variantId),
     variantTitle: optionalString(body.variantTitle),
+    internalTestMarker: optionalString(body.internalTestMarker),
+    clientIp: clientIpFromRequest(request),
     userAgent: request.headers.get("user-agent") || undefined,
     referer: request.headers.get("referer") || undefined,
   };
@@ -369,6 +381,7 @@ function bodyFromSearchParams(url: URL): EstimateRequestBody {
     source: url.searchParams.get("source") || "shopify_theme_jsonp",
     addressEntered: url.searchParams.get("addressEntered") || undefined,
     formattedAddress: url.searchParams.get("formattedAddress") || undefined,
+    internalTestMarker: url.searchParams.get("freightTest") || url.searchParams.get("internalTest") || undefined,
     destination,
   };
 }
