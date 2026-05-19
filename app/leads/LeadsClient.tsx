@@ -76,6 +76,10 @@ function isHighValue(lead: Lead) {
   return (lead.estimatedValue || 0) >= 10_000;
 }
 
+function hasLiveQuoteValue(lead: Lead) {
+  return !isClosed(lead) && (lead.estimatedValue || 0) > 0;
+}
+
 function isCashflowQuote(lead: Lead) {
   return !isClosed(lead) && lead.status === "quoted";
 }
@@ -181,11 +185,15 @@ function sortByCashflow(a: Lead, b: Lead) {
 }
 
 function isCashFirstLead(lead: Lead) {
-  return !isClosed(lead) && (isCashflowQuote(lead) || isHighValue(lead));
+  return hasLiveQuoteValue(lead);
 }
 
 function cashFirstLeads(leads: Lead[]) {
   return leads.filter(isCashFirstLead).sort(sortByCashflow).slice(0, 4);
+}
+
+function quoteWarmth(lead: Lead) {
+  return lead.priority === "hot" ? "hot" : "warm";
 }
 
 function matchesSearch(lead: Lead, search: string) {
@@ -516,7 +524,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
   const router = useRouter();
 
   const activeRows = useMemo(() => result.rows.filter((lead) => !isClosed(lead)), [result.rows]);
-  const cashflowRows = useMemo(() => activeRows.filter(isCashflowQuote), [activeRows]);
+  const cashflowRows = useMemo(() => activeRows.filter(hasLiveQuoteValue), [activeRows]);
   const sampleFollowUpRows = useMemo(() => sortSampleFollowUps(activeRows.filter((lead) => isRecentSampleFollowUp(lead))), [activeRows]);
   const selectedLead = useMemo(() => result.rows.find((lead) => lead.id === selectedId) || null, [result.rows, selectedId]);
 
@@ -526,7 +534,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
         if (filter === "do_today") return doToday(lead);
         if (filter === "sample_followups") return isRecentSampleFollowUp(lead);
         if (filter === "overdue") return isDue(lead);
-        if (filter === "cashflow") return isCashflowQuote(lead);
+        if (filter === "cashflow") return hasLiveQuoteValue(lead);
         if (filter === "hot") return lead.priority === "hot" && !isClosed(lead);
         if (filter === "needs_next_step") return needsNextStep(lead);
         if (filter === "waiting") return lead.status === "waiting_on_customer" && !isClosed(lead);
@@ -540,9 +548,10 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
   }, [filter, result.rows, search]);
 
   const visibleIds = useMemo(() => new Set(visible.map((lead) => lead.id)), [visible]);
-  const hot = activeRows.filter((lead) => lead.priority === "hot").length;
   const overdue = activeRows.filter(isDue).length;
-  const quotedValue = cashflowRows.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
+  const liveQuoteValue = cashflowRows.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
+  const hotQuoteValue = cashflowRows.filter((lead) => quoteWarmth(lead) === "hot").reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
+  const warmQuoteValue = liveQuoteValue - hotQuoteValue;
   const missingNext = activeRows.filter(needsNextStep).length;
   const closed = result.rows.length - activeRows.length;
 
@@ -566,8 +575,9 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
         <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
         <MetricButton label="Recent sample follow-ups" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
-        <MetricButton label="Open quoted value" value={money(quotedValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
-        <MetricButton label="Hot leads" value={hot} tone={hot ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
+        <MetricButton label="Live quote value" value={money(liveQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
+        <MetricButton label="Hot quote value" value={money(hotQuoteValue)} tone={hotQuoteValue ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
+        <MetricButton label="Warm quote value" value={money(warmQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
         <MetricButton label="Missing next step" value={missingNext} tone={missingNext ? "bad" : "good"} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
         <KpiCard label="Active leads" value={activeRows.length} />
         <KpiCard label="Closed leads hidden" value={closed} tone="neutral" />
