@@ -3,9 +3,10 @@
 import { useMemo, useState, useTransition, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { MissionControlShell } from "@/components/mission-control-shell";
-import { Chip, DT, KpiCard } from "@/components/mission-control-ui";
+import { Chip, DT } from "@/components/mission-control-ui";
 import type { Lead, LeadsResult, LeadPriority, LeadStatus } from "@/lib/leads/types";
 import { isRecentSampleFollowUp, sampleDraftPrompt, sampleFollowUpLabel, sortSampleFollowUps } from "@/lib/leads/sample-followups.mjs";
+import { dateKey, doToday, hasLiveQuoteValue, isCashflowQuote, isClosed, isDue, isDueThisWeek, isHighValue, needsNextStep, sortByUrgency, sortLeads, SORT_OPTIONS } from "@/lib/leads/prioritisation.mjs";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   new: "New enquiry",
@@ -20,25 +21,10 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
 
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS) as Array<[LeadStatus, string]>;
 const PRIORITY_OPTIONS: Array<[LeadPriority, string]> = [["hot", "Hot"], ["normal", "Normal"], ["low", "Low"]];
-const CLOSED_STATUSES = new Set<LeadStatus>(["won", "lost", "parked"]);
-
-type LeadFilter = "do_today" | "sample_followups" | "overdue" | "cashflow" | "hot" | "needs_next_step" | "waiting" | "active" | "closed" | "all";
+type LeadFilter = "do_today" | "sample_followups" | "overdue" | "cashflow" | "hot" | "needs_next_step" | "waiting" | "active";
+type LeadSort = "priority" | "follow_up_asc" | "follow_up_desc" | "value_desc" | "value_asc" | "updated_desc" | "name_asc";
 
 type Warning = { label: string; tone: "red" | "amber" | "grey" | "teal" | "green" };
-
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDaysKey(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function dateKey(value?: string) {
-  return value ? value.slice(0, 10) : undefined;
-}
 
 function daysSince(value?: string) {
   const key = dateKey(value);
@@ -48,50 +34,10 @@ function daysSince(value?: string) {
   return Math.floor((Date.now() - date.getTime()) / 86_400_000);
 }
 
-function isClosed(lead: Lead) {
-  return CLOSED_STATUSES.has(lead.status);
-}
-
-function isDue(lead: Lead) {
-  const followUp = dateKey(lead.nextFollowUpAt);
-  return Boolean(followUp && followUp <= todayKey() && !isClosed(lead));
-}
-
-function isDueThisWeek(lead: Lead) {
-  const followUp = dateKey(lead.nextFollowUpAt);
-  return Boolean(followUp && followUp <= addDaysKey(7) && !isClosed(lead));
-}
-
-function needsNextStep(lead: Lead) {
-  return !isClosed(lead) && (!lead.nextAction || lead.nextAction === "No Action" || !dateKey(lead.nextFollowUpAt));
-}
-
 function isStale(lead: Lead) {
   if (isClosed(lead)) return false;
   const age = daysSince(lead.lastInteractionAt || lead.updatedAt);
   return typeof age === "number" && age >= 14;
-}
-
-function isHighValue(lead: Lead) {
-  return (lead.estimatedValue || 0) >= 10_000;
-}
-
-function hasLiveQuoteValue(lead: Lead) {
-  return !isClosed(lead) && (lead.estimatedValue || 0) > 0;
-}
-
-function isCashflowQuote(lead: Lead) {
-  return !isClosed(lead) && lead.status === "quoted";
-}
-
-function doToday(lead: Lead) {
-  if (isClosed(lead)) return false;
-  if (isDue(lead)) return true;
-  if (lead.status === "follow_up_due") return true;
-  if (lead.priority === "hot" && isDueThisWeek(lead)) return true;
-  if (isCashflowQuote(lead) && (isHighValue(lead) || isDueThisWeek(lead))) return true;
-  if (needsNextStep(lead) && (lead.priority === "hot" || isCashflowQuote(lead) || isHighValue(lead))) return true;
-  return false;
 }
 
 function money(value?: number) {
@@ -159,29 +105,6 @@ function whyNow(lead: Lead) {
   if (needsNextStep(lead)) return "Set the next step so it does not drift";
   if (lead.priority === "hot") return "Hot lead due soon";
   return "Review when you scan the board";
-}
-
-function sortByUrgency(a: Lead, b: Lead) {
-  const dueA = isDue(a) ? 0 : 1;
-  const dueB = isDue(b) ? 0 : 1;
-  if (dueA !== dueB) return dueA - dueB;
-  const hotA = a.priority === "hot" ? 0 : 1;
-  const hotB = b.priority === "hot" ? 0 : 1;
-  if (hotA !== hotB) return hotA - hotB;
-  const quoteA = isCashflowQuote(a) && isHighValue(a) ? 0 : 1;
-  const quoteB = isCashflowQuote(b) && isHighValue(b) ? 0 : 1;
-  if (quoteA !== quoteB) return quoteA - quoteB;
-  const followA = dateKey(a.nextFollowUpAt) || "9999-12-31";
-  const followB = dateKey(b.nextFollowUpAt) || "9999-12-31";
-  if (followA !== followB) return followA.localeCompare(followB);
-  return (b.estimatedValue || 0) - (a.estimatedValue || 0) || b.updatedAt.localeCompare(a.updatedAt);
-}
-
-function sortByCashflow(a: Lead, b: Lead) {
-  const dueA = isDue(a) ? 0 : 1;
-  const dueB = isDue(b) ? 0 : 1;
-  if (dueA !== dueB) return dueA - dueB;
-  return (b.estimatedValue || 0) - (a.estimatedValue || 0) || sortByUrgency(a, b);
 }
 
 function quoteWarmth(lead: Lead) {
@@ -378,7 +301,7 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
 }
 
 function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Lead) => void }) {
-  const queue = leads.filter(doToday).sort(sortByUrgency).slice(0, 8);
+  const queue = leads.filter((lead) => doToday(lead)).sort(sortByUrgency);
   if (queue.length === 0) return null;
   return (
     <section style={{ background: "linear-gradient(135deg, rgba(248,241,228,0.98), rgba(255,252,246,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, marginBottom: 14 }}>
@@ -387,7 +310,7 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
           <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>Do Today</h2>
           <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock Monday follow-ups.</p>
         </div>
-        <Chip label={`Top ${queue.length}`} tone="amber" />
+        <Chip label={`${queue.length} today`} tone="amber" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))", gap: 8 }}>
         {queue.map((lead) => (
@@ -457,7 +380,46 @@ function EmptyState({ error }: { error?: string }) {
 }
 
 function MetricButton({ label, value, tone, active, onClick }: { label: string; value: string | number; tone?: "good" | "warn" | "bad" | "neutral"; active: boolean; onClick: () => void }) {
-  return <button type="button" onClick={onClick} style={{ border: `1px solid ${active ? "rgba(210,174,109,0.65)" : DT.border}`, borderRadius: DT.radius, background: active ? DT.goldSoft : "transparent", padding: 0, textAlign: "left", cursor: "pointer" }}><KpiCard label={label} value={value} tone={tone} /></button>;
+  const color = tone === "bad" ? "#8f3f24" : tone === "warn" ? "#8a5b1f" : tone === "good" ? DT.green : DT.textPrimary;
+  return (
+    <button type="button" onClick={onClick} style={{ border: `1px solid ${active ? "rgba(210,174,109,0.65)" : DT.border}`, borderRadius: 12, background: active ? DT.goldSoft : DT.cardBg, padding: "8px 9px", textAlign: "left", cursor: "pointer", boxShadow: active ? "0 5px 18px rgba(210,174,109,0.12)" : "none", minWidth: 0 }}>
+      <div style={{ fontSize: 8.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.055em", color: DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
+      <div style={{ fontSize: 17, fontWeight: 900, color, fontFamily: DT.serif, marginTop: 2, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
+    </button>
+  );
+}
+
+function SortSelect({ value, onChange }: { value: LeadSort; onChange: (value: LeadSort) => void }) {
+  return (
+    <label style={{ display: "flex", gap: 7, alignItems: "center", fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800 }}>
+      Sort
+      <select value={value} onChange={(event) => onChange(event.target.value as LeadSort)} style={{ ...inputStyle, width: "auto", minWidth: 152, borderRadius: 999, padding: "7px 28px 7px 10px", fontWeight: 800 }}>
+        {SORT_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function ClosedReferenceList({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Lead) => void }) {
+  if (leads.length === 0) return null;
+  return (
+    <section style={{ marginTop: 18, borderTop: `1px solid ${DT.border}`, paddingTop: 12 }}>
+      <details>
+        <summary style={{ cursor: "pointer", fontFamily: DT.sans, color: DT.textMuted, fontSize: 12, fontWeight: 900 }}>
+          Reference only: {leads.length} closed / parked leads
+        </summary>
+        <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+          {(sortLeads(leads, "updated_desc") as Lead[]).map((lead) => (
+            <button key={lead.id} type="button" onClick={() => onSelect(lead)} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,252,246,0.62)", padding: "7px 9px", display: "grid", gridTemplateColumns: "minmax(180px,1fr) auto auto", gap: 8, alignItems: "center", textAlign: "left", cursor: "pointer" }}>
+              <span style={{ fontFamily: DT.sans, color: DT.textSecondary, fontSize: 12, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lead.customerName}</span>
+              <Chip label={STATUS_LABELS[lead.status]} tone="grey" />
+              <span style={{ ...smallMutedStyle, justifySelf: "end" }}>{valueLabel(lead.estimatedValue)}</span>
+            </button>
+          ))}
+        </div>
+      </details>
+    </section>
+  );
 }
 
 const inputStyle: CSSProperties = { width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 10, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: "#fff" };
@@ -478,41 +440,41 @@ const drawerStyle: CSSProperties = { width: "min(760px, calc(100vw - 36px))", ma
 
 export default function LeadsClient({ result }: { result: LeadsResult }) {
   const [filter, setFilter] = useState<LeadFilter>("do_today");
+  const [sortMode, setSortMode] = useState<LeadSort>("priority");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const router = useRouter();
 
   const activeRows = useMemo(() => result.rows.filter((lead) => !isClosed(lead)), [result.rows]);
-  const cashflowRows = useMemo(() => activeRows.filter(hasLiveQuoteValue), [activeRows]);
+  const closedRows = useMemo(() => result.rows.filter((lead) => isClosed(lead)), [result.rows]);
+  const cashflowRows = useMemo(() => activeRows.filter((lead) => hasLiveQuoteValue(lead)), [activeRows]);
   const sampleFollowUpRows = useMemo(() => sortSampleFollowUps(activeRows.filter((lead) => isRecentSampleFollowUp(lead))), [activeRows]);
   const selectedLead = useMemo(() => result.rows.find((lead) => lead.id === selectedId) || null, [result.rows, selectedId]);
 
   const visible = useMemo(() => {
-    const rows = result.rows
+    const rows = activeRows
       .filter((lead) => {
         if (filter === "do_today") return doToday(lead);
         if (filter === "sample_followups") return isRecentSampleFollowUp(lead);
         if (filter === "overdue") return isDue(lead);
         if (filter === "cashflow") return hasLiveQuoteValue(lead);
-        if (filter === "hot") return lead.priority === "hot" && !isClosed(lead);
+        if (filter === "hot") return lead.priority === "hot";
         if (filter === "needs_next_step") return needsNextStep(lead);
-        if (filter === "waiting") return lead.status === "waiting_on_customer" && !isClosed(lead);
-        if (filter === "active") return !isClosed(lead);
-        if (filter === "closed") return isClosed(lead);
+        if (filter === "waiting") return lead.status === "waiting_on_customer";
         return true;
       })
       .filter((lead) => (search.trim() ? matchesSearch(lead, search) : true));
-    if (filter === "sample_followups") return sortSampleFollowUps(rows);
-    return rows.sort(filter === "cashflow" ? sortByCashflow : sortByUrgency);
-  }, [filter, result.rows, search]);
+    if (filter === "sample_followups" && sortMode === "priority") return sortSampleFollowUps(rows);
+    return sortLeads(rows, filter === "cashflow" && sortMode === "priority" ? "value_desc" : sortMode);
+  }, [activeRows, filter, search, sortMode]);
 
   const visibleIds = useMemo(() => new Set(visible.map((lead) => lead.id)), [visible]);
-  const overdue = activeRows.filter(isDue).length;
+  const overdue = activeRows.filter((lead) => isDue(lead)).length;
   const liveQuoteValue = cashflowRows.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
   const hotQuoteValue = cashflowRows.filter((lead) => quoteWarmth(lead) === "hot").reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
   const warmQuoteValue = liveQuoteValue - hotQuoteValue;
-  const missingNext = activeRows.filter(needsNextStep).length;
-  const closed = result.rows.length - activeRows.length;
+  const missingNext = activeRows.filter((lead) => needsNextStep(lead)).length;
+  const closed = closedRows.length;
 
   const filters: Array<[LeadFilter, string]> = [
     ["do_today", "Do Today"],
@@ -523,23 +485,20 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
     ["needs_next_step", "Needs Next Step"],
     ["waiting", "Waiting"],
     ["active", "All Active"],
-    ["closed", "Closed / history"],
-    ["all", "All"],
   ];
 
   const refresh = () => router.refresh();
 
   return (
     <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
-        <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
-        <MetricButton label="Recent sample follow-ups" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
-        <MetricButton label="Live quote value" value={money(liveQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
-        <MetricButton label="Hot quote value" value={money(hotQuoteValue)} tone={hotQuoteValue ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
-        <MetricButton label="Warm quote value" value={money(warmQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
-        <MetricButton label="Missing next step" value={missingNext} tone={missingNext ? "bad" : "good"} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
-        <KpiCard label="Active leads" value={activeRows.length} />
-        <KpiCard label="Closed leads hidden" value={closed} tone="neutral" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, marginBottom: 14, overflowX: "auto" }}>
+        <MetricButton label="Overdue" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
+        <MetricButton label="Samples" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
+        <MetricButton label="Live quote" value={money(liveQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
+        <MetricButton label="Hot quote" value={money(hotQuoteValue)} tone={hotQuoteValue ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
+        <MetricButton label="Warm quote" value={money(warmQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
+        <MetricButton label="No next step" value={missingNext} tone={missingNext ? "bad" : "good"} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
+        <MetricButton label="Active" value={activeRows.length} active={filter === "active"} onClick={() => setFilter("active")} />
       </div>
 
       <DecisionQueue leads={activeRows} onSelect={(lead) => setSelectedId(lead.id)} />
@@ -548,20 +507,24 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {filters.map(([key, label]) => <button key={key} onClick={() => setFilter(key)} style={{ border: `1px solid ${filter === key ? "rgba(210,174,109,0.50)" : DT.border}`, background: filter === key ? DT.goldSoft : DT.cardBg, color: filter === key ? "#8a5b1f" : DT.textSecondary, borderRadius: 999, padding: "7px 11px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" }}>{label}</button>)}
         </div>
-        <NewLeadForm onSaved={refresh} />
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+          <SortSelect value={sortMode} onChange={setSortMode} />
+          <NewLeadForm onSaved={refresh} />
+        </div>
       </div>
 
       {result.rows.length === 0 ? <EmptyState error={result.error} /> : (
         <>
           {result.error && <div style={{ ...errorStyle, marginBottom: 12 }}>{result.error}</div>}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, color: DT.textMuted, fontFamily: DT.sans, fontSize: 12 }}>
-            <span>{visible.length} of {result.rows.length} leads shown · closed leads live in Closed / history or All</span>
-            <span>{filter === "do_today" ? "Default: full priority list. Top 8 are highlighted above." : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : "Sorted by urgency, cashflow, follow-up date"}</span>
+            <span>{visible.length} of {activeRows.length} active leads shown · {closed} closed / parked kept at the bottom for reference</span>
+            <span>{filter === "do_today" ? "Default: full priority list. Top cards are highlighted above." : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : `Sorted by ${SORT_OPTIONS.find(([key]) => key === sortMode)?.[1] || "priority"}`}</span>
           </div>
           <LeadListHeader />
           <div style={{ display: "grid", gap: 8 }}>
             {visible.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} />)}
           </div>
+          <ClosedReferenceList leads={closedRows} onSelect={(lead) => setSelectedId(lead.id)} />
         </>
       )}
       <LeadDrawer lead={selectedLead} visibleIds={visibleIds} onClose={() => setSelectedId(null)} onSaved={refresh} />
