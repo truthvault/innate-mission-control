@@ -128,6 +128,14 @@ function quoteWarmth(lead: Lead) {
   return lead.priority === "hot" ? "hot" : "warm";
 }
 
+function isCashFirstLead(lead: Lead) {
+  return !isClosed(lead) && (isCashflowQuote(lead) || isHighValue(lead));
+}
+
+function cashFirstLeads(leads: Lead[]) {
+  return leads.filter(isCashFirstLead).sort(sortByCashflow).slice(0, 4);
+}
+
 function matchesSearch(lead: Lead, search: string) {
   const haystack = [lead.customerName, lead.contactName, lead.email, lead.phone, lead.productCategory, lead.nextAction, lead.lastInteractionSummary, lead.notes, lead.mondayItemId]
     .filter(Boolean)
@@ -383,6 +391,39 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
   );
 }
 
+function CashFirstStrip({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Lead) => void }) {
+  const cashLeads = cashFirstLeads(leads);
+  const total = cashLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
+  if (cashLeads.length === 0) return null;
+  return (
+    <section style={{ background: "linear-gradient(135deg, rgba(255,250,239,0.98), rgba(246,237,219,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", marginBottom: 10, flexWrap: "wrap" }}>
+        <div>
+          <div style={labelStyle}>Cash first</div>
+          <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>Protect quoted/high-value work</h2>
+          <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Read-only: quotes and high-value leads only. No status changes here.</p>
+        </div>
+        <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
+          <span style={labelStyle}>Total visible cash value</span>
+          <strong style={{ fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22 }}>{money(total)}</strong>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
+        {cashLeads.map((lead) => (
+          <button key={lead.id} type="button" onClick={() => onSelect(lead)} style={{ display: "grid", gap: 6, textAlign: "left", border: "1px solid rgba(180,107,70,0.16)", borderRadius: DT.radiusSm, background: DT.cardBg, padding: 10, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start" }}>
+              <strong title={lead.customerName} style={{ fontFamily: DT.serif, fontSize: 16, color: DT.textPrimary, lineHeight: 1.1 }}>{lead.customerName}</strong>
+              <span style={{ fontFamily: DT.sans, color: DT.textSecondary, fontWeight: 900, fontSize: 11 }}>{valueLabel(lead.estimatedValue)}</span>
+            </div>
+            <span style={{ ...rowTextStyle, whiteSpace: "normal", overflow: "visible" }}>{whyNow(lead)}</span>
+            <span style={{ fontFamily: DT.sans, color: "#8f3f24", fontSize: 11, fontWeight: 900 }}>Open context</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function NewLeadForm({ onSaved }: { onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
@@ -555,6 +596,7 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
         <MetricButton label="Active" value={activeRows.length} active={filter === "active"} onClick={() => setFilter("active")} />
       </div>
 
+      <CashFirstStrip leads={activeRows} onSelect={(lead) => setSelectedId(lead.id)} />
       <DecisionQueue leads={activeRows} onSelect={(lead) => setSelectedId(lead.id)} />
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(248,245,238,0.94)", backdropFilter: "blur(10px)" }}>
