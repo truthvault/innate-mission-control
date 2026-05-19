@@ -8,16 +8,45 @@ type PlanTaskPlacement = {
 };
 
 type PlanTaskLinkValue = number | { orderId: number; placement?: PlanTaskPlacement };
+type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+type Person = "nick" | "dylan";
+type PlanTaskEditValue = {
+  text?: string;
+  rowName?: string;
+  day?: DayKey;
+  person?: Person;
+  internal?: boolean;
+  updatedAt: string;
+};
 
 type PlanTaskLinksState = {
   links: Record<string, PlanTaskLinkValue>;
+  taskEdits: Record<string, PlanTaskEditValue>;
   updatedAt: string;
 };
 
 const PATH = "production-plan-task-links/current.json";
 
 function defaultState(): PlanTaskLinksState {
-  return { links: {}, updatedAt: new Date().toISOString() };
+  return { links: {}, taskEdits: {}, updatedAt: new Date().toISOString() };
+}
+
+function cleanText(value: unknown, max = 160) {
+  return typeof value === "string" ? value.trim().slice(0, max) : undefined;
+}
+
+function cleanTaskEdit(value: unknown): Omit<PlanTaskEditValue, "updatedAt"> | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as { text?: unknown; rowName?: unknown; day?: unknown; person?: unknown; internal?: unknown };
+  const edit: Omit<PlanTaskEditValue, "updatedAt"> = {};
+  const text = cleanText(source.text);
+  const rowName = cleanText(source.rowName);
+  if (text) edit.text = text;
+  if (rowName) edit.rowName = rowName;
+  if (["monday", "tuesday", "wednesday", "thursday", "friday"].includes(String(source.day))) edit.day = source.day as DayKey;
+  if (source.person === "nick" || source.person === "dylan") edit.person = source.person;
+  if (typeof source.internal === "boolean") edit.internal = source.internal;
+  return Object.keys(edit).length > 0 ? edit : null;
 }
 
 function cleanPlacement(value: unknown): PlanTaskPlacement | undefined {
@@ -38,7 +67,7 @@ function linkValueForOrder(orderId: number, placement?: PlanTaskPlacement): Plan
 
 async function readState() {
   const state = await readEncryptedBlob<PlanTaskLinksState>(PATH, defaultState());
-  return { ...defaultState(), ...state, links: state.links ?? {} };
+  return { ...defaultState(), ...state, links: state.links ?? {}, taskEdits: state.taskEdits ?? {} };
 }
 
 export async function GET() {
@@ -54,9 +83,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown } | null;
+  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown; taskEdit?: unknown; removeTaskEdit?: boolean } | null;
   const taskId = typeof body?.taskId === "string" ? body.taskId.trim() : "";
   const legacyTaskId = typeof body?.legacyTaskId === "string" ? body.legacyTaskId.trim() : "";
+  const hasOrderIdField = Boolean(body && Object.prototype.hasOwnProperty.call(body, "orderId"));
   const orderId = typeof body?.orderId === "number" && Number.isFinite(body.orderId) ? body.orderId : null;
   const placement = cleanPlacement(body?.placement);
   if (!taskId) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
@@ -71,14 +101,18 @@ export async function POST(request: NextRequest) {
 
     const current = await readState();
     const links = { ...current.links };
-    if (orderId) {
+    const taskEdits = { ...current.taskEdits };
+    if (hasOrderIdField && orderId) {
       links[taskId] = linkValueForOrder(orderId, placement);
       if (legacyTaskId && legacyTaskId !== taskId) delete links[legacyTaskId];
-    } else {
+    } else if (hasOrderIdField) {
       delete links[taskId];
       if (legacyTaskId) delete links[legacyTaskId];
     }
-    const state = { links, updatedAt: new Date().toISOString() };
+    const taskEdit = cleanTaskEdit(body?.taskEdit);
+    if (taskEdit) taskEdits[taskId] = { ...taskEdit, updatedAt: new Date().toISOString() };
+    if (body?.removeTaskEdit) delete taskEdits[taskId];
+    const state = { links, taskEdits, updatedAt: new Date().toISOString() };
     await writeEncryptedBlob(PATH, state);
     return NextResponse.json({ state });
   } catch (err) {

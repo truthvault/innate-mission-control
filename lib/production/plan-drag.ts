@@ -6,6 +6,7 @@ const PEOPLE: readonly Person[] = ['nick', 'dylan'];
 
 export type DraggablePlanTask = {
   id: string;
+  taskKey?: string;
   rowId: string;
   rowName: string;
   rowNotes: string | null;

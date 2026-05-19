@@ -220,6 +220,8 @@ type AppPlanTask = {
   done: boolean;
 };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
+type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; internal?: boolean; updatedAt?: string };
+type PlanTaskEdits = Record<string, PlanTaskEditValue>;
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type PersonFilter = "all" | Person;
 type RailFilter = "all" | "blocked" | "thisWeek" | "materials" | "noDate";
@@ -448,11 +450,15 @@ function placementFromPlanTaskLink(value: PlanTaskLinkValue | undefined) {
   return value && typeof value === "object" ? value.placement : undefined;
 }
 
-function linkValueForPlanTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
-  return links[planTaskLinkKey(task)] ?? links[task.id];
+function stablePlanTaskKey(task: Pick<DraggablePlanTask, "rowId" | "text" | "taskKey">) {
+  return task.taskKey ?? planTaskLinkKey(task);
 }
 
-function assignedOrderIdForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
+function linkValueForPlanTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text" | "taskKey">, links: PlanTaskLinks) {
+  return links[stablePlanTaskKey(task)] ?? links[task.id];
+}
+
+function assignedOrderIdForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text" | "taskKey">, links: PlanTaskLinks) {
   return orderIdFromPlanTaskLink(linkValueForPlanTask(task, links));
 }
 
@@ -2333,6 +2339,7 @@ type PlanWeek = { id: string; title: string; rows: PlanRow[] };
 type BoardPlanTask = DraggablePlanTask & { weekId: string };
 type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
 type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
+type OrderConnectionState = "connected" | "possible" | "needs-order" | "internal";
 
 function isoDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -2420,14 +2427,39 @@ function planTaskLinkKey(task: Pick<DraggablePlanTask, "rowId" | "text">) {
   return `plan-task:${task.rowId}:${planTaskFingerprint(task.text)}`;
 }
 
+function orderConnectionLabel(task: DraggablePlanTask, planTaskLinks: PlanTaskLinks, resolvedOrderId: number | null = null) {
+  const assignedOrderId = assignedOrderIdForTask(task, planTaskLinks);
+  const hasConfirmedOrder = Boolean(assignedOrderId || task.linkedOrderIds.length > 0);
+  const looksInternal = /sample rack|shop|internal|maintenance|clean|tidy|tool|bench/i.test(`${task.text} ${task.rowName}`);
+  if (hasConfirmedOrder) {
+    return { state: "connected" as OrderConnectionState, label: "Connected", detail: "Customer order attached" };
+  }
+  if (resolvedOrderId) {
+    return { state: "possible" as OrderConnectionState, label: "Possible match", detail: "Confirm customer/order" };
+  }
+  if (looksInternal) {
+    return { state: "internal" as OrderConnectionState, label: "No customer / internal", detail: "Workshop task" };
+  }
+  return { state: "needs-order" as OrderConnectionState, label: "Needs order", detail: "Connect order" };
+}
+
+function orderConnectionStyle(state: OrderConnectionState, selected = false) {
+  if (state === "connected") return { color: selected ? "#8a5d08" : DT.teal, bg: selected ? "rgba(255,246,199,0.96)" : DT.tealSoft, border: selected ? "rgba(190,137,24,0.34)" : "rgba(12,124,122,0.14)" };
+  if (state === "possible") return { color: "#8a5d08", bg: "rgba(255,246,199,0.68)", border: "rgba(190,137,24,0.36)" };
+  if (state === "internal") return { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.20)" };
+  return { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.38)" };
+}
+
 function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
   return rows.flatMap((row) =>
     DAYS.flatMap((day) =>
       PEOPLE.flatMap((person) => {
         const text = row.dayTasks[day][person];
+        const taskKey = text ? planTaskLinkKey({ rowId: row.id, text }) : "";
         return text
           ? [{
               id: `${row.id}:${day}:${person}`,
+              taskKey,
               rowId: row.id,
               rowName: row.name,
               rowNotes: row.notes,
@@ -2443,8 +2475,22 @@ function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
   );
 }
 
-function sourceTasksForBoardWeeks(weeks: PlanWeek[]): BoardPlanTask[] {
-  return weeks.flatMap((week) => sourceTasksForWeek(week.rows).map((task) => ({ ...task, weekId: week.id })));
+function applyPlanTaskEdits(tasks: BoardPlanTask[], taskEdits: PlanTaskEdits): BoardPlanTask[] {
+  return tasks.map((task) => {
+    const edit = taskEdits[stablePlanTaskKey(task)] ?? taskEdits[task.id];
+    if (!edit) return task;
+    return {
+      ...task,
+      text: edit.text ?? task.text,
+      rowName: edit.rowName ?? task.rowName,
+      day: edit.day ?? task.day,
+      person: edit.person ?? task.person,
+    };
+  });
+}
+
+function sourceTasksForBoardWeeks(weeks: PlanWeek[], taskEdits: PlanTaskEdits = {}): BoardPlanTask[] {
+  return applyPlanTaskEdits(weeks.flatMap((week) => sourceTasksForWeek(week.rows).map((task) => ({ ...task, weekId: week.id }))), taskEdits);
 }
 
 function boardPlanLaneId(weekId: string, day: DayKey, person: Person) {
@@ -2469,7 +2515,7 @@ function boardPlanLayoutsEqual(left: BoardPlanTask[], right: BoardPlanTask[]) {
   if (left.length !== right.length) return false;
   return left.every((task, index) => {
     const other = right[index];
-    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person;
+    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person && other.text === task.text && other.rowName === task.rowName;
   });
 }
 
@@ -2502,8 +2548,26 @@ function reorderBoardPlanTask(
 }
 
 function saveDraftTasks(weekId: string, tasks: DraggablePlanTask[]) {
-  void weekId;
-  void tasks;
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(`tuesday:${weekId}:tasks`, JSON.stringify(tasks));
+}
+
+function loadDraftTasks(weekId: string, sourceTasks: BoardPlanTask[]) {
+  if (typeof window === "undefined") return sourceTasks;
+  const raw = window.localStorage.getItem(`tuesday:${weekId}:tasks`);
+  if (!raw) return sourceTasks;
+  try {
+    const parsed = JSON.parse(raw) as BoardPlanTask[];
+    const sourceIds = new Set(sourceTasks.map((task) => task.id));
+    if (!Array.isArray(parsed) || parsed.length !== sourceTasks.length || parsed.some((task) => !sourceIds.has(task.id))) return sourceTasks;
+    const sourceById = new Map(sourceTasks.map((task) => [task.id, task]));
+    return parsed.map((draftTask) => {
+      const sourceTask = sourceById.get(draftTask.id);
+      return sourceTask ? { ...sourceTask, weekId: draftTask.weekId, day: draftTask.day, person: draftTask.person } : draftTask;
+    });
+  } catch {
+    return sourceTasks;
+  }
 }
 
 function LinkedOrderPill({ row, onOpenOrder }: { row: PlanRow; onOpenOrder?: (orderId: number) => void }) {
@@ -3063,6 +3127,7 @@ function SortablePlanTaskCard({
   resolveTaskOrderId,
   onTaskSelect,
   onTaskOpen,
+  onTaskEdit,
   isNextTask = false,
 }: {
   task: DraggablePlanTask;
@@ -3071,6 +3136,7 @@ function SortablePlanTaskCard({
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
+  onTaskEdit?: (task: DraggablePlanTask) => void;
   isNextTask?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -3079,10 +3145,11 @@ function SortablePlanTaskCard({
   });
   const resolvedOrderId = resolveTaskOrderId?.(task) ?? null;
   const effectiveOrderIds = resolvedOrderId ? [resolvedOrderId] : effectiveTaskOrderIds(task, planTaskLinks);
-  const assignedOrderId = assignedOrderIdForTask(task, planTaskLinks);
   const isSelectedOrderTask = selectedOrder ? effectiveOrderIds.includes(selectedOrder.id) || planTaskMatchesOrder(task, selectedOrder) : false;
   const isUnlinkedTask = effectiveOrderIds.length === 0;
   const personVisual = PERSON_VISUALS[task.person];
+  const orderConnection = orderConnectionLabel(task, planTaskLinks, resolvedOrderId);
+  const orderConnectionVisual = orderConnectionStyle(orderConnection.state, isSelectedOrderTask);
   const taskBackground = isSelectedOrderTask
     ? "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
     : isNextTask && !isUnlinkedTask
@@ -3105,8 +3172,6 @@ function SortablePlanTaskCard({
       : isNextTask && !isUnlinkedTask
         ? "0 2px 8px rgba(110,138,106,0.08)"
         : "0 1px 2px rgba(0,0,0,0.025)";
-  const taskBadge = isUnlinkedTask ? "Assign" : assignedOrderId ? "Tuesday" : task.linkedOrderIds.length > 0 ? "Monday" : null;
-
   return (
     <div
       ref={setNodeRef}
@@ -3115,7 +3180,7 @@ function SortablePlanTaskCard({
       data-plan-task-id={task.id}
       role="button"
       tabIndex={0}
-      onClick={() => onTaskSelect?.(task)}
+      onClick={() => onTaskEdit?.(task) ?? onTaskSelect?.(task)}
       onDoubleClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -3127,7 +3192,7 @@ function SortablePlanTaskCard({
           onTaskSelect?.(task);
         }
       }}
-      title="Drag to reorder or move to another day or lane"
+      title="Click to edit task, or drag to move it"
       style={{
         display: "block",
         width: "100%",
@@ -3158,12 +3223,113 @@ function SortablePlanTaskCard({
           )}
           <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
           <div style={{ marginTop: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onTaskEdit?.(task);
+            }}
+            style={{ marginTop: 5, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer" }}
+          >
+            Edit task
+          </button>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
           <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>1h</span>
-          {taskBadge && (
-            <span style={{ color: isSelectedOrderTask ? "#8a5d08" : isUnlinkedTask ? "#7d7a73" : DT.teal, background: isSelectedOrderTask ? "rgba(255,246,199,0.96)" : isUnlinkedTask ? "rgba(125,122,115,0.08)" : DT.tealSoft, border: `1px solid ${isSelectedOrderTask ? "rgba(190,137,24,0.34)" : isUnlinkedTask ? "rgba(125,122,115,0.16)" : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{taskBadge}</span>
-          )}
+          <span title={orderConnection.detail} style={{ color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{orderConnection.label}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function WorkshopTaskEditor({
+  task,
+  orders,
+  planTaskLinks,
+  onSave,
+  onConnectOrder,
+  onRemoveOrder,
+  onClose,
+}: {
+  task: BoardPlanTask;
+  orders: UiOrder[];
+  planTaskLinks: PlanTaskLinks;
+  onSave: (task: BoardPlanTask) => void;
+  onConnectOrder: (task: BoardPlanTask, orderId: number) => void;
+  onRemoveOrder: (task: BoardPlanTask) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState(task);
+  const connectedOrderId = assignedOrderIdForTask(task, planTaskLinks) ?? task.linkedOrderIds[0] ?? "";
+  const [orderId, setOrderId] = useState<string>(connectedOrderId ? String(connectedOrderId) : "");
+  const connection = orderConnectionLabel(task, planTaskLinks, connectedOrderId ? Number(connectedOrderId) : null);
+  const connectionVisual = orderConnectionStyle(connection.state);
+  function saveTask() {
+    onSave({ ...draft, text: draft.text.trim() || task.text, rowName: draft.rowName.trim() || task.rowName });
+    if (orderId) onConnectOrder(task, Number(orderId));
+    onClose();
+  }
+  function markInternal() {
+    const next = { ...draft, rowName: draft.rowName.trim() || "Internal workshop" };
+    setDraft(next);
+    onSave(next);
+    onRemoveOrder(task);
+    onClose();
+  }
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Edit task" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "grid", placeItems: "center", background: "rgba(34,32,26,0.32)", padding: 18 }}>
+      <div onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", border: `1px solid ${DT.border}`, borderRadius: 16, background: DT.cardBg, boxShadow: "0 24px 70px rgba(34,32,26,0.24)", padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
+          <div>
+            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Edit task</div>
+            <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 23, color: DT.textPrimary }}>Workshop task</h3>
+          </div>
+          <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 999, padding: "5px 9px", cursor: "pointer", color: DT.textMuted, fontWeight: 900 }}>Close</button>
+        </div>
+        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+          <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+            What to do
+            <input value={draft.text} onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary }} />
+          </label>
+          <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+            Customer / order label
+            <input value={draft.rowName} onChange={(event) => setDraft((current) => ({ ...current, rowName: event.target.value }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary }} />
+          </label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+              Day
+              <select value={draft.day} onChange={(event) => setDraft((current) => ({ ...current, day: event.target.value as DayKey }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", color: DT.textPrimary }}>
+                {DAYS.map((day) => <option key={day} value={day}>{DAY_LABELS[day]}</option>)}
+              </select>
+            </label>
+            <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+              Person
+              <select value={draft.person} onChange={(event) => setDraft((current) => ({ ...current, person: event.target.value as Person }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", color: DT.textPrimary }}>
+                {PEOPLE.map((person) => <option key={person} value={person}>{PERSON_LABELS[person]}</option>)}
+              </select>
+            </label>
+          </div>
+          <div style={{ border: `1px solid ${DT.border}`, borderRadius: 11, padding: 10, background: "rgba(250,248,243,0.72)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Order connection</div>
+              <span style={{ color: connectionVisual.color, background: connectionVisual.bg, border: `1px solid ${connectionVisual.border}`, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{connection.label}</span>
+            </div>
+            <select value={orderId} onChange={(event) => setOrderId(event.target.value)} style={{ marginTop: 8, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", color: DT.textPrimary }}>
+              <option value="">Choose customer/order…</option>
+              {orders.map((order) => <option key={order.id} value={order.id}>{order.customer}</option>)}
+            </select>
+            <div style={{ marginTop: 7, display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <button type="button" onClick={() => orderId && onConnectOrder(task, Number(orderId))} disabled={!orderId} style={{ border: `1px solid rgba(12,124,122,0.18)`, background: orderId ? DT.tealSoft : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Connect order</button>
+              <button type="button" onClick={markInternal} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>No customer / internal</button>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 13, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
+          <button type="button" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save task</button>
         </div>
       </div>
     </div>
@@ -3335,6 +3501,7 @@ function MonthWeekSection({
   onResetDraftLayout,
   onTaskSelect,
   onTaskOpen,
+  onTaskEdit,
   onAppTaskSelect,
   onAppTaskOpen,
   onSuggestedStepMove,
@@ -3361,6 +3528,7 @@ function MonthWeekSection({
   onResetDraftLayout?: () => void;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
+  onTaskEdit?: (task: BoardPlanTask) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
@@ -3460,6 +3628,7 @@ function MonthWeekSection({
                                 resolveTaskOrderId={resolveTaskOrderId}
                                 onTaskSelect={onTaskSelect}
                                 onTaskOpen={onTaskOpen}
+                                onTaskEdit={(item) => onTaskEdit?.(item as BoardPlanTask)}
                                 isNextTask={laneIndex === 0}
                               />
                               {showDropSlot(task.id, true) && dropSlot}
@@ -3592,7 +3761,8 @@ function WorkshopFocusBar({
 function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
   const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
-  const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks), [visibleProductionWeeks]);
+  const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>({});
+  const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -3606,6 +3776,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   const [openOrderId, setOpenOrderId] = useState<number | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState<OrderWorkflowState | null>(null);
   const [selectedAssignmentTask, setSelectedAssignmentTask] = useState<AssignablePlanTask | null>(null);
+  const [editingTask, setEditingTask] = useState<BoardPlanTask | null>(null);
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
   const [assignmentStatus, setAssignmentStatus] = useState("");
   const [showHistory, setShowHistory] = useState(false);
@@ -3659,13 +3830,54 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }, [visibleProductionWeeks]);
 
   useEffect(() => {
-    setBoardTasks(sourceBoardTasks);
+    setBoardTasks(loadDraftTasks("six-week-board", sourceBoardTasks));
     undoBoardLayoutsRef.current = [];
     dragStartBoardTasksRef.current = null;
     lastBoardPreviewRef.current = null;
     setActiveTaskId(null);
     setDropPreview(null);
   }, [sourceBoardTasks]);
+
+  function updateBoardTaskFromEditor(nextTask: BoardPlanTask) {
+    const taskKey = stablePlanTaskKey(nextTask);
+    setBoardTasks((current) => {
+      const next = current.map((task) => task.id === nextTask.id ? nextTask : task);
+      saveDraftTasks("six-week-board", next);
+      return next;
+    });
+    setPlanTaskEdits((current) => ({
+      ...current,
+      [taskKey]: {
+        text: nextTask.text,
+        rowName: nextTask.rowName,
+        day: nextTask.day,
+        person: nextTask.person,
+        internal: /internal workshop/i.test(nextTask.rowName),
+      },
+    }));
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: taskKey,
+        legacyTaskId: nextTask.id,
+        taskEdit: {
+          text: nextTask.text,
+          rowName: nextTask.rowName,
+          day: nextTask.day,
+          person: nextTask.person,
+          internal: /internal workshop/i.test(nextTask.rowName),
+        },
+      }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Task edit save failed"))))
+      .then((data: { state?: { taskEdits?: PlanTaskEdits } }) => {
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        setAssignmentStatus("Task saved in Tuesday");
+      })
+      .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Task edit save failed"));
+    setEditingTask(nextTask);
+  }
 
   function resolveOrderIdForPlanTask(task: DraggablePlanTask) {
     const assignedId = assignedOrderIdForTask(task, planTaskLinks);
@@ -3695,9 +3907,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     let cancelled = false;
     fetch("/api/production/plan-task-links")
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Task links unavailable")))
-      .then((data: { state?: { links?: PlanTaskLinks }; disabledReason?: string }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits }; disabledReason?: string }) => {
         if (cancelled) return;
         setPlanTaskLinks(data.state?.links ?? {});
+        setPlanTaskEdits(data.state?.taskEdits ?? {});
         setAssignmentStatus(data.disabledReason ?? "");
       })
       .catch((err) => {
@@ -3864,7 +4077,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }
 
   function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) {
-    const taskKey = planTaskLinkKey(task);
+    const taskKey = stablePlanTaskKey(task);
     const linkValue = linkValueForPlanTaskSave(orderId, placement);
     setPlanTaskLinks((current) => ({ ...current, [taskKey]: linkValue }));
     setAssignmentStatus("Saving link...");
@@ -3874,9 +4087,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId, placement }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits } }) => {
         if (data.state?.links) setPlanTaskLinks(data.state.links);
-        setAssignmentStatus("Linked in Tuesday");
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        setAssignmentStatus("Connected to order");
         selectOrder(orderId);
       })
       .catch((err) => {
@@ -3890,7 +4104,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }
 
   function removePlanTaskLink(task: AssignablePlanTask) {
-    const taskKey = planTaskLinkKey(task);
+    const taskKey = stablePlanTaskKey(task);
     setPlanTaskLinks((current) => {
       const next = { ...current };
       delete next[taskKey];
@@ -3904,9 +4118,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId: null }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits } }) => {
         if (data.state?.links) setPlanTaskLinks(data.state.links);
-        setAssignmentStatus("Link removed");
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        setAssignmentStatus("Order connection removed");
       })
       .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Save failed"));
   }
@@ -4058,6 +4273,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       resolveTaskOrderId={resolveOrderIdForPlanTask}
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
       onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+      onTaskEdit={setEditingTask}
       onAppTaskSelect={selectOrderForAppTask}
       onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
       onSuggestedStepMove={moveSuggestedStep}
@@ -4084,6 +4300,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
           resolveTaskOrderId={resolveOrderIdForPlanTask}
           onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
           onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+          onTaskEdit={setEditingTask}
           onAppTaskSelect={selectOrderForAppTask}
           onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
         />
@@ -4104,6 +4321,18 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         {newOrderPanel}
         {weekSections}
         {historySections}
+        {editingTask && (
+          <WorkshopTaskEditor
+            key={editingTask.id}
+            task={editingTask}
+            orders={ordersForHealth}
+            planTaskLinks={planTaskLinks}
+            onSave={updateBoardTaskFromEditor}
+            onConnectOrder={(task, orderId) => assignPlanTaskToOrder({ ...task, weekTitle: "Production Plan" }, orderId)}
+            onRemoveOrder={(task) => removePlanTaskLink({ ...task, weekTitle: "Production Plan" })}
+            onClose={() => setEditingTask(null)}
+          />
+        )}
       </div>
       <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : null}</DragOverlay>
     </DndContext>
