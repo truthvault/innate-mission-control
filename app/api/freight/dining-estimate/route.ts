@@ -9,16 +9,11 @@ import {
   requestMainfreightRate,
   type MainfreightDestinationAddress,
 } from "@/lib/freight/mainfreightRate";
+import { assertFreightRequestAllowed, freightCorsHeaders } from "@/lib/freight/publicAccess";
 import { writeQuoteEvent } from "@/lib/freight/quoteLog";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const ALLOWED_ORIGINS = new Set([
-  "https://innatefurniture.co.nz",
-  "https://www.innatefurniture.co.nz",
-  "https://innate-furniture.myshopify.com",
-]);
 
 const PINPOINT_LOCAL_DELIVERY_AREAS = [
   {
@@ -85,24 +80,10 @@ type EstimateResult = {
   body: Record<string, unknown>;
 };
 
-function corsHeaders(request: Request): HeadersInit {
-  const origin = request.headers.get("origin");
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Private-Network": "true",
-    Vary: "Origin",
-  };
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-  }
-  return headers;
-}
-
 function jsonResponse(request: Request, result: EstimateResult) {
   return Response.json(result.body, {
     status: result.status,
-    headers: corsHeaders(request),
+    headers: freightCorsHeaders(request, "GET, POST, OPTIONS"),
   });
 }
 
@@ -114,13 +95,6 @@ function javascriptResponse(body: string, status = 200) {
       "Cache-Control": "no-store",
     },
   });
-}
-
-function assertAllowedOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
-    throw new Error("Origin is not allowed for freight preview requests");
-  }
 }
 
 function asPositiveNumber(value: unknown, field: string): number {
@@ -395,14 +369,14 @@ function safeCallbackName(value: string | null): string {
 }
 
 export async function OPTIONS(request: Request) {
-  return new Response(null, { status: 204, headers: corsHeaders(request) });
+  return new Response(null, { status: 204, headers: freightCorsHeaders(request, "GET, POST, OPTIONS") });
 }
 
 export async function POST(request: Request) {
   const started = Date.now();
 
   try {
-    assertAllowedOrigin(request);
+    assertFreightRequestAllowed(request);
     const body = (await request.json()) as EstimateRequestBody;
     return jsonResponse(request, await estimateFromBody(body, request, started));
   } catch (err) {
@@ -423,6 +397,7 @@ export async function GET(request: Request) {
 
   try {
     const url = new URL(request.url);
+    assertFreightRequestAllowed(request, url);
     const callback = safeCallbackName(url.searchParams.get("callback"));
     const result = await estimateFromBody(bodyFromSearchParams(url), request, started);
     // JSONP script tags fire `onerror` on non-2xx statuses, which hides the

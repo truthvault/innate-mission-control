@@ -47,6 +47,8 @@ Create a Tuesday Freight tab for quoting, booking, tracking, and reconciling fre
 ## Source of truth
 - Local Tuesday/Supabase table first, with supporting data from Shopify/orders, Monday/jobs, Xero bills, and existing freight estimator work.
 - Freight quote calculator events should write to Supabase `freight_quote_events` when `FREIGHT_QUOTE_LOGGING_ENABLED=true` and Supabase service env is configured.
+- Public website freight endpoints should be protected before production deploy with `FREIGHT_PUBLIC_ACCESS_TOKEN` in both Vercel and the Shopify/theme caller; without it they only allow trusted Origin/Referer as a backwards-compatible fallback.
+- Public freight endpoints include a lightweight per-runtime rate guard; tune with `FREIGHT_PUBLIC_RATE_LIMIT_MAX` or disable only for local debugging with `FREIGHT_PUBLIC_RATE_LIMIT_DISABLED=true`.
 - Existing schema: `reference/supabase-freight-schema-2026-05-17.sql`.
 - Raw visitor IP should not be stored; only a salted hash may be stored for internal/test filtering.
 - Airtable is legacy fallback only, not the preferred long-term store.
@@ -84,4 +86,4 @@ Create a Tuesday Freight tab for quoting, booking, tracking, and reconciling fre
 - Should Freight include incoming supplier freight as well as outgoing customer freight?
 - What retention period should apply to freight quote event addresses and metadata?
 - Who besides Guido should be able to see internal/test calculator entries?
-- When approved for production, set `FREIGHT_QUOTE_LOGGING_ENABLED=true` and confirm the Supabase schema/env before deploy.
+- When approved for production, set `FREIGHT_QUOTE_LOGGING_ENABLED=true`, set `FREIGHT_PUBLIC_ACCESS_TOKEN`, update the Shopify/theme caller to send the same public token, and confirm the Supabase schema/env before deploy.

@@ -1,11 +1,7 @@
+import { assertFreightRequestAllowed, freightCorsHeaders } from "@/lib/freight/publicAccess";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const ALLOWED_ORIGINS = new Set([
-  "https://innatefurniture.co.nz",
-  "https://www.innatefurniture.co.nz",
-  "https://innate-furniture.myshopify.com",
-]);
 
 type GoogleAutocompletePrediction = {
   place_id?: string;
@@ -27,21 +23,6 @@ function googlePlacesKey() {
   );
 }
 
-function corsHeaders(request: Request): HeadersInit {
-  const origin = request.headers.get("origin");
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Private-Network": "true",
-    Vary: "Origin",
-    "Cache-Control": "no-store",
-  };
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-  }
-  return headers;
-}
-
 function javascriptResponse(callback: string, body: Record<string, unknown>, status = 200) {
   return new Response(`${callback}(${JSON.stringify(body)});`, {
     status,
@@ -61,7 +42,7 @@ function safeCallbackName(value: string | null): string {
 }
 
 function jsonResponse(request: Request, body: Record<string, unknown>, status = 200) {
-  return Response.json(body, { status, headers: corsHeaders(request) });
+  return Response.json(body, { status, headers: freightCorsHeaders(request, "GET, OPTIONS") });
 }
 
 function publicPrediction(prediction: GoogleAutocompletePrediction) {
@@ -129,7 +110,7 @@ async function autocomplete(input: string) {
 }
 
 export async function OPTIONS(request: Request) {
-  return new Response(null, { status: 204, headers: corsHeaders(request) });
+  return new Response(null, { status: 204, headers: freightCorsHeaders(request, "GET, OPTIONS") });
 }
 
 export async function GET(request: Request) {
@@ -137,6 +118,7 @@ export async function GET(request: Request) {
   const callback = url.searchParams.get("callback");
 
   try {
+    assertFreightRequestAllowed(request, url);
     const result = await autocomplete(url.searchParams.get("input") || "");
     if (callback) return javascriptResponse(safeCallbackName(callback), result.body, result.status);
     return jsonResponse(request, result.body, result.status);

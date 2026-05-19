@@ -1,3 +1,4 @@
+import { getFreightPublicAccessStatus } from "@/lib/freight/publicAccess";
 import { getFreightQuoteLogStatus, listQuoteEvents, type FreightQuoteRow } from "@/lib/freight/quoteLog";
 
 export const dynamic = "force-dynamic";
@@ -146,6 +147,7 @@ export default async function FreightQuotesPage({
   const { rows, error } = await listQuoteEvents(75, { includeInternal, productArea: area });
   const stats = calcStats(rows);
   const logStatus = getFreightQuoteLogStatus();
+  const publicAccessStatus = getFreightPublicAccessStatus();
   const activeStore = logStatus.supabaseConfigured ? "Supabase" : logStatus.airtableConfigured ? "Airtable fallback" : "not configured";
 
   return (
@@ -200,6 +202,8 @@ export default async function FreightQuotesPage({
             <div className="status-row"><span>Write gate</span><strong>{logStatus.loggingEnabled ? "enabled" : "off"}</strong></div>
             <div className="status-row"><span>Primary store</span><strong>{activeStore}</strong></div>
             <div className="status-row"><span>Airtable fallback</span><strong>{logStatus.airtableFallbackEnabled ? "allowed" : "blocked"}</strong></div>
+            <div className="status-row"><span>Public token</span><strong>{publicAccessStatus.tokenConfigured ? "required" : "origin/referer only"}</strong></div>
+            <div className="status-row"><span>Rate guard</span><strong>{publicAccessStatus.rateLimitEnabled ? "on" : "off"}</strong></div>
           </div>
         </div>
       </section>
