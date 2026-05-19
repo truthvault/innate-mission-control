@@ -11,9 +11,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude: login page, Next internals, favicon, the Monday webhook, and the
-  // preview-only freight endpoints. The freight endpoints still validate request
-  // shape/origin in route handlers and never expose server-side secrets.
+  // Exclude: login page, Next internals, favicon, the Monday webhook, the 2talk
+  // inbound SMS webhook, and the preview-only freight endpoints. Public webhook
+  // endpoints still validate their own shared-secret/auth in route handlers.
   // Note: /api/monday/refresh IS still matched and stays gated by the auth cookie.
-  matcher: ["/((?!login|_next/static|_next/image|favicon.ico|api/monday/webhook|api/freight/).*)"],
+  matcher: ["/((?!login|_next/static|_next/image|favicon.ico|api/monday/webhook|api/sms/2talk/inbound|api/freight/).*)"],
 };
