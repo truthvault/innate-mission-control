@@ -47,6 +47,12 @@ const checks = [
     auth: true,
   },
   {
+    path: "/workboard",
+    label: "workboard",
+    expect: ["Workboard", "Today", "Projects", "Inbox", "Waiting", "Done"],
+    auth: true,
+  },
+  {
     path: "/production",
     label: "production default",
     expect: ["Production Plan", "Tuesday", "Synced"],
