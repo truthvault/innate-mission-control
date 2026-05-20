@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT } from "@/components/mission-control-ui";
 import type { Lead, LeadsResult, LeadPriority, LeadStatus } from "@/lib/leads/types";
 import { isRecentSampleFollowUp, sampleDraftPrompt, sampleFollowUpLabel, sortSampleFollowUps } from "@/lib/leads/sample-followups.mjs";
 import { dateKey, doToday, hasLiveQuoteValue, isCashflowQuote, isClosed, isDue, isDueThisWeek, isHighValue, needsNextStep, sortByUrgency, sortLeads, SORT_OPTIONS } from "@/lib/leads/prioritisation.mjs";
+import { matchesLeadSearch } from "@/lib/leads/search.mjs";
 import { buildSupabaseLeadStudioUrl } from "@/lib/leads/supabase-studio.mjs";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -26,7 +27,7 @@ const SAMPLE_STATUS_OPTIONS: Array<[SampleStatusOption, string]> = [["", "No sam
 
 type SampleStatusOption = "" | "requested" | "packed" | "sent" | "delivered" | "followed_up" | "converted" | "parked";
 type LeadFilter = "do_today" | "sample_followups" | "overdue" | "cashflow" | "hot" | "needs_next_step" | "waiting" | "active";
-type LeadSort = "priority" | "follow_up_asc" | "follow_up_desc" | "value_desc" | "value_asc" | "updated_desc" | "name_asc";
+type LeadSort = "priority" | "follow_up_asc" | "follow_up_desc" | "last_contact_desc" | "status_asc" | "source_asc" | "value_desc" | "value_asc" | "updated_desc" | "name_asc";
 
 type Warning = { label: string; tone: "red" | "amber" | "grey" | "teal" | "green" };
 
@@ -129,11 +130,7 @@ function quoteWarmth(lead: Lead) {
 }
 
 function matchesSearch(lead: Lead, search: string) {
-  const haystack = [lead.customerName, lead.contactName, lead.email, lead.phone, lead.productCategory, lead.nextAction, lead.lastInteractionSummary, lead.notes, lead.mondayItemId]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes(search.trim().toLowerCase());
+  return matchesLeadSearch(lead, search);
 }
 
 function readForm(form: HTMLFormElement) {
@@ -181,9 +178,9 @@ function sourceLabel(lead: Lead) {
 
 function SourceLink({ lead, supabaseProjectRef }: { lead: Lead; supabaseProjectRef?: string }) {
   const supabaseUrl = buildSupabaseLeadStudioUrl({ projectRef: supabaseProjectRef, leadId: lead.id });
-  if (supabaseUrl) return <a href={supabaseUrl.toString()} target="_blank" rel="noreferrer" aria-label={`Open Supabase Studio row for ${lead.customerName}`} style={sourceLinkStyle}>Open Supabase row ↗</a>;
+  if (supabaseUrl) return <a href={supabaseUrl.toString()} target="_blank" rel="noreferrer" aria-label={`Open Supabase Studio row for ${lead.customerName}`} style={sourceLinkStyle}>Open source ↗</a>;
   if (!lead.sourceUrl) return <span style={{ ...smallMutedStyle, justifySelf: "end" }}>No source link</span>;
-  return <a href={lead.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open legacy source record for ${lead.customerName}`} style={sourceLinkStyle}>Legacy source ↗</a>;
+  return <a href={lead.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open legacy source record for ${lead.customerName}`} style={sourceLinkStyle}>Open source ↗</a>;
 }
 
 function LeadListHeader() {
@@ -230,12 +227,22 @@ function LeadRow({ lead, selected, onSelect, supabaseProjectRef }: { lead: Lead;
   );
 }
 
-function LeadDrawer({ lead, visibleIds, supabaseProjectRef, onClose, onSaved }: { lead: Lead | null; visibleIds: Set<string>; supabaseProjectRef?: string; onClose: () => void; onSaved: () => void }) {
+function LeadDrawer({ lead, visibleIds, supabaseProjectRef, leadWritesEnabled, onClose, onSaved, onEditingChange }: { lead: Lead | null; visibleIds: Set<string>; supabaseProjectRef?: string; leadWritesEnabled: boolean; onClose: () => void; onSaved: () => void; onEditingChange: (editing: boolean) => void }) {
   const [saving, startSaving] = useTransition();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!lead) return null;
+
+  const setEditingState = (value: boolean) => {
+    setEditing(value);
+    onEditingChange(value);
+  };
+
+  const closeDrawer = () => {
+    setEditingState(false);
+    onClose();
+  };
 
   const submitUpdate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -244,7 +251,7 @@ function LeadDrawer({ lead, visibleIds, supabaseProjectRef, onClose, onSaved }: 
     startSaving(async () => {
       try {
         await jsonFetch(`/api/leads/${lead.id}`, "PATCH", payload);
-        setEditing(false);
+        setEditingState(false);
         onSaved();
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -254,7 +261,7 @@ function LeadDrawer({ lead, visibleIds, supabaseProjectRef, onClose, onSaved }: 
 
   const hiddenByFilter = !visibleIds.has(lead.id);
   return (
-    <aside style={drawerOverlayStyle} aria-label="Lead detail drawer" onClick={onClose}>
+    <aside style={drawerOverlayStyle} aria-label="Lead detail drawer" onClick={closeDrawer}>
       <div style={drawerStyle} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, marginBottom: 12 }}>
           <div>
@@ -262,7 +269,7 @@ function LeadDrawer({ lead, visibleIds, supabaseProjectRef, onClose, onSaved }: 
             <h2 style={{ margin: "3px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 28, lineHeight: 1.05 }}>{lead.customerName}</h2>
             <div style={{ marginTop: 5, fontFamily: DT.sans, color: DT.textMuted, fontSize: 12 }}>{[lead.contactName, lead.productCategory, sourceLabel(lead)].filter(Boolean).join(" · ")}</div>
           </div>
-          <button type="button" onClick={onClose} style={secondaryButtonStyle}>Close</button>
+          <button type="button" onClick={closeDrawer} style={secondaryButtonStyle}>Close</button>
         </div>
         {hiddenByFilter && <div style={{ ...errorStyle, marginBottom: 10, color: DT.textSecondary, background: "rgba(210,174,109,0.10)", borderColor: "rgba(210,174,109,0.25)" }}>This lead is outside the current filter, but remains open for reference.</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
@@ -295,7 +302,11 @@ function LeadDrawer({ lead, visibleIds, supabaseProjectRef, onClose, onSaved }: 
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
           <SourceLink lead={lead} supabaseProjectRef={supabaseProjectRef} />
-          <button type="button" onClick={() => setEditing((value) => !value)} style={editing ? primaryButtonStyle : secondaryButtonStyle}>{editing ? "Close edit fields" : "Edit lead"}</button>
+          {leadWritesEnabled ? (
+            <button type="button" onClick={() => setEditingState(!editing)} style={editing ? primaryButtonStyle : secondaryButtonStyle}>{editing ? "Close edit fields" : "Edit lead"}</button>
+          ) : (
+            <button type="button" disabled title="Lead writes are disabled until Guido approves production Supabase lead writes" style={disabledButtonStyle}>Read-only until approved</button>
+          )}
         </div>
         {editing && (
           <form onSubmit={submitUpdate} style={{ display: "grid", gap: 9, borderTop: `1px solid ${DT.border}`, paddingTop: 12 }}>
@@ -337,7 +348,7 @@ function LeadDrawer({ lead, visibleIds, supabaseProjectRef, onClose, onSaved }: 
             <Textarea name="notes" label="Notes" defaultValue={lead.notes || ""} rows={7} />
             {error && <div style={errorStyle}>{error}</div>}
             <div style={stickyFormActionsStyle}>
-              <button type="button" onClick={() => setEditing(false)} style={secondaryButtonStyle}>Cancel</button>
+              <button type="button" onClick={() => setEditingState(false)} style={secondaryButtonStyle}>Cancel</button>
               <button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Saving to Supabase…" : "Save to Supabase"}</button>
             </div>
           </form>
@@ -383,7 +394,7 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
   );
 }
 
-function NewLeadForm({ onSaved }: { onSaved: () => void }) {
+function NewLeadForm({ onSaved, leadWritesEnabled }: { onSaved: () => void; leadWritesEnabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -403,6 +414,7 @@ function NewLeadForm({ onSaved }: { onSaved: () => void }) {
       }
     });
   };
+  if (!leadWritesEnabled) return <button type="button" disabled title="Lead writes are disabled until Guido approves production Supabase lead writes" style={disabledButtonStyle}>Add lead disabled</button>;
   if (!open) return <button type="button" onClick={() => setOpen(true)} style={secondaryButtonStyle}>Add lead</button>;
   return (
     <form onSubmit={submitCreate} style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, display: "grid", gap: 10, marginBottom: 14 }}>
@@ -480,6 +492,7 @@ const fieldStyle: CSSProperties = { display: "grid", gap: 4, fontSize: 10, textT
 const labelStyle: CSSProperties = { fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 900, color: DT.textFaint, fontFamily: DT.sans };
 const primaryButtonStyle: CSSProperties = { border: "none", background: DT.gold, color: DT.headerBg, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 900, fontFamily: DT.sans, cursor: "pointer" };
 const secondaryButtonStyle: CSSProperties = { border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textSecondary, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" };
+const disabledButtonStyle: CSSProperties = { ...secondaryButtonStyle, opacity: 0.62, cursor: "not-allowed", background: "rgba(185,178,164,0.10)", color: DT.textMuted };
 const secondaryTinyButtonStyle: CSSProperties = { ...secondaryButtonStyle, padding: "6px 9px", fontSize: 10 };
 const stickyFormActionsStyle: CSSProperties = { position: "sticky", bottom: -20, zIndex: 2, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap", margin: "4px -20px -20px", padding: "12px 20px 14px", background: "linear-gradient(180deg, rgba(255,250,241,0.86), #fffaf1 40%)", borderTop: `1px solid ${DT.border}` };
 const sourceLinkStyle: CSSProperties = { ...secondaryTinyButtonStyle, display: "inline-flex", gap: 5, alignItems: "center", textDecoration: "none" };
@@ -492,11 +505,13 @@ const rowTextStyle: CSSProperties = { fontFamily: DT.sans, fontSize: 12, color: 
 const drawerOverlayStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 80, background: "rgba(38,32,25,0.30)", cursor: "default", display: "grid", placeItems: "center", padding: 18 };
 const drawerStyle: CSSProperties = { width: "min(760px, calc(100vw - 36px))", maxHeight: "min(760px, calc(100vh - 36px))", overflowY: "auto", background: "#fffaf1", border: `1px solid ${DT.border}`, borderRadius: 22, boxShadow: "0 28px 70px rgba(31,24,15,0.28)", padding: 20 };
 
-export default function LeadsClient({ result, supabaseProjectRef }: { result: LeadsResult; supabaseProjectRef?: string }) {
+export default function LeadsClient({ result, supabaseProjectRef, leadWritesEnabled = false }: { result: LeadsResult; supabaseProjectRef?: string; leadWritesEnabled?: boolean }) {
   const [filter, setFilter] = useState<LeadFilter>("do_today");
   const [sortMode, setSortMode] = useState<LeadSort>("priority");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingPaused, setEditingPaused] = useState(false);
+  const [autoRefreshNote, setAutoRefreshNote] = useState<string | null>(null);
   const router = useRouter();
 
   const activeRows = useMemo(() => result.rows.filter((lead) => !isClosed(lead)), [result.rows]);
@@ -543,10 +558,33 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
 
   const refresh = () => router.refresh();
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (editingPaused) {
+        setAutoRefreshNote("Auto-refresh paused while editing");
+        return;
+      }
+      setAutoRefreshNote("Auto-refreshed from Supabase");
+      router.refresh();
+    }, 300_000);
+    return () => window.clearInterval(interval);
+  }, [editingPaused, router]);
+
+  useEffect(() => {
+    if (!autoRefreshNote) return;
+    const timeout = window.setTimeout(() => setAutoRefreshNote(null), 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [autoRefreshNote]);
+
   return (
     <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12, background: "rgba(255,252,246,0.86)", border: `1px solid ${DT.border}`, borderRadius: DT.radiusSm, padding: "9px 11px", fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary }}>
+        <span>{autoRefreshNote || "Auto-refreshes from Supabase every 5 minutes when this tab is visible."}</span>
+        <span>{leadWritesEnabled ? "Supabase lead writes enabled" : "Read-only until approved: lead writes disabled"}</span>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, marginBottom: 14, overflowX: "auto" }}>
-        <MetricButton label="Overdue" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
+        <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
         <MetricButton label="Samples" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
         <MetricButton label="Live quote" value={money(liveQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
         <MetricButton label="Hot quote" value={money(hotQuoteValue)} tone={hotQuoteValue ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
@@ -563,7 +601,7 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
         </div>
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
           <SortSelect value={sortMode} onChange={setSortMode} />
-          <NewLeadForm onSaved={refresh} />
+          <NewLeadForm onSaved={refresh} leadWritesEnabled={leadWritesEnabled} />
         </div>
       </div>
 
@@ -581,7 +619,7 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
           <ClosedReferenceList leads={closedRows} onSelect={(lead) => setSelectedId(lead.id)} />
         </>
       )}
-      <LeadDrawer lead={selectedLead} visibleIds={visibleIds} supabaseProjectRef={supabaseProjectRef} onClose={() => setSelectedId(null)} onSaved={refresh} />
+      <LeadDrawer lead={selectedLead} visibleIds={visibleIds} supabaseProjectRef={supabaseProjectRef} leadWritesEnabled={leadWritesEnabled} onClose={() => setSelectedId(null)} onSaved={refresh} onEditingChange={setEditingPaused} />
     </MissionControlShell>
   );
 }

@@ -7,5 +7,6 @@ export const dynamic = "force-dynamic";
 export default async function LeadsPage() {
   const result = await listLeads();
   const supabaseProjectRef = process.env.SUPABASE_PROJECT_REF || projectRefFromSupabaseUrl(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
-  return <LeadsClient result={result} supabaseProjectRef={supabaseProjectRef} />;
+  const leadWritesEnabled = process.env.TUESDAY_LEADS_WRITES_ENABLED === "true";
+  return <LeadsClient result={result} supabaseProjectRef={supabaseProjectRef} leadWritesEnabled={leadWritesEnabled} />;
 }
