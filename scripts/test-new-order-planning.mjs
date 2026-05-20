@@ -136,15 +136,17 @@ assert.deepEqual(
     ['Top: sand + 1st coat', 'dylan', 1],
     ['Top: 2nd coat', 'dylan', 0.5],
     ['Top: 3rd coat', 'dylan', 0.5],
-    ['QC + photos + box/wrap', 'dylan', 2],
-    ['Book freight', 'nick', 0.5],
+    ['QC + photos + box/wrap', 'nick', 2],
+    ['Book freight — Guido', 'nick', 0.5],
   ],
   'steel dining table template uses the standard owners and durations'
 );
 assert.equal(standardTableSuggestions[0].dateIso, '2026-05-18');
 assert.equal(standardTableSuggestions[2].dateIso, '2026-06-02', 'steel table template leaves about two workshop weeks after POs before bottom prep');
 assert.equal(standardTableSuggestions[6].dateIso, '2026-06-15', 'steel table template leaves curing time before QC/pack');
-assert.match(standardTableSuggestions.at(-1)?.detail ?? '', /Guido approval/i, 'book freight is clearly marked for Guido approval');
+assert.match(standardTableSuggestions[6]?.detail ?? '', /Nick \+ Dylan/i, 'QC is Nick-led with Dylan for every steel dining table');
+assert.match(standardTableSuggestions.at(-1)?.detail ?? '', /Guido: book freight/i, 'book freight is clearly Guido-owned');
+assert.doesNotMatch(standardTableSuggestions.at(-1)?.detail ?? '', /Nick/i, 'book freight is not described as Nick-owned');
 
 const genericTableSuggestions = buildStandardDiningTablePlanForOrder({
   ...steelTableOrder,
