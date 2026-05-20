@@ -231,6 +231,7 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
   const [saving, startSaving] = useTransition();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   if (!lead) return null;
 
   const submitUpdate = (event: FormEvent<HTMLFormElement>) => {
@@ -295,6 +296,13 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
         </div>
         {editing && (
           <form onSubmit={submitUpdate} style={{ display: "grid", gap: 9, borderTop: `1px solid ${DT.border}`, paddingTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <div>
+                <div style={labelStyle}>Editing this lead</div>
+                <div style={{ marginTop: 2, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, fontWeight: 900 }}>Update the next useful step</div>
+              </div>
+              <button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Saving to Supabase…" : "Save to Supabase"}</button>
+            </div>
             <div style={{ background: "rgba(110,138,106,0.08)", border: "1px solid rgba(110,138,106,0.18)", borderRadius: DT.radiusSm, padding: 10, fontFamily: DT.sans, color: DT.textSecondary, fontSize: 12, lineHeight: 1.4 }}>
               Save writes directly to Supabase. Set a real next step plus a future follow-up date and the lead drops out of Do Today until it is due again.
             </div>
@@ -325,7 +333,7 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
             <Textarea name="lastInteractionSummary" label="Last touch summary" defaultValue={lead.lastInteractionSummary || ""} rows={3} />
             <Textarea name="notes" label="Notes" defaultValue={lead.notes || ""} rows={7} />
             {error && <div style={errorStyle}>{error}</div>}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <div style={stickyFormActionsStyle}>
               <button type="button" onClick={() => setEditing(false)} style={secondaryButtonStyle}>Cancel</button>
               <button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Saving to Supabase…" : "Save to Supabase"}</button>
             </div>
@@ -470,6 +478,7 @@ const labelStyle: CSSProperties = { fontSize: 9, textTransform: "uppercase", let
 const primaryButtonStyle: CSSProperties = { border: "none", background: DT.gold, color: DT.headerBg, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 900, fontFamily: DT.sans, cursor: "pointer" };
 const secondaryButtonStyle: CSSProperties = { border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textSecondary, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" };
 const secondaryTinyButtonStyle: CSSProperties = { ...secondaryButtonStyle, padding: "6px 9px", fontSize: 10 };
+const stickyFormActionsStyle: CSSProperties = { position: "sticky", bottom: -20, zIndex: 2, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap", margin: "4px -20px -20px", padding: "12px 20px 14px", background: "linear-gradient(180deg, rgba(255,250,241,0.86), #fffaf1 40%)", borderTop: `1px solid ${DT.border}` };
 const sourceLinkStyle: CSSProperties = { ...secondaryTinyButtonStyle, display: "inline-flex", gap: 5, alignItems: "center", textDecoration: "none" };
 const errorStyle: CSSProperties = { color: "#8f3f24", background: "rgba(180,107,70,0.08)", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, padding: 10, fontFamily: DT.sans, fontSize: 12 };
 const smallMutedStyle: CSSProperties = { fontFamily: DT.sans, color: DT.textMuted, fontSize: 11 };
