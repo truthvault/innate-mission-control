@@ -21,6 +21,9 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
 
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS) as Array<[LeadStatus, string]>;
 const PRIORITY_OPTIONS: Array<[LeadPriority, string]> = [["hot", "Hot"], ["normal", "Normal"], ["low", "Low"]];
+const SAMPLE_STATUS_OPTIONS: Array<[SampleStatusOption, string]> = [["", "No sample status"], ["requested", "Requested"], ["packed", "Packed"], ["sent", "Sent"], ["delivered", "Delivered"], ["followed_up", "Followed up"], ["converted", "Converted"], ["parked", "Parked"]];
+
+type SampleStatusOption = "" | "requested" | "packed" | "sent" | "delivered" | "followed_up" | "converted" | "parked";
 type LeadFilter = "do_today" | "sample_followups" | "overdue" | "cashflow" | "hot" | "needs_next_step" | "waiting" | "active";
 type LeadSort = "priority" | "follow_up_asc" | "follow_up_desc" | "value_desc" | "value_asc" | "updated_desc" | "name_asc";
 
@@ -292,19 +295,39 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
         </div>
         {editing && (
           <form onSubmit={submitUpdate} style={{ display: "grid", gap: 9, borderTop: `1px solid ${DT.border}`, paddingTop: 12 }}>
+            <div style={{ background: "rgba(110,138,106,0.08)", border: "1px solid rgba(110,138,106,0.18)", borderRadius: DT.radiusSm, padding: 10, fontFamily: DT.sans, color: DT.textSecondary, fontSize: 12, lineHeight: 1.4 }}>
+              Save writes directly to Supabase. Set a real next step plus a future follow-up date and the lead drops out of Do Today until it is due again.
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              <Input name="customerName" label="Customer / company" defaultValue={lead.customerName || ""} required />
+              <Input name="contactName" label="Contact" defaultValue={lead.contactName || ""} />
+              <Input name="email" label="Email" type="email" defaultValue={lead.email || ""} />
+              <Input name="phone" label="Phone" defaultValue={lead.phone || ""} />
+              <Input name="productCategory" label="Product / item" defaultValue={lead.productCategory || ""} />
+              <Input name="estimatedValue" label="Value" type="number" defaultValue={lead.estimatedValue?.toString() || ""} />
               <Select name="status" label="Status" defaultValue={lead.status} options={STATUS_OPTIONS} />
               <Select name="priority" label="Priority" defaultValue={lead.priority} options={PRIORITY_OPTIONS} />
+              <Input name="owner" label="Owner" defaultValue={lead.owner || ""} />
               <Input name="nextFollowUpAt" label="Next follow-up" type="date" defaultValue={dateKey(lead.nextFollowUpAt) || ""} />
-              <Input name="estimatedValue" label="Value" type="number" defaultValue={lead.estimatedValue?.toString() || ""} />
+              <Input name="source" label="Source" defaultValue={lead.source || ""} />
+              <Input name="sourceUrl" label="Source URL" type="url" defaultValue={lead.sourceUrl || ""} />
             </div>
-            <Input name="nextAction" label="Next step" defaultValue={lead.nextAction || ""} />
-            <Input name="lastInteractionSummary" label="Last touch summary" defaultValue={lead.lastInteractionSummary || ""} />
+            <Textarea name="nextAction" label="Next step / task" defaultValue={lead.nextAction || ""} rows={3} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              <Input name="lastInteractionAt" label="Last touch date/time" defaultValue={lead.lastInteractionAt || ""} />
+              <Select name="sampleStatus" label="Sample status" defaultValue={(lead.sampleStatus || "") as SampleStatusOption} options={SAMPLE_STATUS_OPTIONS} />
+              <Input name="sampleSentAt" label="Sample sent" type="date" defaultValue={dateKey(lead.sampleSentAt) || ""} />
+              <Input name="sampleDeliveredAt" label="Sample delivered" type="date" defaultValue={dateKey(lead.sampleDeliveredAt) || ""} />
+              <Input name="sampleSpecies" label="Sample species" defaultValue={lead.sampleSpecies || ""} />
+              <Input name="sampleTrackingUrl" label="Sample tracking URL" type="url" defaultValue={lead.sampleTrackingUrl || ""} />
+            </div>
+            <Textarea name="sampleNextAction" label="Sample next action" defaultValue={lead.sampleNextAction || ""} rows={2} />
+            <Textarea name="lastInteractionSummary" label="Last touch summary" defaultValue={lead.lastInteractionSummary || ""} rows={3} />
             <Textarea name="notes" label="Notes" defaultValue={lead.notes || ""} rows={7} />
             {error && <div style={errorStyle}>{error}</div>}
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
               <button type="button" onClick={() => setEditing(false)} style={secondaryButtonStyle}>Cancel</button>
-              <button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Saving…" : "Save lead"}</button>
+              <button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Saving to Supabase…" : "Save to Supabase"}</button>
             </div>
           </form>
         )}

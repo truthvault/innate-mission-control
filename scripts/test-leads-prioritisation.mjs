@@ -32,6 +32,32 @@ assert.equal(
   'Aidan decking should be in Do Today because it has a follow-up this week and no real next step'
 );
 
+assert.equal(
+  doToday({
+    ...aidanDecking,
+    status: 'quoted',
+    priority: 'hot',
+    estimatedValue: 10308,
+    nextFollowUpAt: '2026-05-26',
+    nextAction: 'Wait for Aidan/client response. If no reply by 2026-05-26, follow up to confirm final delivery address/access.',
+  }, today),
+  false,
+  'completed hot quoted work with a real future follow-up should leave Do Today until it is due'
+);
+
+assert.equal(
+  doToday({
+    ...aidanDecking,
+    status: 'quoted',
+    priority: 'hot',
+    estimatedValue: 10308,
+    nextFollowUpAt: '2026-05-20',
+    nextAction: 'Follow up if no client response.',
+  }, today),
+  true,
+  'a real next step should return to Do Today on the follow-up date'
+);
+
 assert.deepEqual(
   sortLeads([
     { ...baseLead, id: 'low', customerName: 'Low', estimatedValue: 1000, nextFollowUpAt: '2026-05-25' },
