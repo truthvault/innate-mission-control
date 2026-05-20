@@ -54,7 +54,7 @@ const TABLE_STEPS: TemplateStep[] = [
   { title: "Cut / machine / prep", detail: "Prepare top or components, resolve any machining questions, and flag missing information before finish work starts.", day: "tuesday", person: "nick", estimatedHours: 1 },
   { title: "Sanding + first finish", detail: "Surface prep, first coat, and photo proof while there is still time to catch any detail issue.", day: "wednesday", person: "dylan", estimatedHours: 1 },
   { title: "Second finish + cure buffer", detail: "Second coat and drying/cure buffer so dispatch or assembly is not guessed at the end of the week.", day: "thursday", person: "dylan", estimatedHours: 1 },
-  { title: "QC photos + dispatch prep", detail: "Final proof photos, underside/base check, wrap/dispatch decision, and customer update trigger.", day: "friday", person: "nick", estimatedHours: 1 },
+  { title: "QC photos + dispatch prep", detail: "Nick + Dylan: final proof photos, underside/base check, wrap/dispatch decision, and customer update trigger.", day: "friday", person: "nick", estimatedHours: 1 },
 ];
 
 const STEEL_DINING_TABLE_STEPS: TemplateStep[] = [
@@ -64,8 +64,8 @@ const STEEL_DINING_TABLE_STEPS: TemplateStep[] = [
   { key: "top-first-coat", title: "Top: sand + 1st coat", detail: "Dylan: final sand and first top coat.", day: "thursday", person: "dylan", estimatedHours: 1 },
   { key: "top-second-coat", title: "Top: 2nd coat", detail: "Dylan: second top coat.", day: "monday", person: "dylan", estimatedHours: 0.5 },
   { key: "top-third-coat", title: "Top: 3rd coat", detail: "Dylan: third/final top coat, then leave curing time before handling/boxing.", day: "tuesday", person: "dylan", estimatedHours: 0.5 },
-  { key: "qc-dispatch", title: "QC + photos + dispatch prep", detail: "Dylan: QC, final photos, and either box/wrap for freight or assemble for local delivery after curing.", day: "monday", person: "dylan", estimatedHours: 2, afterCuringWait: true },
-  { key: "book-freight", title: "Book freight", detail: "Nick: prepare freight or local delivery details for Guido approval once QC/pack mode is clear.", day: "tuesday", person: "nick", estimatedHours: 0.5 },
+  { key: "qc-dispatch", title: "QC + photos + dispatch prep", detail: "Nick + Dylan: QC, final photos, and either box/wrap for freight or assemble for local delivery after curing.", day: "monday", person: "nick", estimatedHours: 2, afterCuringWait: true },
+  { key: "book-freight", title: "Book freight — Guido", detail: "Guido: book freight or local delivery details once QC/pack mode is clear.", day: "tuesday", person: "nick", estimatedHours: 0.5 },
 ];
 
 const PANEL_STEPS: TemplateStep[] = [
@@ -73,7 +73,7 @@ const PANEL_STEPS: TemplateStep[] = [
   { title: "Cut / machine / flatten", detail: "Dylan: prepare the benchtop/panel blank, resolve any stock/yield issue, and check cut-outs before finishing.", day: "tuesday", person: "dylan", estimatedHours: 1 },
   { title: "Sand + 1st coat", detail: "Dylan: final sand, edge detail, first coat, and flag any quality issue while it can still move.", day: "wednesday", person: "dylan", estimatedHours: 1 },
   { title: "2nd coat + cure", detail: "Dylan: second coat and drying/cure buffer before handling or freight.", day: "thursday", person: "dylan", estimatedHours: 1 },
-  { title: "QC photos + wrap", detail: "Final proof photos, packaging decision, freight/customer update trigger.", day: "monday", person: "dylan", estimatedHours: 1 },
+  { title: "QC photos + wrap", detail: "Nick + Dylan: final proof photos, packaging decision, freight/customer update trigger.", day: "monday", person: "nick", estimatedHours: 1 },
 ];
 
 const SAMPLE_STEPS: TemplateStep[] = [
