@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT, KpiCard, type ChipTone } from "@/components/mission-control-ui";
 import type { WorkboardResult, WorkPriority, WorkProject, WorkSource, WorkTask, WorkTaskStatus } from "@/lib/workboard/types";
-import { nextTaskForProject, projectOpenTaskCount, visibleTodayTasks } from "@/lib/workboard/prioritisation.mjs";
+import { nextTaskForProject, priorityRank, projectOpenTaskCount, visibleTodayTasks } from "@/lib/workboard/prioritisation.mjs";
 
 type TaskAction = { label: string; status: WorkTaskStatus; aria: string };
 
@@ -125,7 +125,9 @@ export default function WorkboardClient({ result }: { result: WorkboardResult })
   const inboxTasks = useMemo(() => result.tasks.filter((task) => task.status === "inbox"), [result.tasks]);
   const waitingTasks = useMemo(() => result.tasks.filter((task) => task.status === "waiting"), [result.tasks]);
   const doneTasks = useMemo(() => result.tasks.filter((task) => task.status === "done").sort((a, b) => String(b.completedAt || b.updatedAt).localeCompare(String(a.completedAt || a.updatedAt))).slice(0, 10), [result.tasks]);
-  const activeProjects = useMemo(() => result.projects.filter((project) => project.status !== "done" && project.status !== "cancelled"), [result.projects]);
+  const activeProjects = useMemo(() => result.projects
+    .filter((project) => project.status !== "done" && project.status !== "cancelled")
+    .sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority) || a.name.localeCompare(b.name, "en-NZ")), [result.projects]);
 
   const changeStatus = async (task: WorkTask, status: WorkTaskStatus) => {
     setError(null);

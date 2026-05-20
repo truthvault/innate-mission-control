@@ -153,6 +153,6 @@ export async function listWorkboard(): Promise<WorkboardResult> {
       source: "supabase",
     };
   } catch (err) {
-    return { sources: [], projects: [], tasks: [], syncedAt, source: "supabase", error: err instanceof Error ? err.message : String(err) };
+    return { sources: [], projects: [], tasks: [], syncedAt, source: "none", error: err instanceof Error ? err.message : String(err) };
   }
 }
