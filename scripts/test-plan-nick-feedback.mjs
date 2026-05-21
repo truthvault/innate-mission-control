@@ -19,7 +19,7 @@ assert.match(source, /taskCustomerDisplayName/, 'Nick refinement: customer/order
 assert.match(source, /friendlyWorkshopTaskText/, 'Nick refinement: rough Monday task wording should be cleaned up for display only');
 assert.match(source, /Needs Guido:/, 'Nick refinement: Guido blockers should be visible from task cards');
 assert.match(source, /Tick when this task is finished/, 'Nick question: explain how to tick a task off near job tasks in low-pressure wording');
-assert.match(source, /Use this if the day, person, customer, or task wording is wrong/, 'Nick refinement: edit modal should explain when to use it');
+assert.match(source, /Use this if the day, person, customer, task wording, or hours are wrong/, 'Nick refinement: edit modal should explain when to use it, including hours');
 assert.match(source, /Add task to job/, 'Nick question: the add-task control should be explicitly labelled, not just an icon');
 assert.match(source, /Save changes/, 'Nick question: save button should use the plain existing edit-flow wording');
 assert.match(source, /Saves this card in Tuesday only/, 'Nick question: explain what the save button does');

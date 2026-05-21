@@ -13,6 +13,7 @@ export type DraggablePlanTask = {
   day: DayKey;
   person: Person;
   text: string;
+  estimatedHours?: number;
   linkedOrderIds: number[];
   linkedOrders: Array<{ mondayItemId: string; name: string; boardId: string; boardName: string }>;
 };

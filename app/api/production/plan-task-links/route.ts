@@ -15,6 +15,7 @@ type PlanTaskEditValue = {
   rowName?: string;
   day?: DayKey;
   person?: Person;
+  estimatedHours?: number;
   internal?: boolean;
   updatedAt: string;
 };
@@ -37,14 +38,16 @@ function cleanText(value: unknown, max = 160) {
 
 function cleanTaskEdit(value: unknown): Omit<PlanTaskEditValue, "updatedAt"> | null {
   if (!value || typeof value !== "object") return null;
-  const source = value as { text?: unknown; rowName?: unknown; day?: unknown; person?: unknown; internal?: unknown };
+  const source = value as { text?: unknown; rowName?: unknown; day?: unknown; person?: unknown; estimatedHours?: unknown; internal?: unknown };
   const edit: Omit<PlanTaskEditValue, "updatedAt"> = {};
   const text = cleanText(source.text);
   const rowName = cleanText(source.rowName);
+  const estimatedHours = Number(source.estimatedHours);
   if (text) edit.text = text;
   if (rowName) edit.rowName = rowName;
   if (["monday", "tuesday", "wednesday", "thursday", "friday"].includes(String(source.day))) edit.day = source.day as DayKey;
   if (source.person === "nick" || source.person === "dylan") edit.person = source.person;
+  if (Number.isFinite(estimatedHours)) edit.estimatedHours = Math.max(0, Math.round(estimatedHours * 2) / 2);
   if (typeof source.internal === "boolean") edit.internal = source.internal;
   return Object.keys(edit).length > 0 ? edit : null;
 }

@@ -240,7 +240,7 @@ type AppPlanTask = {
   done: boolean;
 };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
-type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; internal?: boolean; updatedAt?: string };
+type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; estimatedHours?: number; internal?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type PersonFilter = "all" | Person;
@@ -480,6 +480,16 @@ function linkValueForPlanTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "te
 
 function assignedOrderIdForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text" | "taskKey">, links: PlanTaskLinks) {
   return orderIdFromPlanTaskLink(linkValueForPlanTask(task, links));
+}
+
+function cleanTaskEstimatedHours(value: unknown) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(0, Math.round(parsed * 2) / 2);
+}
+
+function formatTaskHours(value: unknown) {
+  return `${cleanTaskEstimatedHours(value)}h`;
 }
 
 function placementForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
@@ -2516,6 +2526,7 @@ function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
               text,
               linkedOrderIds: row.linkedOrders.map((linked) => Number(linked.mondayItemId)).filter((id) => Number.isFinite(id)),
               linkedOrders: row.linkedOrders,
+              estimatedHours: 1,
             }]
           : [];
       })
@@ -2533,6 +2544,7 @@ function applyPlanTaskEdits(tasks: BoardPlanTask[], taskEdits: PlanTaskEdits): B
       rowName: edit.rowName ?? task.rowName,
       day: edit.day ?? task.day,
       person: edit.person ?? task.person,
+      estimatedHours: edit.estimatedHours ?? task.estimatedHours,
     };
   });
 }
@@ -2563,7 +2575,7 @@ function boardPlanLayoutsEqual(left: BoardPlanTask[], right: BoardPlanTask[]) {
   if (left.length !== right.length) return false;
   return left.every((task, index) => {
     const other = right[index];
-    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person && other.text === task.text && other.rowName === task.rowName;
+    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person && other.text === task.text && other.rowName === task.rowName && cleanTaskEstimatedHours(other.estimatedHours) === cleanTaskEstimatedHours(task.estimatedHours);
   });
 }
 
@@ -2611,7 +2623,7 @@ function loadDraftTasks(weekId: string, sourceTasks: BoardPlanTask[]) {
     const sourceById = new Map(sourceTasks.map((task) => [task.id, task]));
     return parsed.map((draftTask) => {
       const sourceTask = sourceById.get(draftTask.id);
-      return sourceTask ? { ...sourceTask, weekId: draftTask.weekId, day: draftTask.day, person: draftTask.person } : draftTask;
+      return sourceTask ? { ...sourceTask, weekId: draftTask.weekId, day: draftTask.day, person: draftTask.person, estimatedHours: draftTask.estimatedHours ?? sourceTask.estimatedHours } : draftTask;
     });
   } catch {
     return sourceTasks;
@@ -3293,7 +3305,7 @@ function SortablePlanTaskCard({
           </button>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-          <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>1h</span>
+          <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(task.estimatedHours)}</span>
           <span title={orderConnection.detail} style={{ color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{orderConnection.label}</span>
         </div>
       </div>
@@ -3309,6 +3321,7 @@ function WorkshopTaskEditor({
   onSave,
   onConnectOrder,
   onRemoveOrder,
+  onOpenOrder,
   onClose,
 }: {
   task: BoardPlanTask;
@@ -3317,17 +3330,24 @@ function WorkshopTaskEditor({
   onSave: (task: BoardPlanTask) => void;
   onConnectOrder: (task: BoardPlanTask, orderId: number) => void;
   onRemoveOrder: (task: BoardPlanTask) => void;
+  onOpenOrder: (orderId: number) => void;
   onClose: () => void;
 }) {
-  const [draft, setDraft] = useState(task);
+  const [draft, setDraft] = useState<BoardPlanTask>({ ...task, estimatedHours: cleanTaskEstimatedHours(task.estimatedHours) });
   const connectedOrderId = assignedOrderIdForTask(task, planTaskLinks) ?? task.linkedOrderIds[0] ?? "";
   const [orderId, setOrderId] = useState<string>(connectedOrderId ? String(connectedOrderId) : "");
   const connection = orderConnectionLabel(task, planTaskLinks, connectedOrderId ? Number(connectedOrderId) : null);
   const connectionVisual = orderConnectionStyle(connection.state);
+  const selectedOrder = orderId ? orders.find((order) => order.id === Number(orderId)) ?? null : null;
   function saveTask() {
-    onSave({ ...draft, text: draft.text.trim() || task.text, rowName: draft.rowName.trim() || task.rowName });
+    onSave({ ...draft, text: draft.text.trim() || task.text, rowName: draft.rowName.trim() || task.rowName, estimatedHours: cleanTaskEstimatedHours(draft.estimatedHours) });
     if (orderId) onConnectOrder(task, Number(orderId));
     onClose();
+  }
+  function openSelectedOrderDetails() {
+    if (!orderId) return;
+    onClose();
+    onOpenOrder(Number(orderId));
   }
   function markInternal() {
     const next = { ...draft, rowName: draft.rowName.trim() || "Internal workshop" };
@@ -3338,12 +3358,12 @@ function WorkshopTaskEditor({
   }
   return (
     <div role="dialog" aria-modal="true" aria-label="Edit task" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "grid", placeItems: "center", background: "rgba(34,32,26,0.32)", padding: 18 }}>
-      <div onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", border: `1px solid ${DT.border}`, borderRadius: 16, background: DT.cardBg, boxShadow: "0 24px 70px rgba(34,32,26,0.24)", padding: 16 }}>
+      <div data-workshop-task-editor-glow="review-glow" onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `5px solid ${REVIEW_GLOW.color}`, borderRadius: 16, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.modalShadow, padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
           <div>
             <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Fix workshop task</div>
             <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 23, color: DT.textPrimary }}>Workshop task</h3>
-            <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 750 }}>Use this if the day, person, customer, or task wording is wrong.</div>
+            <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 750 }}>Use this if the day, person, customer, task wording, or hours are wrong.</div>
           </div>
           <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 999, padding: "5px 9px", cursor: "pointer", color: DT.textMuted, fontWeight: 900 }}>Close</button>
         </div>
@@ -3385,6 +3405,18 @@ function WorkshopTaskEditor({
               </select>
             </label>
           </div>
+          <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+            Hours allocated
+            <input
+              aria-label="Hours allocated"
+              type="number"
+              min="0"
+              step="0.5"
+              value={cleanTaskEstimatedHours(draft.estimatedHours)}
+              onChange={(event) => setDraft((current) => ({ ...current, estimatedHours: cleanTaskEstimatedHours(event.target.value) }))}
+              style={{ border: `1px solid ${REVIEW_GLOW.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary, background: "rgba(255,255,255,0.78)", fontWeight: 850 }}
+            />
+          </label>
           <div style={{ border: `1px solid ${DT.border}`, borderRadius: 11, padding: 10, background: "rgba(250,248,243,0.72)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
               <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Order connection</div>
@@ -3396,6 +3428,7 @@ function WorkshopTaskEditor({
             </select>
             <div style={{ marginTop: 7, display: "flex", gap: 7, flexWrap: "wrap" }}>
               <button type="button" onClick={() => orderId && onConnectOrder(task, Number(orderId))} disabled={!orderId} style={{ border: `1px solid rgba(12,124,122,0.18)`, background: orderId ? DT.tealSoft : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Connect order</button>
+              <button type="button" onClick={openSelectedOrderDetails} disabled={!orderId} title={selectedOrder ? `Open ${selectedOrder.customer} full order details` : "Choose an order first"} style={{ border: `1px solid ${orderId ? REVIEW_GLOW.borderStrong : DT.border}`, background: orderId ? REVIEW_GLOW.bgSoft : "rgba(0,0,0,0.035)", color: orderId ? REVIEW_GLOW.color : DT.textFaint, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Open full order details</button>
               <button type="button" onClick={markInternal} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>No customer / internal</button>
             </div>
           </div>
@@ -3746,7 +3779,7 @@ function MonthWeekSection({
                                   {selectedOrder && <div style={{ marginTop: 3, fontSize: 9, color: DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedOrder.customer}</div>}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>1h</span>
+                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(1)}</span>
                                   <span style={{ color: DT.teal, background: DT.tealSoft, border: "1px solid rgba(12,124,122,0.14)", borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : "Job"}</span>
                                 </div>
                               </div>
@@ -3921,6 +3954,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         rowName: nextTask.rowName,
         day: nextTask.day,
         person: nextTask.person,
+        estimatedHours: nextTask.estimatedHours,
         internal: /internal workshop/i.test(nextTask.rowName),
       },
     }));
@@ -3935,6 +3969,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
           rowName: nextTask.rowName,
           day: nextTask.day,
           person: nextTask.person,
+          estimatedHours: nextTask.estimatedHours,
           internal: /internal workshop/i.test(nextTask.rowName),
         },
       }),
@@ -4399,6 +4434,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
             onSave={updateBoardTaskFromEditor}
             onConnectOrder={(task, orderId) => assignPlanTaskToOrder({ ...task, weekTitle: "Production Plan" }, orderId)}
             onRemoveOrder={(task) => removePlanTaskLink({ ...task, weekTitle: "Production Plan" })}
+            onOpenOrder={openOrderOverview}
             onClose={() => setEditingTask(null)}
           />
         )}
