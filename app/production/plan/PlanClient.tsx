@@ -137,6 +137,22 @@ const JOB_TASK_PRESETS = [
   "Customer update",
   "Custom",
 ] as const;
+const TABLE_TASK_STAGE_SUGGESTIONS = [
+  "Material + spec check",
+  "Timber pulled",
+  "Stress cuts",
+  "Cut / machine / prep",
+  "Sand",
+  "1st coat",
+  "2nd coat",
+  "Curing",
+  "QC + photos",
+  "Assemble / box",
+  "Pack / wrap",
+  "Book freight",
+  "Customer update",
+] as const;
+const STAGE_CUSTOM_VALUE = "__custom_task_stage__";
 type Step = { key: string; label: string; who: string | null; wait: boolean; waitLabel?: string };
 const TABLE_STEPS: Step[] = [
   { key: "confirmed", label: "Order Confirmed", who: "Workshop", wait: false },
@@ -3329,7 +3345,22 @@ function WorkshopTaskEditor({
         <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
           <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
             What to do
-            <input value={draft.text} onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary }} />
+            <select
+              aria-label="Stage suggestion"
+              value={TABLE_TASK_STAGE_SUGGESTIONS.includes(draft.text as (typeof TABLE_TASK_STAGE_SUGGESTIONS)[number]) ? draft.text : STAGE_CUSTOM_VALUE}
+              onChange={(event) => {
+                if (event.target.value === STAGE_CUSTOM_VALUE) return;
+                setDraft((current) => ({ ...current, text: event.target.value }));
+              }}
+              style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary, background: DT.cardBg, fontWeight: 850 }}
+            >
+              <option value="" disabled>Choose standard table stage…</option>
+              {TABLE_TASK_STAGE_SUGGESTIONS.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+              <option value={STAGE_CUSTOM_VALUE}>Custom task…</option>
+            </select>
+            {!TABLE_TASK_STAGE_SUGGESTIONS.includes(draft.text as (typeof TABLE_TASK_STAGE_SUGGESTIONS)[number]) && (
+              <input aria-label="Custom task" value={draft.text} onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Describe custom task" style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary }} />
+            )}
           </label>
           <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
             Customer / order label
@@ -4507,18 +4538,6 @@ export default function PlanClient({
             }}
           >
             No Production Plan rows. {mondayError && `(${mondayError})`}
-          </div>
-        ) : !hasMounted ? (
-          <div
-            style={{
-              padding: "60px 20px",
-              textAlign: "center",
-              fontSize: 13,
-              color: DT.textFaint,
-              fontFamily: DT.sans,
-            }}
-          >
-            Loading Production Plan...
           </div>
         ) : (
           <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} />
