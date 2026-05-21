@@ -26,6 +26,8 @@ import { Chip } from "@/components/mission-control-ui";
 import type { UiOrder } from "@/lib/monday/mapping";
 import {
   buildSuggestedPlanForOrder,
+  DAILY_PERSON_CAPACITY_HOURS,
+  EXISTING_PLAN_TASK_ESTIMATED_HOURS,
   formatOrderedDate,
   selectNewOrderForPlanning,
   summarizeLaneCapacity,
@@ -2340,6 +2342,41 @@ type BoardPlanTask = DraggablePlanTask & { weekId: string };
 type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
 type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
 type OrderConnectionState = "connected" | "possible" | "needs-order" | "internal";
+type PlanHealthItem = { label: string; tone: "amber" | "red" | "teal" | "grey" };
+
+function todayTaskHoursForPerson(tasks: BoardPlanTask[], week: PlanWeek, person: Person) {
+  const today = currentDayKey();
+  if (!today) return 0;
+  return tasks
+    .filter((task) => task.weekId === week.id && task.day === today && task.person === person)
+    .length * EXISTING_PLAN_TASK_ESTIMATED_HOURS;
+}
+
+function buildPlanHealthItems({
+  week,
+  tasks,
+  blockedOrderCount,
+  showFriday,
+}: {
+  week: PlanWeek;
+  tasks: BoardPlanTask[];
+  blockedOrderCount: number;
+  showFriday: boolean;
+}): PlanHealthItem[] {
+  const today = currentDayKey();
+  const weekTasks = tasks.filter((task) => task.weekId === week.id);
+  const nickHours = todayTaskHoursForPerson(tasks, week, "nick");
+  const dylanHours = todayTaskHoursForPerson(tasks, week, "dylan");
+  const tasksNeedingOrder = weekTasks.filter((task) => task.linkedOrderIds.length === 0).length;
+  const items: PlanHealthItem[] = [];
+  if (today && dylanHours >= DAILY_PERSON_CAPACITY_HOURS) items.push({ label: "Dylan full today", tone: "amber" });
+  if (today && nickHours === 0) items.push({ label: "Nick has 0h today", tone: "amber" });
+  if (blockedOrderCount > 0) items.push({ label: `${blockedOrderCount} blocked orders`, tone: "red" });
+  if (tasksNeedingOrder > 0) items.push({ label: "Tasks needing order", tone: "red" });
+  if (!showFriday) items.push({ label: "Friday hidden", tone: "grey" });
+  if (items.length === 0) items.push({ label: "Plan health OK", tone: "teal" });
+  return items;
+}
 
 function isoDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -2432,7 +2469,7 @@ function orderConnectionLabel(task: DraggablePlanTask, planTaskLinks: PlanTaskLi
   const hasConfirmedOrder = Boolean(assignedOrderId || task.linkedOrderIds.length > 0);
   const looksInternal = /sample rack|shop|internal|maintenance|clean|tidy|tool|bench/i.test(`${task.text} ${task.rowName}`);
   if (hasConfirmedOrder) {
-    return { state: "connected" as OrderConnectionState, label: "Connected", detail: "Customer order attached" };
+    return { state: "connected" as OrderConnectionState, label: "Order linked", detail: "Customer order attached" };
   }
   if (resolvedOrderId) {
     return { state: "possible" as OrderConnectionState, label: "Possible match", detail: "Confirm customer/order" };
@@ -3192,7 +3229,7 @@ function SortablePlanTaskCard({
           onTaskSelect?.(task);
         }
       }}
-      title="Click to edit task, or drag to move it"
+      title={isUnlinkedTask ? "Needs order link before this task can start" : "Click to edit task, or drag to move it"}
       style={{
         display: "block",
         width: "100%",
@@ -3484,6 +3521,28 @@ function DroppablePlanLane({
   );
 }
 
+function PlanHealthStrip({ items }: { items: PlanHealthItem[] }) {
+  const toneStyles: Record<PlanHealthItem["tone"], { color: string; bg: string; border: string }> = {
+    amber: { color: "#8a5d08", bg: "rgba(255,246,199,0.62)", border: "rgba(190,137,24,0.34)" },
+    red: { color: "#9b2f22", bg: "rgba(155,47,34,0.08)", border: "rgba(155,47,34,0.26)" },
+    teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.18)" },
+    grey: { color: DT.textMuted, bg: "rgba(255,255,255,0.70)", border: DT.border },
+  };
+  return (
+    <div style={{ padding: "8px 12px", borderBottom: `1px solid ${DT.border}`, background: "linear-gradient(135deg, rgba(255,253,249,0.96), rgba(110,138,106,0.055))", display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+      <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Plan health</span>
+      {items.map((item) => {
+        const style = toneStyles[item.tone];
+        return (
+          <span key={item.label} style={{ border: `1px solid ${style.border}`, background: style.bg, color: style.color, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, lineHeight: 1 }}>
+            {item.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function MonthWeekSection({
   week,
   tasks = [],
@@ -3511,6 +3570,7 @@ function MonthWeekSection({
   personFilter = "all",
   weekHeaderControl,
   forcePlanningLanes = false,
+  blockedOrderCount = 0,
 }: {
   week: PlanWeek;
   tasks?: BoardPlanTask[];
@@ -3538,6 +3598,7 @@ function MonthWeekSection({
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
   forcePlanningLanes?: boolean;
+  blockedOrderCount?: number;
 }) {
   const weekAppTasks = useMemo(() => appTasks.filter((task) => appTaskFallsInWeek(task, week)), [appTasks, week]);
   const isNarrow = useIsNarrow();
@@ -3551,6 +3612,7 @@ function MonthWeekSection({
   const isCurrentWeek = Boolean(weekRange && weekRange.start.getTime() === visibleStart.getTime());
   const hasVisibleTasks = tasks.length > 0 || weekAppTasks.length > 0 || suggestedSteps.length > 0;
   const showPlanningLanes = forcePlanningLanes || hasVisibleTasks;
+  const planHealthItems = buildPlanHealthItems({ week, tasks, blockedOrderCount, showFriday });
 
   return (
     <section style={{ background: DT.cardBg, border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.05), 0 2px 12px rgba(0,0,0,0.04)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
@@ -3582,6 +3644,7 @@ function MonthWeekSection({
             </span>
           </div>
         </div>
+        {isCurrentWeek && <PlanHealthStrip items={planHealthItems} />}
         <div style={{ display: isNarrow ? "flex" : "grid", gridTemplateColumns: isNarrow ? undefined : `repeat(${visibleDays.length}, minmax(0, 1fr))`, overflowX: isNarrow ? "auto" : "hidden", WebkitOverflowScrolling: isNarrow ? "touch" : undefined, minWidth: 0 }}>
           {visibleDays.map((day) => {
             const isTodayColumn = isCurrentWeek && todayKey === day;
@@ -3733,9 +3796,9 @@ function WorkshopFocusBar({
   historyControl?: ReactNode;
 }) {
   const options: Array<{ id: PersonFilter; label: string; sublabel: string }> = [
-    { id: "all", label: "All", sublabel: `${todayCounts.nick + todayCounts.dylan} today` },
-    { id: "nick", label: "Nick", sublabel: `${todayCounts.nick} today` },
-    { id: "dylan", label: "Dylan", sublabel: `${todayCounts.dylan} today` },
+    { id: "all", label: "All", sublabel: `${todayCounts.nick + todayCounts.dylan} tasks today` },
+    { id: "nick", label: "Nick", sublabel: `${todayCounts.nick} tasks today` },
+    { id: "dylan", label: "Dylan", sublabel: `${todayCounts.dylan} tasks today` },
   ];
   return (
     <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
@@ -4090,7 +4153,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits } }) => {
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
-        setAssignmentStatus("Connected to order");
+        setAssignmentStatus("Order linked");
         selectOrder(orderId);
       })
       .catch((err) => {
@@ -4211,6 +4274,11 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     return summaries;
   }, [visibleProductionWeeks, editableSteps, boardTasks]);
 
+  const blockedOrderCount = useMemo(
+    () => ordersForHealth.filter((order) => !isCompleteOrder(order) && orderHealth(order) === "blocked").length,
+    [ordersForHealth]
+  );
+
   const historyControl = previous.length > 0 ? (
     <button
       type="button"
@@ -4281,6 +4349,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onSuggestedStepOpen={openNewOrderOverview}
       suggestedStepCustomer={newOrder?.customer}
       weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
+      blockedOrderCount={blockedOrderCount}
       forcePlanningLanes
     />
   ));
