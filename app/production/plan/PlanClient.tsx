@@ -533,6 +533,32 @@ function orderNameMatchScore(order: UiOrder, ...candidates: Array<string | null 
   return best;
 }
 
+function friendlyWorkshopTaskText(value: string) {
+  const compact = value.replace(/\s+/g, " ").trim();
+  const normalized = compact.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!normalized) return compact;
+  if (/^snad( and)? coat$/.test(normalized) || /^sand coat$/.test(normalized) || /^sand and coat$/.test(normalized)) return "Sand and coat";
+  if (/^wrap( check packing)?$/.test(normalized) || /^wrap packing$/.test(normalized)) return "Wrap / check packing";
+  if (/^qc photos?$/.test(normalized) || /^final qc photos?$/.test(normalized)) return "QC + photos";
+  if (/^book freight$/.test(normalized)) return "Book freight";
+  if (/^customer update$/.test(normalized)) return "Customer update";
+  return compact;
+}
+
+function taskNeedsGuido(task: Pick<DraggablePlanTask, "text" | "linkedOrderIds">, isUnlinkedTask = false) {
+  const normalized = normalizeOrderText(task.text);
+  if (isUnlinkedTask) return "order link";
+  if (/\b(book )?freight\b/.test(normalized)) return "freight";
+  if (/\bcustomer update\b/.test(normalized)) return "customer update";
+  if (/\bdelivery\b/.test(normalized)) return "delivery";
+  if (/\bmissing\b|\bblocked\b|\bconfirm\b/.test(normalized)) return "decision";
+  return null;
+}
+
+function taskCustomerDisplayName(task: Pick<DraggablePlanTask, "rowName">) {
+  return task.rowName.trim() || "Customer / order";
+}
+
 function orderWorkshopTasksByPlacement(tasks: WorkshopTask[]) {
   const placedIds = new Set(tasks.filter((task) => task.placement).map((task) => task.id));
   const ordered = tasks.filter((task) => !placedIds.has(task.id));
@@ -1726,7 +1752,7 @@ function EditableJobTasks({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div>
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Job tasks</div>
-          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Pick a stage, person, and date, then Add task to job. Tick the checkbox to mark this task done.</div>
+          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Pick a stage, person, and date, then Add task to job. Tick when this task is finished.</div>
         </div>
         <button
           type="button"
@@ -3187,6 +3213,9 @@ function SortablePlanTaskCard({
         ? "rgba(125,122,115,0.24)"
         : personVisual.taskBorder;
   const taskStripe = isUnlinkedTask ? personVisual.stripeMuted : personVisual.stripe;
+  const displayTaskText = friendlyWorkshopTaskText(task.text);
+  const displayCustomerName = taskCustomerDisplayName(task);
+  const needsGuidoReason = taskNeedsGuido(task, isUnlinkedTask);
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
@@ -3243,8 +3272,13 @@ function SortablePlanTaskCard({
           {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
             <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Start here</span>
           )}
-          <div data-customer-left-label="customer-left-label" style={{ marginBottom: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
-          <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
+          <div data-customer-left-label="customer-left-label" style={{ marginBottom: 3, fontSize: isSelectedOrderTask ? 11 : 10, color: isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>
+          <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{displayTaskText}</div>
+          {needsGuidoReason && (
+            <div style={{ marginTop: 4, display: "inline-flex", alignItems: "center", border: "1px solid rgba(190,137,24,0.28)", background: "rgba(255,246,199,0.68)", color: REVIEW_GLOW.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950 }}>
+              Needs Guido: {needsGuidoReason}
+            </div>
+          )}
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
@@ -3307,8 +3341,9 @@ function WorkshopTaskEditor({
       <div onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", border: `1px solid ${DT.border}`, borderRadius: 16, background: DT.cardBg, boxShadow: "0 24px 70px rgba(34,32,26,0.24)", padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
           <div>
-            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Edit task</div>
+            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Fix workshop task</div>
             <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 23, color: DT.textPrimary }}>Workshop task</h3>
+            <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 750 }}>Use this if the day, person, customer, or task wording is wrong.</div>
           </div>
           <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 999, padding: "5px 9px", cursor: "pointer", color: DT.textMuted, fontWeight: 900 }}>Close</button>
         </div>
@@ -3754,6 +3789,50 @@ function MonthView({ weeks, newOrder, orders }: { weeks: PlanWeek[]; newOrder: N
   return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} />;
 }
 
+function WorkshopPriorityStrip({ tasks, todayKey }: { tasks: BoardPlanTask[]; todayKey: DayKey | null }) {
+  const isNarrow = useIsNarrow(760);
+  const todayTasks = todayKey ? tasks.filter((task) => task.day === todayKey) : [];
+  const needsGuido = tasks
+    .map((task) => ({ task, reason: taskNeedsGuido(task, task.linkedOrderIds.length === 0) }))
+    .filter((item): item is { task: BoardPlanTask; reason: string } => Boolean(item.reason));
+  const topToday = todayTasks.slice(0, 2).map((task) => `${taskCustomerDisplayName(task)} · ${friendlyWorkshopTaskText(task.text)}`);
+  const topGuido = needsGuido.slice(0, 2).map(({ task, reason }) => `${taskCustomerDisplayName(task)} · ${reason}`);
+  const cards = [
+    {
+      label: "Today",
+      value: todayTasks.length ? `${todayTasks.length} workshop task${todayTasks.length === 1 ? "" : "s"}` : "No workshop tasks today",
+      detail: topToday.join(" / ") || "Check the week, then keep moving.",
+      accent: DT.teal,
+      bg: "rgba(12,124,122,0.07)",
+    },
+    {
+      label: "This week",
+      value: `${tasks.length} planned task${tasks.length === 1 ? "" : "s"}`,
+      detail: "Nick/Dylan: use the board below, tick done when finished.",
+      accent: DT.sage,
+      bg: "rgba(110,138,106,0.08)",
+    },
+    {
+      label: "Needs Guido",
+      value: needsGuido.length ? `${needsGuido.length} to unblock` : "Nothing obvious",
+      detail: topGuido.join(" / ") || "Freight, customer updates, and missing links will show here.",
+      accent: REVIEW_GLOW.color,
+      bg: "rgba(255,246,199,0.52)",
+    },
+  ];
+  return (
+    <section aria-label="Today / This week / Needs Guido" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 8, minWidth: 0 }}>
+      {cards.map((card) => (
+        <div key={card.label} style={{ border: `1px solid ${DT.border}`, borderLeft: `4px solid ${card.accent}`, background: card.bg, borderRadius: 12, padding: "10px 11px", minWidth: 0, boxShadow: "0 1px 5px rgba(34,32,26,0.035)" }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, color: card.accent, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em" }}>{card.label}</div>
+          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 14, color: DT.textPrimary, fontWeight: 980, lineHeight: 1.15 }}>{card.value}</div>
+          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 760, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.detail}</div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function WorkshopFocusBar({
   personFilter,
   onPersonFilterChange,
@@ -3861,6 +3940,17 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       dylan: tasks.filter((task) => task.day === today && task.person === "dylan").length,
     };
   }, [visibleProductionWeeks]);
+  const currentWorkshopWeek = useMemo(() => {
+    const now = new Date();
+    return visibleProductionWeeks.find((week) => {
+      const range = weekRangeFromTitle(week.title);
+      return range ? range.start.getTime() <= now.getTime() && now.getTime() <= range.end.getTime() : false;
+    }) ?? visibleProductionWeeks[0] ?? null;
+  }, [visibleProductionWeeks]);
+  const currentWorkshopTasks = useMemo(
+    () => currentWorkshopWeek ? boardTasks.filter((task) => task.weekId === currentWorkshopWeek.id) : [],
+    [boardTasks, currentWorkshopWeek]
+  );
 
   useEffect(() => {
     setBoardTasks(loadDraftTasks("six-week-board", sourceBoardTasks));
@@ -4351,6 +4441,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onDragCancel={handleBoardDragCancel}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+        <WorkshopPriorityStrip tasks={currentWorkshopTasks} todayKey={currentDayKey()} />
         {newOrderPanel}
         {weekSections}
         {historySections}
