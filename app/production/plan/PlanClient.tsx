@@ -26,8 +26,6 @@ import { Chip } from "@/components/mission-control-ui";
 import type { UiOrder } from "@/lib/monday/mapping";
 import {
   buildSuggestedPlanForOrder,
-  DAILY_PERSON_CAPACITY_HOURS,
-  EXISTING_PLAN_TASK_ESTIMATED_HOURS,
   formatOrderedDate,
   selectNewOrderForPlanning,
   summarizeLaneCapacity,
@@ -92,24 +90,24 @@ const PERSON_LABELS: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_SHORT: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_VISUALS: Record<Person, { stripe: string; stripeMuted: string; text: string; laneBg: string; laneBorder: string; taskBg: string; taskBorder: string; taskSoft: string }> = {
   nick: {
-    stripe: "#b8893d",
-    stripeMuted: "#c6a978",
-    text: "#7b5a24",
-    laneBg: "rgba(200,169,110,0.085)",
-    laneBorder: "rgba(184,137,61,0.30)",
-    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(200,169,110,0.095))",
-    taskBorder: "rgba(184,137,61,0.22)",
-    taskSoft: "rgba(200,169,110,0.12)",
+    stripe: "#8b1e1e",
+    stripeMuted: "#c66f6f",
+    text: "#8b1e1e",
+    laneBg: "rgba(139,30,30,0.075)",
+    laneBorder: "rgba(139,30,30,0.28)",
+    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(139,30,30,0.09))",
+    taskBorder: "rgba(139,30,30,0.22)",
+    taskSoft: "rgba(139,30,30,0.12)",
   },
   dylan: {
-    stripe: "#2f8f8a",
-    stripeMuted: "#8fbebb",
-    text: "#287572",
-    laneBg: "rgba(12,124,122,0.075)",
-    laneBorder: "rgba(12,124,122,0.28)",
-    taskBg: "linear-gradient(135deg, rgba(247,251,250,0.98), rgba(12,124,122,0.10))",
-    taskBorder: "rgba(12,124,122,0.20)",
-    taskSoft: "rgba(12,124,122,0.11)",
+    stripe: "#1f1f1f",
+    stripeMuted: "#77716a",
+    text: "#1f1f1f",
+    laneBg: "rgba(31,31,31,0.055)",
+    laneBorder: "rgba(31,31,31,0.24)",
+    taskBg: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(31,31,31,0.075))",
+    taskBorder: "rgba(31,31,31,0.18)",
+    taskSoft: "rgba(31,31,31,0.10)",
   },
 };
 const REVIEW_GLOW = {
@@ -131,6 +129,8 @@ const JOB_TASK_PRESETS = [
   "Cut / machine / prep",
   "Sand and coat",
   "Second coat",
+  "3rd coat (clear final)",
+  "4th coat (blackwash final)",
   "Final QC photos",
   "Pack / wrap",
   "Book freight",
@@ -145,6 +145,8 @@ const TABLE_TASK_STAGE_SUGGESTIONS = [
   "Sand",
   "1st coat",
   "2nd coat",
+  "3rd coat (clear final)",
+  "4th coat (blackwash final)",
   "Curing",
   "QC + photos",
   "Assemble / box",
@@ -1722,7 +1724,10 @@ function EditableJobTasks({
   return (
     <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.66)", borderRadius: 9, padding: "8px 9px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Job tasks</div>
+        <div>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Job tasks</div>
+          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Pick a stage, person, and date, then Add task to job. Tick the checkbox to mark this task done.</div>
+        </div>
         <button
           type="button"
           onClick={addTask}
@@ -1730,10 +1735,10 @@ function EditableJobTasks({
           title="Add task to this job and show it on the Production Plan"
           style={{ border: `1px solid rgba(12,124,122,0.18)`, background: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? DT.textFaint : DT.teal, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "not-allowed" : "pointer" }}
         >
-          ✓
+          Add task to job
         </button>
       </div>
-      <div style={{ marginTop: 7, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 74px", gap: 6 }}>
+      <div style={{ marginTop: 7, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 86px", gap: 6 }}>
         <select
           value={draftAction}
           onChange={(event) => setDraftAction(event.target.value)}
@@ -2358,42 +2363,6 @@ type BoardPlanTask = DraggablePlanTask & { weekId: string };
 type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
 type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
 type OrderConnectionState = "connected" | "possible" | "needs-order" | "internal";
-type PlanHealthItem = { label: string; tone: "amber" | "red" | "teal" | "grey" };
-
-function todayTaskHoursForPerson(tasks: BoardPlanTask[], week: PlanWeek, person: Person) {
-  const today = currentDayKey();
-  if (!today) return 0;
-  return tasks
-    .filter((task) => task.weekId === week.id && task.day === today && task.person === person)
-    .length * EXISTING_PLAN_TASK_ESTIMATED_HOURS;
-}
-
-function buildPlanHealthItems({
-  week,
-  tasks,
-  blockedOrderCount,
-  showFriday,
-}: {
-  week: PlanWeek;
-  tasks: BoardPlanTask[];
-  blockedOrderCount: number;
-  showFriday: boolean;
-}): PlanHealthItem[] {
-  const today = currentDayKey();
-  const weekTasks = tasks.filter((task) => task.weekId === week.id);
-  const nickHours = todayTaskHoursForPerson(tasks, week, "nick");
-  const dylanHours = todayTaskHoursForPerson(tasks, week, "dylan");
-  const tasksNeedingOrder = weekTasks.filter((task) => task.linkedOrderIds.length === 0).length;
-  const items: PlanHealthItem[] = [];
-  if (today && dylanHours >= DAILY_PERSON_CAPACITY_HOURS) items.push({ label: "Dylan full today", tone: "amber" });
-  if (today && nickHours === 0) items.push({ label: "Nick has 0h today", tone: "amber" });
-  if (blockedOrderCount > 0) items.push({ label: `${blockedOrderCount} blocked orders`, tone: "red" });
-  if (tasksNeedingOrder > 0) items.push({ label: "Tasks needing order", tone: "red" });
-  if (!showFriday) items.push({ label: "Friday hidden", tone: "grey" });
-  if (items.length === 0) items.push({ label: "Plan health OK", tone: "teal" });
-  return items;
-}
-
 function isoDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -3274,10 +3243,11 @@ function SortablePlanTaskCard({
           {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
             <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Start here</span>
           )}
+          <div data-customer-left-label="customer-left-label" style={{ marginBottom: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
           <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
-          <div style={{ marginTop: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
           <button
             type="button"
+            onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -3395,9 +3365,12 @@ function WorkshopTaskEditor({
             </div>
           </div>
         </div>
-        <div style={{ marginTop: 13, display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
-          <button type="button" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save task</button>
+        <div style={{ marginTop: 13, display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Saves this card in Tuesday only. It does not update Monday yet.</span>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
+            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save task edits</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3552,28 +3525,6 @@ function DroppablePlanLane({
   );
 }
 
-function PlanHealthStrip({ items }: { items: PlanHealthItem[] }) {
-  const toneStyles: Record<PlanHealthItem["tone"], { color: string; bg: string; border: string }> = {
-    amber: { color: "#8a5d08", bg: "rgba(255,246,199,0.62)", border: "rgba(190,137,24,0.34)" },
-    red: { color: "#9b2f22", bg: "rgba(155,47,34,0.08)", border: "rgba(155,47,34,0.26)" },
-    teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.18)" },
-    grey: { color: DT.textMuted, bg: "rgba(255,255,255,0.70)", border: DT.border },
-  };
-  return (
-    <div style={{ padding: "8px 12px", borderBottom: `1px solid ${DT.border}`, background: "linear-gradient(135deg, rgba(255,253,249,0.96), rgba(110,138,106,0.055))", display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-      <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Plan health</span>
-      {items.map((item) => {
-        const style = toneStyles[item.tone];
-        return (
-          <span key={item.label} style={{ border: `1px solid ${style.border}`, background: style.bg, color: style.color, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, lineHeight: 1 }}>
-            {item.label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 function MonthWeekSection({
   week,
   tasks = [],
@@ -3601,7 +3552,6 @@ function MonthWeekSection({
   personFilter = "all",
   weekHeaderControl,
   forcePlanningLanes = false,
-  blockedOrderCount = 0,
 }: {
   week: PlanWeek;
   tasks?: BoardPlanTask[];
@@ -3629,13 +3579,11 @@ function MonthWeekSection({
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
   forcePlanningLanes?: boolean;
-  blockedOrderCount?: number;
 }) {
   const weekAppTasks = useMemo(() => appTasks.filter((task) => appTaskFallsInWeek(task, week)), [appTasks, week]);
   const isNarrow = useIsNarrow();
   const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
-  const [showFriday, setShowFriday] = useState(false);
-  const visibleDays = showFriday ? DAYS : DAYS.filter((day) => day !== "friday");
+  const visibleDays = DAYS;
   const todayKey = currentDayKey();
   const weekRange = weekRangeFromTitle(week.title);
   const now = new Date();
@@ -3643,10 +3591,9 @@ function MonthWeekSection({
   const isCurrentWeek = Boolean(weekRange && weekRange.start.getTime() === visibleStart.getTime());
   const hasVisibleTasks = tasks.length > 0 || weekAppTasks.length > 0 || suggestedSteps.length > 0;
   const showPlanningLanes = forcePlanningLanes || hasVisibleTasks;
-  const planHealthItems = buildPlanHealthItems({ week, tasks, blockedOrderCount, showFriday });
 
   return (
-    <section style={{ background: DT.cardBg, border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.05), 0 2px 12px rgba(0,0,0,0.04)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
+    <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ background: DT.cardBg, border: `${isCurrentWeek ? 3 : 1}px solid ${isCurrentWeek ? "rgba(12,124,122,0.58)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 4px rgba(12,124,122,0.10), 0 8px 28px rgba(34,32,26,0.09)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
         <div style={{ padding: "10px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: weekHeaderControl ? "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(110,138,106,0.055))" : undefined }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, lineHeight: 1 }}>{displayWeekTitle(week.title)}</h2>
@@ -3663,19 +3610,11 @@ function MonthWeekSection({
                 Reset
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowFriday((value) => !value)}
-              style={{ border: `1px solid ${showFriday ? "rgba(12,124,122,0.26)" : DT.border}`, background: showFriday ? DT.tealSoft : "rgba(255,255,255,0.72)", color: showFriday ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
-            >
-              {showFriday ? "Hide Friday" : "Show Friday"}
-            </button>
             <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "5px 8px", fontSize: 10, color: DT.textMuted, fontFamily: DT.sans, fontWeight: 850 }}>
               {week.rows.length} plan row{week.rows.length === 1 ? "" : "s"}{!hasVisibleTasks ? " · no day assignments" : ""}
             </span>
           </div>
         </div>
-        {isCurrentWeek && <PlanHealthStrip items={planHealthItems} />}
         <div style={{ display: isNarrow ? "flex" : "grid", gridTemplateColumns: isNarrow ? undefined : `repeat(${visibleDays.length}, minmax(0, 1fr))`, overflowX: isNarrow ? "auto" : "hidden", WebkitOverflowScrolling: isNarrow ? "touch" : undefined, minWidth: 0 }}>
           {visibleDays.map((day) => {
             const isTodayColumn = isCurrentWeek && todayKey === day;
@@ -4305,11 +4244,6 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     return summaries;
   }, [visibleProductionWeeks, editableSteps, boardTasks]);
 
-  const blockedOrderCount = useMemo(
-    () => ordersForHealth.filter((order) => !isCompleteOrder(order) && orderHealth(order) === "blocked").length,
-    [ordersForHealth]
-  );
-
   const historyControl = previous.length > 0 ? (
     <button
       type="button"
@@ -4380,7 +4314,6 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onSuggestedStepOpen={openNewOrderOverview}
       suggestedStepCustomer={newOrder?.customer}
       weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
-      blockedOrderCount={blockedOrderCount}
       forcePlanningLanes
     />
   ));
