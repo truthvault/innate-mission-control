@@ -3404,7 +3404,7 @@ function WorkshopTaskEditor({
           <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Saves this card in Tuesday only. It does not update Monday yet.</span>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
-            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save task edits</button>
+            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save changes</button>
           </div>
         </div>
       </div>
@@ -3632,6 +3632,7 @@ function MonthWeekSection({
         <div style={{ padding: "10px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: weekHeaderControl ? "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(110,138,106,0.055))" : undefined }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, lineHeight: 1 }}>{displayWeekTitle(week.title)}</h2>
+            {isCurrentWeek && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
             {weekHeaderControl}
@@ -3789,50 +3790,6 @@ function MonthView({ weeks, newOrder, orders }: { weeks: PlanWeek[]; newOrder: N
   return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} />;
 }
 
-function WorkshopPriorityStrip({ tasks, todayKey }: { tasks: BoardPlanTask[]; todayKey: DayKey | null }) {
-  const isNarrow = useIsNarrow(760);
-  const todayTasks = todayKey ? tasks.filter((task) => task.day === todayKey) : [];
-  const needsGuido = tasks
-    .map((task) => ({ task, reason: taskNeedsGuido(task, task.linkedOrderIds.length === 0) }))
-    .filter((item): item is { task: BoardPlanTask; reason: string } => Boolean(item.reason));
-  const topToday = todayTasks.slice(0, 2).map((task) => `${taskCustomerDisplayName(task)} · ${friendlyWorkshopTaskText(task.text)}`);
-  const topGuido = needsGuido.slice(0, 2).map(({ task, reason }) => `${taskCustomerDisplayName(task)} · ${reason}`);
-  const cards = [
-    {
-      label: "Today",
-      value: todayTasks.length ? `${todayTasks.length} workshop task${todayTasks.length === 1 ? "" : "s"}` : "No workshop tasks today",
-      detail: topToday.join(" / ") || "Check the week, then keep moving.",
-      accent: DT.teal,
-      bg: "rgba(12,124,122,0.07)",
-    },
-    {
-      label: "This week",
-      value: `${tasks.length} planned task${tasks.length === 1 ? "" : "s"}`,
-      detail: "Nick/Dylan: use the board below, tick done when finished.",
-      accent: DT.sage,
-      bg: "rgba(110,138,106,0.08)",
-    },
-    {
-      label: "Needs Guido",
-      value: needsGuido.length ? `${needsGuido.length} to unblock` : "Nothing obvious",
-      detail: topGuido.join(" / ") || "Freight, customer updates, and missing links will show here.",
-      accent: REVIEW_GLOW.color,
-      bg: "rgba(255,246,199,0.52)",
-    },
-  ];
-  return (
-    <section aria-label="Today / This week / Needs Guido" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "repeat(3, minmax(0, 1fr))", gap: 8, minWidth: 0 }}>
-      {cards.map((card) => (
-        <div key={card.label} style={{ border: `1px solid ${DT.border}`, borderLeft: `4px solid ${card.accent}`, background: card.bg, borderRadius: 12, padding: "10px 11px", minWidth: 0, boxShadow: "0 1px 5px rgba(34,32,26,0.035)" }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, color: card.accent, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em" }}>{card.label}</div>
-          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 14, color: DT.textPrimary, fontWeight: 980, lineHeight: 1.15 }}>{card.value}</div>
-          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 760, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.detail}</div>
-        </div>
-      ))}
-    </section>
-  );
-}
-
 function WorkshopFocusBar({
   personFilter,
   onPersonFilterChange,
@@ -3940,17 +3897,6 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       dylan: tasks.filter((task) => task.day === today && task.person === "dylan").length,
     };
   }, [visibleProductionWeeks]);
-  const currentWorkshopWeek = useMemo(() => {
-    const now = new Date();
-    return visibleProductionWeeks.find((week) => {
-      const range = weekRangeFromTitle(week.title);
-      return range ? range.start.getTime() <= now.getTime() && now.getTime() <= range.end.getTime() : false;
-    }) ?? visibleProductionWeeks[0] ?? null;
-  }, [visibleProductionWeeks]);
-  const currentWorkshopTasks = useMemo(
-    () => currentWorkshopWeek ? boardTasks.filter((task) => task.weekId === currentWorkshopWeek.id) : [],
-    [boardTasks, currentWorkshopWeek]
-  );
 
   useEffect(() => {
     setBoardTasks(loadDraftTasks("six-week-board", sourceBoardTasks));
@@ -4441,7 +4387,6 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onDragCancel={handleBoardDragCancel}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-        <WorkshopPriorityStrip tasks={currentWorkshopTasks} todayKey={currentDayKey()} />
         {newOrderPanel}
         {weekSections}
         {historySections}
