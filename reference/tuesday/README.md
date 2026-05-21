@@ -12,6 +12,7 @@ Purpose: fast capture and durable routing for Innate Mission Control, also calle
 - `dashboard.md`
 - `foundations.md`
 - `inbox.md`
+- `vercel-cli-deploy.md` — safe Vercel CLI deploy workflow, live links, and post-deploy verification checklist
 
 ## Gym Mode protocol
 
