@@ -556,16 +556,6 @@ function friendlyWorkshopTaskText(value: string) {
   return compact;
 }
 
-function taskActionPrompt(task: Pick<DraggablePlanTask, "text" | "linkedOrderIds">, isUnlinkedTask = false) {
-  const normalized = normalizeOrderText(task.text);
-  if (isUnlinkedTask) return "Needs order link";
-  if (/\b(book )?freight\b/.test(normalized)) return "Needs freight check";
-  if (/\bcustomer update\b/.test(normalized)) return "Needs customer update";
-  if (/\bdelivery\b/.test(normalized)) return "Needs delivery check";
-  if (/\bmissing\b|\bblocked\b|\bconfirm\b/.test(normalized)) return "Needs decision";
-  return null;
-}
-
 function taskCustomerDisplayName(task: Pick<DraggablePlanTask, "rowName">) {
   return task.rowName.trim() || "Customer / order";
 }
@@ -2508,15 +2498,15 @@ function orderConnectionLabel(task: DraggablePlanTask, planTaskLinks: PlanTaskLi
   const hasConfirmedOrder = Boolean(assignedOrderId || task.linkedOrderIds.length > 0);
   const looksInternal = /sample rack|shop|internal|maintenance|clean|tidy|tool|bench/i.test(`${task.text} ${task.rowName}`);
   if (hasConfirmedOrder) {
-    return { state: "connected" as OrderConnectionState, label: "Order linked", detail: "Customer order attached" };
+    return { state: "connected" as OrderConnectionState, label: "Linked", detail: "Customer order attached" };
   }
   if (resolvedOrderId) {
-    return { state: "possible" as OrderConnectionState, label: "Possible match", detail: "Confirm customer/order" };
+    return { state: "possible" as OrderConnectionState, label: "Confirm order", detail: "Confirm customer/order" };
   }
   if (looksInternal) {
     return { state: "internal" as OrderConnectionState, label: "Internal", detail: "Workshop task" };
   }
-  return { state: "needs-order" as OrderConnectionState, label: "Needs order", detail: "Connect order" };
+  return { state: "needs-order" as OrderConnectionState, label: "Needs order link", detail: "Connect order" };
 }
 
 function orderConnectionStyle(state: OrderConnectionState, selected = false) {
@@ -3304,7 +3294,7 @@ function SortablePlanTaskCard({
   const taskStripe = isUnlinkedTask ? personVisual.stripeMuted : personVisual.stripe;
   const displayTaskText = friendlyWorkshopTaskText(task.text);
   const displayCustomerName = taskCustomerDisplayName(task);
-  const actionPrompt = taskActionPrompt(task, orderConnection.state === "needs-order");
+  const orderConnectionNeedsAttention = orderConnection.state === "needs-order" || orderConnection.state === "possible";
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
@@ -3368,11 +3358,8 @@ function SortablePlanTaskCard({
           <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
         </div>
         <div data-task-card-meta="task-card-meta" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, minWidth: 0 }}>
-          <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
-          {actionPrompt && (
-            <span style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", border: "1px solid rgba(190,137,24,0.28)", background: "rgba(255,246,199,0.58)", color: REVIEW_GLOW.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>
-              {actionPrompt}
-            </span>
+          {orderConnectionNeedsAttention && (
+            <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
           )}
         </div>
         <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", minWidth: 0 }}>
