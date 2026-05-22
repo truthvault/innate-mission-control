@@ -26,6 +26,9 @@ const clientMustHave = [
   ['delight burst draws rainbow trail', 'drawRainbowTrail'],
   ['delight burst draws a pineapple shell', 'drawPineapple'],
   ['delight burst draws the flying unicorn', 'drawUnicorn'],
+  ['delight burst draws polished unicorn', 'drawHyperRealisticUnicorn'],
+  ['delight burst gives unicorn sunglasses', 'drawSunglasses'],
+  ['delight burst gives unicorn smile', 'drawUnicornSmile'],
   ['delight burst runs for two seconds', 'DELIGHT_CANVAS_DURATION_MS = 2000'],
   ['delight burst has legacy pineapple marker for live verification', 'data-delight-pineapple="delight-pineapple"'],
   ['delight burst has legacy flying unicorn marker for live verification', 'data-delight-flying-unicorn="delight-flying-unicorn"'],
@@ -42,15 +45,23 @@ const dragMustHave = [
   ['draggable task type carries done state', 'done?: boolean'],
 ];
 
+const forbiddenClientNeedles = [
+  ['delight burst should not draw caption text', 'Done. Unicorn escaped the pineapple.'],
+  ['delight burst should not draw text labels', 'fillText(label'],
+];
+
 const missing = [
   ...clientMustHave.filter(([, needle]) => !clientSource.includes(needle)).map(([label, needle]) => ['client', label, needle]),
   ...apiMustHave.filter(([, needle]) => !apiSource.includes(needle)).map(([label, needle]) => ['api', label, needle]),
   ...dragMustHave.filter(([, needle]) => !dragSource.includes(needle)).map(([label, needle]) => ['drag', label, needle]),
 ];
 
-if (missing.length) {
+const forbidden = forbiddenClientNeedles.filter(([, needle]) => clientSource.includes(needle)).map(([label, needle]) => ['client', label, needle]);
+
+if (missing.length || forbidden.length) {
   console.error('Production Plan task-card done button requirements missing:');
   for (const [file, label, needle] of missing) console.error(`- ${file}: ${label}: ${needle}`);
+  for (const [file, label, needle] of forbidden) console.error(`- ${file}: forbidden ${label}: ${needle}`);
   process.exit(1);
 }
 

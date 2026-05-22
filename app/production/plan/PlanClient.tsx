@@ -228,54 +228,181 @@ function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scal
   ctx.restore();
 }
 
-function drawUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number) {
+function drawSunglasses(ctx: CanvasRenderingContext2D) {
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const lensGradient = ctx.createLinearGradient(18, -23, 54, -5);
+  lensGradient.addColorStop(0, "rgba(11,15,24,0.96)");
+  lensGradient.addColorStop(0.52, "rgba(38,45,58,0.98)");
+  lensGradient.addColorStop(1, "rgba(5,8,14,0.96)");
+  ctx.fillStyle = lensGradient;
+  ctx.strokeStyle = "rgba(255,255,255,0.62)";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.roundRect(18, -23, 17, 12, 5);
+  ctx.roundRect(39, -24, 17, 12, 5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(18,18,22,0.95)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(35, -17);
+  ctx.lineTo(39, -18);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.42)";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(22, -21);
+  ctx.lineTo(29, -22);
+  ctx.moveTo(43, -22);
+  ctx.lineTo(50, -23);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawUnicornSmile(ctx: CanvasRenderingContext2D) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(74,54,61,0.78)";
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(39, -6);
+  ctx.quadraticCurveTo(46, -1, 54, -6);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,139,181,0.58)";
+  ctx.beginPath();
+  ctx.ellipse(51, -4, 3.2, 1.7, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
   ctx.scale(scale, scale);
-  ctx.shadowColor = "rgba(117,64,166,0.28)";
-  ctx.shadowBlur = 24;
-  ctx.shadowOffsetY = 8;
-  ctx.fillStyle = "#fff8f6";
-  ctx.strokeStyle = "rgba(70,54,86,0.24)";
-  ctx.lineWidth = 2;
+
+  ctx.shadowColor = "rgba(66,52,94,0.30)";
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetY = 11;
+  const bodyGradient = ctx.createRadialGradient(20, -20, 5, -4, 6, 78);
+  bodyGradient.addColorStop(0, "#ffffff");
+  bodyGradient.addColorStop(0.42, "#fff4f5");
+  bodyGradient.addColorStop(0.78, "#eadfe8");
+  bodyGradient.addColorStop(1, "#cfc0d2");
+  ctx.fillStyle = bodyGradient;
+  ctx.strokeStyle = "rgba(78,60,86,0.28)";
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
-  ctx.ellipse(0, 2, 35, 24, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(-5, 8, 42, 26, -0.10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const neckGradient = ctx.createLinearGradient(14, -26, 4, 20);
+  neckGradient.addColorStop(0, "#fffefe");
+  neckGradient.addColorStop(1, "#decfe0");
+  ctx.fillStyle = neckGradient;
+  ctx.beginPath();
+  ctx.moveTo(12, -24);
+  ctx.quadraticCurveTo(-10, -12, 0, 16);
+  ctx.quadraticCurveTo(16, 24, 29, 2);
+  ctx.quadraticCurveTo(31, -16, 12, -24);
+  ctx.fill();
+  ctx.stroke();
+
+  const headGradient = ctx.createRadialGradient(38, -24, 7, 33, -12, 40);
+  headGradient.addColorStop(0, "#ffffff");
+  headGradient.addColorStop(0.55, "#fff2f4");
+  headGradient.addColorStop(1, "#d8c8dc");
+  ctx.fillStyle = headGradient;
+  ctx.beginPath();
+  ctx.ellipse(34, -14, 24, 19, -0.20, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
   ctx.beginPath();
-  ctx.ellipse(28, -12, 18, 16, -0.16, 0, Math.PI * 2);
+  ctx.ellipse(51, -9, 16, 10, -0.04, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+
   ctx.shadowColor = "transparent";
-  ctx.fillStyle = "#ffe061";
+  const hornGradient = ctx.createLinearGradient(38, -31, 50, -68);
+  hornGradient.addColorStop(0, "#fff2a8");
+  hornGradient.addColorStop(0.48, "#f8c64f");
+  hornGradient.addColorStop(1, "#fff9d2");
+  ctx.fillStyle = hornGradient;
+  ctx.strokeStyle = "rgba(137,91,25,0.38)";
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(38, -28);
-  ctx.lineTo(45, -60);
-  ctx.lineTo(52, -28);
+  ctx.moveTo(36, -29);
+  ctx.lineTo(47, -70);
+  ctx.lineTo(55, -28);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  const mane = ["#ff4faf", "#875cff", "#45cfff", "#ffd84a"];
-  mane.forEach((colour, index) => {
-    ctx.fillStyle = colour;
+  ctx.strokeStyle = "rgba(160,103,26,0.42)";
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 4; i += 1) {
     ctx.beginPath();
-    ctx.ellipse(15 - index * 7, -20 + index * 4, 9, 18, 0.72, 0, Math.PI * 2);
+    ctx.moveTo(41 + i * 2, -36 - i * 7);
+    ctx.lineTo(52 - i * 1.5, -39 - i * 7);
+    ctx.stroke();
+  }
+
+  const maneColours = ["#ff4faf", "#7a5cff", "#25c8ff", "#ffd84a", "#ff7c4d"];
+  maneColours.forEach((colour, index) => {
+    const maneGradient = ctx.createRadialGradient(10 - index * 7, -24 + index * 4, 2, 10 - index * 7, -24 + index * 4, 18);
+    maneGradient.addColorStop(0, "#ffffff");
+    maneGradient.addColorStop(0.22, colour);
+    maneGradient.addColorStop(1, "rgba(96,56,130,0.58)");
+    ctx.fillStyle = maneGradient;
+    ctx.beginPath();
+    ctx.ellipse(11 - index * 7, -22 + index * 5, 9, 21, 0.70, 0, Math.PI * 2);
     ctx.fill();
   });
-  ctx.strokeStyle = "#ff8fd2";
-  ctx.lineWidth = 5;
+
+  const tailGradient = ctx.createLinearGradient(-64, -45, -28, 6);
+  tailGradient.addColorStop(0, "#ff4faf");
+  tailGradient.addColorStop(0.34, "#7a5cff");
+  tailGradient.addColorStop(0.70, "#25c8ff");
+  tailGradient.addColorStop(1, "#ffd84a");
+  ctx.strokeStyle = tailGradient;
+  ctx.lineWidth = 8;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(-32, -4);
-  ctx.quadraticCurveTo(-64, -28, -48, -50);
+  ctx.moveTo(-36, 0);
+  ctx.quadraticCurveTo(-73, -30, -48, -58);
   ctx.stroke();
-  ctx.fillStyle = "#2f2736";
+
+  ctx.fillStyle = "rgba(255,213,222,0.72)";
   ctx.beginPath();
-  ctx.arc(34, -15, 2.6, 0, Math.PI * 2);
+  ctx.ellipse(31, -33, 7, 13, 0.28, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = "rgba(78,60,86,0.22)";
+  ctx.stroke();
+
+  drawSunglasses(ctx);
+  drawUnicornSmile(ctx);
+
+  ctx.fillStyle = "rgba(92,63,82,0.62)";
+  ctx.beginPath();
+  ctx.ellipse(61, -9, 2.4, 1.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 0.42;
+  ctx.strokeStyle = "rgba(255,255,255,0.92)";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(10, 0);
+  ctx.quadraticCurveTo(28, 8, 48, 0);
+  ctx.stroke();
   ctx.restore();
 }
+
+function drawUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number) {
+  drawHyperRealisticUnicorn(ctx, x, y, scale, rotation);
+}
+
 
 function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOrigin) {
   // Canvas Delight Engine: use a real drawing layer instead of HTML/CSS keyframe puppets.
@@ -385,25 +512,6 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.05 + 0.22 * Math.sin(t * Math.PI * 8));
     drawPineapple(ctx, cx, cy, pineappleScale, t);
     drawUnicorn(ctx, unicornX, unicornY, 0.44 + launch * 0.52, -0.30 + launch * 0.44);
-
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, (t - 0.10) / 0.16, (1 - t) / 0.18));
-    ctx.font = "900 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const labelY = Math.max(52, cy - 96 - Math.sin(t * Math.PI) * 12);
-    const label = "Done. Unicorn escaped the pineapple.";
-    const metrics = ctx.measureText(label);
-    ctx.fillStyle = "rgba(255,253,249,0.96)";
-    ctx.strokeStyle = "rgba(190,137,24,0.38)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(cx - metrics.width / 2 - 16, labelY - 20, metrics.width + 32, 40, 20);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#1f1f1f";
-    ctx.fillText(label, cx, labelY);
-    ctx.restore();
 
     if (t < 1) raf = requestAnimationFrame(frame);
   }
