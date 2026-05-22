@@ -19,6 +19,12 @@ assert.match(source, /taskCustomerDisplayName/, 'Nick refinement: customer/order
 assert.match(source, /friendlyWorkshopTaskText/, 'Nick refinement: rough Monday task wording should be cleaned up for display only');
 assert.doesNotMatch(source, /Needs Guido/i, 'Nick refinement: task cards should not mention Guido by name');
 assert.match(source, /Needs order link/, 'Nick refinement: unlinked customer tasks should ask for an order link without blaming Guido');
+assert.match(source, /data-task-card-main/, 'Nick card cleanup: task cards need a stable stacked main area, not a cramped two-column layout');
+assert.match(source, /data-task-card-meta/, 'Nick card cleanup: task card badges should live in one wrapping metadata row');
+assert.match(source, /data-task-card-actions/, 'Nick card cleanup: task actions should sit in a consistent bottom row');
+assert.match(source, /flex: "1 1 86px"/, 'Nick card cleanup: metadata pills must have a sensible minimum width so they do not become tall bubbles');
+assert.match(source, /whiteSpace: "nowrap"/, 'Nick card cleanup: pills and buttons should stay single-line');
+assert.match(source, /taskActionPrompt\(task, orderConnection\.state === "needs-order"\)/, 'Nick card cleanup: internal tasks should not also ask for an order link');
 assert.match(source, /Tick when this task is finished/, 'Nick question: explain how to tick a task off near job tasks in low-pressure wording');
 assert.match(source, /Use this if the day, person, customer, task wording, or hours are wrong/, 'Nick refinement: edit modal should explain when to use it, including hours');
 assert.match(source, /Add task to job/, 'Nick question: the add-task control should be explicitly labelled, not just an icon');
