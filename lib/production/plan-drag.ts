@@ -14,6 +14,7 @@ export type DraggablePlanTask = {
   person: Person;
   text: string;
   estimatedHours?: number;
+  done?: boolean;
   linkedOrderIds: number[];
   linkedOrders: Array<{ mondayItemId: string; name: string; boardId: string; boardName: string }>;
 };

@@ -272,7 +272,7 @@ type AppPlanTask = {
   done: boolean;
 };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
-type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; estimatedHours?: number; internal?: boolean; updatedAt?: string };
+type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; estimatedHours?: number; internal?: boolean; done?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type ProductionPlanMode = "schedule" | "orderRows";
@@ -2585,6 +2585,7 @@ function applyPlanTaskEdits(tasks: BoardPlanTask[], taskEdits: PlanTaskEdits): B
       day: edit.day ?? task.day,
       person: edit.person ?? task.person,
       estimatedHours: edit.estimatedHours ?? task.estimatedHours,
+      done: edit.done ?? task.done,
     };
   });
 }
@@ -3287,6 +3288,7 @@ function SortablePlanTaskCard({
   onTaskSelect,
   onTaskOpen,
   onTaskEdit,
+  onTaskDoneToggle,
   isNextTask = false,
 }: {
   task: DraggablePlanTask;
@@ -3296,6 +3298,7 @@ function SortablePlanTaskCard({
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onTaskEdit?: (task: DraggablePlanTask) => void;
+  onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean) => void;
   isNextTask?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -3389,7 +3392,7 @@ function SortablePlanTaskCard({
               <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>Start here</span>
             )}
             <div data-customer-left-label="customer-left-label" style={{ marginBottom: 3, fontSize: isSelectedOrderTask ? 11 : 10, color: isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>
-            <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.2, overflowWrap: "normal", wordBreak: "normal" }}>{displayTaskText}</div>
+            <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.2, overflowWrap: "normal", wordBreak: "normal", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{displayTaskText}</div>
           </div>
           <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
         </div>
@@ -3398,7 +3401,22 @@ function SortablePlanTaskCard({
             <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
           )}
         </div>
-        <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", minWidth: 0 }}>
+        <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: 5, minWidth: 0, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            data-task-card-done-button="task-card-done-button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onTaskDoneToggle?.(task, !task.done);
+            }}
+            style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
+          >
+            {task.done ? "Undo" : "Done"}
+          </button>
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
@@ -3717,6 +3735,7 @@ function MonthWeekSection({
   onTaskSelect,
   onTaskOpen,
   onTaskEdit,
+  onTaskDoneToggle,
   onAppTaskSelect,
   onAppTaskOpen,
   onSuggestedStepMove,
@@ -3744,6 +3763,7 @@ function MonthWeekSection({
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onTaskEdit?: (task: BoardPlanTask) => void;
+  onTaskDoneToggle?: (task: BoardPlanTask, done: boolean) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
@@ -3837,6 +3857,7 @@ function MonthWeekSection({
                                 onTaskSelect={onTaskSelect}
                                 onTaskOpen={onTaskOpen}
                                 onTaskEdit={(item) => onTaskEdit?.(item as BoardPlanTask)}
+                                onTaskDoneToggle={(item, done) => onTaskDoneToggle?.(item as BoardPlanTask, done)}
                                 isNextTask={laneIndex === 0}
                               />
                               {showDropSlot(task.id, true) && dropSlot}
@@ -4178,7 +4199,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
-  function updateBoardTaskFromEditor(nextTask: BoardPlanTask) {
+  function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
     const taskKey = stablePlanTaskKey(nextTask);
     setBoardTasks((current) => {
       const next = current.map((task) => task.id === nextTask.id ? nextTask : task);
@@ -4194,6 +4215,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         person: nextTask.person,
         estimatedHours: nextTask.estimatedHours,
         internal: /internal workshop/i.test(nextTask.rowName),
+        done: nextTask.done,
       },
     }));
     fetch("/api/production/plan-task-links", {
@@ -4209,6 +4231,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
           person: nextTask.person,
           estimatedHours: nextTask.estimatedHours,
           internal: /internal workshop/i.test(nextTask.rowName),
+          done: nextTask.done,
         },
       }),
     })
@@ -4218,7 +4241,11 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
         setAssignmentStatus("Task saved in Tuesday");
       })
       .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Task edit save failed"));
-    setEditingTask(nextTask);
+    if (keepEditorOpen) setEditingTask(nextTask);
+  }
+
+  function toggleBoardTaskDone(task: BoardPlanTask, done: boolean) {
+    updateBoardTaskFromEditor({ ...task, done }, false);
   }
 
   const resolveOrderIdForPlanTask = useCallback((task: DraggablePlanTask) => {
@@ -4627,6 +4654,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
       onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
       onTaskEdit={setEditingTask}
+      onTaskDoneToggle={toggleBoardTaskDone}
       onAppTaskSelect={selectOrderForAppTask}
       onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
       onSuggestedStepMove={moveSuggestedStep}
@@ -4654,6 +4682,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
           onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
           onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
           onTaskEdit={setEditingTask}
+          onTaskDoneToggle={toggleBoardTaskDone}
           onAppTaskSelect={selectOrderForAppTask}
           onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
         />
