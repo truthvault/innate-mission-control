@@ -17,7 +17,8 @@ assert.match(source, /Current week/, 'Nick feedback: current week should be obvi
 assert.match(source, /customer-left-label/, 'Nick feedback: customer/order name should be visually led from the left of plan task cards');
 assert.match(source, /taskCustomerDisplayName/, 'Nick refinement: customer/order display should be deliberately prominent on cards');
 assert.match(source, /friendlyWorkshopTaskText/, 'Nick refinement: rough Monday task wording should be cleaned up for display only');
-assert.match(source, /Needs Guido:/, 'Nick refinement: Guido blockers should be visible from task cards');
+assert.doesNotMatch(source, /Needs Guido/i, 'Nick refinement: task cards should not mention Guido by name');
+assert.match(source, /Needs order link/, 'Nick refinement: unlinked customer tasks should ask for an order link without blaming Guido');
 assert.match(source, /Tick when this task is finished/, 'Nick question: explain how to tick a task off near job tasks in low-pressure wording');
 assert.match(source, /Use this if the day, person, customer, task wording, or hours are wrong/, 'Nick refinement: edit modal should explain when to use it, including hours');
 assert.match(source, /Add task to job/, 'Nick question: the add-task control should be explicitly labelled, not just an icon');

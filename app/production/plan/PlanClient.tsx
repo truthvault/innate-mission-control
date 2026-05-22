@@ -556,13 +556,13 @@ function friendlyWorkshopTaskText(value: string) {
   return compact;
 }
 
-function taskNeedsGuido(task: Pick<DraggablePlanTask, "text" | "linkedOrderIds">, isUnlinkedTask = false) {
+function taskActionPrompt(task: Pick<DraggablePlanTask, "text" | "linkedOrderIds">, isUnlinkedTask = false) {
   const normalized = normalizeOrderText(task.text);
-  if (isUnlinkedTask) return "order link";
-  if (/\b(book )?freight\b/.test(normalized)) return "freight";
-  if (/\bcustomer update\b/.test(normalized)) return "customer update";
-  if (/\bdelivery\b/.test(normalized)) return "delivery";
-  if (/\bmissing\b|\bblocked\b|\bconfirm\b/.test(normalized)) return "decision";
+  if (isUnlinkedTask) return "Needs order link";
+  if (/\b(book )?freight\b/.test(normalized)) return "Needs freight check";
+  if (/\bcustomer update\b/.test(normalized)) return "Needs customer update";
+  if (/\bdelivery\b/.test(normalized)) return "Needs delivery check";
+  if (/\bmissing\b|\bblocked\b|\bconfirm\b/.test(normalized)) return "Needs decision";
   return null;
 }
 
@@ -3304,7 +3304,7 @@ function SortablePlanTaskCard({
   const taskStripe = isUnlinkedTask ? personVisual.stripeMuted : personVisual.stripe;
   const displayTaskText = friendlyWorkshopTaskText(task.text);
   const displayCustomerName = taskCustomerDisplayName(task);
-  const needsGuidoReason = taskNeedsGuido(task, isUnlinkedTask);
+  const actionPrompt = taskActionPrompt(task, isUnlinkedTask);
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
@@ -3363,9 +3363,9 @@ function SortablePlanTaskCard({
           )}
           <div data-customer-left-label="customer-left-label" style={{ marginBottom: 3, fontSize: isSelectedOrderTask ? 11 : 10, color: isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>
           <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{displayTaskText}</div>
-          {needsGuidoReason && (
-            <div style={{ marginTop: 4, display: "inline-flex", alignItems: "center", border: "1px solid rgba(190,137,24,0.28)", background: "rgba(255,246,199,0.68)", color: REVIEW_GLOW.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950 }}>
-              Needs Guido: {needsGuidoReason}
+          {actionPrompt && (
+            <div style={{ marginTop: 4, display: "inline-flex", alignItems: "center", border: "1px solid rgba(190,137,24,0.28)", background: "rgba(255,246,199,0.58)", color: REVIEW_GLOW.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950 }}>
+              {actionPrompt}
             </div>
           )}
           <button
