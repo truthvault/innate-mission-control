@@ -124,6 +124,38 @@ const CAPACITY_STYLES = {
   watch: { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
+
+function DelightUnicorn() {
+  return (
+    <div
+      aria-label="Tuesday delight unicorn"
+      title="Tuesday delight unicorn"
+      style={{
+        position: "fixed",
+        right: 18,
+        bottom: 18,
+        zIndex: 80,
+        pointerEvents: "none",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "8px 11px 8px 9px",
+        borderRadius: 999,
+        border: "1px solid rgba(190,137,24,0.34)",
+        background: "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,246,199,0.84))",
+        boxShadow: "0 10px 24px rgba(34,32,26,0.12), 0 0 0 4px rgba(211,154,35,0.08)",
+        color: DT.textPrimary,
+        fontFamily: DT.sans,
+        fontSize: 11,
+        fontWeight: 850,
+        letterSpacing: "0.01em",
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>🦄</span>
+      <span>delight v4</span>
+    </div>
+  );
+}
 const JOB_TASK_PRESETS = [
   "Material + spec check",
   "Cut / machine / prep",
@@ -4730,6 +4762,7 @@ export type PlanClientProps = {
   syncedAt: string;
   source: "fresh" | "cache" | "snapshot" | "none";
   mondayError?: string;
+  delightEnabled?: boolean;
 };
 
 export default function PlanClient({
@@ -4738,6 +4771,7 @@ export default function PlanClient({
   syncedAt,
   source,
   mondayError,
+  delightEnabled = false,
 }: PlanClientProps) {
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
@@ -4778,6 +4812,7 @@ export default function PlanClient({
         ) : (
           <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} />
         )}
+        {delightEnabled && <DelightUnicorn />}
     </MissionControlShell>
   );
 }
