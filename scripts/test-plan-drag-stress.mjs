@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   dropTargetFromOverId,
   parsePlanLaneId,
@@ -8,6 +9,8 @@ import {
   planLayoutsEqual,
   reorderPlanTask,
 } from '../lib/production/plan-drag.ts';
+
+const planClientSource = readFileSync(new URL('../app/production/plan/PlanClient.tsx', import.meta.url), 'utf8');
 
 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const people = ['nick', 'dylan'];
@@ -54,6 +57,9 @@ assert.ok(planLayoutsEqual(tasks, original));
 assert.deepEqual(parsePlanLaneId(planLaneId('wednesday', 'dylan')), { day: 'wednesday', person: 'dylan' });
 assert.deepEqual(dropTargetFromOverId(tasks, 'task-3'), { day: 'thursday', person: 'dylan', overTaskId: 'task-3' });
 assert.deepEqual(dropTargetFromOverId(tasks, planLaneId('friday', 'nick')), { day: 'friday', person: 'nick' });
+assert.match(planClientSource, /setActivatorNodeRef/, 'task cards should use a dedicated drag activator so action buttons stay clickable');
+assert.match(planClientSource, /useSensor\(PointerSensor/, 'task dragging should use the stable dnd-kit PointerSensor');
+assert.doesNotMatch(planClientSource, /useSensor\(WorkshopPointerSensor/, 'custom pointer sensor must not disable normal card dragging');
 
 const firstMove = reorderPlanTask(tasks, 'task-9', 'monday', 'nick', 'task-0', false);
 assertUniqueSameIds(tasks, firstMove);

@@ -3266,7 +3266,7 @@ function SortablePlanTaskCard({
   onTaskEdit?: (task: DraggablePlanTask) => void;
   isNextTask?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: "plan-task" },
   });
@@ -3305,8 +3305,6 @@ function SortablePlanTaskCard({
   return (
     <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       data-plan-task-id={task.id}
       role="button"
       tabIndex={0}
@@ -3337,16 +3335,22 @@ function SortablePlanTaskCard({
         borderLeft: (isSelectedOrderTask ? "7px solid " : "5px solid ") + taskStripe,
         borderRadius: 8,
         padding: isSelectedOrderTask ? "8px 8px" : isNextTask ? "7px 7px" : "5px 6px",
-        cursor: isDragging ? "grabbing" : "grab",
+        cursor: "default",
         opacity: isDragging ? 0.28 : 1,
         boxShadow: taskShadow,
         outline: "none",
         transform: CSS.Transform.toString(transform),
         transition: transition ?? "transform 180ms ease, opacity 120ms ease, box-shadow 120ms ease",
-        touchAction: "none",
+        touchAction: "manipulation",
       }}
     >
-      <div data-task-card-main="task-card-main" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+      <div
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        data-task-card-main="task-card-main"
+        style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
+      >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
           <div style={{ minWidth: 0, flex: "1 1 auto" }}>
             {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
@@ -3366,6 +3370,8 @@ function SortablePlanTaskCard({
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
