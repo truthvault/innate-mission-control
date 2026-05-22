@@ -125,30 +125,78 @@ const CAPACITY_STYLES = {
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
 
-function DelightDoneBurst() {
+function DelightDoneBurst({ origin }: { origin: { x: number; y: number } }) {
+  const particles = ["✨", "🌈", "⭐", "💥", "✨", "🌟", "💫", "🍍"];
   return (
     <div
       data-delight-done-burst="delight-done-burst"
-      aria-label="Tuesday done unicorn"
+      aria-label="Tuesday done unicorn pineapple explosion"
       style={{
         position: "fixed",
-        left: "50%",
-        top: "18%",
-        transform: "translateX(-50%)",
+        inset: 0,
         zIndex: 120,
         pointerEvents: "none",
-        padding: "12px 16px",
-        borderRadius: 999,
-        border: "1px solid rgba(190,137,24,0.38)",
-        background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,246,199,0.92))",
-        boxShadow: "0 18px 46px rgba(34,32,26,0.18), 0 0 0 7px rgba(211,154,35,0.10)",
-        color: DT.textPrimary,
-        fontFamily: DT.sans,
-        fontSize: 13,
-        fontWeight: 950,
+        overflow: "hidden",
       }}
     >
-      🦄 Done. Tiny workshop magic.
+      <style>{`
+        @keyframes tuesdayPineapplePop {
+          0% { transform: translate(-50%, -50%) scale(0.44) rotate(-10deg); opacity: 0; filter: blur(2px); }
+          18% { transform: translate(-50%, -50%) scale(1.28) rotate(6deg); opacity: 1; filter: blur(0); }
+          38% { transform: translate(-50%, -50%) scale(0.92) rotate(-3deg); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(0.18) rotate(30deg); opacity: 0; }
+        }
+        @keyframes tuesdayUnicornLaunch {
+          0% { transform: translate(-50%, -50%) scale(0.35) rotate(-20deg); opacity: 0; }
+          12% { transform: translate(-50%, -50%) scale(0.85) rotate(-8deg); opacity: 1; }
+          58% { transform: translate(calc(-50% + 72px), calc(-50% - 112px)) scale(1.75) rotate(12deg); opacity: 1; }
+          100% { transform: translate(calc(-50% + 170px), calc(-50% - 230px)) scale(2.22) rotate(24deg); opacity: 0; }
+        }
+        @keyframes tuesdaySparkBlast {
+          0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+          16% { opacity: 1; }
+          100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.4); opacity: 0; }
+        }
+        @keyframes tuesdayRainbowShockwave {
+          0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+          20% { opacity: 0.95; }
+          100% { transform: translate(-50%, -50%) scale(3.1); opacity: 0; }
+        }
+        @keyframes tuesdayDoneCaption {
+          0% { transform: translate(-50%, 14px) scale(0.8); opacity: 0; }
+          20% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+          78% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+          100% { transform: translate(-50%, -16px) scale(0.94); opacity: 0; }
+        }
+      `}</style>
+      <div style={{ position: "fixed", left: origin.x, top: origin.y, width: 130, height: 130, borderRadius: 999, transform: "translate(-50%, -50%)", background: "conic-gradient(from 120deg, rgba(255,80,184,0.36), rgba(255,214,70,0.42), rgba(87,214,255,0.38), rgba(166,97,255,0.34), rgba(255,80,184,0.36))", animation: "tuesdayRainbowShockwave 1700ms cubic-bezier(.17,.84,.44,1) both" }} />
+      <div data-delight-pineapple="delight-pineapple" style={{ position: "fixed", left: origin.x, top: origin.y, fontSize: 58, lineHeight: 1, transform: "translate(-50%, -50%)", textShadow: "0 12px 30px rgba(34,32,26,0.20)", animation: "tuesdayPineapplePop 1900ms cubic-bezier(.18,.89,.32,1.28) both" }}>🍍</div>
+      <div data-delight-flying-unicorn="delight-flying-unicorn" style={{ position: "fixed", left: origin.x, top: origin.y, fontSize: 64, lineHeight: 1, transform: "translate(-50%, -50%)", textShadow: "0 16px 34px rgba(34,32,26,0.25)", animation: "tuesdayUnicornLaunch 2000ms cubic-bezier(.16,.88,.24,1) both" }}>🦄</div>
+      {particles.map((particle, index) => {
+        const angle = (Math.PI * 2 * index) / particles.length;
+        const distance = 92 + (index % 3) * 26;
+        return (
+          <span
+            key={`${particle}-${index}`}
+            style={{
+              position: "fixed",
+              left: origin.x,
+              top: origin.y,
+              fontSize: 18 + (index % 3) * 5,
+              lineHeight: 1,
+              transform: "translate(-50%, -50%)",
+              animation: `tuesdaySparkBlast ${1250 + index * 70}ms cubic-bezier(.19,.9,.29,1) both`,
+              ["--tx" as string]: `${Math.cos(angle) * distance}px`,
+              ["--ty" as string]: `${Math.sin(angle) * distance}px`,
+            }}
+          >
+            {particle}
+          </span>
+        );
+      })}
+      <div style={{ position: "fixed", left: origin.x, top: Math.max(72, origin.y - 92), transform: "translate(-50%, 0)", padding: "10px 14px", borderRadius: 999, border: "1px solid rgba(190,137,24,0.38)", background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,246,199,0.92))", boxShadow: "0 18px 46px rgba(34,32,26,0.18), 0 0 0 7px rgba(211,154,35,0.10)", color: DT.textPrimary, fontFamily: DT.sans, fontSize: 13, fontWeight: 950, animation: "tuesdayDoneCaption 2000ms ease both" }}>
+        Done. Unicorn escaped the pineapple.
+      </div>
     </div>
   );
 }
@@ -3326,7 +3374,7 @@ function SortablePlanTaskCard({
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onTaskEdit?: (task: DraggablePlanTask) => void;
-  onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean) => void;
+  onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean, origin?: { x: number; y: number }) => void;
   isNextTask?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -3439,7 +3487,7 @@ function SortablePlanTaskCard({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onTaskDoneToggle?.(task, !task.done);
+              onTaskDoneToggle?.(task, !task.done, { x: event.clientX, y: event.clientY });
             }}
             style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
           >
@@ -4049,7 +4097,7 @@ function OrderJourneyView({
   onTaskSelect: (task: OrderJourneyTask) => void;
   onTaskOpen: (task: OrderJourneyTask) => void;
   onOrderOpen: (orderId: number) => void;
-  onTaskDoneToggle: (task: OrderJourneyTask, done: boolean) => void;
+  onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: { x: number; y: number }) => void;
 }) {
   const isNarrow = useIsNarrow(880);
   const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
@@ -4111,7 +4159,7 @@ function OrderJourneyView({
                           <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
                           <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                             {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
-                            <button type="button" data-order-row-done-button="order-row-done-button" onClick={() => onTaskDoneToggle(task, !task.done)} style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>{task.done ? "Undo" : "Done"}</button>
+                            <button type="button" data-order-row-done-button="order-row-done-button" onClick={(event) => onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>{task.done ? "Undo" : "Done"}</button>
                             <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
                             <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
                           </div>
@@ -4155,7 +4203,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
-  const [delightBurst, setDelightBurst] = useState<number | null>(null);
+  const [delightBurst, setDelightBurst] = useState<{ id: number; origin: { x: number; y: number } } | null>(null);
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
@@ -4231,10 +4279,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
-  function triggerDelightBurst() {
+  function triggerDelightBurst(origin?: { x: number; y: number }) {
     if (!delightEnabled) return;
-    setDelightBurst(Date.now());
-    window.setTimeout(() => setDelightBurst(null), 1800);
+    setDelightBurst({ id: Date.now(), origin: origin ?? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight * 0.34) } });
+    window.setTimeout(() => setDelightBurst(null), 2100);
   }
 
   function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
@@ -4282,8 +4330,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     if (keepEditorOpen) setEditingTask(nextTask);
   }
 
-  function toggleBoardTaskDone(task: BoardPlanTask, done: boolean) {
-    if (done) triggerDelightBurst();
+  function toggleBoardTaskDone(task: BoardPlanTask, done: boolean, origin?: { x: number; y: number }) {
+    if (done) triggerDelightBurst(origin);
     updateBoardTaskFromEditor({ ...task, done }, false);
   }
 
@@ -4803,7 +4851,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {planningBoard}
-        {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst} /> : null}
+        {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
@@ -4820,7 +4868,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       }}
     >
       {planningBoard}
-      {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst} /> : null}
+      {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
       {orderRail}
       {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
