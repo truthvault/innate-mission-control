@@ -243,6 +243,7 @@ type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
 type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; estimatedHours?: number; internal?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
+type ProductionPlanMode = "schedule" | "orderRows";
 type PersonFilter = "all" | Person;
 type RailFilter = "all" | "blocked" | "thisWeek" | "materials" | "noDate";
 type RailSort = "soonest" | "latest" | "customer";
@@ -2396,6 +2397,23 @@ function weekRangeFromTitle(title: string, now = new Date()) {
 
 type PlanWeek = { id: string; title: string; rows: PlanRow[] };
 type BoardPlanTask = DraggablePlanTask & { weekId: string };
+type OrderJourneyTask = BoardPlanTask & {
+  orderId: number | null;
+  orderName: string;
+  weekTitle: string;
+  dateLabel: string;
+  sortKey: string;
+  connectionState: OrderConnectionState;
+};
+type OrderJourneyRow = {
+  id: string;
+  order: UiOrder | null;
+  name: string;
+  dueLabel: string | null;
+  statusLabel: string | null;
+  health: OrderHealthLevel | "internal" | "unlinked";
+  tasks: OrderJourneyTask[];
+};
 type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
 type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
 type OrderConnectionState = "connected" | "possible" | "needs-order" | "internal";
@@ -2551,6 +2569,65 @@ function applyPlanTaskEdits(tasks: BoardPlanTask[], taskEdits: PlanTaskEdits): B
 
 function sourceTasksForBoardWeeks(weeks: PlanWeek[], taskEdits: PlanTaskEdits = {}): BoardPlanTask[] {
   return applyPlanTaskEdits(weeks.flatMap((week) => sourceTasksForWeek(week.rows).map((task) => ({ ...task, weekId: week.id }))), taskEdits);
+}
+
+function orderJourneyTaskSortKey(task: BoardPlanTask, weekTitle: string) {
+  const rangeStart = weekRangeFromTitle(weekTitle)?.start.getTime() ?? Number.MAX_SAFE_INTEGER;
+  return [rangeStart, DAYS.indexOf(task.day), PEOPLE.indexOf(task.person), task.rowName, task.id].join(":");
+}
+
+function buildOrderJourneyRows({
+  tasks,
+  orders,
+  planTaskLinks,
+  resolveOrderId,
+  weekTitleForTask,
+}: {
+  tasks: BoardPlanTask[];
+  orders: UiOrder[];
+  planTaskLinks: PlanTaskLinks;
+  resolveOrderId: (task: BoardPlanTask) => number | null;
+  weekTitleForTask: (task: BoardPlanTask) => string;
+}): OrderJourneyRow[] {
+  const ordersById = new Map(orders.map((order) => [order.id, order]));
+  const rows = new Map<string, OrderJourneyRow>();
+
+  for (const task of tasks) {
+    const orderId = resolveOrderId(task);
+    const order = orderId ? ordersById.get(orderId) ?? null : null;
+    const connection = orderConnectionLabel(task, planTaskLinks, orderId);
+    const internal = connection.state === "internal";
+    const id = order ? `order:${order.id}` : `${internal ? "internal" : "unlinked"}:${normalizeOrderText(task.rowName) || task.rowId}`;
+    const weekTitle = weekTitleForTask(task);
+    const row = rows.get(id) ?? {
+      id,
+      order,
+      name: order?.customer ?? taskCustomerDisplayName(task),
+      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : connection.label,
+      health: order ? orderHealth(order) : internal ? "internal" : "unlinked",
+      tasks: [],
+    };
+    row.tasks.push({
+      ...task,
+      orderId,
+      orderName: row.name,
+      weekTitle: displayWeekTitle(weekTitle),
+      dateLabel: `${displayWeekTitle(weekTitle)} · ${DAY_LABELS[task.day]}`,
+      sortKey: orderJourneyTaskSortKey(task, weekTitle),
+      connectionState: connection.state,
+    });
+    rows.set(id, row);
+  }
+
+  const healthOrder: Record<OrderJourneyRow["health"], number> = { blocked: 0, watch: 1, onTrack: 2, unlinked: 3, internal: 4 };
+  return Array.from(rows.values())
+    .map((row) => ({ ...row, tasks: [...row.tasks].sort((a, b) => a.sortKey.localeCompare(b.sortKey)) }))
+    .sort((a, b) => {
+      const dueA = a.order?.shipDate ? new Date(a.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const dueB = b.order?.shipDate ? new Date(b.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return (healthOrder[a.health] - healthOrder[b.health]) || (dueA - dueB) || a.name.localeCompare(b.name);
+    });
 }
 
 function boardPlanLaneId(weekId: string, day: DayKey, person: Person) {
@@ -3860,12 +3937,129 @@ function WorkshopFocusBar({
   );
 }
 
+function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlanMode; onModeChange: (mode: ProductionPlanMode) => void }) {
+  const options: Array<{ id: ProductionPlanMode; label: string; hint: string }> = [
+    { id: "schedule", label: "Schedule", hint: "Day / person capacity" },
+    { id: "orderRows", label: "Order rows", hint: "Customer journey" },
+  ];
+  return (
+    <div aria-label="Production plan view" style={{ display: "flex", gap: 4, padding: 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+      {options.map((option) => {
+        const active = mode === option.id;
+        return (
+          <button key={option.id} type="button" onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, padding: "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function OrderJourneyView({
+  rows,
+  selectedOrder,
+  onTaskEdit,
+  onTaskSelect,
+  onTaskOpen,
+  onOrderOpen,
+}: {
+  rows: OrderJourneyRow[];
+  selectedOrder: UiOrder | null;
+  onTaskEdit: (task: OrderJourneyTask) => void;
+  onTaskSelect: (task: OrderJourneyTask) => void;
+  onTaskOpen: (task: OrderJourneyTask) => void;
+  onOrderOpen: (orderId: number) => void;
+}) {
+  const isNarrow = useIsNarrow(880);
+  const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
+  const needsRows = rows.filter((row) => row.health === "internal" || row.health === "unlinked");
+  const renderRow = (row: OrderJourneyRow) => {
+    const selected = Boolean(row.order && selectedOrder?.id === row.order.id);
+    const healthMeta = row.health === "internal"
+      ? { label: "Internal", color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.22)" }
+      : row.health === "unlinked"
+        ? { label: "Needs order", color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.34)" }
+        : HEALTH_META[row.health];
+    const rowStyle = {
+      border: `1px solid ${selected ? REVIEW_GLOW.border : DT.border}`,
+      borderLeft: `4px solid ${healthMeta.color}`,
+      background: selected ? REVIEW_GLOW.bgSoft : "rgba(255,255,255,0.86)",
+      boxShadow: selected ? REVIEW_GLOW.shadow : DT.shadow,
+      borderRadius: DT.radius,
+      overflow: "hidden",
+    };
+    return (
+      <article key={row.id} style={rowStyle}>
+        <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "250px minmax(0, 1fr)", gap: 0 }}>
+          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
+            <div style={{ fontFamily: DT.serif, fontSize: 17, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
+            <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 950 }}>{healthMeta.label}</span>
+              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850 }}>{row.dueLabel}</span>}
+            </div>
+            {row.statusLabel && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>{row.statusLabel}</div>}
+            {row.order && (
+              <button type="button" onClick={() => onOrderOpen(row.order!.id)} style={{ marginTop: 9, border: `1px solid ${DT.border}`, background: DT.headerBg, color: "#fff", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>
+                Open order
+              </button>
+            )}
+          </div>
+          <div style={{ padding: 10, minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 3 }}>
+              {row.tasks.map((task) => {
+                const personVisual = PERSON_VISUALS[task.person];
+                const connection = orderConnectionStyle(task.connectionState, selected);
+                return (
+                  <div key={task.id} style={{ flex: isNarrow ? "1 0 220px" : "0 0 184px", border: `1px solid ${personVisual.taskBorder}`, borderTop: `3px solid ${personVisual.stripe}`, borderRadius: 12, background: personVisual.taskBg, padding: 9, minHeight: 92 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
+                      <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.04em" }}>{task.dateLabel}</span>
+                      <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{PERSON_LABELS[task.person]}</span>
+                    </div>
+                    <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 7, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 13, lineHeight: 1.2, fontWeight: 950, cursor: "pointer" }}>{friendlyWorkshopTaskText(task.text)}</button>
+                    <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{formatTaskHours(task.estimatedHours)}</span>
+                      <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
+                      <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  if (rows.length === 0) {
+    return <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this window.</section>;
+  }
+
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,253,249,0.82)", padding: 12, boxShadow: DT.shadow }}>
+        <div style={{ fontFamily: DT.serif, fontSize: 22, color: DT.textPrimary, fontWeight: 760 }}>Customer / order journey</div>
+        <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 750 }}>Each row keeps the order together, left-to-right, so Nick can see the workshop journey without chasing tasks across day lanes.</div>
+      </div>
+      {activeRows.map(renderRow)}
+      {needsRows.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ padding: "4px 2px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>Needs order / internal</div>
+          {needsRows.map(renderRow)}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
   const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
   const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>({});
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
+  const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
@@ -3908,6 +4102,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   );
   const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
+  const weekTitleById = useMemo(() => new Map(visibleProductionWeeks.map((week) => [week.id, displayWeekTitle(week.title)])), [visibleProductionWeeks]);
   const isDraftChanged = !boardPlanLayoutsEqual(sourceBoardTasks, boardTasks);
   const keepOverlayWorkflow = useCallback((workflow: OrderWorkflowState | null) => {
     if (workflow) setSelectedWorkflow(workflow);
@@ -3983,7 +4178,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     setEditingTask(nextTask);
   }
 
-  function resolveOrderIdForPlanTask(task: DraggablePlanTask) {
+  const resolveOrderIdForPlanTask = useCallback((task: DraggablePlanTask) => {
     const assignedId = assignedOrderIdForTask(task, planTaskLinks);
     if (assignedId && ordersForHealth.some((order) => order.id === assignedId)) return assignedId;
     const linkedId = task.linkedOrderIds.find((id) => ordersForHealth.some((order) => order.id === id));
@@ -3993,7 +4188,15 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       .filter(({ score }) => score >= 2)
       .sort((a, b) => b.score - a.score || ((orderDaysUntil(a.order.shipDate) ?? 999) - (orderDaysUntil(b.order.shipDate) ?? 999)));
     return scored[0]?.order.id ?? null;
-  }
+  }, [ordersForHealth, planTaskLinks]);
+
+  const orderJourneyRows = useMemo(() => buildOrderJourneyRows({
+    tasks: boardTasks,
+    orders: ordersForHealth,
+    planTaskLinks,
+    resolveOrderId: resolveOrderIdForPlanTask,
+    weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
+  }), [boardTasks, ordersForHealth, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
 
   function selectOrder(id: number) {
     setSelectedAssignmentTask(null);
@@ -4326,7 +4529,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   ) : null;
 
   const workshopHeaderControl = (
-    <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+      <ProductionPlanModeToggle mode={planViewMode} onModeChange={setPlanViewMode} />
+      <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
+    </div>
   );
 
   const newOrderPanel = showNewOrder ? (
@@ -4384,7 +4590,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onSuggestedStepSelect={selectNewOrderReview}
       onSuggestedStepOpen={openNewOrderOverview}
       suggestedStepCustomer={newOrder?.customer}
-      weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
+      weekHeaderControl={undefined}
       forcePlanningLanes
     />
   ));
@@ -4422,9 +4628,23 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onDragCancel={handleBoardDragCancel}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-        {newOrderPanel}
-        {weekSections}
-        {historySections}
+        {workshopHeaderControl}
+        {planViewMode === "schedule" ? (
+          <>
+            {newOrderPanel}
+            {weekSections}
+            {historySections}
+          </>
+        ) : (
+          <OrderJourneyView
+            rows={orderJourneyRows}
+            selectedOrder={selectedOrder}
+            onTaskEdit={setEditingTask}
+            onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+            onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+            onOrderOpen={openOrderOverview}
+          />
+        )}
         {editingTask && (
           <WorkshopTaskEditor
             key={editingTask.id}

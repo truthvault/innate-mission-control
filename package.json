@@ -10,7 +10,7 @@
     "check:mutations": "bash scripts/check-no-monday-mutations.sh",
     "smoke:tuesday": "node scripts/smoke-tuesday.mjs",
     "smoke:freight": "node scripts/smoke-freight.mjs",
-    "test:planning": "node scripts/test-new-order-planning.mjs && node scripts/test-plan-new-order-colours.mjs && node scripts/test-plan-drag-stress.mjs && node scripts/test-plan-task-stage-suggestions.mjs && node scripts/test-plan-nick-feedback.mjs && node scripts/test-workshop-task-editor-upgrades.mjs"
+    "test:planning": "node scripts/test-new-order-planning.mjs && node scripts/test-plan-new-order-colours.mjs && node scripts/test-plan-drag-stress.mjs && node scripts/test-plan-task-stage-suggestions.mjs && node scripts/test-plan-nick-feedback.mjs && node scripts/test-workshop-task-editor-upgrades.mjs && node scripts/test-plan-order-journey-view.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
