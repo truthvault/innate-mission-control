@@ -18,9 +18,36 @@ Every live-update report to Guido should include the relevant live link.
 - `.vercel/` is intentionally gitignored and must stay out of commits.
 - `.vercel/.env.production.local` may contain production secrets. Do not print, copy, or commit it.
 
-## Reliable production deploy path
+## Fast production ship path for approved Tuesday branch changes
 
-Use the prebuilt deploy path:
+Default for small Tuesday app updates:
+
+```bash
+git push -u origin HEAD
+# Wait/check that Vercel's Git preview is Ready, then:
+npm run ship:tuesday
+```
+
+`npm run ship:tuesday`:
+
+1. refuses a dirty worktree unless `-- --allow-dirty` is passed;
+2. finds the newest Vercel **Ready** preview whose `githubCommitRef` and `githubCommitSha` match the current branch and commit;
+3. refuses `UNKNOWN`, `BUILDING`, or wrong-commit deployments;
+4. promotes the Ready preview with `vercel promote`;
+5. confirms a Ready production deployment for the same commit;
+6. runs `SMOKE_BASE_URL=https://innate-mission-control.vercel.app npm run smoke:tuesday`.
+
+Useful dry run before asking Guido to ship:
+
+```bash
+npm run ship:tuesday -- --dry-run
+```
+
+Why: direct `vercel deploy --prod --yes` can hang at `Building…` and leave an `UNKNOWN` deployment with no useful logs. Git previews for this app generally finish in 20–60s, and promoting a Ready preview avoids rebuilding during the live step.
+
+## Fallback production deploy path
+
+Use this only if the Git preview/promote path is unavailable:
 
 ```bash
 vercel pull --yes --environment=production
@@ -28,7 +55,7 @@ vercel build --prod
 vercel deploy --prebuilt --prod --yes
 ```
 
-Why: direct source deploy via `vercel deploy --prod --yes --no-wait` once uploaded successfully but failed with Vercel `UNKNOWN`/deployment-error and no useful logs. The prebuilt path built locally, deployed successfully, reached `Ready`, and attached the canonical production alias.
+Why: prebuilt deploy builds locally and has previously reached `Ready` when direct source deploys produced `UNKNOWN`/deployment-error.
 
 ## Required checks before a code deploy
 
