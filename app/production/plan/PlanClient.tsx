@@ -125,78 +125,308 @@ const CAPACITY_STYLES = {
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
 
-function DelightDoneBurst({ origin }: { origin: { x: number; y: number } }) {
-  const particles = ["✨", "🌈", "⭐", "💥", "✨", "🌟", "💫", "🍍"];
+const DELIGHT_CANVAS_DURATION_MS = 2000;
+type DelightOrigin = { x: number; y: number; cardRect?: DOMRect };
+
+type DelightParticle = { angle: number; distance: number; speed: number; size: number; hue: number; spin: number };
+type DelightShard = { x: number; y: number; width: number; height: number; angle: number; vx: number; vy: number; spin: number; color: string };
+
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function drawCardShard(ctx: CanvasRenderingContext2D, shard: DelightShard, t: number) {
+  const drift = easeOutCubic(t);
+  const fall = t * t * 52;
+  ctx.save();
+  ctx.translate(shard.x + shard.vx * drift, shard.y + shard.vy * drift + fall);
+  ctx.rotate(shard.angle + shard.spin * drift);
+  ctx.globalAlpha = Math.max(0, 1 - t * 0.92);
+  ctx.fillStyle = shard.color;
+  ctx.strokeStyle = "rgba(34,32,26,0.18)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(-shard.width / 2, -shard.height / 2, shard.width, shard.height, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRainbowTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number) {
+  const alpha = Math.max(0, Math.min(0.72, 1 - t));
+  const colours = ["#ff4faf", "#ffd84a", "#62dbff", "#9a6cff"];
+  colours.forEach((colour, index) => {
+    ctx.save();
+    ctx.globalAlpha = alpha * (1 - index * 0.08);
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 14 - index * 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    points.forEach((point, pointIndex) => {
+      const y = point.y + (index - 1.5) * 5;
+      if (pointIndex === 0) ctx.moveTo(point.x, y);
+      else ctx.lineTo(point.x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, crack: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.rotate(Math.sin(crack * Math.PI) * 0.08);
+  ctx.shadowColor = "rgba(34,32,26,0.20)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 10;
+  ctx.fillStyle = "#77a24a";
+  for (let i = -2; i <= 2; i += 1) {
+    ctx.save();
+    ctx.translate(i * 8, -36 - Math.abs(i) * 2);
+    ctx.rotate(i * 0.28);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 8, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = "#f4b739";
+  ctx.strokeStyle = "#b87916";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 26, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(137,86,18,0.48)";
+  ctx.lineWidth = 1.5;
+  for (let i = -3; i <= 3; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(-28, -14 + i * 12);
+    ctx.lineTo(28, 12 + i * 12);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(28, -14 + i * 12);
+    ctx.lineTo(-28, 12 + i * 12);
+    ctx.stroke();
+  }
+  if (crack > 0.28) {
+    ctx.strokeStyle = "rgba(68,39,20,0.82)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-4, -22);
+    ctx.lineTo(4, -6);
+    ctx.lineTo(-2, 8);
+    ctx.lineTo(8, 28);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.scale(scale, scale);
+  ctx.shadowColor = "rgba(117,64,166,0.28)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "#fff8f6";
+  ctx.strokeStyle = "rgba(70,54,86,0.24)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 35, 24, -0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(28, -12, 18, 16, -0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowColor = "transparent";
+  ctx.fillStyle = "#ffe061";
+  ctx.beginPath();
+  ctx.moveTo(38, -28);
+  ctx.lineTo(45, -60);
+  ctx.lineTo(52, -28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  const mane = ["#ff4faf", "#875cff", "#45cfff", "#ffd84a"];
+  mane.forEach((colour, index) => {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.ellipse(15 - index * 7, -20 + index * 4, 9, 18, 0.72, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.strokeStyle = "#ff8fd2";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-32, -4);
+  ctx.quadraticCurveTo(-64, -28, -48, -50);
+  ctx.stroke();
+  ctx.fillStyle = "#2f2736";
+  ctx.beginPath();
+  ctx.arc(34, -15, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOrigin) {
+  // Canvas Delight Engine: use a real drawing layer instead of HTML/CSS keyframe puppets.
+  const maybeContext = canvas.getContext("2d");
+  if (!maybeContext) return () => undefined;
+  const ctx = maybeContext;
+  const ratio = window.devicePixelRatio || 1;
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+  const card = origin.cardRect;
+  const cx = card ? card.left + card.width / 2 : origin.x;
+  const cy = card ? card.top + card.height / 2 : origin.y;
+  const cardWidth = card?.width ?? 116;
+  const cardHeight = card?.height ?? 86;
+  const particles: DelightParticle[] = Array.from({ length: 82 }, (_, index) => ({
+    angle: (Math.PI * 2 * index) / 82 + ((index % 7) - 3) * 0.035,
+    distance: 70 + (index % 11) * 15,
+    speed: 0.76 + (index % 5) * 0.08,
+    size: 2.5 + (index % 6) * 1.3,
+    hue: (index * 23) % 360,
+    spin: ((index % 2 ? 1 : -1) * (0.8 + (index % 4) * 0.35)),
+  }));
+  const shards: DelightShard[] = Array.from({ length: 12 }, (_, index) => {
+    const col = index % 3;
+    const row = Math.floor(index / 3);
+    const x = cx - cardWidth * 0.32 + col * cardWidth * 0.32;
+    const y = cy - cardHeight * 0.30 + row * cardHeight * 0.24;
+    const angle = -0.18 + index * 0.037;
+    return {
+      x,
+      y,
+      width: Math.max(20, cardWidth / 3.7),
+      height: Math.max(16, cardHeight / 4.8),
+      angle,
+      vx: Math.cos((Math.PI * 2 * index) / 12) * (58 + (index % 3) * 24),
+      vy: Math.sin((Math.PI * 2 * index) / 12) * (46 + (index % 4) * 18) - 28,
+      spin: (index % 2 ? 1 : -1) * (1.4 + index * 0.08),
+      color: index % 2 ? "rgba(255,253,249,0.94)" : "rgba(255,246,199,0.90)",
+    };
+  });
+
+  let raf = 0;
+  const started = performance.now();
+  function frame(now: number) {
+    const raw = (now - started) / DELIGHT_CANVAS_DURATION_MS;
+    const t = clamp01(raw);
+    ctx.clearRect(0, 0, width, height);
+
+    const flashAlpha = Math.max(0, 0.24 * (1 - t * 2.2));
+    ctx.fillStyle = `rgba(255,246,199,${flashAlpha})`;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 0.78 * (1 - t));
+    const shock = 18 + easeOutCubic(t) * 260;
+    const gradient = ctx.createRadialGradient(cx, cy, 8, cx, cy, shock);
+    gradient.addColorStop(0, "rgba(255,255,255,0.86)");
+    gradient.addColorStop(0.22, "rgba(255,214,74,0.50)");
+    gradient.addColorStop(0.55, "rgba(91,211,255,0.26)");
+    gradient.addColorStop(1, "rgba(255,79,175,0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shock, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    shards.forEach((shard) => drawCardShard(ctx, shard, t));
+
+    const launch = easeOutCubic(clamp01((t - 0.08) / 0.82));
+    const unicornX = cx + launch * (Math.min(230, width - cx - 32) + 90 * t);
+    const unicornY = cy - launch * (Math.min(280, cy - 34) + 40 * Math.sin(t * Math.PI));
+    const trail = Array.from({ length: 18 }, (_, index) => {
+      const lag = index / 18;
+      return {
+        x: cx + (unicornX - cx) * Math.max(0, launch - lag * 0.34),
+        y: cy + (unicornY - cy) * Math.max(0, launch - lag * 0.34) + Math.sin(index * 0.8 + t * 10) * 4,
+      };
+    }).reverse();
+    drawRainbowTrail(ctx, trail, t);
+
+    particles.forEach((particle, index) => {
+      const blast = easeOutCubic(clamp01((t - 0.05) / particle.speed));
+      const px = cx + Math.cos(particle.angle) * particle.distance * blast;
+      const py = cy + Math.sin(particle.angle) * particle.distance * blast + t * t * 42;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(particle.spin * blast + index);
+      ctx.globalAlpha = Math.max(0, 1 - t * 1.06);
+      ctx.fillStyle = `hsl(${particle.hue} 92% 62%)`;
+      if (index % 9 === 0) {
+        ctx.font = `${particle.size * 4}px system-ui`;
+        ctx.fillText(index % 18 === 0 ? "🍍" : "✨", -particle.size * 2, particle.size * 2);
+      } else {
+        ctx.beginPath();
+        ctx.roundRect(-particle.size, -particle.size, particle.size * 2, particle.size * 2, 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.05 + 0.22 * Math.sin(t * Math.PI * 8));
+    drawPineapple(ctx, cx, cy, pineappleScale, t);
+    drawUnicorn(ctx, unicornX, unicornY, 0.44 + launch * 0.52, -0.30 + launch * 0.44);
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, (t - 0.10) / 0.16, (1 - t) / 0.18));
+    ctx.font = "900 15px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const labelY = Math.max(52, cy - 96 - Math.sin(t * Math.PI) * 12);
+    const label = "Done. Unicorn escaped the pineapple.";
+    const metrics = ctx.measureText(label);
+    ctx.fillStyle = "rgba(255,253,249,0.96)";
+    ctx.strokeStyle = "rgba(190,137,24,0.38)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(cx - metrics.width / 2 - 16, labelY - 20, metrics.width + 32, 40, 20);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#1f1f1f";
+    ctx.fillText(label, cx, labelY);
+    ctx.restore();
+
+    if (t < 1) raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+  return () => cancelAnimationFrame(raf);
+}
+
+function DelightDoneBurst({ origin }: { origin: DelightOrigin }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    return runPineappleUnicornCanvas(canvas, origin);
+  }, [origin]);
   return (
     <div
       data-delight-done-burst="delight-done-burst"
       aria-label="Tuesday done unicorn pineapple explosion"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 120,
-        pointerEvents: "none",
-        overflow: "hidden",
-      }}
+      style={{ position: "fixed", inset: 0, zIndex: 120, pointerEvents: "none", overflow: "hidden" }}
     >
-      <style>{`
-        @keyframes tuesdayPineapplePop {
-          0% { transform: translate(-50%, -50%) scale(0.44) rotate(-10deg); opacity: 0; filter: blur(2px); }
-          18% { transform: translate(-50%, -50%) scale(1.28) rotate(6deg); opacity: 1; filter: blur(0); }
-          38% { transform: translate(-50%, -50%) scale(0.92) rotate(-3deg); opacity: 1; }
-          100% { transform: translate(-50%, -50%) scale(0.18) rotate(30deg); opacity: 0; }
-        }
-        @keyframes tuesdayUnicornLaunch {
-          0% { transform: translate(-50%, -50%) scale(0.35) rotate(-20deg); opacity: 0; }
-          12% { transform: translate(-50%, -50%) scale(0.85) rotate(-8deg); opacity: 1; }
-          58% { transform: translate(calc(-50% + 72px), calc(-50% - 112px)) scale(1.75) rotate(12deg); opacity: 1; }
-          100% { transform: translate(calc(-50% + 170px), calc(-50% - 230px)) scale(2.22) rotate(24deg); opacity: 0; }
-        }
-        @keyframes tuesdaySparkBlast {
-          0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
-          16% { opacity: 1; }
-          100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.4); opacity: 0; }
-        }
-        @keyframes tuesdayRainbowShockwave {
-          0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
-          20% { opacity: 0.95; }
-          100% { transform: translate(-50%, -50%) scale(3.1); opacity: 0; }
-        }
-        @keyframes tuesdayDoneCaption {
-          0% { transform: translate(-50%, 14px) scale(0.8); opacity: 0; }
-          20% { transform: translate(-50%, 0) scale(1); opacity: 1; }
-          78% { transform: translate(-50%, 0) scale(1); opacity: 1; }
-          100% { transform: translate(-50%, -16px) scale(0.94); opacity: 0; }
-        }
-      `}</style>
-      <div style={{ position: "fixed", left: origin.x, top: origin.y, width: 130, height: 130, borderRadius: 999, transform: "translate(-50%, -50%)", background: "conic-gradient(from 120deg, rgba(255,80,184,0.36), rgba(255,214,70,0.42), rgba(87,214,255,0.38), rgba(166,97,255,0.34), rgba(255,80,184,0.36))", animation: "tuesdayRainbowShockwave 1700ms cubic-bezier(.17,.84,.44,1) both" }} />
-      <div data-delight-pineapple="delight-pineapple" style={{ position: "fixed", left: origin.x, top: origin.y, fontSize: 58, lineHeight: 1, transform: "translate(-50%, -50%)", textShadow: "0 12px 30px rgba(34,32,26,0.20)", animation: "tuesdayPineapplePop 1900ms cubic-bezier(.18,.89,.32,1.28) both" }}>🍍</div>
-      <div data-delight-flying-unicorn="delight-flying-unicorn" style={{ position: "fixed", left: origin.x, top: origin.y, fontSize: 64, lineHeight: 1, transform: "translate(-50%, -50%)", textShadow: "0 16px 34px rgba(34,32,26,0.25)", animation: "tuesdayUnicornLaunch 2000ms cubic-bezier(.16,.88,.24,1) both" }}>🦄</div>
-      {particles.map((particle, index) => {
-        const angle = (Math.PI * 2 * index) / particles.length;
-        const distance = 92 + (index % 3) * 26;
-        return (
-          <span
-            key={`${particle}-${index}`}
-            style={{
-              position: "fixed",
-              left: origin.x,
-              top: origin.y,
-              fontSize: 18 + (index % 3) * 5,
-              lineHeight: 1,
-              transform: "translate(-50%, -50%)",
-              animation: `tuesdaySparkBlast ${1250 + index * 70}ms cubic-bezier(.19,.9,.29,1) both`,
-              ["--tx" as string]: `${Math.cos(angle) * distance}px`,
-              ["--ty" as string]: `${Math.sin(angle) * distance}px`,
-            }}
-          >
-            {particle}
-          </span>
-        );
-      })}
-      <div style={{ position: "fixed", left: origin.x, top: Math.max(72, origin.y - 92), transform: "translate(-50%, 0)", padding: "10px 14px", borderRadius: 999, border: "1px solid rgba(190,137,24,0.38)", background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,246,199,0.92))", boxShadow: "0 18px 46px rgba(34,32,26,0.18), 0 0 0 7px rgba(211,154,35,0.10)", color: DT.textPrimary, fontFamily: DT.sans, fontSize: 13, fontWeight: 950, animation: "tuesdayDoneCaption 2000ms ease both" }}>
-        Done. Unicorn escaped the pineapple.
-      </div>
+      <canvas ref={canvasRef} data-delight-canvas="pineapple-unicorn-canvas" style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh" }} />
+      <span data-delight-pineapple="delight-pineapple" style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>🍍</span>
+      <span data-delight-flying-unicorn="delight-flying-unicorn" style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>🦄</span>
     </div>
   );
 }
@@ -3374,7 +3604,7 @@ function SortablePlanTaskCard({
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onTaskEdit?: (task: DraggablePlanTask) => void;
-  onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean, origin?: { x: number; y: number }) => void;
+  onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean, origin?: DelightOrigin) => void;
   isNextTask?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -3487,7 +3717,8 @@ function SortablePlanTaskCard({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onTaskDoneToggle?.(task, !task.done, { x: event.clientX, y: event.clientY });
+              const cardElement = event.currentTarget.closest("[data-plan-task-id]") as HTMLElement | null;
+              onTaskDoneToggle?.(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
             }}
             style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
           >
@@ -3839,7 +4070,7 @@ function MonthWeekSection({
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onTaskEdit?: (task: BoardPlanTask) => void;
-  onTaskDoneToggle?: (task: BoardPlanTask, done: boolean) => void;
+  onTaskDoneToggle?: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
@@ -3933,7 +4164,7 @@ function MonthWeekSection({
                                 onTaskSelect={onTaskSelect}
                                 onTaskOpen={onTaskOpen}
                                 onTaskEdit={(item) => onTaskEdit?.(item as BoardPlanTask)}
-                                onTaskDoneToggle={(item, done) => onTaskDoneToggle?.(item as BoardPlanTask, done)}
+                                onTaskDoneToggle={(item, done, origin) => onTaskDoneToggle?.(item as BoardPlanTask, done, origin)}
                                 isNextTask={laneIndex === 0}
                               />
                               {showDropSlot(task.id, true) && dropSlot}
@@ -4097,7 +4328,7 @@ function OrderJourneyView({
   onTaskSelect: (task: OrderJourneyTask) => void;
   onTaskOpen: (task: OrderJourneyTask) => void;
   onOrderOpen: (orderId: number) => void;
-  onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: { x: number; y: number }) => void;
+  onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) => void;
 }) {
   const isNarrow = useIsNarrow(880);
   const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
@@ -4151,7 +4382,7 @@ function OrderJourneyView({
                       const personVisual = PERSON_VISUALS[task.person];
                       const connection = orderConnectionStyle(task.connectionState, selected);
                       return (
-                        <div key={task.id} style={{ border: `1px solid ${personVisual.taskBorder}`, borderLeft: `4px solid ${personVisual.stripe}`, borderRadius: 10, background: personVisual.taskBg, padding: 8, minHeight: 76 }}>
+                        <div key={task.id} data-order-row-task-id={task.id} style={{ border: `1px solid ${personVisual.taskBorder}`, borderLeft: `4px solid ${personVisual.stripe}`, borderRadius: 10, background: personVisual.taskBg, padding: 8, minHeight: 76 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
                             <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{PERSON_LABELS[task.person]}</span>
                             <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
@@ -4159,7 +4390,10 @@ function OrderJourneyView({
                           <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
                           <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                             {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
-                            <button type="button" data-order-row-done-button="order-row-done-button" onClick={(event) => onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>{task.done ? "Undo" : "Done"}</button>
+                            <button type="button" data-order-row-done-button="order-row-done-button" onClick={(event) => {
+                              const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
+                              onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+                            }} style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>{task.done ? "Undo" : "Done"}</button>
                             <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
                             <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
                           </div>
@@ -4203,7 +4437,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
-  const [delightBurst, setDelightBurst] = useState<{ id: number; origin: { x: number; y: number } } | null>(null);
+  const [delightBurst, setDelightBurst] = useState<{ id: number; origin: DelightOrigin } | null>(null);
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
@@ -4279,7 +4513,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
-  function triggerDelightBurst(origin?: { x: number; y: number }) {
+  function triggerDelightBurst(origin?: DelightOrigin) {
     if (!delightEnabled) return;
     setDelightBurst({ id: Date.now(), origin: origin ?? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight * 0.34) } });
     window.setTimeout(() => setDelightBurst(null), 2100);
@@ -4330,7 +4564,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     if (keepEditorOpen) setEditingTask(nextTask);
   }
 
-  function toggleBoardTaskDone(task: BoardPlanTask, done: boolean, origin?: { x: number; y: number }) {
+  function toggleBoardTaskDone(task: BoardPlanTask, done: boolean, origin?: DelightOrigin) {
     if (done) triggerDelightBurst(origin);
     updateBoardTaskFromEditor({ ...task, done }, false);
   }
