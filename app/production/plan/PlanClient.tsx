@@ -3982,7 +3982,7 @@ function OrderJourneyView({
     };
     return (
       <article key={row.id} style={rowStyle}>
-        <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "250px minmax(0, 1fr)", gap: 0 }}>
+        <div data-order-row-week-grid="order-row-week-grid" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "220px repeat(5, minmax(104px, 1fr))", gap: 0 }}>
           <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
             <div style={{ fontFamily: DT.serif, fontSize: 17, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
             <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -3996,28 +3996,43 @@ function OrderJourneyView({
               </button>
             )}
           </div>
-          <div style={{ padding: 10, minWidth: 0 }}>
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 3 }}>
-              {row.tasks.map((task) => {
-                const personVisual = PERSON_VISUALS[task.person];
-                const connection = orderConnectionStyle(task.connectionState, selected);
-                return (
-                  <div key={task.id} style={{ flex: isNarrow ? "1 0 220px" : "0 0 184px", border: `1px solid ${personVisual.taskBorder}`, borderTop: `3px solid ${personVisual.stripe}`, borderRadius: 12, background: personVisual.taskBg, padding: 9, minHeight: 92 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
-                      <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.04em" }}>{task.dateLabel}</span>
-                      <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{PERSON_LABELS[task.person]}</span>
-                    </div>
-                    <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 7, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 13, lineHeight: 1.2, fontWeight: 950, cursor: "pointer" }}>{friendlyWorkshopTaskText(task.text)}</button>
-                    <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
-                      <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{formatTaskHours(task.estimatedHours)}</span>
-                      <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
-                      <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
-                    </div>
+          {DAYS.map((day) => {
+            const dayTasks = row.tasks.filter((task) => task.day === day);
+            return (
+              <div key={`${row.id}:${day}`} style={{ minHeight: isNarrow ? 0 : 104, padding: 8, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "rgba(255,255,255,0.50)" : "rgba(232,230,224,0.18)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
+                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{DAY_LABELS[day]}</span>
+                  {dayTasks.length > 1 && <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted }}>{dayTasks.length}</span>}
+                </div>
+                {dayTasks.length === 0 ? (
+                  <div data-empty-order-day-cell="empty-order-day-cell" style={{ minHeight: isNarrow ? 12 : 52, border: `1px dashed rgba(0,0,0,0.045)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(124,116,107,0.48)", fontFamily: DT.sans, fontSize: 9, fontWeight: 850 }}>
+                    No task
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {dayTasks.map((task) => {
+                      const personVisual = PERSON_VISUALS[task.person];
+                      const connection = orderConnectionStyle(task.connectionState, selected);
+                      return (
+                        <div key={task.id} style={{ border: `1px solid ${personVisual.taskBorder}`, borderLeft: `4px solid ${personVisual.stripe}`, borderRadius: 10, background: personVisual.taskBg, padding: 8, minHeight: 76 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
+                            <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{PERSON_LABELS[task.person]}</span>
+                            <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
+                          </div>
+                          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer" }}>{friendlyWorkshopTaskText(task.text)}</button>
+                          <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                            {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
+                            <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
+                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </article>
     );
@@ -4031,7 +4046,6 @@ function OrderJourneyView({
     <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,253,249,0.82)", padding: 12, boxShadow: DT.shadow }}>
         <div style={{ fontFamily: DT.serif, fontSize: 22, color: DT.textPrimary, fontWeight: 760 }}>Customer / order journey</div>
-        <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 750 }}>Each row keeps the order together, left-to-right, so Nick can see the workshop journey without chasing tasks across day lanes.</div>
       </div>
       {activeRows.map(renderRow)}
       {needsRows.length > 0 && (
