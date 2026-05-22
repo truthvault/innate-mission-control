@@ -12,6 +12,13 @@ const clientMustHave = [
   ['done card is visually struck through', 'textDecoration: task.done ? "line-through" : "none"'],
   ['card done toggles persist through task edit save path', 'done: nextTask.done'],
   ['done button uses shared save handler', 'onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean) => void'],
+  ['order rows accept a done toggle handler', 'onTaskDoneToggle: (task: OrderJourneyTask, done: boolean) => void'],
+  ['order rows render a Done button', 'data-order-row-done-button="order-row-done-button"'],
+  ['order rows can undo done tasks', 'task.done ? "Undo" : "Done"'],
+  ['order rows done button persists through same handler', 'onTaskDoneToggle(task, !task.done)'],
+  ['done click triggers delight burst', 'triggerDelightBurst()'],
+  ['delight burst is gated by query flag', 'delightEnabled && delightBurst'],
+  ['delight burst has visible unicorn marker', 'data-delight-done-burst="delight-done-burst"'],
 ];
 
 const apiMustHave = [

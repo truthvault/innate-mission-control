@@ -125,6 +125,34 @@ const CAPACITY_STYLES = {
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
 
+function DelightDoneBurst() {
+  return (
+    <div
+      data-delight-done-burst="delight-done-burst"
+      aria-label="Tuesday done unicorn"
+      style={{
+        position: "fixed",
+        left: "50%",
+        top: "18%",
+        transform: "translateX(-50%)",
+        zIndex: 120,
+        pointerEvents: "none",
+        padding: "12px 16px",
+        borderRadius: 999,
+        border: "1px solid rgba(190,137,24,0.38)",
+        background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,246,199,0.92))",
+        boxShadow: "0 18px 46px rgba(34,32,26,0.18), 0 0 0 7px rgba(211,154,35,0.10)",
+        color: DT.textPrimary,
+        fontFamily: DT.sans,
+        fontSize: 13,
+        fontWeight: 950,
+      }}
+    >
+      🦄 Done. Tiny workshop magic.
+    </div>
+  );
+}
+
 function DelightUnicorn() {
   return (
     <div
@@ -3946,8 +3974,8 @@ function MonthWeekSection({
 }
 
 
-function MonthView({ weeks, newOrder, orders }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; orders: UiOrder[] }) {
-  return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} />;
+function MonthView({ weeks, newOrder, orders, delightEnabled }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; orders: UiOrder[]; delightEnabled?: boolean }) {
+  return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} delightEnabled={delightEnabled} />;
 }
 
 function WorkshopFocusBar({
@@ -4013,6 +4041,7 @@ function OrderJourneyView({
   onTaskSelect,
   onTaskOpen,
   onOrderOpen,
+  onTaskDoneToggle,
 }: {
   rows: OrderJourneyRow[];
   selectedOrder: UiOrder | null;
@@ -4020,6 +4049,7 @@ function OrderJourneyView({
   onTaskSelect: (task: OrderJourneyTask) => void;
   onTaskOpen: (task: OrderJourneyTask) => void;
   onOrderOpen: (orderId: number) => void;
+  onTaskDoneToggle: (task: OrderJourneyTask, done: boolean) => void;
 }) {
   const isNarrow = useIsNarrow(880);
   const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
@@ -4078,9 +4108,10 @@ function OrderJourneyView({
                             <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{PERSON_LABELS[task.person]}</span>
                             <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
                           </div>
-                          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer" }}>{friendlyWorkshopTaskText(task.text)}</button>
+                          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
                           <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                             {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
+                            <button type="button" data-order-row-done-button="order-row-done-button" onClick={() => onTaskDoneToggle(task, !task.done)} style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>{task.done ? "Undo" : "Done"}</button>
                             <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
                             <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
                           </div>
@@ -4117,13 +4148,14 @@ function OrderJourneyView({
   );
 }
 
-function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
+function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = false }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[]; delightEnabled?: boolean }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
   const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
   const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>({});
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
+  const [delightBurst, setDelightBurst] = useState<number | null>(null);
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
@@ -4199,6 +4231,12 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
+  function triggerDelightBurst() {
+    if (!delightEnabled) return;
+    setDelightBurst(Date.now());
+    window.setTimeout(() => setDelightBurst(null), 1800);
+  }
+
   function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
     const taskKey = stablePlanTaskKey(nextTask);
     setBoardTasks((current) => {
@@ -4245,6 +4283,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }
 
   function toggleBoardTaskDone(task: BoardPlanTask, done: boolean) {
+    if (done) triggerDelightBurst();
     updateBoardTaskFromEditor({ ...task, done }, false);
   }
 
@@ -4715,6 +4754,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
             onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
             onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
             onOrderOpen={openOrderOverview}
+            onTaskDoneToggle={toggleBoardTaskDone}
           />
         )}
         {editingTask && (
@@ -4763,6 +4803,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {planningBoard}
+        {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst} /> : null}
         {orderRail}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
@@ -4779,6 +4820,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       }}
     >
       {planningBoard}
+      {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst} /> : null}
       {orderRail}
       {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
@@ -4839,7 +4881,7 @@ export default function PlanClient({
             No Production Plan rows. {mondayError && `(${mondayError})`}
           </div>
         ) : (
-          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} />
+          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} delightEnabled={delightEnabled} />
         )}
         {delightEnabled && <DelightUnicorn />}
     </MissionControlShell>
