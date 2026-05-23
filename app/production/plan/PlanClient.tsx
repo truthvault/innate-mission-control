@@ -227,8 +227,8 @@ function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
 
 
 function drawBlackTransition(ctx: CanvasRenderingContext2D, width: number, height: number, t: number) {
-  const fadeIn = clamp01((t - 0.82) / 0.10);
-  const fadeOut = clamp01((t - 0.94) / 0.06);
+  const fadeIn = clamp01((t - 0.88) / 0.035);
+  const fadeOut = clamp01((t - 0.95) / 0.05);
   const alpha = Math.max(0, Math.sin(fadeIn * Math.PI * 0.5) * (1 - fadeOut));
   if (alpha <= 0) return;
   ctx.save();
@@ -640,6 +640,8 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const unicornX = targetX + Math.sin(t * Math.PI * 5) * 3 * (1 - screenApproach);
     const unicornY = cy - launchLift + (targetY - cy) * screenApproach;
     const flameMix = easeOutCubic(clamp01((screenApproach - 0.22) / 0.78));
+    const cameraPassThrough = easeOutCubic(clamp01((t - 0.66) / 0.22));
+    const cameraExitFade = 1 - easeOutCubic(clamp01((t - 0.84) / 0.06));
     const trail = Array.from({ length: 28 }, (_, index) => {
       const lag = index / 28;
       const trailApproach = Math.max(0, screenApproach - lag * 0.50);
@@ -675,10 +677,15 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
 
     const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
     drawPineapple(ctx, cx, cy, pineappleScale, t);
-    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.4) * 4.8;
+    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.4 + Math.pow(cameraPassThrough, 2.8) * 15.5;
     const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach);
-    drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
-    drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+    if (cameraExitFade > 0) {
+      ctx.save();
+      ctx.globalAlpha = cameraExitFade;
+      drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+      drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+      ctx.restore();
+    }
     drawBlackTransition(ctx, width, height, t);
 
     if (t < 1) raf = requestAnimationFrame(frame);

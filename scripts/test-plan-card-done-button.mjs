@@ -37,6 +37,8 @@ const clientMustHave = [
   ['delight burst has motion blur trail', 'drawUnicornMotionBlur'],
   ['delight burst flies straight out of pineapple', 'straightOutLaunch'],
   ['delight burst fills the screen', 'screenFillScale'],
+  ['delight burst flies through the camera', 'cameraPassThrough'],
+  ['delight burst fades out after camera hit', 'cameraExitFade'],
   ['delight burst uses black transition back to schedule', 'drawBlackTransition'],
   ['delight burst does not arc sideways first', 'targetX = cx'],
   ['delight burst flies toward the screen', 'screenApproach'],
