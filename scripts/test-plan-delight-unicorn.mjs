@@ -16,6 +16,7 @@ const clientMustHave = [
   ['unicorn component exists', 'function DelightUnicorn()'],
   ['unicorn is findable in live bundle', 'Tuesday delight unicorn'],
   ['unicorn emoji is present', '🦄'],
+  ['unicorn badge is parked away from the order rail', 'data-delight-badge-placement="in-flow-safe"'],
 ];
 
 const missing = [

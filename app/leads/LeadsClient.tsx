@@ -450,7 +450,7 @@ function SortSelect({ value, onChange }: { value: LeadSort; onChange: (value: Le
   return (
     <label style={{ display: "flex", gap: 7, alignItems: "center", fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800 }}>
       Sort
-      <select value={value} onChange={(event) => onChange(event.target.value as LeadSort)} style={{ ...inputStyle, width: "auto", minWidth: 152, borderRadius: 999, padding: "7px 28px 7px 10px", fontWeight: 800 }}>
+      <select aria-label="Sort leads" value={value} onChange={(event) => onChange(event.target.value as LeadSort)} style={{ ...inputStyle, width: "auto", minWidth: 152, borderRadius: 999, padding: "7px 28px 7px 10px", fontWeight: 800 }}>
         {SORT_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select>
     </label>
@@ -548,7 +548,7 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
   const refresh = () => router.refresh();
 
   return (
-    <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
+    <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input aria-label="Search leads" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, marginBottom: 14, overflowX: "auto" }}>
         <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
         <MetricButton label="Samples" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
@@ -578,9 +578,11 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
             <span>{visible.length} of {activeRows.length} active leads shown · {closed} closed / parked kept at the bottom for reference</span>
             <span>{filter === "do_today" ? "Default: full priority list. Top cards are highlighted above." : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : `Sorted by ${SORT_OPTIONS.find(([key]) => key === sortMode)?.[1] || "priority"}`}</span>
           </div>
-          <LeadListHeader />
-          <div style={{ display: "grid", gap: 8 }}>
-            {visible.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} supabaseProjectRef={supabaseProjectRef} />)}
+          <div style={{ overflowX: "auto", paddingBottom: 2 }}>
+            <div style={{ minWidth: 940, display: "grid", gap: 8 }}>
+              <LeadListHeader />
+              {visible.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} supabaseProjectRef={supabaseProjectRef} />)}
+            </div>
           </div>
           <ClosedReferenceList leads={closedRows} onSelect={(lead) => setSelectedId(lead.id)} />
         </>

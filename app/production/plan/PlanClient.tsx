@@ -739,15 +739,12 @@ function DelightUnicorn() {
     <div
       aria-label="Tuesday delight unicorn"
       title="Tuesday delight unicorn"
+      data-delight-badge-placement="in-flow-safe"
       style={{
-        position: "fixed",
-        right: 18,
-        bottom: 18,
-        zIndex: 80,
-        pointerEvents: "none",
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
         gap: 8,
+        marginTop: 12,
         padding: "8px 11px 8px 9px",
         borderRadius: 999,
         border: "1px solid rgba(190,137,24,0.34)",
@@ -761,7 +758,7 @@ function DelightUnicorn() {
       }}
     >
       <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>🦄</span>
-      <span>delight v4</span>
+      <span>delight on</span>
     </div>
   );
 }
@@ -4698,12 +4695,24 @@ function OrderJourneyView({
                           <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
                           <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                             {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
-                            <button type="button" data-order-row-done-button="order-row-done-button" onClick={(event) => {
-                              const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
-                              onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
-                            }} style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>{task.done ? "Undo" : "Done"}</button>
-                            <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
-                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, cursor: "pointer" }}>Details</button>
+                            <button
+                              type="button"
+                              data-order-row-done-button="order-row-done-button"
+                              onPointerDown={(event) => event.stopPropagation()}
+                              onMouseDown={(event) => event.stopPropagation()}
+                              onTouchStart={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
+                                onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+                              }}
+                              style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}
+                            >
+                              {task.done ? "Undo" : "Done"}
+                            </button>
+                            <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Edit task</button>
+                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Details</button>
                           </div>
                         </div>
                       );
@@ -4821,10 +4830,27 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
+  const delightBurstTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (delightBurstTimeoutRef.current) {
+        window.clearTimeout(delightBurstTimeoutRef.current);
+      }
+    };
+  }, []);
+
   function triggerDelightBurst(origin?: DelightOrigin) {
     if (!delightEnabled) return;
-    setDelightBurst({ id: Date.now(), origin: origin ?? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight * 0.34) } });
-    window.setTimeout(() => setDelightBurst(null), 3100);
+    const burstId = Date.now();
+    if (delightBurstTimeoutRef.current) {
+      window.clearTimeout(delightBurstTimeoutRef.current);
+    }
+    setDelightBurst({ id: burstId, origin: origin ?? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight * 0.34) } });
+    delightBurstTimeoutRef.current = window.setTimeout(() => {
+      setDelightBurst((current) => current?.id === burstId ? null : current);
+      delightBurstTimeoutRef.current = null;
+    }, 3100);
   }
 
   function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
