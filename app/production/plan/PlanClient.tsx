@@ -125,7 +125,7 @@ const CAPACITY_STYLES = {
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
 
-const DELIGHT_CANVAS_DURATION_MS = 2000;
+const DELIGHT_CANVAS_DURATION_MS = 3000;
 type DelightOrigin = { x: number; y: number; cardRect?: DOMRect };
 
 type DelightParticle = { angle: number; distance: number; speed: number; size: number; hue: number; spin: number };
@@ -227,34 +227,6 @@ function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
   ctx.restore();
 }
 
-
-function drawCameraImpactFlash(ctx: CanvasRenderingContext2D, width: number, height: number, x: number, y: number, cameraImpact: number) {
-  if (cameraImpact <= 0.01) return;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  const warmFlash = Math.sin(clamp01(cameraImpact) * Math.PI) * 0.74;
-  const radius = Math.max(width, height) * (0.18 + cameraImpact * 0.96);
-  const glow = ctx.createRadialGradient(x, y, 4, x, y, radius);
-  glow.addColorStop(0, `rgba(255,255,236,${0.72 * warmFlash})`);
-  glow.addColorStop(0.18, `rgba(255,189,57,${0.54 * warmFlash})`);
-  glow.addColorStop(0.48, `rgba(255,78,34,${0.30 * warmFlash})`);
-  glow.addColorStop(1, "rgba(255,42,0,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, width, height);
-  ctx.restore();
-
-  const vignette = Math.max(0, cameraImpact - 0.34) / 0.66;
-  if (vignette <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = Math.min(0.42, vignette * 0.42);
-  const edge = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.22, width / 2, height / 2, Math.max(width, height) * 0.74);
-  edge.addColorStop(0, "rgba(0,0,0,0)");
-  edge.addColorStop(0.72, "rgba(0,0,0,0.10)");
-  edge.addColorStop(1, "rgba(0,0,0,0.82)");
-  ctx.fillStyle = edge;
-  ctx.fillRect(0, 0, width, height);
-  ctx.restore();
-}
 
 const noBlackExitBlink = true;
 
@@ -666,7 +638,14 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const cameraPassThrough = easeOutCubic(clamp01((t - 0.66) / 0.22));
     const impactStart = 0.74;
     const cameraImpact = easeOutCubic(clamp01((t - impactStart) / 0.16));
-    const cameraExitFade = 1 - easeOutCubic(clamp01((cameraImpact - 0.64) / 0.26));
+    const rightExitFade = 1 - easeOutCubic(clamp01((rightExitAtEightyPercent - 0.72) / 0.26));
+    const slickOffscreenCutoff = rightExitAtEightyPercent >= 0.985;
+    const noPostExitGlow = true;
+    if (slickOffscreenCutoff) {
+      void noPostExitGlow;
+      if (t < 1) raf = requestAnimationFrame(frame);
+      return;
+    }
     const trailFadeBeforeImpact = 1 - easeOutCubic(clamp01((t - 0.66) / 0.08));
     const trailCutoff = trailFadeBeforeImpact > 0.02;
     const originFade = 1 - easeOutCubic(clamp01((t - 0.56) / 0.18));
@@ -718,14 +697,15 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     }
     const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.8 + Math.pow(cameraPassThrough, 2.2) * 4.2;
     const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach) + forwardThenRightExit * 0.16;
-    if (cameraExitFade > 0) {
+    if (rightExitFade > 0) {
       ctx.save();
-      ctx.globalAlpha = cameraExitFade;
+      ctx.globalAlpha = rightExitFade;
       drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
       drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
       ctx.restore();
     }
-    drawCameraImpactFlash(ctx, width, height, unicornX, unicornY, cameraImpact);
+    void cameraImpact;
+    void noPostExitGlow;
     void noBlackExitBlink;
 
     if (t < 1) raf = requestAnimationFrame(frame);
@@ -4839,7 +4819,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   function triggerDelightBurst(origin?: DelightOrigin) {
     if (!delightEnabled) return;
     setDelightBurst({ id: Date.now(), origin: origin ?? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight * 0.34) } });
-    window.setTimeout(() => setDelightBurst(null), 2100);
+    window.setTimeout(() => setDelightBurst(null), 3100);
   }
 
   function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
