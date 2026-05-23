@@ -226,10 +226,38 @@ function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
 }
 
 
-function drawBlackTransition(ctx: CanvasRenderingContext2D, width: number, height: number, t: number) {
-  const fadeIn = clamp01((t - 0.88) / 0.035);
-  const fadeOut = clamp01((t - 0.95) / 0.05);
-  const alpha = Math.max(0, Math.sin(fadeIn * Math.PI * 0.5) * (1 - fadeOut));
+function drawCameraImpactFlash(ctx: CanvasRenderingContext2D, width: number, height: number, x: number, y: number, cameraImpact: number) {
+  if (cameraImpact <= 0.01) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const warmFlash = Math.sin(clamp01(cameraImpact) * Math.PI) * 0.74;
+  const radius = Math.max(width, height) * (0.18 + cameraImpact * 0.96);
+  const glow = ctx.createRadialGradient(x, y, 4, x, y, radius);
+  glow.addColorStop(0, `rgba(255,255,236,${0.72 * warmFlash})`);
+  glow.addColorStop(0.18, `rgba(255,189,57,${0.54 * warmFlash})`);
+  glow.addColorStop(0.48, `rgba(255,78,34,${0.30 * warmFlash})`);
+  glow.addColorStop(1, "rgba(255,42,0,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  const vignette = Math.max(0, cameraImpact - 0.34) / 0.66;
+  if (vignette <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.42, vignette * 0.42);
+  const edge = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.22, width / 2, height / 2, Math.max(width, height) * 0.74);
+  edge.addColorStop(0, "rgba(0,0,0,0)");
+  edge.addColorStop(0.72, "rgba(0,0,0,0.10)");
+  edge.addColorStop(1, "rgba(0,0,0,0.82)");
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+function drawBlackTransition(ctx: CanvasRenderingContext2D, width: number, height: number, cameraImpact: number) {
+  const fadeIn = easeOutCubic(clamp01((cameraImpact - 0.72) / 0.18));
+  const fadeOut = easeOutCubic(clamp01((cameraImpact - 0.92) / 0.08));
+  const alpha = Math.max(0, fadeIn * (1 - fadeOut));
   if (alpha <= 0) return;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -641,7 +669,9 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const unicornY = cy - launchLift + (targetY - cy) * screenApproach;
     const flameMix = easeOutCubic(clamp01((screenApproach - 0.22) / 0.78));
     const cameraPassThrough = easeOutCubic(clamp01((t - 0.66) / 0.22));
-    const cameraExitFade = 1 - easeOutCubic(clamp01((t - 0.84) / 0.06));
+    const cameraImpact = easeOutCubic(clamp01((t - 0.76) / 0.18));
+    const cameraExitFade = 1 - easeOutCubic(clamp01((cameraImpact - 0.58) / 0.32));
+    const trailFadeBeforeImpact = 1 - easeOutCubic(clamp01((cameraImpact - 0.16) / 0.70));
     const trail = Array.from({ length: 28 }, (_, index) => {
       const lag = index / 28;
       const trailApproach = Math.max(0, screenApproach - lag * 0.50);
@@ -651,9 +681,12 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
         y: cy + depthDrift + (targetY - cy) * trailApproach + Math.cos(index * 1.1 + t * 10) * 4,
       };
     }).reverse();
+    ctx.save();
+    ctx.globalAlpha = trailFadeBeforeImpact;
     drawSmokeTrail(ctx, trail, t, flameMix);
     drawRainbowTrail(ctx, trail, t);
     drawFlameTrail(ctx, trail, t, flameMix);
+    ctx.restore();
 
     particles.forEach((particle, index) => {
       const blast = easeOutCubic(clamp01((t - 0.05) / particle.speed));
@@ -677,7 +710,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
 
     const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
     drawPineapple(ctx, cx, cy, pineappleScale, t);
-    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.4 + Math.pow(cameraPassThrough, 2.8) * 15.5;
+    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.4 + Math.pow(cameraPassThrough, 2.8) * 15.5 + Math.pow(cameraImpact, 2.2) * 5.8;
     const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach);
     if (cameraExitFade > 0) {
       ctx.save();
@@ -686,7 +719,8 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
       ctx.restore();
     }
-    drawBlackTransition(ctx, width, height, t);
+    drawCameraImpactFlash(ctx, width, height, unicornX, unicornY, cameraImpact);
+    drawBlackTransition(ctx, width, height, cameraImpact);
 
     if (t < 1) raf = requestAnimationFrame(frame);
   }
