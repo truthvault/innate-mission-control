@@ -232,175 +232,230 @@ function drawSunglasses(ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  const lensGradient = ctx.createLinearGradient(18, -23, 54, -5);
-  lensGradient.addColorStop(0, "rgba(11,15,24,0.96)");
-  lensGradient.addColorStop(0.52, "rgba(38,45,58,0.98)");
-  lensGradient.addColorStop(1, "rgba(5,8,14,0.96)");
+  const lensGradient = ctx.createLinearGradient(22, -26, 66, -8);
+  lensGradient.addColorStop(0, "rgba(6,9,16,0.98)");
+  lensGradient.addColorStop(0.45, "rgba(33,40,54,0.99)");
+  lensGradient.addColorStop(1, "rgba(3,5,10,0.98)");
   ctx.fillStyle = lensGradient;
-  ctx.strokeStyle = "rgba(255,255,255,0.62)";
-  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = "rgba(255,255,255,0.70)";
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(18, -23, 17, 12, 5);
-  ctx.roundRect(39, -24, 17, 12, 5);
+  ctx.roundRect(20, -27, 20, 14, 6);
+  ctx.roundRect(45, -28, 20, 14, 6);
   ctx.fill();
   ctx.stroke();
-  ctx.strokeStyle = "rgba(18,18,22,0.95)";
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(12,12,17,0.96)";
+  ctx.lineWidth = 3.5;
   ctx.beginPath();
-  ctx.moveTo(35, -17);
-  ctx.lineTo(39, -18);
+  ctx.moveTo(40, -20);
+  ctx.lineTo(45, -21);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.42)";
-  ctx.lineWidth = 1.3;
+  ctx.strokeStyle = "rgba(255,255,255,0.48)";
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(22, -21);
-  ctx.lineTo(29, -22);
-  ctx.moveTo(43, -22);
-  ctx.lineTo(50, -23);
+  ctx.moveTo(24, -25);
+  ctx.lineTo(33, -26);
+  ctx.moveTo(49, -26);
+  ctx.lineTo(58, -27);
   ctx.stroke();
   ctx.restore();
 }
 
 function drawUnicornSmile(ctx: CanvasRenderingContext2D) {
   ctx.save();
-  ctx.strokeStyle = "rgba(74,54,61,0.78)";
-  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = "rgba(70,48,58,0.82)";
+  ctx.lineWidth = 2.4;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(39, -6);
-  ctx.quadraticCurveTo(46, -1, 54, -6);
+  ctx.moveTo(45, -7);
+  ctx.quadraticCurveTo(53, -1, 62, -8);
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,139,181,0.58)";
+  ctx.fillStyle = "rgba(255,139,181,0.62)";
   ctx.beginPath();
-  ctx.ellipse(51, -4, 3.2, 1.7, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(58, -5.5, 3.8, 1.9, -0.22, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
-function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number) {
+function drawUnicornLeg(ctx: CanvasRenderingContext2D, x: number, y: number, lean: number, motion: number, rear = false) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(lean + Math.sin(motion) * 0.13);
+  const legGradient = ctx.createLinearGradient(0, 0, 8, 38);
+  legGradient.addColorStop(0, rear ? "#eee3ef" : "#fff8fa");
+  legGradient.addColorStop(1, rear ? "#cdbbd2" : "#dacadc");
+  ctx.fillStyle = legGradient;
+  ctx.strokeStyle = "rgba(78,60,86,0.22)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.roundRect(-4, -1, 9, 34, 5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "rgba(94,67,86,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(1, 34, 8, 4, 0.04, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawUnicornMotionBlur(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number, motion: number) {
+  for (let i = 3; i >= 1; i -= 1) {
+    ctx.save();
+    ctx.globalAlpha = 0.08 * i;
+    ctx.filter = `blur(${i * 2}px)`;
+    drawHyperRealisticUnicorn(ctx, x - i * 22, y + i * 9, scale * (1 - i * 0.025), rotation - i * 0.035, motion - i * 0.45, true);
+    ctx.restore();
+  }
+}
+
+function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number, motion = 0, ghost = false) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
   ctx.scale(scale, scale);
 
-  ctx.shadowColor = "rgba(66,52,94,0.30)";
-  ctx.shadowBlur = 30;
-  ctx.shadowOffsetY = 11;
-  const bodyGradient = ctx.createRadialGradient(20, -20, 5, -4, 6, 78);
+  const maneFlow = Math.sin(motion * 1.8) * 4;
+  const bounce = Math.sin(motion * 2.2) * 2.5;
+  if (!ghost) {
+    ctx.shadowColor = "rgba(66,52,94,0.34)";
+    ctx.shadowBlur = 34;
+    ctx.shadowOffsetY = 13;
+  }
+
+  const bodyGradient = ctx.createRadialGradient(24, -22, 6, -4, 8 + bounce, 88);
   bodyGradient.addColorStop(0, "#ffffff");
-  bodyGradient.addColorStop(0.42, "#fff4f5");
-  bodyGradient.addColorStop(0.78, "#eadfe8");
-  bodyGradient.addColorStop(1, "#cfc0d2");
+  bodyGradient.addColorStop(0.38, "#fff6f8");
+  bodyGradient.addColorStop(0.74, "#eaddea");
+  bodyGradient.addColorStop(1, "#c9b6ce");
   ctx.fillStyle = bodyGradient;
   ctx.strokeStyle = "rgba(78,60,86,0.28)";
-  ctx.lineWidth = 2.2;
+  ctx.lineWidth = 2.3;
   ctx.beginPath();
-  ctx.ellipse(-5, 8, 42, 26, -0.10, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  const neckGradient = ctx.createLinearGradient(14, -26, 4, 20);
-  neckGradient.addColorStop(0, "#fffefe");
-  neckGradient.addColorStop(1, "#decfe0");
-  ctx.fillStyle = neckGradient;
-  ctx.beginPath();
-  ctx.moveTo(12, -24);
-  ctx.quadraticCurveTo(-10, -12, 0, 16);
-  ctx.quadraticCurveTo(16, 24, 29, 2);
-  ctx.quadraticCurveTo(31, -16, 12, -24);
-  ctx.fill();
-  ctx.stroke();
-
-  const headGradient = ctx.createRadialGradient(38, -24, 7, 33, -12, 40);
-  headGradient.addColorStop(0, "#ffffff");
-  headGradient.addColorStop(0.55, "#fff2f4");
-  headGradient.addColorStop(1, "#d8c8dc");
-  ctx.fillStyle = headGradient;
-  ctx.beginPath();
-  ctx.ellipse(34, -14, 24, 19, -0.20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(51, -9, 16, 10, -0.04, 0, Math.PI * 2);
+  ctx.ellipse(-6, 9 + bounce, 50, 30, -0.12, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
   ctx.shadowColor = "transparent";
-  const hornGradient = ctx.createLinearGradient(38, -31, 50, -68);
+  drawUnicornLeg(ctx, -30, 29 + bounce, -0.22, motion, true);
+  drawUnicornLeg(ctx, -4, 31 + bounce, 0.10, motion + 1.4);
+  drawUnicornLeg(ctx, 21, 28 + bounce, -0.02, motion + 2.5);
+
+  ctx.shadowColor = ghost ? "transparent" : "rgba(66,52,94,0.16)";
+  ctx.shadowBlur = ghost ? 0 : 16;
+  const neckGradient = ctx.createLinearGradient(18, -32, 4, 26);
+  neckGradient.addColorStop(0, "#fffefe");
+  neckGradient.addColorStop(1, "#ddcede");
+  ctx.fillStyle = neckGradient;
+  ctx.beginPath();
+  ctx.moveTo(16, -30 + bounce);
+  ctx.quadraticCurveTo(-12, -14, -1, 19 + bounce);
+  ctx.quadraticCurveTo(18, 28, 34, 2 + bounce);
+  ctx.quadraticCurveTo(35, -20, 16, -30 + bounce);
+  ctx.fill();
+  ctx.stroke();
+
+  const headGradient = ctx.createRadialGradient(43, -28, 8, 40, -14 + bounce, 48);
+  headGradient.addColorStop(0, "#ffffff");
+  headGradient.addColorStop(0.50, "#fff3f5");
+  headGradient.addColorStop(1, "#d6c4dc");
+  ctx.fillStyle = headGradient;
+  ctx.beginPath();
+  ctx.ellipse(40, -16 + bounce, 28, 21, -0.20, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(60, -10 + bounce, 18, 11, -0.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowColor = "transparent";
+  const hornGradient = ctx.createLinearGradient(43, -34, 56, -82);
   hornGradient.addColorStop(0, "#fff2a8");
-  hornGradient.addColorStop(0.48, "#f8c64f");
+  hornGradient.addColorStop(0.46, "#f8c64f");
   hornGradient.addColorStop(1, "#fff9d2");
   ctx.fillStyle = hornGradient;
-  ctx.strokeStyle = "rgba(137,91,25,0.38)";
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "rgba(137,91,25,0.40)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(36, -29);
-  ctx.lineTo(47, -70);
-  ctx.lineTo(55, -28);
+  ctx.moveTo(41, -33 + bounce);
+  ctx.lineTo(54, -82 + bounce);
+  ctx.lineTo(63, -32 + bounce);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.strokeStyle = "rgba(160,103,26,0.42)";
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "rgba(160,103,26,0.45)";
+  ctx.lineWidth = 1.25;
   for (let i = 0; i < 4; i += 1) {
     ctx.beginPath();
-    ctx.moveTo(41 + i * 2, -36 - i * 7);
-    ctx.lineTo(52 - i * 1.5, -39 - i * 7);
+    ctx.moveTo(46 + i * 2, -41 - i * 8 + bounce);
+    ctx.lineTo(60 - i * 1.5, -44 - i * 8 + bounce);
     ctx.stroke();
   }
 
-  const maneColours = ["#ff4faf", "#7a5cff", "#25c8ff", "#ffd84a", "#ff7c4d"];
+  const maneColours = ["#ff4faf", "#7a5cff", "#25c8ff", "#ffd84a", "#ff7c4d", "#72f0aa"];
   maneColours.forEach((colour, index) => {
-    const maneGradient = ctx.createRadialGradient(10 - index * 7, -24 + index * 4, 2, 10 - index * 7, -24 + index * 4, 18);
+    const mx = 14 - index * 8 + Math.sin(motion + index) * 2.3;
+    const my = -26 + index * 5 + maneFlow * (1 - index * 0.10);
+    const maneGradient = ctx.createRadialGradient(mx, my, 2, mx, my, 22);
     maneGradient.addColorStop(0, "#ffffff");
-    maneGradient.addColorStop(0.22, colour);
+    maneGradient.addColorStop(0.20, colour);
     maneGradient.addColorStop(1, "rgba(96,56,130,0.58)");
     ctx.fillStyle = maneGradient;
     ctx.beginPath();
-    ctx.ellipse(11 - index * 7, -22 + index * 5, 9, 21, 0.70, 0, Math.PI * 2);
+    ctx.ellipse(mx, my, 10, 25, 0.70 + Math.sin(motion + index) * 0.08, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  const tailGradient = ctx.createLinearGradient(-64, -45, -28, 6);
+  const tailGradient = ctx.createLinearGradient(-78, -54, -31, 8);
   tailGradient.addColorStop(0, "#ff4faf");
-  tailGradient.addColorStop(0.34, "#7a5cff");
-  tailGradient.addColorStop(0.70, "#25c8ff");
+  tailGradient.addColorStop(0.30, "#7a5cff");
+  tailGradient.addColorStop(0.62, "#25c8ff");
   tailGradient.addColorStop(1, "#ffd84a");
   ctx.strokeStyle = tailGradient;
-  ctx.lineWidth = 8;
+  ctx.lineWidth = 11;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(-36, 0);
-  ctx.quadraticCurveTo(-73, -30, -48, -58);
+  ctx.moveTo(-43, 0 + bounce);
+  ctx.quadraticCurveTo(-86, -33 + maneFlow, -56, -68 + maneFlow * 1.2);
   ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,213,222,0.72)";
+  ctx.lineWidth = 5;
+  ctx.globalAlpha = ghost ? ctx.globalAlpha : 0.55;
+  ctx.strokeStyle = "rgba(255,255,255,0.82)";
   ctx.beginPath();
-  ctx.ellipse(31, -33, 7, 13, 0.28, 0, Math.PI * 2);
+  ctx.moveTo(-49, -4 + bounce);
+  ctx.quadraticCurveTo(-76, -30 + maneFlow, -54, -55 + maneFlow);
+  ctx.stroke();
+  ctx.globalAlpha = ghost ? ctx.globalAlpha : 1;
+
+  ctx.fillStyle = "rgba(255,213,222,0.78)";
+  ctx.beginPath();
+  ctx.ellipse(36, -38 + bounce, 8, 15, 0.28, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "rgba(78,60,86,0.22)";
   ctx.stroke();
 
-  drawSunglasses(ctx);
-  drawUnicornSmile(ctx);
+  if (!ghost) {
+    drawSunglasses(ctx);
+    drawUnicornSmile(ctx);
+  }
 
-  ctx.fillStyle = "rgba(92,63,82,0.62)";
+  ctx.fillStyle = "rgba(92,63,82,0.66)";
   ctx.beginPath();
-  ctx.ellipse(61, -9, 2.4, 1.7, 0, 0, Math.PI * 2);
+  ctx.ellipse(70, -10 + bounce, 2.8, 1.8, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.globalAlpha = 0.42;
-  ctx.strokeStyle = "rgba(255,255,255,0.92)";
-  ctx.lineWidth = 1.3;
+  ctx.globalAlpha = ghost ? ctx.globalAlpha : 0.46;
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(10, 0);
-  ctx.quadraticCurveTo(28, 8, 48, 0);
+  ctx.moveTo(10, 0 + bounce);
+  ctx.quadraticCurveTo(31, 9 + bounce, 55, -1 + bounce);
   ctx.stroke();
   ctx.restore();
 }
 
-function drawUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number) {
-  drawHyperRealisticUnicorn(ctx, x, y, scale, rotation);
+function drawUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number, motion = 0) {
+  drawHyperRealisticUnicorn(ctx, x, y, scale, rotation, motion);
 }
 
 
@@ -423,28 +478,28 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
   const cy = card ? card.top + card.height / 2 : origin.y;
   const cardWidth = card?.width ?? 116;
   const cardHeight = card?.height ?? 86;
-  const particles: DelightParticle[] = Array.from({ length: 82 }, (_, index) => ({
-    angle: (Math.PI * 2 * index) / 82 + ((index % 7) - 3) * 0.035,
-    distance: 70 + (index % 11) * 15,
+  const particles: DelightParticle[] = Array.from({ length: 118 }, (_, index) => ({
+    angle: (Math.PI * 2 * index) / 118 + ((index % 9) - 4) * 0.038,
+    distance: 86 + (index % 13) * 17,
     speed: 0.76 + (index % 5) * 0.08,
     size: 2.5 + (index % 6) * 1.3,
     hue: (index * 23) % 360,
     spin: ((index % 2 ? 1 : -1) * (0.8 + (index % 4) * 0.35)),
   }));
-  const shards: DelightShard[] = Array.from({ length: 12 }, (_, index) => {
-    const col = index % 3;
-    const row = Math.floor(index / 3);
-    const x = cx - cardWidth * 0.32 + col * cardWidth * 0.32;
-    const y = cy - cardHeight * 0.30 + row * cardHeight * 0.24;
-    const angle = -0.18 + index * 0.037;
+  const shards: DelightShard[] = Array.from({ length: 22 }, (_, index) => {
+    const col = index % 4;
+    const row = Math.floor(index / 4);
+    const x = cx - cardWidth * 0.42 + col * cardWidth * 0.28;
+    const y = cy - cardHeight * 0.38 + row * cardHeight * 0.19;
+    const angle = -0.26 + index * 0.034;
     return {
       x,
       y,
       width: Math.max(20, cardWidth / 3.7),
       height: Math.max(16, cardHeight / 4.8),
       angle,
-      vx: Math.cos((Math.PI * 2 * index) / 12) * (58 + (index % 3) * 24),
-      vy: Math.sin((Math.PI * 2 * index) / 12) * (46 + (index % 4) * 18) - 28,
+      vx: Math.cos((Math.PI * 2 * index) / 22) * (72 + (index % 4) * 27),
+      vy: Math.sin((Math.PI * 2 * index) / 22) * (58 + (index % 5) * 19) - 42,
       spin: (index % 2 ? 1 : -1) * (1.4 + index * 0.08),
       color: index % 2 ? "rgba(255,253,249,0.94)" : "rgba(255,246,199,0.90)",
     };
@@ -463,7 +518,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, 0.78 * (1 - t));
-    const shock = 18 + easeOutCubic(t) * 260;
+    const shock = 24 + easeOutCubic(t) * 340;
     const gradient = ctx.createRadialGradient(cx, cy, 8, cx, cy, shock);
     gradient.addColorStop(0, "rgba(255,255,255,0.86)");
     gradient.addColorStop(0.22, "rgba(255,214,74,0.50)");
@@ -478,8 +533,8 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     shards.forEach((shard) => drawCardShard(ctx, shard, t));
 
     const launch = easeOutCubic(clamp01((t - 0.08) / 0.82));
-    const unicornX = cx + launch * (Math.min(230, width - cx - 32) + 90 * t);
-    const unicornY = cy - launch * (Math.min(280, cy - 34) + 40 * Math.sin(t * Math.PI));
+    const unicornX = cx + launch * (Math.min(300, width - cx - 40) + 116 * t);
+    const unicornY = cy - launch * (Math.min(330, cy - 46) + 54 * Math.sin(t * Math.PI));
     const trail = Array.from({ length: 18 }, (_, index) => {
       const lag = index / 18;
       return {
@@ -509,9 +564,10 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       ctx.restore();
     });
 
-    const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.05 + 0.22 * Math.sin(t * Math.PI * 8));
+    const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
     drawPineapple(ctx, cx, cy, pineappleScale, t);
-    drawUnicorn(ctx, unicornX, unicornY, 0.44 + launch * 0.52, -0.30 + launch * 0.44);
+    drawUnicornMotionBlur(ctx, unicornX, unicornY, 0.54 + launch * 0.72, -0.34 + launch * 0.50, now / 180);
+    drawUnicorn(ctx, unicornX, unicornY, 0.54 + launch * 0.72, -0.34 + launch * 0.50, now / 180);
 
     if (t < 1) raf = requestAnimationFrame(frame);
   }
