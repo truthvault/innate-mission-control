@@ -41,6 +41,12 @@ const checks = [
     auth: false,
   },
   {
+    path: "/today",
+    label: "today",
+    expect: ["Owner Daily Brief", "Most important decision", "Source health"],
+    auth: true,
+  },
+  {
     path: "/leads",
     label: "leads",
     expect: ["Leads", "Tuesday"],

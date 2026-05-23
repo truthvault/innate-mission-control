@@ -5,9 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "workboard" | "plan" | "samples" | "dispatch" | "test";
+export type MissionControlSection = "today" | "orders" | "leads" | "workboard" | "plan" | "samples" | "dispatch" | "test";
 
 const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
+  { section: "today", label: "Today", href: "/today" },
   { section: "leads", label: "Leads", href: "/leads" },
   { section: "workboard", label: "Workboard", href: "/workboard" },
   { section: "plan", label: "Production Plan", href: "/production/plan" },
@@ -25,6 +26,7 @@ function relativeAge(iso: string): string {
 }
 
 function scopeFor(section: MissionControlSection): string {
+  if (section === "today") return "today";
   if (section === "leads") return "leads";
   if (section === "workboard") return "workboard";
   if (section === "plan") return "plan";
@@ -140,7 +142,7 @@ function RefreshButton({ section }: { section: MissionControlSection }) {
     setRefreshed(false);
     try {
       const scope = scopeFor(section);
-      if (scope === "leads" || scope === "workboard") {
+      if (scope === "today" || scope === "leads" || scope === "workboard") {
         setRefreshed(true);
         window.setTimeout(() => setRefreshed(false), 5000);
         startTransition(() => router.refresh());
