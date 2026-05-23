@@ -196,30 +196,32 @@ function drawSmokeTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
   ctx.restore();
 }
 
-function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number, flameMix: number) {
+function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number, flameMix: number, flameJetTightness = 0) {
   if (flameMix <= 0.01) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   points.slice(0, 13).forEach((point, index) => {
     const age = index / 13;
     const flame = flameMix * Math.max(0, 1 - age * 0.82);
-    const radius = 12 + flame * 36 + Math.sin(t * 20 + index) * 5;
-    ctx.globalAlpha = flame * (0.34 + age * 0.14);
-    const glow = ctx.createRadialGradient(point.x, point.y, 2, point.x, point.y, radius * 1.8);
+    const tight = clamp01(flameJetTightness);
+    const radius = (12 + flame * 36 + Math.sin(t * 20 + index) * 5) * (1 - tight * 0.42);
+    const jetY = point.y + age * tight * 28;
+    ctx.globalAlpha = flame * (0.34 + age * 0.14) * (1 - tight * age * 0.55);
+    const glow = ctx.createRadialGradient(point.x, jetY, 2, point.x, jetY, radius * (1.8 - tight * 0.38));
     glow.addColorStop(0, "rgba(255,255,220,0.96)");
     glow.addColorStop(0.26, "rgba(255,181,41,0.82)");
     glow.addColorStop(0.62, "rgba(255,73,24,0.40)");
     glow.addColorStop(1, "rgba(255,45,0,0)");
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(point.x, point.y, radius * 1.8, 0, Math.PI * 2);
+    ctx.arc(point.x, jetY, radius * (1.8 - tight * 0.38), 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = index % 2 ? "rgba(255,91,25,0.72)" : "rgba(255,210,58,0.82)";
     ctx.beginPath();
-    ctx.moveTo(point.x, point.y - radius * 1.4);
-    ctx.quadraticCurveTo(point.x + radius * 0.82, point.y - radius * 0.15, point.x + radius * 0.18, point.y + radius);
-    ctx.quadraticCurveTo(point.x - radius * 0.74, point.y + radius * 0.18, point.x, point.y - radius * 1.4);
+    ctx.moveTo(point.x, jetY - radius * (1.4 + tight * 0.35));
+    ctx.quadraticCurveTo(point.x + radius * (0.82 - tight * 0.28), jetY - radius * 0.15, point.x + radius * 0.18, jetY + radius);
+    ctx.quadraticCurveTo(point.x - radius * (0.74 - tight * 0.24), jetY + radius * 0.18, point.x, jetY - radius * (1.4 + tight * 0.35));
     ctx.fill();
   });
   ctx.restore();
@@ -255,8 +257,8 @@ function drawCameraImpactFlash(ctx: CanvasRenderingContext2D, width: number, hei
 }
 
 function drawBlackTransition(ctx: CanvasRenderingContext2D, width: number, height: number, cameraImpact: number) {
-  const fadeIn = easeOutCubic(clamp01((cameraImpact - 0.72) / 0.18));
-  const fadeOut = easeOutCubic(clamp01((cameraImpact - 0.92) / 0.08));
+  const fadeIn = easeOutCubic(clamp01((cameraImpact - 0.78) / 0.14));
+  const fadeOut = easeOutCubic(clamp01((cameraImpact - 0.93) / 0.07));
   const alpha = Math.max(0, fadeIn * (1 - fadeOut));
   if (alpha <= 0) return;
   ctx.save();
@@ -669,9 +671,13 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const unicornY = cy - launchLift + (targetY - cy) * screenApproach;
     const flameMix = easeOutCubic(clamp01((screenApproach - 0.22) / 0.78));
     const cameraPassThrough = easeOutCubic(clamp01((t - 0.66) / 0.22));
-    const cameraImpact = easeOutCubic(clamp01((t - 0.76) / 0.18));
-    const cameraExitFade = 1 - easeOutCubic(clamp01((cameraImpact - 0.58) / 0.32));
-    const trailFadeBeforeImpact = 1 - easeOutCubic(clamp01((cameraImpact - 0.16) / 0.70));
+    const impactStart = 0.74;
+    const cameraImpact = easeOutCubic(clamp01((t - impactStart) / 0.16));
+    const cameraExitFade = 1 - easeOutCubic(clamp01((cameraImpact - 0.64) / 0.26));
+    const trailFadeBeforeImpact = 1 - easeOutCubic(clamp01((t - 0.66) / 0.08));
+    const trailCutoff = trailFadeBeforeImpact > 0.02;
+    const originFade = 1 - easeOutCubic(clamp01((t - 0.56) / 0.18));
+    const flameJetTightness = easeOutCubic(clamp01((t - 0.58) / 0.14));
     const trail = Array.from({ length: 28 }, (_, index) => {
       const lag = index / 28;
       const trailApproach = Math.max(0, screenApproach - lag * 0.50);
@@ -681,12 +687,14 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
         y: cy + depthDrift + (targetY - cy) * trailApproach + Math.cos(index * 1.1 + t * 10) * 4,
       };
     }).reverse();
-    ctx.save();
-    ctx.globalAlpha = trailFadeBeforeImpact;
-    drawSmokeTrail(ctx, trail, t, flameMix);
-    drawRainbowTrail(ctx, trail, t);
-    drawFlameTrail(ctx, trail, t, flameMix);
-    ctx.restore();
+    if (trailCutoff) {
+      ctx.save();
+      ctx.globalAlpha = trailFadeBeforeImpact;
+      drawSmokeTrail(ctx, trail, t, flameMix);
+      drawRainbowTrail(ctx, trail, t);
+      if (t < impactStart) drawFlameTrail(ctx, trail, t, flameMix, flameJetTightness);
+      ctx.restore();
+    }
 
     particles.forEach((particle, index) => {
       const blast = easeOutCubic(clamp01((t - 0.05) / particle.speed));
@@ -695,7 +703,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       ctx.save();
       ctx.translate(px, py);
       ctx.rotate(particle.spin * blast + index);
-      ctx.globalAlpha = Math.max(0, 1 - t * 1.06);
+      ctx.globalAlpha = Math.max(0, 1 - t * 1.06) * originFade;
       ctx.fillStyle = `hsl(${particle.hue} 92% 62%)`;
       if (index % 9 === 0) {
         ctx.font = `${particle.size * 4}px system-ui`;
@@ -709,7 +717,12 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     });
 
     const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
-    drawPineapple(ctx, cx, cy, pineappleScale, t);
+    if (originFade > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = originFade;
+      drawPineapple(ctx, cx, cy, pineappleScale, t);
+      ctx.restore();
+    }
     const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.4 + Math.pow(cameraPassThrough, 2.8) * 15.5 + Math.pow(cameraImpact, 2.2) * 5.8;
     const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach);
     if (cameraExitFade > 0) {
