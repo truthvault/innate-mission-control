@@ -228,39 +228,6 @@ function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scal
   ctx.restore();
 }
 
-function drawSunglasses(ctx: CanvasRenderingContext2D) {
-  ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  const lensGradient = ctx.createLinearGradient(22, -26, 66, -8);
-  lensGradient.addColorStop(0, "rgba(6,9,16,0.98)");
-  lensGradient.addColorStop(0.45, "rgba(33,40,54,0.99)");
-  lensGradient.addColorStop(1, "rgba(3,5,10,0.98)");
-  ctx.fillStyle = lensGradient;
-  ctx.strokeStyle = "rgba(255,255,255,0.70)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(20, -27, 20, 14, 6);
-  ctx.roundRect(45, -28, 20, 14, 6);
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(12,12,17,0.96)";
-  ctx.lineWidth = 3.5;
-  ctx.beginPath();
-  ctx.moveTo(40, -20);
-  ctx.lineTo(45, -21);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.48)";
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.moveTo(24, -25);
-  ctx.lineTo(33, -26);
-  ctx.moveTo(49, -26);
-  ctx.lineTo(58, -27);
-  ctx.stroke();
-  ctx.restore();
-}
-
 function drawUnicornSmile(ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.strokeStyle = "rgba(70,48,58,0.82)";
@@ -274,6 +241,127 @@ function drawUnicornSmile(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(58, -5.5, 3.8, 1.9, -0.22, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+
+function drawFrontFacingSunglasses(ctx: CanvasRenderingContext2D, bounce: number) {
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const lensGradient = ctx.createLinearGradient(16, -27 + bounce, 69, -9 + bounce);
+  lensGradient.addColorStop(0, "rgba(5,8,15,0.98)");
+  lensGradient.addColorStop(0.48, "rgba(30,38,54,0.99)");
+  lensGradient.addColorStop(1, "rgba(3,5,10,0.98)");
+  ctx.fillStyle = lensGradient;
+  ctx.strokeStyle = "rgba(255,255,255,0.72)";
+  ctx.lineWidth = 2.1;
+  ctx.beginPath();
+  ctx.roundRect(14, -29 + bounce, 23, 15, 6);
+  ctx.roundRect(45, -29 + bounce, 23, 15, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(12,12,17,0.96)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(37, -21 + bounce);
+  ctx.lineTo(45, -21 + bounce);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.52)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(19, -27 + bounce);
+  ctx.lineTo(30, -28 + bounce);
+  ctx.moveTo(50, -28 + bounce);
+  ctx.lineTo(61, -27 + bounce);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFaceHighlight(ctx: CanvasRenderingContext2D, bounce: number) {
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(25, -38 + bounce);
+  ctx.quadraticCurveTo(40, -45 + bounce, 57, -38 + bounce);
+  ctx.moveTo(21, -5 + bounce);
+  ctx.quadraticCurveTo(40, 5 + bounce, 61, -5 + bounce);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: number, ghost = false) {
+  ctx.save();
+  ctx.shadowColor = ghost ? "transparent" : "rgba(66,52,94,0.18)";
+  ctx.shadowBlur = ghost ? 0 : 18;
+
+  ctx.fillStyle = "rgba(255,213,222,0.78)";
+  ctx.strokeStyle = "rgba(78,60,86,0.24)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(16, -40 + bounce, 8, 16, -0.45, 0, Math.PI * 2);
+  ctx.ellipse(66, -40 + bounce, 8, 16, 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const hornGradient = ctx.createLinearGradient(40, -42 + bounce, 42, -88 + bounce);
+  hornGradient.addColorStop(0, "#fff2a8");
+  hornGradient.addColorStop(0.46, "#f8c64f");
+  hornGradient.addColorStop(1, "#fff9d2");
+  ctx.fillStyle = hornGradient;
+  ctx.strokeStyle = "rgba(137,91,25,0.40)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(31, -39 + bounce);
+  ctx.lineTo(42, -89 + bounce);
+  ctx.lineTo(53, -39 + bounce);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(160,103,26,0.45)";
+  ctx.lineWidth = 1.25;
+  for (let i = 0; i < 4; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(36 + i * 1.5, -47 - i * 8 + bounce);
+    ctx.lineTo(50 - i * 1.5, -50 - i * 8 + bounce);
+    ctx.stroke();
+  }
+
+  const headGradient = ctx.createRadialGradient(32, -34 + bounce, 9, 41, -17 + bounce, 48);
+  headGradient.addColorStop(0, "#ffffff");
+  headGradient.addColorStop(0.50, "#fff3f5");
+  headGradient.addColorStop(1, "#d6c4dc");
+  ctx.fillStyle = headGradient;
+  ctx.strokeStyle = "rgba(78,60,86,0.28)";
+  ctx.lineWidth = 2.3;
+  ctx.beginPath();
+  ctx.ellipse(41, -19 + bounce, 31, 27, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const muzzleGradient = ctx.createRadialGradient(41, -2 + bounce, 4, 41, -2 + bounce, 23);
+  muzzleGradient.addColorStop(0, "#fffefd");
+  muzzleGradient.addColorStop(0.72, "#f4dee6");
+  muzzleGradient.addColorStop(1, "#dcc4d4");
+  ctx.fillStyle = muzzleGradient;
+  ctx.beginPath();
+  ctx.ellipse(41, -2 + bounce, 21, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  if (!ghost) drawFrontFacingSunglasses(ctx, bounce);
+  if (!ghost) {
+    ctx.fillStyle = "rgba(92,63,82,0.68)";
+    ctx.beginPath();
+    ctx.ellipse(34, -1 + bounce, 2.2, 1.7, -0.18, 0, Math.PI * 2);
+    ctx.ellipse(48, -1 + bounce, 2.2, 1.7, 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    drawUnicornSmile(ctx);
+    drawFaceHighlight(ctx, bounce);
+  }
   ctx.restore();
 }
 
@@ -354,43 +442,8 @@ function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: 
   ctx.fill();
   ctx.stroke();
 
-  const headGradient = ctx.createRadialGradient(43, -28, 8, 40, -14 + bounce, 48);
-  headGradient.addColorStop(0, "#ffffff");
-  headGradient.addColorStop(0.50, "#fff3f5");
-  headGradient.addColorStop(1, "#d6c4dc");
-  ctx.fillStyle = headGradient;
-  ctx.beginPath();
-  ctx.ellipse(40, -16 + bounce, 28, 21, -0.20, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(60, -10 + bounce, 18, 11, -0.05, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
+  // Front-facing face is drawn after the mane/tail so it looks at the user instead of flying side-on.
 
-  ctx.shadowColor = "transparent";
-  const hornGradient = ctx.createLinearGradient(43, -34, 56, -82);
-  hornGradient.addColorStop(0, "#fff2a8");
-  hornGradient.addColorStop(0.46, "#f8c64f");
-  hornGradient.addColorStop(1, "#fff9d2");
-  ctx.fillStyle = hornGradient;
-  ctx.strokeStyle = "rgba(137,91,25,0.40)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(41, -33 + bounce);
-  ctx.lineTo(54, -82 + bounce);
-  ctx.lineTo(63, -32 + bounce);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(160,103,26,0.45)";
-  ctx.lineWidth = 1.25;
-  for (let i = 0; i < 4; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(46 + i * 2, -41 - i * 8 + bounce);
-    ctx.lineTo(60 - i * 1.5, -44 - i * 8 + bounce);
-    ctx.stroke();
-  }
 
   const maneColours = ["#ff4faf", "#7a5cff", "#25c8ff", "#ffd84a", "#ff7c4d", "#72f0aa"];
   maneColours.forEach((colour, index) => {
@@ -427,22 +480,7 @@ function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: 
   ctx.stroke();
   ctx.globalAlpha = ghost ? ctx.globalAlpha : 1;
 
-  ctx.fillStyle = "rgba(255,213,222,0.78)";
-  ctx.beginPath();
-  ctx.ellipse(36, -38 + bounce, 8, 15, 0.28, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(78,60,86,0.22)";
-  ctx.stroke();
-
-  if (!ghost) {
-    drawSunglasses(ctx);
-    drawUnicornSmile(ctx);
-  }
-
-  ctx.fillStyle = "rgba(92,63,82,0.66)";
-  ctx.beginPath();
-  ctx.ellipse(70, -10 + bounce, 2.8, 1.8, 0, 0, Math.PI * 2);
-  ctx.fill();
+  drawFrontFacingUnicornFace(ctx, bounce, ghost);
 
   ctx.globalAlpha = ghost ? ctx.globalAlpha : 0.46;
   ctx.strokeStyle = "rgba(255,255,255,0.94)";
