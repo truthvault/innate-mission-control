@@ -667,8 +667,11 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const targetX = cx;
     const targetY = height * 0.46;
     const launchLift = 36 * straightOutLaunch * (1 - screenApproach * 0.45);
-    const unicornX = targetX + Math.sin(t * Math.PI * 5) * 3 * (1 - screenApproach);
-    const unicornY = cy - launchLift + (targetY - cy) * screenApproach;
+    const rightExitAtEightyPercent = easeOutCubic(clamp01((screenApproach - 0.80) / 0.20));
+    const forwardThenRightExit = rightExitAtEightyPercent;
+    const offscreenRightExit = rightExitAtEightyPercent * (width - cx + 220);
+    const unicornX = targetX + Math.sin(t * Math.PI * 5) * 3 * (1 - screenApproach) + offscreenRightExit;
+    const unicornY = cy - launchLift + (targetY - cy) * screenApproach - rightExitAtEightyPercent * 36;
     const flameMix = easeOutCubic(clamp01((screenApproach - 0.22) / 0.78));
     const cameraPassThrough = easeOutCubic(clamp01((t - 0.66) / 0.22));
     const impactStart = 0.74;
@@ -723,8 +726,8 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       drawPineapple(ctx, cx, cy, pineappleScale, t);
       ctx.restore();
     }
-    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.4 + Math.pow(cameraPassThrough, 2.8) * 15.5 + Math.pow(cameraImpact, 2.2) * 5.8;
-    const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach);
+    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.8 + Math.pow(cameraPassThrough, 2.2) * 4.2;
+    const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach) + forwardThenRightExit * 0.16;
     if (cameraExitFade > 0) {
       ctx.save();
       ctx.globalAlpha = cameraExitFade;
