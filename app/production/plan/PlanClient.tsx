@@ -226,6 +226,19 @@ function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
 }
 
 
+function drawBlackTransition(ctx: CanvasRenderingContext2D, width: number, height: number, t: number) {
+  const fadeIn = clamp01((t - 0.82) / 0.10);
+  const fadeOut = clamp01((t - 0.94) / 0.06);
+  const alpha = Math.max(0, Math.sin(fadeIn * Math.PI * 0.5) * (1 - fadeOut));
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#050405";
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+
 function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, crack: number) {
   ctx.save();
   ctx.translate(x, y);
@@ -619,24 +632,21 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
 
     shards.forEach((shard) => drawCardShard(ctx, shard, t));
 
-    const launch = easeOutCubic(clamp01((t - 0.08) / 0.82));
-    const screenApproach = easeOutCubic(clamp01((t - 0.34) / 0.58));
-    const targetX = width * 0.56;
-    const targetY = height * 0.40;
-    const arcX = cx + launch * (Math.min(300, width - cx - 40) + 116 * t);
-    const arcY = cy - launch * (Math.min(330, cy - 46) + 54 * Math.sin(t * Math.PI));
-    const unicornX = arcX + (targetX - arcX) * screenApproach;
-    const unicornY = arcY + (targetY - arcY) * screenApproach;
-    const flameMix = easeOutCubic(clamp01((screenApproach - 0.18) / 0.82));
-    const trail = Array.from({ length: 24 }, (_, index) => {
-      const lag = index / 24;
-      const trailLaunch = Math.max(0, launch - lag * 0.32);
-      const trailApproach = Math.max(0, screenApproach - lag * 0.42);
-      const baseX = cx + (arcX - cx) * trailLaunch;
-      const baseY = cy + (arcY - cy) * trailLaunch + Math.sin(index * 0.8 + t * 10) * 5;
+    const straightOutLaunch = easeOutCubic(clamp01((t - 0.06) / 0.28));
+    const screenApproach = easeOutCubic(clamp01((t - 0.18) / 0.62));
+    const targetX = cx;
+    const targetY = height * 0.46;
+    const launchLift = 36 * straightOutLaunch * (1 - screenApproach * 0.45);
+    const unicornX = targetX + Math.sin(t * Math.PI * 5) * 3 * (1 - screenApproach);
+    const unicornY = cy - launchLift + (targetY - cy) * screenApproach;
+    const flameMix = easeOutCubic(clamp01((screenApproach - 0.22) / 0.78));
+    const trail = Array.from({ length: 28 }, (_, index) => {
+      const lag = index / 28;
+      const trailApproach = Math.max(0, screenApproach - lag * 0.50);
+      const depthDrift = straightOutLaunch * (1 - lag) * 22;
       return {
-        x: baseX + (targetX - baseX) * trailApproach,
-        y: baseY + (targetY - baseY) * trailApproach,
+        x: cx + Math.sin(index * 0.9 + t * 12) * (5 + lag * 14) * (1 - trailApproach),
+        y: cy + depthDrift + (targetY - cy) * trailApproach + Math.cos(index * 1.1 + t * 10) * 4,
       };
     }).reverse();
     drawSmokeTrail(ctx, trail, t, flameMix);
@@ -665,10 +675,11 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
 
     const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
     drawPineapple(ctx, cx, cy, pineappleScale, t);
-    const unicornScale = 0.54 + launch * 0.58 + screenApproach * 0.88;
-    const unicornRotation = -0.34 + launch * 0.50 - screenApproach * 0.16;
-    drawUnicornMotionBlur(ctx, unicornX, unicornY, unicornScale, unicornRotation, now / 180);
-    drawUnicorn(ctx, unicornX, unicornY, unicornScale, unicornRotation, now / 180);
+    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.4) * 4.8;
+    const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach);
+    drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+    drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+    drawBlackTransition(ctx, width, height, t);
 
     if (t < 1) raf = requestAnimationFrame(frame);
   }
