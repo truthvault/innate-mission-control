@@ -177,6 +177,55 @@ function drawRainbowTrail(ctx: CanvasRenderingContext2D, points: { x: number; y:
   });
 }
 
+function drawSmokeTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number, flameMix: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  points.forEach((point, index) => {
+    const age = index / Math.max(1, points.length - 1);
+    const puff = 18 + age * 38 + t * 16;
+    ctx.globalAlpha = Math.max(0, (0.42 - age * 0.20) * (1 - flameMix * 0.72) * (1 - t * 0.28));
+    const smoke = ctx.createRadialGradient(point.x, point.y, 2, point.x, point.y, puff);
+    smoke.addColorStop(0, "rgba(255,255,255,0.78)");
+    smoke.addColorStop(0.46, "rgba(194,184,190,0.36)");
+    smoke.addColorStop(1, "rgba(92,83,94,0)");
+    ctx.fillStyle = smoke;
+    ctx.beginPath();
+    ctx.arc(point.x + Math.sin(index * 1.7 + t * 8) * 8, point.y + Math.cos(index * 1.2 + t * 7) * 6, puff, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number, flameMix: number) {
+  if (flameMix <= 0.01) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  points.slice(0, 13).forEach((point, index) => {
+    const age = index / 13;
+    const flame = flameMix * Math.max(0, 1 - age * 0.82);
+    const radius = 12 + flame * 36 + Math.sin(t * 20 + index) * 5;
+    ctx.globalAlpha = flame * (0.34 + age * 0.14);
+    const glow = ctx.createRadialGradient(point.x, point.y, 2, point.x, point.y, radius * 1.8);
+    glow.addColorStop(0, "rgba(255,255,220,0.96)");
+    glow.addColorStop(0.26, "rgba(255,181,41,0.82)");
+    glow.addColorStop(0.62, "rgba(255,73,24,0.40)");
+    glow.addColorStop(1, "rgba(255,45,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius * 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = index % 2 ? "rgba(255,91,25,0.72)" : "rgba(255,210,58,0.82)";
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y - radius * 1.4);
+    ctx.quadraticCurveTo(point.x + radius * 0.82, point.y - radius * 0.15, point.x + radius * 0.18, point.y + radius);
+    ctx.quadraticCurveTo(point.x - radius * 0.74, point.y + radius * 0.18, point.x, point.y - radius * 1.4);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+
 function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, crack: number) {
   ctx.save();
   ctx.translate(x, y);
@@ -571,16 +620,28 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     shards.forEach((shard) => drawCardShard(ctx, shard, t));
 
     const launch = easeOutCubic(clamp01((t - 0.08) / 0.82));
-    const unicornX = cx + launch * (Math.min(300, width - cx - 40) + 116 * t);
-    const unicornY = cy - launch * (Math.min(330, cy - 46) + 54 * Math.sin(t * Math.PI));
-    const trail = Array.from({ length: 18 }, (_, index) => {
-      const lag = index / 18;
+    const screenApproach = easeOutCubic(clamp01((t - 0.34) / 0.58));
+    const targetX = width * 0.56;
+    const targetY = height * 0.40;
+    const arcX = cx + launch * (Math.min(300, width - cx - 40) + 116 * t);
+    const arcY = cy - launch * (Math.min(330, cy - 46) + 54 * Math.sin(t * Math.PI));
+    const unicornX = arcX + (targetX - arcX) * screenApproach;
+    const unicornY = arcY + (targetY - arcY) * screenApproach;
+    const flameMix = easeOutCubic(clamp01((screenApproach - 0.18) / 0.82));
+    const trail = Array.from({ length: 24 }, (_, index) => {
+      const lag = index / 24;
+      const trailLaunch = Math.max(0, launch - lag * 0.32);
+      const trailApproach = Math.max(0, screenApproach - lag * 0.42);
+      const baseX = cx + (arcX - cx) * trailLaunch;
+      const baseY = cy + (arcY - cy) * trailLaunch + Math.sin(index * 0.8 + t * 10) * 5;
       return {
-        x: cx + (unicornX - cx) * Math.max(0, launch - lag * 0.34),
-        y: cy + (unicornY - cy) * Math.max(0, launch - lag * 0.34) + Math.sin(index * 0.8 + t * 10) * 4,
+        x: baseX + (targetX - baseX) * trailApproach,
+        y: baseY + (targetY - baseY) * trailApproach,
       };
     }).reverse();
+    drawSmokeTrail(ctx, trail, t, flameMix);
     drawRainbowTrail(ctx, trail, t);
+    drawFlameTrail(ctx, trail, t, flameMix);
 
     particles.forEach((particle, index) => {
       const blast = easeOutCubic(clamp01((t - 0.05) / particle.speed));
@@ -604,8 +665,10 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
 
     const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
     drawPineapple(ctx, cx, cy, pineappleScale, t);
-    drawUnicornMotionBlur(ctx, unicornX, unicornY, 0.54 + launch * 0.72, -0.34 + launch * 0.50, now / 180);
-    drawUnicorn(ctx, unicornX, unicornY, 0.54 + launch * 0.72, -0.34 + launch * 0.50, now / 180);
+    const unicornScale = 0.54 + launch * 0.58 + screenApproach * 0.88;
+    const unicornRotation = -0.34 + launch * 0.50 - screenApproach * 0.16;
+    drawUnicornMotionBlur(ctx, unicornX, unicornY, unicornScale, unicornRotation, now / 180);
+    drawUnicorn(ctx, unicornX, unicornY, unicornScale, unicornRotation, now / 180);
 
     if (t < 1) raf = requestAnimationFrame(frame);
   }
