@@ -55,19 +55,26 @@ const checks = [
   {
     path: "/production",
     label: "production default",
-    expect: ["Production Plan", "Tuesday", "Synced"],
+    expect: ["Production Plan", "Tuesday", "Tuesday delight unicorn"],
     auth: true,
   },
   {
     path: "/production/plan",
     label: "plan",
-    expect: ["Production Plan", "Tuesday", "Synced"],
+    expect: ["Production Plan", "Tuesday", "Tuesday delight unicorn"],
+    auth: true,
+  },
+  {
+    path: "/production/plan?delight=off",
+    label: "plan delight off",
+    expect: ["Production Plan", "Tuesday"],
+    expectAbsent: ["Tuesday delight unicorn"],
     auth: true,
   },
   {
     path: "/production/samples",
     label: "samples",
-    expect: ["Sample Stock", "Tuesday", "Synced"],
+    expect: ["Sample Stock", "Tuesday"],
     auth: true,
   },
 ];
@@ -92,6 +99,11 @@ async function checkPage(check) {
   for (const needle of check.expect) {
     if (!text.includes(needle)) {
       throw new Error(`${check.label}: missing expected text ${JSON.stringify(needle)}`);
+    }
+  }
+  for (const needle of check.expectAbsent ?? []) {
+    if (text.includes(needle)) {
+      throw new Error(`${check.label}: should not include ${JSON.stringify(needle)}`);
     }
   }
   return `${check.label}: ${response.status}`;

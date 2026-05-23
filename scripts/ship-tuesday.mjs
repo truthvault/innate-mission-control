@@ -67,6 +67,28 @@ function findReadyProduction({ sha }) {
     .sort((a, b) => (b.ready ?? b.createdAt ?? 0) - (a.ready ?? a.createdAt ?? 0))[0] ?? null;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForReadyProduction(git, timeoutMs = 180_000) {
+  const deadline = Date.now() + timeoutMs;
+  let attempt = 0;
+  let lastSeen = "none";
+  while (Date.now() < deadline) {
+    attempt += 1;
+    const production = findReadyProduction(git);
+    if (production) return production;
+    const recent = listDeployments({ environment: "production" }).slice(0, 4);
+    lastSeen = recent
+      .map((deployment) => `${deployment.state} ${deployment.meta?.githubCommitSha?.slice(0, 7) ?? "no-sha"}`)
+      .join(", ") || "none";
+    console.log(`  waiting for production READY for ${git.shortSha} (${attempt}; recent: ${lastSeen})`);
+    await sleep(Math.min(15_000, 3_000 + attempt * 1_000));
+  }
+  throw new Error(`Promotion finished, but no Ready production deployment found for ${git.shortSha} after ${Math.round(timeoutMs / 1000)}s. Recent production deployments: ${lastSeen}`);
+}
+
 function deploymentUrl(deployment) {
   return deployment.url.startsWith("http") ? deployment.url : `https://${deployment.url}`;
 }
@@ -75,7 +97,7 @@ function smokeLive() {
   run("npm", ["run", "smoke:tuesday"], { env: { SMOKE_BASE_URL: LIVE_URL } });
 }
 
-function main() {
+async function main() {
   requireCleanWorktree();
   const git = currentGit();
   const started = Date.now();
@@ -107,10 +129,10 @@ function main() {
   run("vercel", ["promote", previewUrl, "--yes", "--timeout", "5m"]);
 
   console.log("- confirming production deployment...");
-  const production = findReadyProduction(git);
-  if (!production) throw new Error(`Promotion finished, but no Ready production deployment found for ${git.shortSha}. Check 'vercel ls ${PROJECT}'.`);
+  const production = await waitForReadyProduction(git);
   console.log(`- production deployment: ${deploymentUrl(production)}`);
   console.log(`- live URL: ${LIVE_URL}/production/plan`);
+  console.log(`- delight test URL: ${LIVE_URL}/production/plan?delight=off disables the unicorn`);
 
   if (!skipSmoke) {
     console.log("- smoking production...");
@@ -122,9 +144,7 @@ function main() {
   console.log(`Tuesday fast ship OK in ${Math.round((Date.now() - started) / 1000)}s`);
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
-}
+});

@@ -19,7 +19,7 @@ export default async function PlanPage({
       syncedAt={result.syncedAt}
       source={result.source}
       mondayError={result.mondayError}
-      delightEnabled={query.delight === "v4"}
+      delightEnabled={query.delight !== "off"}
     />
   );
 }

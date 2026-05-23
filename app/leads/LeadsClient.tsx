@@ -6,7 +6,7 @@ import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT } from "@/components/mission-control-ui";
 import type { Lead, LeadsResult, LeadPriority, LeadStatus } from "@/lib/leads/types";
 import { isRecentSampleFollowUp, sampleDraftPrompt, sampleFollowUpLabel, sortSampleFollowUps } from "@/lib/leads/sample-followups.mjs";
-import { dateKey, doToday, hasLiveQuoteValue, isCashflowQuote, isClosed, isDue, isDueThisWeek, isHighValue, needsNextStep, sortByUrgency, sortLeads, SORT_OPTIONS } from "@/lib/leads/prioritisation.mjs";
+import { dateKey as normalizeLeadDateKey, doToday, hasLiveQuoteValue, isCashflowQuote, isClosed, isDue, isDueThisWeek, isHighValue, needsNextStep, sortByUrgency, sortLeads, SORT_OPTIONS } from "@/lib/leads/prioritisation.mjs";
 import { buildSupabaseLeadStudioUrl } from "@/lib/leads/supabase-studio.mjs";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -41,6 +41,10 @@ function leadNameParts(lead: Lead) {
   const suffixLooksLikeItem = Boolean(suffix && suffix !== contact && (productHint.test(suffix) || (category && suffix.toLowerCase().includes(category.toLowerCase()))));
   const item = suffixLooksLikeItem ? suffix : category || lead.sampleSpecies || lead.source || "General enquiry";
   return { title, item };
+}
+
+function dateKey(value?: string) {
+  return normalizeLeadDateKey(value);
 }
 
 function daysSince(value?: string) {
@@ -101,7 +105,7 @@ function statusTone(status: LeadStatus): "teal" | "amber" | "green" | "grey" | "
 
 function leadWarnings(lead: Lead) {
   const warnings: Warning[] = [];
-  if (isDue(lead)) warnings.push({ label: `Overdue: ${dateLabel(lead.nextFollowUpAt)}`, tone: "red" });
+  if (isDue(lead)) warnings.push({ label: `Overdue now · ${dateLabel(lead.nextFollowUpAt)}`, tone: "red" });
   else if (isDueThisWeek(lead)) warnings.push({ label: `Due: ${dateLabel(lead.nextFollowUpAt)}`, tone: "amber" });
   if (needsNextStep(lead)) warnings.push({ label: "Missing next step", tone: "red" });
   if (isCashflowQuote(lead) && isHighValue(lead)) warnings.push({ label: "High value quote", tone: "green" });
@@ -181,9 +185,9 @@ function sourceLabel(lead: Lead) {
 
 function SourceLink({ lead, supabaseProjectRef }: { lead: Lead; supabaseProjectRef?: string }) {
   const supabaseUrl = buildSupabaseLeadStudioUrl({ projectRef: supabaseProjectRef, leadId: lead.id });
-  if (supabaseUrl) return <a href={supabaseUrl.toString()} target="_blank" rel="noreferrer" aria-label={`Open Supabase Studio row for ${lead.customerName}`} style={sourceLinkStyle}>Open Supabase row ↗</a>;
+  if (supabaseUrl) return <a href={supabaseUrl.toString()} target="_blank" rel="noreferrer" aria-label={`Open Supabase Studio row for ${lead.customerName}`} style={sourceLinkStyle}>Open source</a>;
   if (!lead.sourceUrl) return <span style={{ ...smallMutedStyle, justifySelf: "end" }}>No source link</span>;
-  return <a href={lead.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open legacy source record for ${lead.customerName}`} style={sourceLinkStyle}>Legacy source ↗</a>;
+  return <a href={lead.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open legacy source record for ${lead.customerName}`} style={sourceLinkStyle}>Open source</a>;
 }
 
 function LeadListHeader() {
@@ -546,7 +550,7 @@ export default function LeadsClient({ result, supabaseProjectRef }: { result: Le
   return (
     <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 8, marginBottom: 14, overflowX: "auto" }}>
-        <MetricButton label="Overdue" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
+        <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
         <MetricButton label="Samples" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
         <MetricButton label="Live quote" value={money(liveQuoteValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
         <MetricButton label="Hot quote" value={money(hotQuoteValue)} tone={hotQuoteValue ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />

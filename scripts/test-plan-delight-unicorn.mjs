@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
 
 const pageSource = readFileSync(new URL('../app/production/plan/page.tsx', import.meta.url), 'utf8');
+const productionPageSource = readFileSync(new URL('../app/production/page.tsx', import.meta.url), 'utf8');
 const clientSource = readFileSync(new URL('../app/production/plan/PlanClient.tsx', import.meta.url), 'utf8');
 
 const pageMustHave = [
   ['page accepts searchParams promise', 'searchParams: Promise<{ [key: string]: string | string[] | undefined }>'],
   ['page awaits searchParams', 'const query = await searchParams'],
-  ['page derives delight v4 flag', 'delightEnabled={query.delight === "v4"}'],
+  ['page enables delight by default with an explicit off switch', 'delightEnabled={query.delight !== "off"}'],
 ];
 
 const clientMustHave = [
@@ -19,6 +20,7 @@ const clientMustHave = [
 
 const missing = [
   ...pageMustHave.filter(([, needle]) => !pageSource.includes(needle)).map(([label, needle]) => ['page', label, needle]),
+  ...[['production route enables delight by default', 'delightEnabled']].filter(([, needle]) => !productionPageSource.includes(needle)).map(([label, needle]) => ['production-page', label, needle]),
   ...clientMustHave.filter(([, needle]) => !clientSource.includes(needle)).map(([label, needle]) => ['client', label, needle]),
 ];
 

@@ -1198,7 +1198,10 @@ function friendlyWorkshopTaskText(value: string) {
 }
 
 function taskCustomerDisplayName(task: Pick<DraggablePlanTask, "rowName">) {
-  return task.rowName.trim() || "Customer / order";
+  const compact = task.rowName.replace(/\s+/g, " ").trim();
+  if (!compact) return "Customer / order";
+  if (/^no customer\s*\/?\s*internal$/i.test(compact)) return "Internal";
+  return compact;
 }
 
 function orderWorkshopTasksByPlacement(tasks: WorkshopTask[]) {
@@ -3977,8 +3980,9 @@ function SortablePlanTaskCard({
         background: taskBackground,
         border: `${isSelectedOrderTask ? 2 : 1}px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
         borderLeft: (isSelectedOrderTask ? "7px solid " : "5px solid ") + taskStripe,
-        borderRadius: 8,
-        padding: isSelectedOrderTask ? "8px 8px" : isNextTask ? "7px 7px" : "5px 6px",
+        borderRadius: 10,
+        minHeight: isSelectedOrderTask ? 96 : 88,
+        padding: isSelectedOrderTask ? "9px 9px" : isNextTask ? "8px 8px" : "7px 8px",
         cursor: "default",
         opacity: isDragging ? 0.28 : 1,
         boxShadow: taskShadow,
@@ -3993,24 +3997,25 @@ function SortablePlanTaskCard({
         {...attributes}
         {...listeners}
         data-task-card-main="task-card-main"
-        style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
+        data-task-card-clean-layout="true"
+        style={{ display: "grid", gridTemplateRows: "auto 1fr auto", gap: 7, minHeight: "100%", minWidth: 0, cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
       >
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
-          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
-            {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
-              <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>Start here</span>
-            )}
-            <div data-customer-left-label="customer-left-label" style={{ marginBottom: 3, fontSize: isSelectedOrderTask ? 11 : 10, color: isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>
-            <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.2, overflowWrap: "normal", wordBreak: "normal", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{displayTaskText}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "start", gap: 7, minWidth: 0 }}>
+          <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+            <div data-task-card-meta="task-card-meta" style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flexWrap: "wrap" }}>
+              {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
+                <span style={{ display: "inline-flex", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>Start here</span>
+              )}
+              {orderConnectionNeedsAttention && (
+                <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
+              )}
+            </div>
+            <div data-customer-left-label="customer-left-label" style={{ fontSize: isSelectedOrderTask ? 11 : 10, color: isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>
           </div>
-          <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
+          <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
         </div>
-        <div data-task-card-meta="task-card-meta" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, minWidth: 0 }}>
-          {orderConnectionNeedsAttention && (
-            <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
-          )}
-        </div>
-        <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "flex-start", alignItems: "center", gap: 5, minWidth: 0, flexWrap: "wrap" }}>
+        <div data-task-card-title="task-card-title" style={{ alignSelf: "center", fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 820 : 930, lineHeight: 1.18, overflowWrap: "break-word", wordBreak: "normal", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{displayTaskText}</div>
+        <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 5, minWidth: 0, flexWrap: "nowrap" }}>
           <button
             type="button"
             data-task-card-done-button="task-card-done-button"
@@ -4023,7 +4028,7 @@ function SortablePlanTaskCard({
               const cardElement = event.currentTarget.closest("[data-plan-task-id]") as HTMLElement | null;
               onTaskDoneToggle?.(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
             }}
-            style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
+            style={{ flex: "0 0 auto", border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
           >
             {task.done ? "Undo" : "Done"}
           </button>
@@ -4037,9 +4042,9 @@ function SortablePlanTaskCard({
               event.stopPropagation();
               onTaskEdit?.(task);
             }}
-            style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.textMuted, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
+            style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
           >
-            Edit task
+            Edit
           </button>
         </div>
       </div>
