@@ -256,17 +256,7 @@ function drawCameraImpactFlash(ctx: CanvasRenderingContext2D, width: number, hei
   ctx.restore();
 }
 
-function drawBlackTransition(ctx: CanvasRenderingContext2D, width: number, height: number, cameraImpact: number) {
-  const fadeIn = easeOutCubic(clamp01((cameraImpact - 0.78) / 0.14));
-  const fadeOut = easeOutCubic(clamp01((cameraImpact - 0.93) / 0.07));
-  const alpha = Math.max(0, fadeIn * (1 - fadeOut));
-  if (alpha <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#050405";
-  ctx.fillRect(0, 0, width, height);
-  ctx.restore();
-}
+const noBlackExitBlink = true;
 
 
 function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, crack: number) {
@@ -736,7 +726,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       ctx.restore();
     }
     drawCameraImpactFlash(ctx, width, height, unicornX, unicornY, cameraImpact);
-    drawBlackTransition(ctx, width, height, cameraImpact);
+    void noBlackExitBlink;
 
     if (t < 1) raf = requestAnimationFrame(frame);
   }

@@ -49,7 +49,7 @@ const clientMustHave = [
   ['delight burst fades origin before camera hit', 'originFade'],
   ['delight burst tightens flame jet before cutoff', 'flameJetTightness'],
   ['delight burst fades out after camera hit', 'cameraExitFade'],
-  ['delight burst uses black transition back to schedule', 'drawBlackTransition'],
+  ['delight burst returns to the schedule without a black blink', 'noBlackExitBlink'],
   ['delight burst does not arc sideways first', 'targetX = cx'],
   ['delight burst flies toward the screen', 'screenApproach'],
   ['delight burst has smoke trail', 'drawSmokeTrail'],
@@ -75,6 +75,7 @@ const dragMustHave = [
 const forbiddenClientNeedles = [
   ['delight burst should not draw caption text', 'Done. Unicorn escaped the pineapple.'],
   ['delight burst should not draw text labels', 'fillText(label'],
+  ['delight burst should not black-flash after the right exit', 'drawBlackTransition'],
 ];
 
 const missing = [
