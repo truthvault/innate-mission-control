@@ -4810,6 +4810,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
   const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(false);
   const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
+  const planTaskLinksUpdatedAtRef = useRef<string | null>(null);
   const [assignmentStatus, setAssignmentStatus] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
@@ -4979,24 +4980,32 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     setOpenOrderId(id);
   }
 
-  const applyPlanTaskLinkState = useCallback((state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits }) => {
+  const applyPlanTaskLinkState = useCallback((state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }) => {
     setPlanTaskLinks(state?.links ?? {});
     setPlanTaskEdits(state?.taskEdits ?? {});
     setPlanTaskLinksLoaded(true);
+    if (state?.updatedAt) planTaskLinksUpdatedAtRef.current = state.updatedAt;
   }, []);
 
-  const loadPlanTaskLinkState = useCallback((statusMessage = "") => {
-    fetch("/api/production/plan-task-links")
+  const loadPlanTaskLinkState = useCallback((statusMessage = "", options: { showStatusIfUnchanged?: boolean } = {}) => {
+    fetch("/api/production/plan-task-links", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Task links unavailable")))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits }; disabledReason?: string }) => {
-        startTransition(() => applyPlanTaskLinkState(data.state));
-        setAssignmentStatus(data.disabledReason ?? statusMessage);
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; disabledReason?: string }) => {
+        const updatedAt = data.state?.updatedAt ?? null;
+        const isInitialLoad = !planTaskLinksLoaded;
+        const changedSinceLastLoad = Boolean(updatedAt && updatedAt !== planTaskLinksUpdatedAtRef.current);
+        if (isInitialLoad || changedSinceLastLoad || !updatedAt) {
+          startTransition(() => applyPlanTaskLinkState(data.state));
+          if (data.disabledReason || statusMessage) setAssignmentStatus(data.disabledReason ?? statusMessage);
+          return;
+        }
+        if (data.disabledReason || options.showStatusIfUnchanged) setAssignmentStatus(data.disabledReason ?? statusMessage);
       })
       .catch((err) => {
         setPlanTaskLinksLoaded(true);
         setAssignmentStatus(err instanceof Error ? err.message : "Task links unavailable");
       });
-  }, [applyPlanTaskLinkState]);
+  }, [applyPlanTaskLinkState, planTaskLinksLoaded]);
 
   const broadcastPlanTaskLinkChange = useCallback((updatedAt?: string) => {
     void planTaskLinksRealtimeRef.current?.send({
@@ -5011,12 +5020,24 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   }, [loadPlanTaskLinkState]);
 
   useEffect(() => {
+    const refreshOpenBoard = () => loadPlanTaskLinkState();
+    const intervalId = window.setInterval(refreshOpenBoard, 30000);
+    window.addEventListener("focus", refreshOpenBoard);
+    document.addEventListener("visibilitychange", refreshOpenBoard);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshOpenBoard);
+      document.removeEventListener("visibilitychange", refreshOpenBoard);
+    };
+  }, [loadPlanTaskLinkState]);
+
+  useEffect(() => {
     const supabase = createBrowserSupabaseClient();
     if (!supabase.ok) return;
     const channel = supabase.client
       .channel(PLAN_TASK_LINKS_REALTIME_CHANNEL)
       .on("broadcast", { event: PLAN_TASK_LINKS_REALTIME_EVENT }, () => {
-        loadPlanTaskLinkState("Updated from another screen");
+        loadPlanTaskLinkState("Updated from another screen", { showStatusIfUnchanged: true });
       })
       .subscribe();
     planTaskLinksRealtimeRef.current = channel;
