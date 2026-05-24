@@ -6,7 +6,7 @@ import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT } from "@/components/mission-control-ui";
 import type { Lead, LeadsResult, LeadPriority, LeadStatus } from "@/lib/leads/types";
 import { isRecentSampleFollowUp, sampleDraftPrompt, sampleFollowUpLabel, sortSampleFollowUps } from "@/lib/leads/sample-followups.mjs";
-import { dateKey, doToday, hasLiveQuoteValue, isCashflowQuote, isClosed, isDue, isDueThisWeek, isHighValue, needsNextStep, sortByUrgency, sortLeads, SORT_OPTIONS } from "@/lib/leads/prioritisation.mjs";
+import { dateKey, doToday, hasLiveQuoteValue, isCashflowQuote, isClosed, isDue, isDueThisWeek, isHighValue, needsNextStep, sortByCashflow, sortByUrgency, sortLeads, SORT_OPTIONS } from "@/lib/leads/prioritisation.mjs";
 import { buildSupabaseLeadStudioUrl } from "@/lib/leads/supabase-studio.mjs";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
