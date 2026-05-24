@@ -9,6 +9,7 @@
     "lint": "eslint",
     "check:mutations": "bash scripts/check-no-monday-mutations.sh",
     "smoke:tuesday": "node scripts/smoke-tuesday.mjs",
+    "test:daily-brief": "node scripts/test-daily-brief.mjs",
     "smoke:freight": "node scripts/smoke-freight.mjs",
     "test:planning": "node scripts/test-new-order-planning.mjs && node scripts/test-plan-new-order-colours.mjs && node scripts/test-plan-drag-stress.mjs"
   },
