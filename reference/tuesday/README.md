@@ -12,6 +12,7 @@ Purpose: fast capture and durable routing for Innate Mission Control, also calle
 - `dashboard.md`
 - `foundations.md`
 - `inbox.md`
+- `realtime-update-research-2026-05-25.md` — researched Supabase Realtime path for Monday-like cross-computer updates
 
 ## Gym Mode protocol
 

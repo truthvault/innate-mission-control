@@ -17,10 +17,12 @@ const clientMustHave = [
   ['unicorn is findable in live bundle', 'Tuesday delight unicorn'],
   ['unicorn emoji is present', '🦄'],
   ['unicorn badge is parked away from the order rail', 'data-delight-badge-placement="in-flow-safe"'],
-  ['workshop demo strip explains tick-to-finish use', 'data-workshop-demo-strip="production-plan-demo-strip"'],
-  ['workshop demo strip names Nick QC lead', 'Nick: QC lead'],
-  ['workshop demo strip names Dylan workshop support', 'Dylan: workshop support'],
-  ['workshop demo strip names Guido freight owner', 'Guido: freight / customer promises'],
+];
+
+const clientMustNotHave = [
+  ['cluttery workshop demo strip', 'data-workshop-demo-strip="production-plan-demo-strip"'],
+  ['removed Nick/Dylan/Guido role explainer', 'Nick: QC lead'],
+  ['removed task-instruction chips', 'Tick finished tasks'],
 ];
 
 const missing = [
@@ -28,11 +30,20 @@ const missing = [
   ...[['production route enables delight by default', 'delightEnabled']].filter(([, needle]) => !productionPageSource.includes(needle)).map(([label, needle]) => ['production-page', label, needle]),
   ...clientMustHave.filter(([, needle]) => !clientSource.includes(needle)).map(([label, needle]) => ['client', label, needle]),
 ];
+const forbidden = clientMustNotHave
+  .filter(([, needle]) => clientSource.includes(needle))
+  .map(([label, needle]) => ['client', label, needle]);
 
-if (missing.length) {
-  console.error('Production Plan delight unicorn requirements missing:');
-  for (const [file, label, needle] of missing) console.error(`- ${file}: ${label}: ${needle}`);
+if (missing.length || forbidden.length) {
+  if (missing.length) {
+    console.error('Production Plan delight unicorn requirements missing:');
+    for (const [file, label, needle] of missing) console.error(`- ${file}: ${label}: ${needle}`);
+  }
+  if (forbidden.length) {
+    console.error('Production Plan clutter should stay removed:');
+    for (const [file, label, needle] of forbidden) console.error(`- ${file}: ${label}: ${needle}`);
+  }
   process.exit(1);
 }
 
-console.log('OK: production plan delight unicorn requirements present');
+console.log('OK: production plan delight unicorn requirements present and clutter removed');

@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip } from "@/components/mission-control-ui";
+import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
 import type { UiOrder } from "@/lib/monday/mapping";
 import {
   buildSuggestedPlanForOrder,
@@ -763,46 +764,6 @@ function DelightUnicorn() {
   );
 }
 
-function WorkshopDemoStrip() {
-  const steps = ["Tick finished tasks", "Edit only if the task is wrong", "Blocked means tell Guido"];
-  const roles = ["Nick: QC lead", "Dylan: workshop support", "Guido: freight / customer promises"];
-  return (
-    <section
-      data-workshop-demo-strip="production-plan-demo-strip"
-      aria-label="How to use the Production Plan workshop board"
-      style={{
-        marginBottom: 14,
-        border: `1px solid ${DT.border}`,
-        borderLeft: `5px solid ${DT.sage}`,
-        borderRadius: 16,
-        background: "rgba(255,253,249,0.86)",
-        boxShadow: "0 12px 26px rgba(80,57,20,0.07)",
-        padding: "12px 14px",
-        display: "grid",
-        gap: 10,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em" }}>Workshop board</div>
-          <div style={{ marginTop: 3, fontFamily: DT.serif, fontSize: 20, color: DT.textPrimary, fontWeight: 760 }}>Keep the plan true as work moves.</div>
-        </div>
-        <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 850 }}>Finish something? Hit ✓ Done.</div>
-      </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {steps.map((step) => (
-          <span key={step} style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900 }}>{step}</span>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {roles.map((role) => (
-          <span key={role} style={{ border: "1px solid rgba(0,0,0,0.06)", background: "rgba(255,255,255,0.66)", color: DT.textMuted, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 850 }}>{role}</span>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 const JOB_TASK_PRESETS = [
   "Material + spec check",
   "Cut / machine / prep",
@@ -1320,25 +1281,44 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
   const [workflow, setWorkflow] = useState<OrderWorkflowState>(() => defaultWorkflowState(order.id));
   const [workflowStatus, setWorkflowStatus] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadWorkflow = useCallback((statusPrefix = "") => {
+    let active = true;
     fetch(`/api/production/order-workflow?orderId=${order.id}`)
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Workflow unavailable")))
       .then((data: { state?: OrderWorkflowState; disabledReason?: string }) => {
-        if (cancelled) return;
+        if (!active) return;
         const next = data.state ?? defaultWorkflowState(order.id);
         setWorkflow(next);
         onWorkflowChange?.(next);
-        setWorkflowStatus(data.disabledReason ?? "");
+        setWorkflowStatus(data.disabledReason ?? statusPrefix);
       })
       .catch((err) => {
-        if (!cancelled) setWorkflowStatus(err instanceof Error ? err.message : "Workflow unavailable");
+        if (active) setWorkflowStatus(err instanceof Error ? err.message : "Workflow unavailable");
       });
     return () => {
-      cancelled = true;
-      onWorkflowChange?.(null);
+      active = false;
     };
   }, [order.id, onWorkflowChange]);
+
+  useEffect(() => {
+    const cancelLoad = loadWorkflow();
+    return () => {
+      cancelLoad();
+      onWorkflowChange?.(null);
+    };
+  }, [loadWorkflow, onWorkflowChange]);
+
+  const handleRealtimeWorkflowChange = useCallback(() => {
+    loadWorkflow("Updated from workshop");
+  }, [loadWorkflow]);
+
+  useRealtimeRefresh({
+    channelName: `production-order-workflow:${order.id}`,
+    table: "production_order_workflows",
+    filter: `order_id=eq.${order.id}`,
+    refreshOnChange: false,
+    onChange: handleRealtimeWorkflowChange,
+  });
 
   function saveWorkflow(next: OrderWorkflowState) {
     setWorkflow(next);
@@ -5525,7 +5505,6 @@ export default function PlanClient({
       pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} /> : undefined}
       maxWidth={1500}
     >
-        <WorkshopDemoStrip />
         {rows.length === 0 ? (
           <div
             style={{
