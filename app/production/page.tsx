@@ -14,6 +14,7 @@ export default async function ProductionPage() {
       syncedAt={result.syncedAt}
       source={result.source}
       mondayError={result.mondayError}
+      delightEnabled
     />
   );
 }
