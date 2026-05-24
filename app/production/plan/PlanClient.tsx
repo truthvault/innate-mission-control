@@ -1,6 +1,6 @@
 'use client';
 
-import { type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCorners,
   DndContext,
@@ -557,7 +557,10 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
   const maybeContext = canvas.getContext("2d");
   if (!maybeContext) return () => undefined;
   const ctx = maybeContext;
-  const ratio = window.devicePixelRatio || 1;
+  // Keep the delight smooth on Retina screens. Full DPR 2-3 canvas + blur filters
+  // makes the unicorn render millions of pixels per frame while the board is also
+  // saving/re-rendering the completed task.
+  const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
   const width = window.innerWidth;
   const height = window.innerHeight;
   canvas.width = Math.round(width * ratio);
@@ -571,15 +574,18 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
   const cy = card ? card.top + card.height / 2 : origin.y;
   const cardWidth = card?.width ?? 116;
   const cardHeight = card?.height ?? 86;
-  const particles: DelightParticle[] = Array.from({ length: 118 }, (_, index) => ({
-    angle: (Math.PI * 2 * index) / 118 + ((index % 9) - 4) * 0.038,
+  const particleCount = width < 760 ? 58 : 82;
+  const shardCount = width < 760 ? 12 : 16;
+  const trailCount = width < 760 ? 14 : 20;
+  const particles: DelightParticle[] = Array.from({ length: particleCount }, (_, index) => ({
+    angle: (Math.PI * 2 * index) / particleCount + ((index % 9) - 4) * 0.038,
     distance: 86 + (index % 13) * 17,
     speed: 0.76 + (index % 5) * 0.08,
     size: 2.5 + (index % 6) * 1.3,
     hue: (index * 23) % 360,
     spin: ((index % 2 ? 1 : -1) * (0.8 + (index % 4) * 0.35)),
   }));
-  const shards: DelightShard[] = Array.from({ length: 22 }, (_, index) => {
+  const shards: DelightShard[] = Array.from({ length: shardCount }, (_, index) => {
     const col = index % 4;
     const row = Math.floor(index / 4);
     const x = cx - cardWidth * 0.42 + col * cardWidth * 0.28;
@@ -591,8 +597,8 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       width: Math.max(20, cardWidth / 3.7),
       height: Math.max(16, cardHeight / 4.8),
       angle,
-      vx: Math.cos((Math.PI * 2 * index) / 22) * (72 + (index % 4) * 27),
-      vy: Math.sin((Math.PI * 2 * index) / 22) * (58 + (index % 5) * 19) - 42,
+      vx: Math.cos((Math.PI * 2 * index) / shardCount) * (72 + (index % 4) * 27),
+      vy: Math.sin((Math.PI * 2 * index) / shardCount) * (58 + (index % 5) * 19) - 42,
       spin: (index % 2 ? 1 : -1) * (1.4 + index * 0.08),
       color: index % 2 ? "rgba(255,253,249,0.94)" : "rgba(255,246,199,0.90)",
     };
@@ -651,8 +657,8 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     const trailCutoff = trailFadeBeforeImpact > 0.02;
     const originFade = 1 - easeOutCubic(clamp01((t - 0.56) / 0.18));
     const flameJetTightness = easeOutCubic(clamp01((t - 0.58) / 0.14));
-    const trail = Array.from({ length: 28 }, (_, index) => {
-      const lag = index / 28;
+    const trail = Array.from({ length: trailCount }, (_, index) => {
+      const lag = index / trailCount;
       const trailApproach = Math.max(0, screenApproach - lag * 0.50);
       const depthDrift = straightOutLaunch * (1 - lag) * 22;
       return {
@@ -701,7 +707,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     if (rightExitFade > 0) {
       ctx.save();
       ctx.globalAlpha = rightExitFade;
-      drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+      if (ratio <= 1.25 && width >= 760) drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
       drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
       ctx.restore();
     }
@@ -4881,18 +4887,20 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       saveDraftTasks("six-week-board", next);
       return next;
     });
-    setPlanTaskEdits((current) => ({
-      ...current,
-      [taskKey]: {
-        text: nextTask.text,
-        rowName: nextTask.rowName,
-        day: nextTask.day,
-        person: nextTask.person,
-        estimatedHours: nextTask.estimatedHours,
-        internal: /internal workshop/i.test(nextTask.rowName),
-        done: nextTask.done,
-      },
-    }));
+    startTransition(() => {
+      setPlanTaskEdits((current) => ({
+        ...current,
+        [taskKey]: {
+          text: nextTask.text,
+          rowName: nextTask.rowName,
+          day: nextTask.day,
+          person: nextTask.person,
+          estimatedHours: nextTask.estimatedHours,
+          internal: /internal workshop/i.test(nextTask.rowName),
+          done: nextTask.done,
+        },
+      }));
+    });
     fetch("/api/production/plan-task-links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
