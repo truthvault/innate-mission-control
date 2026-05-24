@@ -24,6 +24,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip } from "@/components/mission-control-ui";
 import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { UiOrder } from "@/lib/monday/mapping";
 import {
   buildSuggestedPlanForOrder,
@@ -46,6 +48,9 @@ import {
   type DayKey,
   type Person,
 } from "@/lib/monday/production-plan-mapping";
+
+const PLAN_TASK_LINKS_REALTIME_CHANNEL = "production-plan-task-links";
+const PLAN_TASK_LINKS_REALTIME_EVENT = "plan-task-links-changed";
 
 const DT = {
   pageBg: "#f5f3ee",
@@ -3920,6 +3925,7 @@ function SortablePlanTaskCard({
   task,
   selectedOrder,
   planTaskLinks,
+  planTaskLinksLoaded = true,
   resolveTaskOrderId,
   onTaskSelect,
   onTaskOpen,
@@ -3930,6 +3936,7 @@ function SortablePlanTaskCard({
   task: DraggablePlanTask;
   selectedOrder?: UiOrder | null;
   planTaskLinks: PlanTaskLinks;
+  planTaskLinksLoaded?: boolean;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
@@ -3946,7 +3953,9 @@ function SortablePlanTaskCard({
   const isSelectedOrderTask = selectedOrder ? effectiveOrderIds.includes(selectedOrder.id) || planTaskMatchesOrder(task, selectedOrder) : false;
   const isUnlinkedTask = effectiveOrderIds.length === 0;
   const personVisual = PERSON_VISUALS[task.person];
-  const orderConnection = orderConnectionLabel(task, planTaskLinks, resolvedOrderId);
+  const orderConnection = planTaskLinksLoaded
+    ? orderConnectionLabel(task, planTaskLinks, resolvedOrderId)
+    : { state: "connected" as OrderConnectionState, label: "Checking", detail: "Checking order link" };
   const orderConnectionVisual = orderConnectionStyle(orderConnection.state, isSelectedOrderTask);
   const taskBackground = isSelectedOrderTask
     ? "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
@@ -4364,6 +4373,7 @@ function MonthWeekSection({
   selectedOrder = null,
   appTasks = [],
   planTaskLinks = {},
+  planTaskLinksLoaded = true,
   resolveTaskOrderId,
   activeTaskId = null,
   activeSuggestedStepId = null,
@@ -4392,6 +4402,7 @@ function MonthWeekSection({
   selectedOrder?: UiOrder | null;
   appTasks?: AppPlanTask[];
   planTaskLinks?: PlanTaskLinks;
+  planTaskLinksLoaded?: boolean;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   activeTaskId?: string | null;
   activeSuggestedStepId?: string | null;
@@ -4492,6 +4503,7 @@ function MonthWeekSection({
                                 task={task}
                                 selectedOrder={selectedOrder}
                                 planTaskLinks={planTaskLinks}
+                                planTaskLinksLoaded={planTaskLinksLoaded}
                                 resolveTaskOrderId={resolveTaskOrderId}
                                 onTaskSelect={onTaskSelect}
                                 onTaskOpen={onTaskOpen}
@@ -4796,6 +4808,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   const [selectedAssignmentTask, setSelectedAssignmentTask] = useState<AssignablePlanTask | null>(null);
   const [editingTask, setEditingTask] = useState<BoardPlanTask | null>(null);
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
+  const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(false);
+  const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
   const [assignmentStatus, setAssignmentStatus] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
@@ -4919,8 +4933,9 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Task edit save failed"))))
-      .then((data: { state?: { taskEdits?: PlanTaskEdits } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string } }) => {
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Task saved in Tuesday");
       })
       .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Task edit save failed"));
@@ -4964,23 +4979,52 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
     setOpenOrderId(id);
   }
 
-  useEffect(() => {
-    let cancelled = false;
+  const applyPlanTaskLinkState = useCallback((state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits }) => {
+    setPlanTaskLinks(state?.links ?? {});
+    setPlanTaskEdits(state?.taskEdits ?? {});
+    setPlanTaskLinksLoaded(true);
+  }, []);
+
+  const loadPlanTaskLinkState = useCallback((statusMessage = "") => {
     fetch("/api/production/plan-task-links")
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Task links unavailable")))
       .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits }; disabledReason?: string }) => {
-        if (cancelled) return;
-        setPlanTaskLinks(data.state?.links ?? {});
-        setPlanTaskEdits(data.state?.taskEdits ?? {});
-        setAssignmentStatus(data.disabledReason ?? "");
+        startTransition(() => applyPlanTaskLinkState(data.state));
+        setAssignmentStatus(data.disabledReason ?? statusMessage);
       })
       .catch((err) => {
-        if (!cancelled) setAssignmentStatus(err instanceof Error ? err.message : "Task links unavailable");
+        setPlanTaskLinksLoaded(true);
+        setAssignmentStatus(err instanceof Error ? err.message : "Task links unavailable");
       });
-    return () => {
-      cancelled = true;
-    };
+  }, [applyPlanTaskLinkState]);
+
+  const broadcastPlanTaskLinkChange = useCallback((updatedAt?: string) => {
+    void planTaskLinksRealtimeRef.current?.send({
+      type: "broadcast",
+      event: PLAN_TASK_LINKS_REALTIME_EVENT,
+      payload: { updatedAt: updatedAt ?? new Date().toISOString() },
+    });
   }, []);
+
+  useEffect(() => {
+    loadPlanTaskLinkState();
+  }, [loadPlanTaskLinkState]);
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase.ok) return;
+    const channel = supabase.client
+      .channel(PLAN_TASK_LINKS_REALTIME_CHANNEL)
+      .on("broadcast", { event: PLAN_TASK_LINKS_REALTIME_EVENT }, () => {
+        loadPlanTaskLinkState("Updated from another screen");
+      })
+      .subscribe();
+    planTaskLinksRealtimeRef.current = channel;
+    return () => {
+      if (planTaskLinksRealtimeRef.current === channel) planTaskLinksRealtimeRef.current = null;
+      void supabase.client.removeChannel(channel);
+    };
+  }, [loadPlanTaskLinkState]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -5148,9 +5192,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId, placement }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string } }) => {
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Order linked");
         selectOrder(orderId);
       })
@@ -5179,9 +5224,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId: null }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string } }) => {
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Order connection removed");
       })
       .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Save failed"));
@@ -5328,6 +5374,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       selectedOrder={selectedOrder}
       appTasks={selectedAppTasks}
       planTaskLinks={planTaskLinks}
+      planTaskLinksLoaded={planTaskLinksLoaded}
       activeTaskId={activeTaskId}
       dropPreview={dropPreview}
       isDraftChanged={isDraftChanged}
@@ -5361,6 +5408,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
           selectedOrder={selectedOrder}
           appTasks={selectedAppTasks}
           planTaskLinks={planTaskLinks}
+          planTaskLinksLoaded={planTaskLinksLoaded}
           personFilter={personFilter}
           resolveTaskOrderId={resolveOrderIdForPlanTask}
           onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
