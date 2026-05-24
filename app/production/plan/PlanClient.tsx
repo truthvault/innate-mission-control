@@ -51,6 +51,7 @@ import {
 
 const PLAN_TASK_LINKS_REALTIME_CHANNEL = "production-plan-task-links";
 const PLAN_TASK_LINKS_REALTIME_EVENT = "plan-task-links-changed";
+type PlanTaskLinksStorage = "blob" | "supabase";
 
 const DT = {
   pageBg: "#f5f3ee",
@@ -4809,6 +4810,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   const [editingTask, setEditingTask] = useState<BoardPlanTask | null>(null);
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
   const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(false);
+  const [planTaskLinksStorage, setPlanTaskLinksStorage] = useState<PlanTaskLinksStorage>("blob");
   const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
   const planTaskLinksUpdatedAtRef = useRef<string | null>(null);
   const [assignmentStatus, setAssignmentStatus] = useState("");
@@ -4934,7 +4936,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Task edit save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Task saved in Tuesday");
@@ -4990,7 +4993,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   const loadPlanTaskLinkState = useCallback((statusMessage = "", options: { showStatusIfUnchanged?: boolean } = {}) => {
     fetch("/api/production/plan-task-links", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Task links unavailable")))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; disabledReason?: string }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage; disabledReason?: string }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
         const updatedAt = data.state?.updatedAt ?? null;
         const isInitialLoad = !planTaskLinksLoaded;
         const changedSinceLastLoad = Boolean(updatedAt && updatedAt !== planTaskLinksUpdatedAtRef.current);
@@ -5007,13 +5011,27 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       });
   }, [applyPlanTaskLinkState, planTaskLinksLoaded]);
 
+  const handlePlanTaskLinksRealtimeChange = useCallback(() => {
+    loadPlanTaskLinkState("Updated from another screen", { showStatusIfUnchanged: true });
+  }, [loadPlanTaskLinkState]);
+
+  useRealtimeRefresh({
+    channelName: "production-plan-task-links:current",
+    table: "production_plan_task_links",
+    filter: "id=eq.current",
+    refreshOnChange: false,
+    enabled: planTaskLinksStorage === "supabase",
+    onChange: handlePlanTaskLinksRealtimeChange,
+  });
+
   const broadcastPlanTaskLinkChange = useCallback((updatedAt?: string) => {
+    if (planTaskLinksStorage === "supabase") return;
     void planTaskLinksRealtimeRef.current?.send({
       type: "broadcast",
       event: PLAN_TASK_LINKS_REALTIME_EVENT,
       payload: { updatedAt: updatedAt ?? new Date().toISOString() },
     });
-  }, []);
+  }, [planTaskLinksStorage]);
 
   useEffect(() => {
     loadPlanTaskLinkState();
@@ -5032,6 +5050,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
   }, [loadPlanTaskLinkState]);
 
   useEffect(() => {
+    if (planTaskLinksStorage !== "blob") return;
     const supabase = createBrowserSupabaseClient();
     if (!supabase.ok) return;
     const channel = supabase.client
@@ -5045,7 +5064,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       if (planTaskLinksRealtimeRef.current === channel) planTaskLinksRealtimeRef.current = null;
       void supabase.client.removeChannel(channel);
     };
-  }, [loadPlanTaskLinkState]);
+  }, [loadPlanTaskLinkState, planTaskLinksStorage]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -5213,7 +5232,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId, placement }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
@@ -5245,7 +5265,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId: null }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);

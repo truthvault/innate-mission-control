@@ -1,36 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isMissingBlobToken, readEncryptedBlob, writeEncryptedBlob } from "@/lib/tuesday/encrypted-blob-store";
 import { getOrdersWithFallback } from "@/lib/monday/fetch-orders";
-
-type PlanTaskPlacement = {
-  mode: "start" | "end" | "before" | "after";
-  anchorTaskId?: string;
-};
-
-type PlanTaskLinkValue = number | { orderId: number; placement?: PlanTaskPlacement };
-type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
-type Person = "nick" | "dylan";
-type PlanTaskEditValue = {
-  text?: string;
-  rowName?: string;
-  day?: DayKey;
-  person?: Person;
-  estimatedHours?: number;
-  internal?: boolean;
-  done?: boolean;
-  updatedAt: string;
-};
-
-type PlanTaskLinksState = {
-  links: Record<string, PlanTaskLinkValue>;
-  taskEdits: Record<string, PlanTaskEditValue>;
-  updatedAt: string;
-};
-
-const PATH = "production-plan-task-links/current.json";
+import {
+  defaultPlanTaskLinksState,
+  isMissingBlobToken,
+  readPlanTaskLinksState,
+  writePlanTaskLinksState,
+  type DayKey,
+  type PlanTaskLinkValue,
+  type PlanTaskEditValue,
+  type PlanTaskLinksState,
+  type PlanTaskPlacement,
+} from "@/lib/tuesday/plan-task-links-store";
 
 function defaultState(): PlanTaskLinksState {
-  return { links: {}, taskEdits: {}, updatedAt: new Date().toISOString() };
+  return defaultPlanTaskLinksState();
 }
 
 function cleanText(value: unknown, max = 160) {
@@ -71,17 +54,16 @@ function linkValueForOrder(orderId: number, placement?: PlanTaskPlacement): Plan
 }
 
 async function readState() {
-  const state = await readEncryptedBlob<PlanTaskLinksState>(PATH, defaultState());
-  return { ...defaultState(), ...state, links: state.links ?? {}, taskEdits: state.taskEdits ?? {} };
+  return readPlanTaskLinksState();
 }
 
 export async function GET() {
   try {
-    const state = await readState();
-    return NextResponse.json({ state });
+    const { state, storage } = await readState();
+    return NextResponse.json({ state, storage });
   } catch (err) {
     if (isMissingBlobToken(err)) {
-      return NextResponse.json({ state: defaultState(), disabledReason: "Plan task link storage is not connected yet." });
+      return NextResponse.json({ state: defaultState(), storage: "blob", disabledReason: "Plan task link storage is not connected yet." });
     }
     return NextResponse.json({ error: err instanceof Error ? err.message : "Plan task links unavailable" }, { status: 500 });
   }
@@ -104,7 +86,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const current = await readState();
+    const currentResult = await readState();
+    const current = currentResult.state;
     const links = { ...current.links };
     const taskEdits = { ...current.taskEdits };
     if (hasOrderIdField && orderId) {
@@ -118,8 +101,8 @@ export async function POST(request: NextRequest) {
     if (taskEdit) taskEdits[taskId] = { ...taskEdit, updatedAt: new Date().toISOString() };
     if (body?.removeTaskEdit) delete taskEdits[taskId];
     const state = { links, taskEdits, updatedAt: new Date().toISOString() };
-    await writeEncryptedBlob(PATH, state);
-    return NextResponse.json({ state });
+    const written = await writePlanTaskLinksState(state);
+    return NextResponse.json(written);
   } catch (err) {
     if (isMissingBlobToken(err)) {
       return NextResponse.json({ error: "Plan task link storage is not connected yet." }, { status: 503 });
