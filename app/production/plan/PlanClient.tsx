@@ -5017,8 +5017,8 @@ function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = fal
 
   useRealtimeRefresh({
     channelName: "production-plan-task-links:current",
-    table: "production_plan_task_links",
-    filter: "id=eq.current",
+    table: "production_order_workflows",
+    filter: "order_id=eq.0",
     refreshOnChange: false,
     enabled: planTaskLinksStorage === "supabase",
     onChange: handlePlanTaskLinksRealtimeChange,

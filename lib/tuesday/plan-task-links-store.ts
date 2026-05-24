@@ -28,8 +28,8 @@ export type PlanTaskLinksState = {
 export type PlanTaskLinksStorage = "blob" | "supabase";
 
 const BLOB_PATH = "production-plan-task-links/current.json";
-const SUPABASE_TABLE = "production_plan_task_links";
-const SUPABASE_ROW_ID = "current";
+const SUPABASE_TABLE = process.env.TUESDAY_PLAN_TASK_TABLE || "production_order_workflows";
+const SUPABASE_SENTINEL_ORDER_ID = 0;
 
 export function defaultPlanTaskLinksState(): PlanTaskLinksState {
   return { links: {}, taskEdits: {}, updatedAt: new Date().toISOString() };
@@ -77,18 +77,18 @@ async function supabaseRequest(path: string, init: RequestInit) {
 
 async function readSupabaseState(): Promise<PlanTaskLinksState> {
   const params = new URLSearchParams({
-    id: `eq.${SUPABASE_ROW_ID}`,
-    select: "links,task_edits,updated_at",
+    order_id: `eq.${SUPABASE_SENTINEL_ORDER_ID}`,
+    select: "state,updated_at",
     limit: "1",
   });
   const response = await supabaseRequest(`${SUPABASE_TABLE}?${params}`, { method: "GET" });
-  const rows = (await response.json()) as Array<{ links?: unknown; task_edits?: unknown; updated_at?: unknown }>;
+  const rows = (await response.json()) as Array<{ state?: unknown; updated_at?: unknown }>;
   const row = rows[0];
   if (!row) return defaultPlanTaskLinksState();
+  const state = isRecord(row.state) ? row.state as Partial<PlanTaskLinksState> : {};
   return normalizeState({
-    links: isRecord(row.links) ? row.links as PlanTaskLinksState["links"] : {},
-    taskEdits: isRecord(row.task_edits) ? row.task_edits as PlanTaskLinksState["taskEdits"] : {},
-    updatedAt: typeof row.updated_at === "string" ? row.updated_at : undefined,
+    ...state,
+    updatedAt: typeof state.updatedAt === "string" ? state.updatedAt : typeof row.updated_at === "string" ? row.updated_at : undefined,
   });
 }
 
@@ -98,19 +98,19 @@ async function writeSupabaseState(state: PlanTaskLinksState): Promise<PlanTaskLi
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify({
-      id: SUPABASE_ROW_ID,
-      links: normalized.links,
-      task_edits: normalized.taskEdits,
+      order_id: SUPABASE_SENTINEL_ORDER_ID,
+      xero_invoice_number: null,
+      state: normalized,
       updated_at: normalized.updatedAt,
     }),
   });
-  const rows = (await response.json()) as Array<{ links?: unknown; task_edits?: unknown; updated_at?: unknown }>;
+  const rows = (await response.json()) as Array<{ state?: unknown; updated_at?: unknown }>;
   const row = rows[0];
-  if (!row) return normalized;
+  if (!row || !isRecord(row.state)) return normalized;
+  const saved = row.state as Partial<PlanTaskLinksState>;
   return normalizeState({
-    links: isRecord(row.links) ? row.links as PlanTaskLinksState["links"] : normalized.links,
-    taskEdits: isRecord(row.task_edits) ? row.task_edits as PlanTaskLinksState["taskEdits"] : normalized.taskEdits,
-    updatedAt: typeof row.updated_at === "string" ? row.updated_at : normalized.updatedAt,
+    ...saved,
+    updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : typeof row.updated_at === "string" ? row.updated_at : normalized.updatedAt,
   });
 }
 
