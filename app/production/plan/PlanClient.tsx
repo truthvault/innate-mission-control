@@ -743,18 +743,18 @@ function DelightUnicorn() {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 8,
+        gap: 7,
         marginTop: 12,
-        padding: "8px 11px 8px 9px",
+        width: "fit-content",
+        padding: "7px 10px",
         borderRadius: 999,
-        border: "1px solid rgba(190,137,24,0.34)",
-        background: "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(255,246,199,0.84))",
-        boxShadow: "0 10px 24px rgba(34,32,26,0.12), 0 0 0 4px rgba(211,154,35,0.08)",
-        color: DT.textPrimary,
+        border: "1px solid rgba(211,154,35,0.30)",
+        background: "rgba(255,246,199,0.86)",
+        color: "#8a5d08",
         fontFamily: DT.sans,
-        fontSize: 11,
-        fontWeight: 850,
-        letterSpacing: "0.01em",
+        fontSize: 12,
+        fontWeight: 900,
+        boxShadow: "0 8px 18px rgba(80,57,20,0.08)",
       }}
     >
       <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>🦄</span>
@@ -762,6 +762,47 @@ function DelightUnicorn() {
     </div>
   );
 }
+
+function WorkshopDemoStrip() {
+  const steps = ["Tick finished tasks", "Edit only if the task is wrong", "Blocked means tell Guido"];
+  const roles = ["Nick: QC lead", "Dylan: workshop support", "Guido: freight / customer promises"];
+  return (
+    <section
+      data-workshop-demo-strip="production-plan-demo-strip"
+      aria-label="How to use the Production Plan workshop board"
+      style={{
+        marginBottom: 14,
+        border: `1px solid ${DT.border}`,
+        borderLeft: `5px solid ${DT.sage}`,
+        borderRadius: 16,
+        background: "rgba(255,253,249,0.86)",
+        boxShadow: "0 12px 26px rgba(80,57,20,0.07)",
+        padding: "12px 14px",
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em" }}>Workshop board</div>
+          <div style={{ marginTop: 3, fontFamily: DT.serif, fontSize: 20, color: DT.textPrimary, fontWeight: 760 }}>Keep the plan true as work moves.</div>
+        </div>
+        <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 850 }}>Finish something? Hit ✓ Done.</div>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {steps.map((step) => (
+          <span key={step} style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900 }}>{step}</span>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {roles.map((role) => (
+          <span key={role} style={{ border: "1px solid rgba(0,0,0,0.06)", background: "rgba(255,255,255,0.66)", color: DT.textMuted, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 850 }}>{role}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 const JOB_TASK_PRESETS = [
   "Material + spec check",
   "Cut / machine / prep",
@@ -4027,7 +4068,7 @@ function SortablePlanTaskCard({
             }}
             style={{ flex: "0 0 auto", border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
           >
-            {task.done ? "Undo" : "Done"}
+            {task.done ? "↩ Undo" : "✓ Done"}
           </button>
           <button
             type="button"
@@ -4709,7 +4750,7 @@ function OrderJourneyView({
                               }}
                               style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}
                             >
-                              {task.done ? "Undo" : "Done"}
+                              {task.done ? "↩ Undo" : "✓ Done"}
                             </button>
                             <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Edit task</button>
                             <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Details</button>
@@ -5484,6 +5525,7 @@ export default function PlanClient({
       pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} /> : undefined}
       maxWidth={1500}
     >
+        <WorkshopDemoStrip />
         {rows.length === 0 ? (
           <div
             style={{

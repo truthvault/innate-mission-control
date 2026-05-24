@@ -17,6 +17,10 @@ const clientMustHave = [
   ['unicorn is findable in live bundle', 'Tuesday delight unicorn'],
   ['unicorn emoji is present', '🦄'],
   ['unicorn badge is parked away from the order rail', 'data-delight-badge-placement="in-flow-safe"'],
+  ['workshop demo strip explains tick-to-finish use', 'data-workshop-demo-strip="production-plan-demo-strip"'],
+  ['workshop demo strip names Nick QC lead', 'Nick: QC lead'],
+  ['workshop demo strip names Dylan workshop support', 'Dylan: workshop support'],
+  ['workshop demo strip names Guido freight owner', 'Guido: freight / customer promises'],
 ];
 
 const missing = [
