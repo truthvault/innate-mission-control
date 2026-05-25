@@ -488,7 +488,7 @@ export async function readSupabaseOrders(): Promise<ReconciliationInput["supabas
 export async function readMondayMirror(): Promise<ReconciliationInput["monday"]> {
   if (!process.env.MONDAY_API_TOKEN || !process.env.MONDAY_ORDERS_BOARD_ID) return { status: "not_connected", orders: [], error: "Monday env not configured" };
   try {
-    const { getOrdersFresh } = await import("../monday/fetch-orders.ts");
+    const { getOrdersFresh } = await import("../monday/fetch-orders");
     const result = await getOrdersFresh({ writeSnapshot: false });
     return {
       status: result.source === "none" ? "error" : "connected",
