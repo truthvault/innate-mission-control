@@ -1605,8 +1605,9 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
         width: "100%",
         minWidth: 0,
         textAlign: "left",
-        border: `1px solid ${DT.border}`,
-        borderLeft: `4px solid ${health.color}`,
+        borderWidth: "1px 1px 1px 4px",
+        borderStyle: "solid",
+        borderColor: `${DT.border} ${DT.border} ${DT.border} ${health.color}`,
         background: DT.cardBg,
         borderRadius: 10,
         padding: "10px 10px 9px",
@@ -1680,7 +1681,7 @@ function NewOrderRailCard({
           onOpenOrder();
         }
       }}
-      style={{ marginBottom: 8, border: `1px solid ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder}`, borderLeft: `5px solid ${reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayStripe}`, background: reviewActive ? REVIEW_GLOW.bg : newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? REVIEW_GLOW.shadow : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
+      style={{ marginBottom: 8, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder} ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder} ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder} ${reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayStripe}`, background: reviewActive ? REVIEW_GLOW.bg : newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? REVIEW_GLOW.shadow : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
@@ -1887,7 +1888,7 @@ function TaskAssignmentPanel({
                 type="button"
                 key={order.id}
                 onClick={() => chooseOrder(order)}
-                style={{ width: "100%", minWidth: 0, textAlign: "left", border: `1px solid ${active ? REVIEW_GLOW.borderStrong : DT.border}`, borderLeft: `4px solid ${active ? REVIEW_GLOW.color : health.color}`, background: active ? REVIEW_GLOW.bg : DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: active ? REVIEW_GLOW.shadow : "0 1px 4px rgba(0,0,0,0.025)" }}
+                style={{ width: "100%", minWidth: 0, textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${active ? REVIEW_GLOW.borderStrong : DT.border} ${active ? REVIEW_GLOW.borderStrong : DT.border} ${active ? REVIEW_GLOW.borderStrong : DT.border} ${active ? REVIEW_GLOW.color : health.color}`, background: active ? REVIEW_GLOW.bg : DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: active ? REVIEW_GLOW.shadow : "0 1px 4px rgba(0,0,0,0.025)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ minWidth: 0 }}>
@@ -3497,7 +3498,7 @@ function NewOrderHalo({
   return (
     <>
       {open && (
-        <section style={{ border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `5px solid ${REVIEW_GLOW.color}`, borderRadius: 12, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.shadow, padding: 12 }}>
+        <section style={{ borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, borderRadius: 12, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.shadow, padding: 12 }}>
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div>
@@ -3544,7 +3545,7 @@ function NewOrderHalo({
               <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: REVIEW_GLOW.color }}>Editable task suggestions</div>
               <div style={{ display: "grid", gap: 6, marginTop: 7 }}>
                 {suggestions.map((step, index) => (
-                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `5px solid ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bgSoft, boxShadow: "0 5px 16px rgba(190,137,24,0.08)" }}>
+                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bgSoft, boxShadow: "0 5px 16px rgba(190,137,24,0.08)" }}>
                     <div style={{ width: 22, height: 22, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.70)", color: newOrderPalette.clayAccentDark, fontSize: 10, fontWeight: 900 }}>{index + 1}</div>
                     <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "subgrid", gridColumn: isNarrow ? undefined : "2 / -1", gap: 7, alignItems: "center" }}>
                       <input
@@ -3910,7 +3911,7 @@ function shouldInsertAfterOver(event: Pick<DragOverEvent, "active" | "over">) {
 function PlanTaskDragCard({ task }: { task: DraggablePlanTask }) {
   const personVisual = PERSON_VISUALS[task.person];
   return (
-    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", border: "1px solid " + personVisual.taskBorder, borderLeft: "6px solid " + personVisual.stripe, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
+    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", borderWidth: "1px 1px 1px 6px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
@@ -3987,6 +3988,7 @@ function SortablePlanTaskCard({
     <div
       ref={setNodeRef}
       data-plan-task-id={task.id}
+      data-qa-plan-task={task.id}
       role="button"
       tabIndex={0}
       onClick={() => onTaskEdit?.(task) ?? onTaskSelect?.(task)}
@@ -4012,8 +4014,15 @@ function SortablePlanTaskCard({
         textDecoration: "none",
         color: isUnlinkedTask ? "#4f4b46" : DT.textPrimary,
         background: taskBackground,
-        border: `${isSelectedOrderTask ? 2 : 1}px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
-        borderLeft: (isSelectedOrderTask ? "7px solid " : "5px solid ") + taskStripe,
+        borderStyle: isUnlinkedTask ? "dashed" : "solid",
+        borderTopWidth: isSelectedOrderTask ? 2 : 1,
+        borderRightWidth: isSelectedOrderTask ? 2 : 1,
+        borderBottomWidth: isSelectedOrderTask ? 2 : 1,
+        borderLeftWidth: isSelectedOrderTask ? 7 : 5,
+        borderTopColor: taskBorder,
+        borderRightColor: taskBorder,
+        borderBottomColor: taskBorder,
+        borderLeftColor: taskStripe,
         borderRadius: 10,
         minHeight: isSelectedOrderTask ? 96 : 88,
         padding: isSelectedOrderTask ? "9px 9px" : isNextTask ? "8px 8px" : "7px 8px",
@@ -4131,7 +4140,7 @@ function WorkshopTaskEditor({
   }
   return (
     <div role="dialog" aria-modal="true" aria-label="Edit task" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "grid", placeItems: "center", background: "rgba(34,32,26,0.32)", padding: 18 }}>
-      <div data-workshop-task-editor-glow="review-glow" onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `5px solid ${REVIEW_GLOW.color}`, borderRadius: 16, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.modalShadow, padding: 16 }}>
+      <div data-workshop-task-editor-glow="review-glow" onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, borderRadius: 16, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.modalShadow, padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
           <div>
             <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Fix workshop task</div>
@@ -4289,8 +4298,9 @@ function SortableSuggestedStepCard({
         textDecoration: "none",
         color: DT.textPrimary,
         background: REVIEW_GLOW.bg,
-        border: `1px solid ${REVIEW_GLOW.borderStrong}`,
-        borderLeft: `5px solid ${REVIEW_GLOW.color}`,
+        borderWidth: "1px 1px 1px 5px",
+        borderStyle: "solid",
+        borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`,
         borderRadius: 8,
         padding: "6px 7px",
         boxShadow: REVIEW_GLOW.shadow,
@@ -4347,11 +4357,12 @@ function DroppablePlanLane({
     <div
       ref={setNodeRef}
       data-plan-lane-day={day}
+      data-qa-plan-lane={id}
       data-plan-lane-person={person}
       data-plan-lane-date-iso={dateIso}
       data-plan-lane-date-label={dateLabel}
       onDragOver={(event) => event.preventDefault()}
-      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, border: "1px dashed " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder), borderLeft: "3px solid " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
+      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, borderWidth: "1px 1px 1px 3px", borderStyle: "dashed dashed dashed solid", borderColor: (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
     >
       <div style={{ marginBottom: 5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap", minWidth: 0 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9, color: personVisual.text, fontFamily: DT.sans, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: "0 0 0 3px " + personVisual.taskSoft, flex: "0 0 auto" }} />{PERSON_LABELS[person]}</span>
@@ -4542,8 +4553,9 @@ function MonthWeekSection({
                                 overflow: "hidden",
                                 color: DT.textPrimary,
                                 background: "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))",
-                                border: "2px solid rgba(190,137,24,0.86)",
-                                borderLeft: "7px solid " + PERSON_VISUALS[person].stripe,
+                                borderWidth: "2px 2px 2px 7px",
+                                borderStyle: "solid",
+                                borderColor: "rgba(190,137,24,0.86) rgba(190,137,24,0.86) rgba(190,137,24,0.86) " + PERSON_VISUALS[person].stripe,
                                 borderRadius: 8,
                                 padding: "8px 8px",
                                 cursor: onAppTaskSelect ? "pointer" : "default",
@@ -4686,8 +4698,9 @@ function OrderJourneyView({
         ? { label: "Needs order", color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.34)" }
         : HEALTH_META[row.health];
     const rowStyle = {
-      border: `1px solid ${selected ? REVIEW_GLOW.border : DT.border}`,
-      borderLeft: `4px solid ${healthMeta.color}`,
+      borderWidth: "1px 1px 1px 4px",
+      borderStyle: "solid",
+      borderColor: `${selected ? REVIEW_GLOW.border : DT.border} ${selected ? REVIEW_GLOW.border : DT.border} ${selected ? REVIEW_GLOW.border : DT.border} ${healthMeta.color}`,
       background: selected ? REVIEW_GLOW.bgSoft : "rgba(255,255,255,0.86)",
       boxShadow: selected ? REVIEW_GLOW.shadow : DT.shadow,
       borderRadius: DT.radius,
@@ -4727,7 +4740,7 @@ function OrderJourneyView({
                       const personVisual = PERSON_VISUALS[task.person];
                       const connection = orderConnectionStyle(task.connectionState, selected);
                       return (
-                        <div key={task.id} data-order-row-task-id={task.id} style={{ border: `1px solid ${personVisual.taskBorder}`, borderLeft: `4px solid ${personVisual.stripe}`, borderRadius: 10, background: personVisual.taskBg, padding: 8, minHeight: 76 }}>
+                        <div key={task.id} data-order-row-task-id={task.id} style={{ borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, borderRadius: 10, background: personVisual.taskBg, padding: 8, minHeight: 76 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
                             <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{PERSON_LABELS[task.person]}</span>
                             <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
@@ -5569,6 +5582,7 @@ export type PlanClientProps = {
   source: "fresh" | "cache" | "snapshot" | "none";
   mondayError?: string;
   delightEnabled?: boolean;
+  qaFixtureMode?: boolean;
 };
 
 export default function PlanClient({
@@ -5578,6 +5592,7 @@ export default function PlanClient({
   source,
   mondayError,
   delightEnabled = false,
+  qaFixtureMode = false,
 }: PlanClientProps) {
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
@@ -5603,6 +5618,24 @@ export default function PlanClient({
       pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} /> : undefined}
       maxWidth={1500}
     >
+        {qaFixtureMode && (
+          <div
+            data-qa-plan-fixture="true"
+            style={{
+              marginBottom: 12,
+              border: "1px solid rgba(190,137,24,0.26)",
+              background: "rgba(255,246,199,0.72)",
+              color: "#8a5d08",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontFamily: DT.sans,
+              fontSize: 12,
+              fontWeight: 850,
+            }}
+          >
+            QA fixture mode: local browser-test data only. No Monday, Supabase, Xero, or customer records are used.
+          </div>
+        )}
         {rows.length === 0 ? (
           <div
             style={{

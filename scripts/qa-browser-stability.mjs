@@ -128,7 +128,8 @@ async function main() {
     const workButtons = await count(page, page.locator('button'));
     assert(workButtons >= 1, 'Workboard should expose at least one button/control');
 
-    await gotoAndCheck(page, '/production/plan', 'Production Plan');
+    await gotoAndCheck(page, '/production/plan?fixture=qa', 'Production Plan');
+    await page.getByText('QA fixture mode', { exact: false }).first().waitFor({ timeout: 10_000 });
     const planButtons = page.locator('button');
     assert(await count(page, planButtons) >= 1, 'Production Plan should expose at least one button/control');
     const safePlanControls = page.getByRole('button', { name: /show tasks|open full task list|hide tasks|close full task list|schedule|order rows|collapse|expand/i });
@@ -136,25 +137,20 @@ async function main() {
       await safePlanControls.first().click();
       report.interactions.push('production plan: safe visible control clicks');
     }
-    const draggable = page.locator('[draggable="true"], [role="button"][aria-roledescription*="sortable" i], [data-rbd-draggable-id], [data-draggable], [data-dnd-kit-draggable]');
-    const droppable = page.locator('[data-droppable], [data-rbd-droppable-id], [data-dnd-kit-droppable]');
+    const draggable = page.locator('[data-qa-plan-task] [data-task-card-main="task-card-main"]');
+    const droppable = page.locator('[data-qa-plan-lane]');
     const draggableCount = await count(page, draggable);
     const droppableCount = await count(page, droppable);
-    if (draggableCount > 0 && droppableCount > 0) {
-      const from = await draggable.first().boundingBox();
-      const to = await droppable.last().boundingBox();
-      if (from && to) {
-        await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-        await page.mouse.down();
-        await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
-        await page.mouse.up();
-        report.drag = { status: 'exercised', detail: `${draggableCount} draggable, ${droppableCount} droppable` };
-      } else {
-        report.drag = { status: 'skipped', detail: 'drag elements found but not visible' };
-      }
-    } else {
-      report.drag = { status: 'needs-fixture', detail: `No browser-visible drag fixture in sandbox (${draggableCount} draggable, ${droppableCount} droppable). Logic-level drag tests still run via npm run test:planning.` };
-    }
+    assert(draggableCount > 0, 'Production Plan fixture should render browser-draggable QA tasks');
+    assert(droppableCount > 1, 'Production Plan fixture should render multiple QA drop lanes');
+    const from = await draggable.first().boundingBox();
+    const to = await droppable.last().boundingBox();
+    assert(Boolean(from && to), 'Production Plan QA drag/drop elements should be visible');
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 });
+    await page.mouse.up();
+    report.drag = { status: 'exercised', detail: `${draggableCount} draggable, ${droppableCount} droppable` };
 
     await gotoAndCheck(page, '/production/test', 'Test Run');
     const summary = page.locator('summary').first();
