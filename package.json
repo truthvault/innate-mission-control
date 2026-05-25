@@ -10,6 +10,8 @@
     "check:mutations": "bash scripts/check-no-monday-mutations.sh",
     "smoke:tuesday": "node scripts/smoke-tuesday.mjs",
     "smoke:freight": "node scripts/smoke-freight.mjs",
+    "reconcile:sot": "node scripts/reconcile-source-of-truth.mjs",
+    "test:reconcile:sot": "node scripts/test-source-of-truth-reconciliation.mjs",
     "test:planning": "node scripts/test-new-order-planning.mjs && node scripts/test-plan-new-order-colours.mjs && node scripts/test-plan-drag-stress.mjs"
   },
   "dependencies": {
