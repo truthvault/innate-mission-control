@@ -64,6 +64,12 @@ const checks = [
     expect: ["Sample Stock", "Tuesday", "Synced"],
     auth: true,
   },
+  {
+    path: "/today",
+    label: "today",
+    expect: ["Owner Daily Brief", "Tuesday"],
+    auth: true,
+  },
 ];
 
 async function readText(response) {
