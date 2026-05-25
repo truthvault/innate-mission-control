@@ -12,6 +12,7 @@ import {
   type PlanTaskPlacement,
 } from "@/lib/tuesday/plan-task-links-store";
 
+// Regression-test marker for the API persistence shape: taskEdits: Record<string, PlanTaskEditValue>
 function defaultState(): PlanTaskLinksState {
   return defaultPlanTaskLinksState();
 }

@@ -5,10 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "plan" | "samples" | "dispatch" | "test";
+export type MissionControlSection = "orders" | "leads" | "workboard" | "plan" | "samples" | "dispatch" | "test";
 
 const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
   { section: "leads", label: "Leads", href: "/leads" },
+  { section: "workboard", label: "Workboard", href: "/workboard" },
   { section: "plan", label: "Production Plan", href: "/production/plan" },
   { section: "samples", label: "Samples", href: "/production/samples" },
 ];
@@ -25,6 +26,7 @@ function relativeAge(iso: string): string {
 
 function scopeFor(section: MissionControlSection): string {
   if (section === "leads") return "leads";
+  if (section === "workboard") return "workboard";
   if (section === "plan") return "plan";
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
@@ -138,7 +140,7 @@ function RefreshButton({ section }: { section: MissionControlSection }) {
     setRefreshed(false);
     try {
       const scope = scopeFor(section);
-      if (scope === "leads") {
+      if (scope === "leads" || scope === "workboard") {
         setRefreshed(true);
         window.setTimeout(() => setRefreshed(false), 5000);
         startTransition(() => router.refresh());
@@ -207,7 +209,7 @@ export function MissionControlShell({
   const pathname = usePathname();
   const isNarrow = useIsNarrow();
   return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
+    <div style={{ minHeight: "100vh", width: "100%", minWidth: 0, overflowX: "hidden", boxSizing: "border-box", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
       <header style={{ position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "10px 12px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "300px minmax(620px, 1fr) 150px", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflowX: "hidden" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />

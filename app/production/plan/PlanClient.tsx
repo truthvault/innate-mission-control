@@ -2427,7 +2427,7 @@ function EditableJobTasks({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div>
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Job tasks</div>
-          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Pick a stage, person, and date, then Add task to job. Tick when this task is finished.</div>
+          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Pick a stage, person, and date, then Add task to job. Tick the checkbox to mark this task done.</div>
         </div>
         <button
           type="button"
@@ -3172,15 +3172,15 @@ function orderConnectionLabel(task: DraggablePlanTask, planTaskLinks: PlanTaskLi
   const hasConfirmedOrder = Boolean(assignedOrderId || task.linkedOrderIds.length > 0);
   const looksInternal = /sample rack|shop|internal|maintenance|clean|tidy|tool|bench/i.test(`${task.text} ${task.rowName}`);
   if (hasConfirmedOrder) {
-    return { state: "connected" as OrderConnectionState, label: "Linked", detail: "Customer order attached" };
+    return { state: "connected" as OrderConnectionState, label: "Connected", detail: "Customer order attached" };
   }
   if (resolvedOrderId) {
-    return { state: "possible" as OrderConnectionState, label: "Confirm order", detail: "Confirm customer/order" };
+    return { state: "possible" as OrderConnectionState, label: "Possible match", detail: "Confirm customer/order" };
   }
   if (looksInternal) {
-    return { state: "internal" as OrderConnectionState, label: "Internal", detail: "Workshop task" };
+    return { state: "internal" as OrderConnectionState, label: "No customer / internal", detail: "Workshop task" };
   }
-  return { state: "needs-order" as OrderConnectionState, label: "Needs order link", detail: "Connect order" };
+  return { state: "needs-order" as OrderConnectionState, label: "Needs order", detail: "Connect order" };
 }
 
 function orderConnectionStyle(state: OrderConnectionState, selected = false) {
@@ -4210,7 +4210,7 @@ function WorkshopTaskEditor({
           <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Saves this card in Tuesday only. It does not update Monday yet.</span>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
-            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save changes</button>
+            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save task edits</button>
           </div>
         </div>
       </div>

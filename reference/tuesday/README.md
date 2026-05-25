@@ -12,7 +12,16 @@ Purpose: fast capture and durable routing for Innate Mission Control, also calle
 - `dashboard.md`
 - `foundations.md`
 - `inbox.md`
+- `projects-tasks-workboard-handover-2026-05-20.md` — handover/spec for a Supabase-backed Workboard tab seeded from the Stephen meeting
+- `workboard-linear-product-brief-2026-05-20.md` — Linear-inspired Workboard product translation for Tuesday
+- `workboard-mvp-implementation-plan-2026-05-20.md` — local Workboard MVP implementation plan
+- `innate-2talk-sms-setup-2026-05-19.md` — inbound/outbound 2talk SMS setup notes and safety boundaries
+- `supabase-sms-messages-schema-2026-05-19.sql` — draft SMS message table schema
+- `vercel-cli-deploy.md` — safe Vercel CLI deploy workflow, live links, and post-deploy verification checklist
 - `realtime-update-research-2026-05-25.md` — researched Supabase Realtime path for Monday-like cross-computer updates
+- `production-plan-task-links-supabase-2026-05-25.sql` — notes for the current Supabase-backed Production Plan task-link storage rollout
+- `tuesday-readiness-audit-2026-05-24.md` — current percent-readiness audit for Innate lighthouse + external Workshop OS productisation
+- `tuesday-agent-handover-2026-05-24.md` — current operating handover for the Tuesday profile/worker
 
 ## Gym Mode protocol
 
