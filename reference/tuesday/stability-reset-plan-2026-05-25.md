@@ -29,6 +29,7 @@ npm run check:mutations
 npm run test:planning
 npm run test:daily-brief
 npm run qa:stability
+npm run qa:browser
 ```
 
 `npm run qa:stability` must verify:
