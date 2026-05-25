@@ -47,6 +47,12 @@ const checks = [
     auth: true,
   },
   {
+    path: "/workboard",
+    label: "workboard",
+    expect: ["Workboard", "Today", "Projects", "Inbox", "Waiting", "Done"],
+    auth: true,
+  },
+  {
     path: "/production",
     label: "production default",
     expect: ["Production Plan", "Tuesday", "Synced"],
@@ -62,6 +68,12 @@ const checks = [
     path: "/production/samples",
     label: "samples",
     expect: ["Sample Stock", "Tuesday", "Synced"],
+    auth: true,
+  },
+  {
+    path: "/today",
+    label: "today",
+    expect: ["Owner Daily Brief", "Tuesday"],
     auth: true,
   },
 ];

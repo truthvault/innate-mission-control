@@ -149,7 +149,7 @@ export default function SampleStockClient({ board, syncedAt, source, mondayError
               <Kpi label="Ready full sets" value={`${board.summary.readyFullSets}/${SAMPLE_TYPES.length}`} tone={board.summary.readyFullSets === SAMPLE_TYPES.length ? "good" : "warn"} />
             </div>
             <PromiseRule />
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(300px, 0.9fr)", gap: 16, marginTop: 14, alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16, marginTop: 14, alignItems: "start" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {matrices.map((m) => <StockMatrix key={m.sampleType} title={m.sampleType} cells={m.cells} />)}
               </div>

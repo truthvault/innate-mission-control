@@ -1,6 +1,6 @@
 'use client';
 
-import { type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, type DragEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCorners,
   DndContext,
@@ -23,6 +23,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip } from "@/components/mission-control-ui";
+import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { UiOrder } from "@/lib/monday/mapping";
 import {
   buildSuggestedPlanForOrder,
@@ -45,6 +48,10 @@ import {
   type DayKey,
   type Person,
 } from "@/lib/monday/production-plan-mapping";
+
+const PLAN_TASK_LINKS_REALTIME_CHANNEL = "production-plan-task-links";
+const PLAN_TASK_LINKS_REALTIME_EVENT = "plan-task-links-changed";
+type PlanTaskLinksStorage = "blob" | "supabase";
 
 const DT = {
   pageBg: "#f5f3ee",
@@ -90,24 +97,24 @@ const PERSON_LABELS: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_SHORT: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_VISUALS: Record<Person, { stripe: string; stripeMuted: string; text: string; laneBg: string; laneBorder: string; taskBg: string; taskBorder: string; taskSoft: string }> = {
   nick: {
-    stripe: "#b8893d",
-    stripeMuted: "#c6a978",
-    text: "#7b5a24",
-    laneBg: "rgba(200,169,110,0.085)",
-    laneBorder: "rgba(184,137,61,0.30)",
-    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(200,169,110,0.095))",
-    taskBorder: "rgba(184,137,61,0.22)",
-    taskSoft: "rgba(200,169,110,0.12)",
+    stripe: "#8b1e1e",
+    stripeMuted: "#c66f6f",
+    text: "#8b1e1e",
+    laneBg: "rgba(139,30,30,0.075)",
+    laneBorder: "rgba(139,30,30,0.28)",
+    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(139,30,30,0.09))",
+    taskBorder: "rgba(139,30,30,0.22)",
+    taskSoft: "rgba(139,30,30,0.12)",
   },
   dylan: {
-    stripe: "#2f8f8a",
-    stripeMuted: "#8fbebb",
-    text: "#287572",
-    laneBg: "rgba(12,124,122,0.075)",
-    laneBorder: "rgba(12,124,122,0.28)",
-    taskBg: "linear-gradient(135deg, rgba(247,251,250,0.98), rgba(12,124,122,0.10))",
-    taskBorder: "rgba(12,124,122,0.20)",
-    taskSoft: "rgba(12,124,122,0.11)",
+    stripe: "#1f1f1f",
+    stripeMuted: "#77716a",
+    text: "#1f1f1f",
+    laneBg: "rgba(31,31,31,0.055)",
+    laneBorder: "rgba(31,31,31,0.24)",
+    taskBg: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(31,31,31,0.075))",
+    taskBorder: "rgba(31,31,31,0.18)",
+    taskSoft: "rgba(31,31,31,0.10)",
   },
 };
 const REVIEW_GLOW = {
@@ -124,17 +131,682 @@ const CAPACITY_STYLES = {
   watch: { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
+
+const DELIGHT_CANVAS_DURATION_MS = 3000;
+type DelightOrigin = { x: number; y: number; cardRect?: DOMRect };
+
+type DelightParticle = { angle: number; distance: number; speed: number; size: number; hue: number; spin: number };
+type DelightShard = { x: number; y: number; width: number; height: number; angle: number; vx: number; vy: number; spin: number; color: string };
+
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function drawCardShard(ctx: CanvasRenderingContext2D, shard: DelightShard, t: number) {
+  const drift = easeOutCubic(t);
+  const fall = t * t * 52;
+  ctx.save();
+  ctx.translate(shard.x + shard.vx * drift, shard.y + shard.vy * drift + fall);
+  ctx.rotate(shard.angle + shard.spin * drift);
+  ctx.globalAlpha = Math.max(0, 1 - t * 0.92);
+  ctx.fillStyle = shard.color;
+  ctx.strokeStyle = "rgba(34,32,26,0.18)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(-shard.width / 2, -shard.height / 2, shard.width, shard.height, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRainbowTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number) {
+  const alpha = Math.max(0, Math.min(0.72, 1 - t));
+  const colours = ["#ff4faf", "#ffd84a", "#62dbff", "#9a6cff"];
+  colours.forEach((colour, index) => {
+    ctx.save();
+    ctx.globalAlpha = alpha * (1 - index * 0.08);
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 14 - index * 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    points.forEach((point, pointIndex) => {
+      const y = point.y + (index - 1.5) * 5;
+      if (pointIndex === 0) ctx.moveTo(point.x, y);
+      else ctx.lineTo(point.x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawSmokeTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number, flameMix: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = "source-over";
+  points.forEach((point, index) => {
+    const age = index / Math.max(1, points.length - 1);
+    const puff = 18 + age * 38 + t * 16;
+    ctx.globalAlpha = Math.max(0, (0.42 - age * 0.20) * (1 - flameMix * 0.72) * (1 - t * 0.28));
+    const smoke = ctx.createRadialGradient(point.x, point.y, 2, point.x, point.y, puff);
+    smoke.addColorStop(0, "rgba(255,255,255,0.78)");
+    smoke.addColorStop(0.46, "rgba(194,184,190,0.36)");
+    smoke.addColorStop(1, "rgba(92,83,94,0)");
+    ctx.fillStyle = smoke;
+    ctx.beginPath();
+    ctx.arc(point.x + Math.sin(index * 1.7 + t * 8) * 8, point.y + Math.cos(index * 1.2 + t * 7) * 6, puff, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: number }[], t: number, flameMix: number, flameJetTightness = 0) {
+  if (flameMix <= 0.01) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  points.slice(0, 13).forEach((point, index) => {
+    const age = index / 13;
+    const flame = flameMix * Math.max(0, 1 - age * 0.82);
+    const tight = clamp01(flameJetTightness);
+    const radius = (12 + flame * 36 + Math.sin(t * 20 + index) * 5) * (1 - tight * 0.42);
+    const jetY = point.y + age * tight * 28;
+    ctx.globalAlpha = flame * (0.34 + age * 0.14) * (1 - tight * age * 0.55);
+    const glow = ctx.createRadialGradient(point.x, jetY, 2, point.x, jetY, radius * (1.8 - tight * 0.38));
+    glow.addColorStop(0, "rgba(255,255,220,0.96)");
+    glow.addColorStop(0.26, "rgba(255,181,41,0.82)");
+    glow.addColorStop(0.62, "rgba(255,73,24,0.40)");
+    glow.addColorStop(1, "rgba(255,45,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(point.x, jetY, radius * (1.8 - tight * 0.38), 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = index % 2 ? "rgba(255,91,25,0.72)" : "rgba(255,210,58,0.82)";
+    ctx.beginPath();
+    ctx.moveTo(point.x, jetY - radius * (1.4 + tight * 0.35));
+    ctx.quadraticCurveTo(point.x + radius * (0.82 - tight * 0.28), jetY - radius * 0.15, point.x + radius * 0.18, jetY + radius);
+    ctx.quadraticCurveTo(point.x - radius * (0.74 - tight * 0.24), jetY + radius * 0.18, point.x, jetY - radius * (1.4 + tight * 0.35));
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+
+const noBlackExitBlink = true;
+
+
+function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, crack: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.rotate(Math.sin(crack * Math.PI) * 0.08);
+  ctx.shadowColor = "rgba(34,32,26,0.20)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 10;
+  ctx.fillStyle = "#77a24a";
+  for (let i = -2; i <= 2; i += 1) {
+    ctx.save();
+    ctx.translate(i * 8, -36 - Math.abs(i) * 2);
+    ctx.rotate(i * 0.28);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 8, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = "#f4b739";
+  ctx.strokeStyle = "#b87916";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 26, 34, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(137,86,18,0.48)";
+  ctx.lineWidth = 1.5;
+  for (let i = -3; i <= 3; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(-28, -14 + i * 12);
+    ctx.lineTo(28, 12 + i * 12);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(28, -14 + i * 12);
+    ctx.lineTo(-28, 12 + i * 12);
+    ctx.stroke();
+  }
+  if (crack > 0.28) {
+    ctx.strokeStyle = "rgba(68,39,20,0.82)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-4, -22);
+    ctx.lineTo(4, -6);
+    ctx.lineTo(-2, 8);
+    ctx.lineTo(8, 28);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawUnicornSmile(ctx: CanvasRenderingContext2D) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(70,48,58,0.82)";
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(45, -7);
+  ctx.quadraticCurveTo(53, -1, 62, -8);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,139,181,0.62)";
+  ctx.beginPath();
+  ctx.ellipse(58, -5.5, 3.8, 1.9, -0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+
+function drawFrontFacingSunglasses(ctx: CanvasRenderingContext2D, bounce: number) {
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const lensGradient = ctx.createLinearGradient(16, -27 + bounce, 69, -9 + bounce);
+  lensGradient.addColorStop(0, "rgba(5,8,15,0.98)");
+  lensGradient.addColorStop(0.48, "rgba(30,38,54,0.99)");
+  lensGradient.addColorStop(1, "rgba(3,5,10,0.98)");
+  ctx.fillStyle = lensGradient;
+  ctx.strokeStyle = "rgba(255,255,255,0.72)";
+  ctx.lineWidth = 2.1;
+  ctx.beginPath();
+  ctx.roundRect(14, -29 + bounce, 23, 15, 6);
+  ctx.roundRect(45, -29 + bounce, 23, 15, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(12,12,17,0.96)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(37, -21 + bounce);
+  ctx.lineTo(45, -21 + bounce);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.52)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(19, -27 + bounce);
+  ctx.lineTo(30, -28 + bounce);
+  ctx.moveTo(50, -28 + bounce);
+  ctx.lineTo(61, -27 + bounce);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFaceHighlight(ctx: CanvasRenderingContext2D, bounce: number) {
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(25, -38 + bounce);
+  ctx.quadraticCurveTo(40, -45 + bounce, 57, -38 + bounce);
+  ctx.moveTo(21, -5 + bounce);
+  ctx.quadraticCurveTo(40, 5 + bounce, 61, -5 + bounce);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: number, ghost = false) {
+  ctx.save();
+  ctx.shadowColor = ghost ? "transparent" : "rgba(66,52,94,0.18)";
+  ctx.shadowBlur = ghost ? 0 : 18;
+
+  ctx.fillStyle = "rgba(255,213,222,0.78)";
+  ctx.strokeStyle = "rgba(78,60,86,0.24)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(16, -40 + bounce, 8, 16, -0.45, 0, Math.PI * 2);
+  ctx.ellipse(66, -40 + bounce, 8, 16, 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const hornGradient = ctx.createLinearGradient(40, -42 + bounce, 42, -88 + bounce);
+  hornGradient.addColorStop(0, "#fff2a8");
+  hornGradient.addColorStop(0.46, "#f8c64f");
+  hornGradient.addColorStop(1, "#fff9d2");
+  ctx.fillStyle = hornGradient;
+  ctx.strokeStyle = "rgba(137,91,25,0.40)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(31, -39 + bounce);
+  ctx.lineTo(42, -89 + bounce);
+  ctx.lineTo(53, -39 + bounce);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(160,103,26,0.45)";
+  ctx.lineWidth = 1.25;
+  for (let i = 0; i < 4; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(36 + i * 1.5, -47 - i * 8 + bounce);
+    ctx.lineTo(50 - i * 1.5, -50 - i * 8 + bounce);
+    ctx.stroke();
+  }
+
+  const headGradient = ctx.createRadialGradient(32, -34 + bounce, 9, 41, -17 + bounce, 48);
+  headGradient.addColorStop(0, "#ffffff");
+  headGradient.addColorStop(0.50, "#fff3f5");
+  headGradient.addColorStop(1, "#d6c4dc");
+  ctx.fillStyle = headGradient;
+  ctx.strokeStyle = "rgba(78,60,86,0.28)";
+  ctx.lineWidth = 2.3;
+  ctx.beginPath();
+  ctx.ellipse(41, -19 + bounce, 31, 27, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  const muzzleGradient = ctx.createRadialGradient(41, -2 + bounce, 4, 41, -2 + bounce, 23);
+  muzzleGradient.addColorStop(0, "#fffefd");
+  muzzleGradient.addColorStop(0.72, "#f4dee6");
+  muzzleGradient.addColorStop(1, "#dcc4d4");
+  ctx.fillStyle = muzzleGradient;
+  ctx.beginPath();
+  ctx.ellipse(41, -2 + bounce, 21, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  if (!ghost) drawFrontFacingSunglasses(ctx, bounce);
+  if (!ghost) {
+    ctx.fillStyle = "rgba(92,63,82,0.68)";
+    ctx.beginPath();
+    ctx.ellipse(34, -1 + bounce, 2.2, 1.7, -0.18, 0, Math.PI * 2);
+    ctx.ellipse(48, -1 + bounce, 2.2, 1.7, 0.18, 0, Math.PI * 2);
+    ctx.fill();
+    drawUnicornSmile(ctx);
+    drawFaceHighlight(ctx, bounce);
+  }
+  ctx.restore();
+}
+
+function drawUnicornLeg(ctx: CanvasRenderingContext2D, x: number, y: number, lean: number, motion: number, rear = false) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(lean + Math.sin(motion) * 0.13);
+  const legGradient = ctx.createLinearGradient(0, 0, 8, 38);
+  legGradient.addColorStop(0, rear ? "#eee3ef" : "#fff8fa");
+  legGradient.addColorStop(1, rear ? "#cdbbd2" : "#dacadc");
+  ctx.fillStyle = legGradient;
+  ctx.strokeStyle = "rgba(78,60,86,0.22)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.roundRect(-4, -1, 9, 34, 5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "rgba(94,67,86,0.28)";
+  ctx.beginPath();
+  ctx.ellipse(1, 34, 8, 4, 0.04, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawUnicornMotionBlur(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number, motion: number) {
+  for (let i = 3; i >= 1; i -= 1) {
+    ctx.save();
+    ctx.globalAlpha = 0.08 * i;
+    ctx.filter = `blur(${i * 2}px)`;
+    drawHyperRealisticUnicorn(ctx, x - i * 22, y + i * 9, scale * (1 - i * 0.025), rotation - i * 0.035, motion - i * 0.45, true);
+    ctx.restore();
+  }
+}
+
+function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number, motion = 0, ghost = false) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.scale(scale, scale);
+
+  const maneFlow = Math.sin(motion * 1.8) * 4;
+  const bounce = Math.sin(motion * 2.2) * 2.5;
+  if (!ghost) {
+    ctx.shadowColor = "rgba(66,52,94,0.34)";
+    ctx.shadowBlur = 34;
+    ctx.shadowOffsetY = 13;
+  }
+
+  const bodyGradient = ctx.createRadialGradient(24, -22, 6, -4, 8 + bounce, 88);
+  bodyGradient.addColorStop(0, "#ffffff");
+  bodyGradient.addColorStop(0.38, "#fff6f8");
+  bodyGradient.addColorStop(0.74, "#eaddea");
+  bodyGradient.addColorStop(1, "#c9b6ce");
+  ctx.fillStyle = bodyGradient;
+  ctx.strokeStyle = "rgba(78,60,86,0.28)";
+  ctx.lineWidth = 2.3;
+  ctx.beginPath();
+  ctx.ellipse(-6, 9 + bounce, 50, 30, -0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowColor = "transparent";
+  drawUnicornLeg(ctx, -30, 29 + bounce, -0.22, motion, true);
+  drawUnicornLeg(ctx, -4, 31 + bounce, 0.10, motion + 1.4);
+  drawUnicornLeg(ctx, 21, 28 + bounce, -0.02, motion + 2.5);
+
+  ctx.shadowColor = ghost ? "transparent" : "rgba(66,52,94,0.16)";
+  ctx.shadowBlur = ghost ? 0 : 16;
+  const neckGradient = ctx.createLinearGradient(18, -32, 4, 26);
+  neckGradient.addColorStop(0, "#fffefe");
+  neckGradient.addColorStop(1, "#ddcede");
+  ctx.fillStyle = neckGradient;
+  ctx.beginPath();
+  ctx.moveTo(16, -30 + bounce);
+  ctx.quadraticCurveTo(-12, -14, -1, 19 + bounce);
+  ctx.quadraticCurveTo(18, 28, 34, 2 + bounce);
+  ctx.quadraticCurveTo(35, -20, 16, -30 + bounce);
+  ctx.fill();
+  ctx.stroke();
+
+  // Front-facing face is drawn after the mane/tail so it looks at the user instead of flying side-on.
+
+
+  const maneColours = ["#ff4faf", "#7a5cff", "#25c8ff", "#ffd84a", "#ff7c4d", "#72f0aa"];
+  maneColours.forEach((colour, index) => {
+    const mx = 14 - index * 8 + Math.sin(motion + index) * 2.3;
+    const my = -26 + index * 5 + maneFlow * (1 - index * 0.10);
+    const maneGradient = ctx.createRadialGradient(mx, my, 2, mx, my, 22);
+    maneGradient.addColorStop(0, "#ffffff");
+    maneGradient.addColorStop(0.20, colour);
+    maneGradient.addColorStop(1, "rgba(96,56,130,0.58)");
+    ctx.fillStyle = maneGradient;
+    ctx.beginPath();
+    ctx.ellipse(mx, my, 10, 25, 0.70 + Math.sin(motion + index) * 0.08, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const tailGradient = ctx.createLinearGradient(-78, -54, -31, 8);
+  tailGradient.addColorStop(0, "#ff4faf");
+  tailGradient.addColorStop(0.30, "#7a5cff");
+  tailGradient.addColorStop(0.62, "#25c8ff");
+  tailGradient.addColorStop(1, "#ffd84a");
+  ctx.strokeStyle = tailGradient;
+  ctx.lineWidth = 11;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-43, 0 + bounce);
+  ctx.quadraticCurveTo(-86, -33 + maneFlow, -56, -68 + maneFlow * 1.2);
+  ctx.stroke();
+  ctx.lineWidth = 5;
+  ctx.globalAlpha = ghost ? ctx.globalAlpha : 0.55;
+  ctx.strokeStyle = "rgba(255,255,255,0.82)";
+  ctx.beginPath();
+  ctx.moveTo(-49, -4 + bounce);
+  ctx.quadraticCurveTo(-76, -30 + maneFlow, -54, -55 + maneFlow);
+  ctx.stroke();
+  ctx.globalAlpha = ghost ? ctx.globalAlpha : 1;
+
+  drawFrontFacingUnicornFace(ctx, bounce, ghost);
+
+  ctx.globalAlpha = ghost ? ctx.globalAlpha : 0.46;
+  ctx.strokeStyle = "rgba(255,255,255,0.94)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(10, 0 + bounce);
+  ctx.quadraticCurveTo(31, 9 + bounce, 55, -1 + bounce);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawUnicorn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, rotation: number, motion = 0) {
+  drawHyperRealisticUnicorn(ctx, x, y, scale, rotation, motion);
+}
+
+
+function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOrigin) {
+  // Canvas Delight Engine: use a real drawing layer instead of HTML/CSS keyframe puppets.
+  const maybeContext = canvas.getContext("2d");
+  if (!maybeContext) return () => undefined;
+  const ctx = maybeContext;
+  // Keep the delight smooth on Retina screens. Full DPR 2-3 canvas + blur filters
+  // makes the unicorn render millions of pixels per frame while the board is also
+  // saving/re-rendering the completed task.
+  const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+  const card = origin.cardRect;
+  const cx = card ? card.left + card.width / 2 : origin.x;
+  const cy = card ? card.top + card.height / 2 : origin.y;
+  const cardWidth = card?.width ?? 116;
+  const cardHeight = card?.height ?? 86;
+  const particleCount = width < 760 ? 58 : 82;
+  const shardCount = width < 760 ? 12 : 16;
+  const trailCount = width < 760 ? 14 : 20;
+  const particles: DelightParticle[] = Array.from({ length: particleCount }, (_, index) => ({
+    angle: (Math.PI * 2 * index) / particleCount + ((index % 9) - 4) * 0.038,
+    distance: 86 + (index % 13) * 17,
+    speed: 0.76 + (index % 5) * 0.08,
+    size: 2.5 + (index % 6) * 1.3,
+    hue: (index * 23) % 360,
+    spin: ((index % 2 ? 1 : -1) * (0.8 + (index % 4) * 0.35)),
+  }));
+  const shards: DelightShard[] = Array.from({ length: shardCount }, (_, index) => {
+    const col = index % 4;
+    const row = Math.floor(index / 4);
+    const x = cx - cardWidth * 0.42 + col * cardWidth * 0.28;
+    const y = cy - cardHeight * 0.38 + row * cardHeight * 0.19;
+    const angle = -0.26 + index * 0.034;
+    return {
+      x,
+      y,
+      width: Math.max(20, cardWidth / 3.7),
+      height: Math.max(16, cardHeight / 4.8),
+      angle,
+      vx: Math.cos((Math.PI * 2 * index) / shardCount) * (72 + (index % 4) * 27),
+      vy: Math.sin((Math.PI * 2 * index) / shardCount) * (58 + (index % 5) * 19) - 42,
+      spin: (index % 2 ? 1 : -1) * (1.4 + index * 0.08),
+      color: index % 2 ? "rgba(255,253,249,0.94)" : "rgba(255,246,199,0.90)",
+    };
+  });
+
+  let raf = 0;
+  const started = performance.now();
+  function frame(now: number) {
+    const raw = (now - started) / DELIGHT_CANVAS_DURATION_MS;
+    const t = clamp01(raw);
+    ctx.clearRect(0, 0, width, height);
+
+    const flashAlpha = Math.max(0, 0.24 * (1 - t * 2.2));
+    ctx.fillStyle = `rgba(255,246,199,${flashAlpha})`;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 0.78 * (1 - t));
+    const shock = 24 + easeOutCubic(t) * 340;
+    const gradient = ctx.createRadialGradient(cx, cy, 8, cx, cy, shock);
+    gradient.addColorStop(0, "rgba(255,255,255,0.86)");
+    gradient.addColorStop(0.22, "rgba(255,214,74,0.50)");
+    gradient.addColorStop(0.55, "rgba(91,211,255,0.26)");
+    gradient.addColorStop(1, "rgba(255,79,175,0)");
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(cx, cy, shock, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    shards.forEach((shard) => drawCardShard(ctx, shard, t));
+
+    const straightOutLaunch = easeOutCubic(clamp01((t - 0.06) / 0.28));
+    const screenApproach = easeOutCubic(clamp01((t - 0.18) / 0.62));
+    const targetX = cx;
+    const targetY = height * 0.46;
+    const launchLift = 36 * straightOutLaunch * (1 - screenApproach * 0.45);
+    const rightExitAtEightyPercent = easeOutCubic(clamp01((screenApproach - 0.80) / 0.20));
+    const forwardThenRightExit = rightExitAtEightyPercent;
+    const offscreenRightExit = rightExitAtEightyPercent * (width - cx + 220);
+    const unicornX = targetX + Math.sin(t * Math.PI * 5) * 3 * (1 - screenApproach) + offscreenRightExit;
+    const unicornY = cy - launchLift + (targetY - cy) * screenApproach - rightExitAtEightyPercent * 36;
+    const flameMix = easeOutCubic(clamp01((screenApproach - 0.22) / 0.78));
+    const cameraPassThrough = easeOutCubic(clamp01((t - 0.66) / 0.22));
+    const impactStart = 0.74;
+    const cameraImpact = easeOutCubic(clamp01((t - impactStart) / 0.16));
+    const rightExitFade = 1 - easeOutCubic(clamp01((rightExitAtEightyPercent - 0.72) / 0.26));
+    const slickOffscreenCutoff = rightExitAtEightyPercent >= 0.985;
+    const noPostExitGlow = true;
+    if (slickOffscreenCutoff) {
+      void noPostExitGlow;
+      if (t < 1) raf = requestAnimationFrame(frame);
+      return;
+    }
+    const trailFadeBeforeImpact = 1 - easeOutCubic(clamp01((t - 0.66) / 0.08));
+    const trailCutoff = trailFadeBeforeImpact > 0.02;
+    const originFade = 1 - easeOutCubic(clamp01((t - 0.56) / 0.18));
+    const flameJetTightness = easeOutCubic(clamp01((t - 0.58) / 0.14));
+    const trail = Array.from({ length: trailCount }, (_, index) => {
+      const lag = index / trailCount;
+      const trailApproach = Math.max(0, screenApproach - lag * 0.50);
+      const depthDrift = straightOutLaunch * (1 - lag) * 22;
+      return {
+        x: cx + Math.sin(index * 0.9 + t * 12) * (5 + lag * 14) * (1 - trailApproach),
+        y: cy + depthDrift + (targetY - cy) * trailApproach + Math.cos(index * 1.1 + t * 10) * 4,
+      };
+    }).reverse();
+    if (trailCutoff) {
+      ctx.save();
+      ctx.globalAlpha = trailFadeBeforeImpact;
+      drawSmokeTrail(ctx, trail, t, flameMix);
+      drawRainbowTrail(ctx, trail, t);
+      if (t < impactStart) drawFlameTrail(ctx, trail, t, flameMix, flameJetTightness);
+      ctx.restore();
+    }
+
+    particles.forEach((particle, index) => {
+      const blast = easeOutCubic(clamp01((t - 0.05) / particle.speed));
+      const px = cx + Math.cos(particle.angle) * particle.distance * blast;
+      const py = cy + Math.sin(particle.angle) * particle.distance * blast + t * t * 42;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(particle.spin * blast + index);
+      ctx.globalAlpha = Math.max(0, 1 - t * 1.06) * originFade;
+      ctx.fillStyle = `hsl(${particle.hue} 92% 62%)`;
+      if (index % 9 === 0) {
+        ctx.font = `${particle.size * 4}px system-ui`;
+        ctx.fillText(index % 18 === 0 ? "🍍" : "✨", -particle.size * 2, particle.size * 2);
+      } else {
+        ctx.beginPath();
+        ctx.roundRect(-particle.size, -particle.size, particle.size * 2, particle.size * 2, 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+
+    const pineappleScale = Math.max(0, Math.sin(Math.min(1, t / 0.66) * Math.PI)) * (1.24 + 0.28 * Math.sin(t * Math.PI * 8));
+    if (originFade > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = originFade;
+      drawPineapple(ctx, cx, cy, pineappleScale, t);
+      ctx.restore();
+    }
+    const screenFillScale = 0.52 + straightOutLaunch * 0.50 + Math.pow(screenApproach, 2.1) * 2.8 + Math.pow(cameraPassThrough, 2.2) * 4.2;
+    const unicornRotation = -0.10 + Math.sin(t * Math.PI * 8) * 0.035 * (1 - screenApproach) + forwardThenRightExit * 0.16;
+    if (rightExitFade > 0) {
+      ctx.save();
+      ctx.globalAlpha = rightExitFade;
+      if (ratio <= 1.25 && width >= 760) drawUnicornMotionBlur(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+      drawUnicorn(ctx, unicornX, unicornY, screenFillScale, unicornRotation, now / 180);
+      ctx.restore();
+    }
+    void cameraImpact;
+    void noPostExitGlow;
+    void noBlackExitBlink;
+
+    if (t < 1) raf = requestAnimationFrame(frame);
+  }
+  raf = requestAnimationFrame(frame);
+  return () => cancelAnimationFrame(raf);
+}
+
+function DelightDoneBurst({ origin }: { origin: DelightOrigin }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    return runPineappleUnicornCanvas(canvas, origin);
+  }, [origin]);
+  return (
+    <div
+      data-delight-done-burst="delight-done-burst"
+      aria-label="Tuesday done unicorn pineapple explosion"
+      style={{ position: "fixed", inset: 0, zIndex: 120, pointerEvents: "none", overflow: "hidden" }}
+    >
+      <canvas ref={canvasRef} data-delight-canvas="pineapple-unicorn-canvas" style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh" }} />
+      <span data-delight-pineapple="delight-pineapple" style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>🍍</span>
+      <span data-delight-flying-unicorn="delight-flying-unicorn" style={{ position: "absolute", width: 1, height: 1, opacity: 0, overflow: "hidden" }}>🦄</span>
+    </div>
+  );
+}
+
+function DelightUnicorn() {
+  return (
+    <div
+      aria-label="Tuesday delight unicorn"
+      title="Tuesday delight unicorn"
+      data-delight-badge-placement="in-flow-safe"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        marginTop: 12,
+        width: "fit-content",
+        padding: "7px 10px",
+        borderRadius: 999,
+        border: "1px solid rgba(211,154,35,0.30)",
+        background: "rgba(255,246,199,0.86)",
+        color: "#8a5d08",
+        fontFamily: DT.sans,
+        fontSize: 12,
+        fontWeight: 900,
+        boxShadow: "0 8px 18px rgba(80,57,20,0.08)",
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>🦄</span>
+      <span>delight on</span>
+    </div>
+  );
+}
+
 const JOB_TASK_PRESETS = [
   "Material + spec check",
   "Cut / machine / prep",
   "Sand and coat",
   "Second coat",
+  "3rd coat (clear final)",
+  "4th coat (blackwash final)",
   "Final QC photos",
   "Pack / wrap",
   "Book freight",
   "Customer update",
   "Custom",
 ] as const;
+const TABLE_TASK_STAGE_SUGGESTIONS = [
+  "Material + spec check",
+  "Timber pulled",
+  "Stress cuts",
+  "Cut / machine / prep",
+  "Sand",
+  "1st coat",
+  "2nd coat",
+  "3rd coat (clear final)",
+  "4th coat (blackwash final)",
+  "Curing",
+  "QC + photos",
+  "Assemble / box",
+  "Pack / wrap",
+  "Book freight",
+  "Customer update",
+] as const;
+const STAGE_CUSTOM_VALUE = "__custom_task_stage__";
 type Step = { key: string; label: string; who: string | null; wait: boolean; waitLabel?: string };
 const TABLE_STEPS: Step[] = [
   { key: "confirmed", label: "Order Confirmed", who: "Workshop", wait: false },
@@ -220,7 +892,10 @@ type AppPlanTask = {
   done: boolean;
 };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
+type PlanTaskEditValue = { text?: string; rowName?: string; day?: DayKey; person?: Person; estimatedHours?: number; internal?: boolean; done?: boolean; updatedAt?: string };
+type PlanTaskEdits = Record<string, PlanTaskEditValue>;
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
+type ProductionPlanMode = "schedule" | "orderRows";
 type PersonFilter = "all" | Person;
 type RailFilter = "all" | "blocked" | "thisWeek" | "materials" | "noDate";
 type RailSort = "soonest" | "latest" | "customer";
@@ -448,12 +1123,26 @@ function placementFromPlanTaskLink(value: PlanTaskLinkValue | undefined) {
   return value && typeof value === "object" ? value.placement : undefined;
 }
 
-function linkValueForPlanTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
-  return links[planTaskLinkKey(task)] ?? links[task.id];
+function stablePlanTaskKey(task: Pick<DraggablePlanTask, "rowId" | "text" | "taskKey">) {
+  return task.taskKey ?? planTaskLinkKey(task);
 }
 
-function assignedOrderIdForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
+function linkValueForPlanTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text" | "taskKey">, links: PlanTaskLinks) {
+  return links[stablePlanTaskKey(task)] ?? links[task.id];
+}
+
+function assignedOrderIdForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text" | "taskKey">, links: PlanTaskLinks) {
   return orderIdFromPlanTaskLink(linkValueForPlanTask(task, links));
+}
+
+function cleanTaskEstimatedHours(value: unknown) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(0, Math.round(parsed * 2) / 2);
+}
+
+function formatTaskHours(value: unknown) {
+  return `${cleanTaskEstimatedHours(value)}h`;
 }
 
 function placementForTask(task: Pick<DraggablePlanTask, "id" | "rowId" | "text">, links: PlanTaskLinks) {
@@ -505,6 +1194,25 @@ function orderNameMatchScore(order: UiOrder, ...candidates: Array<string | null 
     if (matches > 0) best = Math.max(best, matches);
   }
   return best;
+}
+
+function friendlyWorkshopTaskText(value: string) {
+  const compact = value.replace(/\s+/g, " ").trim();
+  const normalized = compact.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!normalized) return compact;
+  if (/^snad( and)? coat$/.test(normalized) || /^sand coat$/.test(normalized) || /^sand and coat$/.test(normalized)) return "Sand and coat";
+  if (/^wrap( check packing)?$/.test(normalized) || /^wrap packing$/.test(normalized)) return "Wrap / check packing";
+  if (/^qc photos?$/.test(normalized) || /^final qc photos?$/.test(normalized)) return "QC + photos";
+  if (/^book freight$/.test(normalized)) return "Book freight";
+  if (/^customer update$/.test(normalized)) return "Customer update";
+  return compact;
+}
+
+function taskCustomerDisplayName(task: Pick<DraggablePlanTask, "rowName">) {
+  const compact = task.rowName.replace(/\s+/g, " ").trim();
+  if (!compact) return "Customer / order";
+  if (/^no customer\s*\/?\s*internal$/i.test(compact)) return "Internal";
+  return compact;
 }
 
 function orderWorkshopTasksByPlacement(tasks: WorkshopTask[]) {
@@ -585,25 +1293,44 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
   const [workflow, setWorkflow] = useState<OrderWorkflowState>(() => defaultWorkflowState(order.id));
   const [workflowStatus, setWorkflowStatus] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadWorkflow = useCallback((statusPrefix = "") => {
+    let active = true;
     fetch(`/api/production/order-workflow?orderId=${order.id}`)
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Workflow unavailable")))
       .then((data: { state?: OrderWorkflowState; disabledReason?: string }) => {
-        if (cancelled) return;
+        if (!active) return;
         const next = data.state ?? defaultWorkflowState(order.id);
         setWorkflow(next);
         onWorkflowChange?.(next);
-        setWorkflowStatus(data.disabledReason ?? "");
+        setWorkflowStatus(data.disabledReason ?? statusPrefix);
       })
       .catch((err) => {
-        if (!cancelled) setWorkflowStatus(err instanceof Error ? err.message : "Workflow unavailable");
+        if (active) setWorkflowStatus(err instanceof Error ? err.message : "Workflow unavailable");
       });
     return () => {
-      cancelled = true;
-      onWorkflowChange?.(null);
+      active = false;
     };
   }, [order.id, onWorkflowChange]);
+
+  useEffect(() => {
+    const cancelLoad = loadWorkflow();
+    return () => {
+      cancelLoad();
+      onWorkflowChange?.(null);
+    };
+  }, [loadWorkflow, onWorkflowChange]);
+
+  const handleRealtimeWorkflowChange = useCallback(() => {
+    loadWorkflow("Updated from workshop");
+  }, [loadWorkflow]);
+
+  useRealtimeRefresh({
+    channelName: `production-order-workflow:${order.id}`,
+    table: "production_order_workflows",
+    filter: `order_id=eq.${order.id}`,
+    refreshOnChange: false,
+    onChange: handleRealtimeWorkflowChange,
+  });
 
   function saveWorkflow(next: OrderWorkflowState) {
     setWorkflow(next);
@@ -878,8 +1605,9 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
         width: "100%",
         minWidth: 0,
         textAlign: "left",
-        border: `1px solid ${DT.border}`,
-        borderLeft: `4px solid ${health.color}`,
+        borderWidth: "1px 1px 1px 4px",
+        borderStyle: "solid",
+        borderColor: `${DT.border} ${DT.border} ${DT.border} ${health.color}`,
         background: DT.cardBg,
         borderRadius: 10,
         padding: "10px 10px 9px",
@@ -953,7 +1681,7 @@ function NewOrderRailCard({
           onOpenOrder();
         }
       }}
-      style={{ marginBottom: 8, border: `1px solid ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder}`, borderLeft: `5px solid ${reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayStripe}`, background: reviewActive ? REVIEW_GLOW.bg : newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? REVIEW_GLOW.shadow : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
+      style={{ marginBottom: 8, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder} ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder} ${reviewActive ? REVIEW_GLOW.borderStrong : newOrderPalette.clayBorder} ${reviewActive ? REVIEW_GLOW.color : newOrderPalette.clayStripe}`, background: reviewActive ? REVIEW_GLOW.bg : newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? REVIEW_GLOW.shadow : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
@@ -1160,7 +1888,7 @@ function TaskAssignmentPanel({
                 type="button"
                 key={order.id}
                 onClick={() => chooseOrder(order)}
-                style={{ width: "100%", minWidth: 0, textAlign: "left", border: `1px solid ${active ? REVIEW_GLOW.borderStrong : DT.border}`, borderLeft: `4px solid ${active ? REVIEW_GLOW.color : health.color}`, background: active ? REVIEW_GLOW.bg : DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: active ? REVIEW_GLOW.shadow : "0 1px 4px rgba(0,0,0,0.025)" }}
+                style={{ width: "100%", minWidth: 0, textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${active ? REVIEW_GLOW.borderStrong : DT.border} ${active ? REVIEW_GLOW.borderStrong : DT.border} ${active ? REVIEW_GLOW.borderStrong : DT.border} ${active ? REVIEW_GLOW.color : health.color}`, background: active ? REVIEW_GLOW.bg : DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: active ? REVIEW_GLOW.shadow : "0 1px 4px rgba(0,0,0,0.025)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ minWidth: 0 }}>
@@ -1698,7 +2426,10 @@ function EditableJobTasks({
   return (
     <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.66)", borderRadius: 9, padding: "8px 9px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Job tasks</div>
+        <div>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Job tasks</div>
+          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Pick a stage, person, and date, then Add task to job. Tick the checkbox to mark this task done.</div>
+        </div>
         <button
           type="button"
           onClick={addTask}
@@ -1706,10 +2437,10 @@ function EditableJobTasks({
           title="Add task to this job and show it on the Production Plan"
           style={{ border: `1px solid rgba(12,124,122,0.18)`, background: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? DT.textFaint : DT.teal, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "not-allowed" : "pointer" }}
         >
-          ✓
+          Add task to job
         </button>
       </div>
-      <div style={{ marginTop: 7, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 74px", gap: 6 }}>
+      <div style={{ marginTop: 7, display: "grid", gridTemplateColumns: "minmax(0, 1fr) 86px", gap: 6 }}>
         <select
           value={draftAction}
           onChange={(event) => setDraftAction(event.target.value)}
@@ -2331,9 +3062,26 @@ function weekRangeFromTitle(title: string, now = new Date()) {
 
 type PlanWeek = { id: string; title: string; rows: PlanRow[] };
 type BoardPlanTask = DraggablePlanTask & { weekId: string };
+type OrderJourneyTask = BoardPlanTask & {
+  orderId: number | null;
+  orderName: string;
+  weekTitle: string;
+  dateLabel: string;
+  sortKey: string;
+  connectionState: OrderConnectionState;
+};
+type OrderJourneyRow = {
+  id: string;
+  order: UiOrder | null;
+  name: string;
+  dueLabel: string | null;
+  statusLabel: string | null;
+  health: OrderHealthLevel | "internal" | "unlinked";
+  tasks: OrderJourneyTask[];
+};
 type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
 type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
-
+type OrderConnectionState = "connected" | "possible" | "needs-order" | "internal";
 function isoDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -2420,14 +3168,39 @@ function planTaskLinkKey(task: Pick<DraggablePlanTask, "rowId" | "text">) {
   return `plan-task:${task.rowId}:${planTaskFingerprint(task.text)}`;
 }
 
+function orderConnectionLabel(task: DraggablePlanTask, planTaskLinks: PlanTaskLinks, resolvedOrderId: number | null = null) {
+  const assignedOrderId = assignedOrderIdForTask(task, planTaskLinks);
+  const hasConfirmedOrder = Boolean(assignedOrderId || task.linkedOrderIds.length > 0);
+  const looksInternal = /sample rack|shop|internal|maintenance|clean|tidy|tool|bench/i.test(`${task.text} ${task.rowName}`);
+  if (hasConfirmedOrder) {
+    return { state: "connected" as OrderConnectionState, label: "Connected", detail: "Customer order attached" };
+  }
+  if (resolvedOrderId) {
+    return { state: "possible" as OrderConnectionState, label: "Possible match", detail: "Confirm customer/order" };
+  }
+  if (looksInternal) {
+    return { state: "internal" as OrderConnectionState, label: "No customer / internal", detail: "Workshop task" };
+  }
+  return { state: "needs-order" as OrderConnectionState, label: "Needs order", detail: "Connect order" };
+}
+
+function orderConnectionStyle(state: OrderConnectionState, selected = false) {
+  if (state === "connected") return { color: selected ? "#8a5d08" : DT.teal, bg: selected ? "rgba(255,246,199,0.96)" : DT.tealSoft, border: selected ? "rgba(190,137,24,0.34)" : "rgba(12,124,122,0.14)" };
+  if (state === "possible") return { color: "#8a5d08", bg: "rgba(255,246,199,0.68)", border: "rgba(190,137,24,0.36)" };
+  if (state === "internal") return { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.20)" };
+  return { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.38)" };
+}
+
 function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
   return rows.flatMap((row) =>
     DAYS.flatMap((day) =>
       PEOPLE.flatMap((person) => {
         const text = row.dayTasks[day][person];
+        const taskKey = text ? planTaskLinkKey({ rowId: row.id, text }) : "";
         return text
           ? [{
               id: `${row.id}:${day}:${person}`,
+              taskKey,
               rowId: row.id,
               rowName: row.name,
               rowNotes: row.notes,
@@ -2436,6 +3209,7 @@ function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
               text,
               linkedOrderIds: row.linkedOrders.map((linked) => Number(linked.mondayItemId)).filter((id) => Number.isFinite(id)),
               linkedOrders: row.linkedOrders,
+              estimatedHours: 1,
             }]
           : [];
       })
@@ -2443,8 +3217,83 @@ function sourceTasksForWeek(rows: PlanRow[]): DraggablePlanTask[] {
   );
 }
 
-function sourceTasksForBoardWeeks(weeks: PlanWeek[]): BoardPlanTask[] {
-  return weeks.flatMap((week) => sourceTasksForWeek(week.rows).map((task) => ({ ...task, weekId: week.id })));
+function applyPlanTaskEdits(tasks: BoardPlanTask[], taskEdits: PlanTaskEdits): BoardPlanTask[] {
+  return tasks.map((task) => {
+    const edit = taskEdits[stablePlanTaskKey(task)] ?? taskEdits[task.id];
+    if (!edit) return task;
+    return {
+      ...task,
+      text: edit.text ?? task.text,
+      rowName: edit.rowName ?? task.rowName,
+      day: edit.day ?? task.day,
+      person: edit.person ?? task.person,
+      estimatedHours: edit.estimatedHours ?? task.estimatedHours,
+      done: edit.done ?? task.done,
+    };
+  });
+}
+
+function sourceTasksForBoardWeeks(weeks: PlanWeek[], taskEdits: PlanTaskEdits = {}): BoardPlanTask[] {
+  return applyPlanTaskEdits(weeks.flatMap((week) => sourceTasksForWeek(week.rows).map((task) => ({ ...task, weekId: week.id }))), taskEdits);
+}
+
+function orderJourneyTaskSortKey(task: BoardPlanTask, weekTitle: string) {
+  const rangeStart = weekRangeFromTitle(weekTitle)?.start.getTime() ?? Number.MAX_SAFE_INTEGER;
+  return [rangeStart, DAYS.indexOf(task.day), PEOPLE.indexOf(task.person), task.rowName, task.id].join(":");
+}
+
+function buildOrderJourneyRows({
+  tasks,
+  orders,
+  planTaskLinks,
+  resolveOrderId,
+  weekTitleForTask,
+}: {
+  tasks: BoardPlanTask[];
+  orders: UiOrder[];
+  planTaskLinks: PlanTaskLinks;
+  resolveOrderId: (task: BoardPlanTask) => number | null;
+  weekTitleForTask: (task: BoardPlanTask) => string;
+}): OrderJourneyRow[] {
+  const ordersById = new Map(orders.map((order) => [order.id, order]));
+  const rows = new Map<string, OrderJourneyRow>();
+
+  for (const task of tasks) {
+    const orderId = resolveOrderId(task);
+    const order = orderId ? ordersById.get(orderId) ?? null : null;
+    const connection = orderConnectionLabel(task, planTaskLinks, orderId);
+    const internal = connection.state === "internal";
+    const id = order ? `order:${order.id}` : `${internal ? "internal" : "unlinked"}:${normalizeOrderText(task.rowName) || task.rowId}`;
+    const weekTitle = weekTitleForTask(task);
+    const row = rows.get(id) ?? {
+      id,
+      order,
+      name: order?.customer ?? taskCustomerDisplayName(task),
+      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : connection.label,
+      health: order ? orderHealth(order) : internal ? "internal" : "unlinked",
+      tasks: [],
+    };
+    row.tasks.push({
+      ...task,
+      orderId,
+      orderName: row.name,
+      weekTitle: displayWeekTitle(weekTitle),
+      dateLabel: `${displayWeekTitle(weekTitle)} · ${DAY_LABELS[task.day]}`,
+      sortKey: orderJourneyTaskSortKey(task, weekTitle),
+      connectionState: connection.state,
+    });
+    rows.set(id, row);
+  }
+
+  const healthOrder: Record<OrderJourneyRow["health"], number> = { blocked: 0, watch: 1, onTrack: 2, unlinked: 3, internal: 4 };
+  return Array.from(rows.values())
+    .map((row) => ({ ...row, tasks: [...row.tasks].sort((a, b) => a.sortKey.localeCompare(b.sortKey)) }))
+    .sort((a, b) => {
+      const dueA = a.order?.shipDate ? new Date(a.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const dueB = b.order?.shipDate ? new Date(b.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
+      return (healthOrder[a.health] - healthOrder[b.health]) || (dueA - dueB) || a.name.localeCompare(b.name);
+    });
 }
 
 function boardPlanLaneId(weekId: string, day: DayKey, person: Person) {
@@ -2469,7 +3318,7 @@ function boardPlanLayoutsEqual(left: BoardPlanTask[], right: BoardPlanTask[]) {
   if (left.length !== right.length) return false;
   return left.every((task, index) => {
     const other = right[index];
-    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person;
+    return other?.id === task.id && other.weekId === task.weekId && other.day === task.day && other.person === task.person && other.text === task.text && other.rowName === task.rowName && cleanTaskEstimatedHours(other.estimatedHours) === cleanTaskEstimatedHours(task.estimatedHours);
   });
 }
 
@@ -2502,8 +3351,26 @@ function reorderBoardPlanTask(
 }
 
 function saveDraftTasks(weekId: string, tasks: DraggablePlanTask[]) {
-  void weekId;
-  void tasks;
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(`tuesday:${weekId}:tasks`, JSON.stringify(tasks));
+}
+
+function loadDraftTasks(weekId: string, sourceTasks: BoardPlanTask[]) {
+  if (typeof window === "undefined") return sourceTasks;
+  const raw = window.localStorage.getItem(`tuesday:${weekId}:tasks`);
+  if (!raw) return sourceTasks;
+  try {
+    const parsed = JSON.parse(raw) as BoardPlanTask[];
+    const sourceIds = new Set(sourceTasks.map((task) => task.id));
+    if (!Array.isArray(parsed) || parsed.length !== sourceTasks.length || parsed.some((task) => !sourceIds.has(task.id))) return sourceTasks;
+    const sourceById = new Map(sourceTasks.map((task) => [task.id, task]));
+    return parsed.map((draftTask) => {
+      const sourceTask = sourceById.get(draftTask.id);
+      return sourceTask ? { ...sourceTask, weekId: draftTask.weekId, day: draftTask.day, person: draftTask.person, estimatedHours: draftTask.estimatedHours ?? sourceTask.estimatedHours } : draftTask;
+    });
+  } catch {
+    return sourceTasks;
+  }
 }
 
 function LinkedOrderPill({ row, onOpenOrder }: { row: PlanRow; onOpenOrder?: (orderId: number) => void }) {
@@ -2631,7 +3498,7 @@ function NewOrderHalo({
   return (
     <>
       {open && (
-        <section style={{ border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `5px solid ${REVIEW_GLOW.color}`, borderRadius: 12, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.shadow, padding: 12 }}>
+        <section style={{ borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, borderRadius: 12, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.shadow, padding: 12 }}>
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div>
@@ -2678,7 +3545,7 @@ function NewOrderHalo({
               <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: REVIEW_GLOW.color }}>Editable task suggestions</div>
               <div style={{ display: "grid", gap: 6, marginTop: 7 }}>
                 {suggestions.map((step, index) => (
-                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, border: `1px solid ${REVIEW_GLOW.borderStrong}`, borderLeft: `5px solid ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bgSoft, boxShadow: "0 5px 16px rgba(190,137,24,0.08)" }}>
+                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bgSoft, boxShadow: "0 5px 16px rgba(190,137,24,0.08)" }}>
                     <div style={{ width: 22, height: 22, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.70)", color: newOrderPalette.clayAccentDark, fontSize: 10, fontWeight: 900 }}>{index + 1}</div>
                     <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "subgrid", gridColumn: isNarrow ? undefined : "2 / -1", gap: 7, alignItems: "center" }}>
                       <input
@@ -3044,7 +3911,7 @@ function shouldInsertAfterOver(event: Pick<DragOverEvent, "active" | "over">) {
 function PlanTaskDragCard({ task }: { task: DraggablePlanTask }) {
   const personVisual = PERSON_VISUALS[task.person];
   return (
-    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", border: "1px solid " + personVisual.taskBorder, borderLeft: "6px solid " + personVisual.stripe, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
+    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", borderWidth: "1px 1px 1px 6px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
@@ -3060,29 +3927,38 @@ function SortablePlanTaskCard({
   task,
   selectedOrder,
   planTaskLinks,
+  planTaskLinksLoaded = true,
   resolveTaskOrderId,
   onTaskSelect,
   onTaskOpen,
+  onTaskEdit,
+  onTaskDoneToggle,
   isNextTask = false,
 }: {
   task: DraggablePlanTask;
   selectedOrder?: UiOrder | null;
   planTaskLinks: PlanTaskLinks;
+  planTaskLinksLoaded?: boolean;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
+  onTaskEdit?: (task: DraggablePlanTask) => void;
+  onTaskDoneToggle?: (task: DraggablePlanTask, done: boolean, origin?: DelightOrigin) => void;
   isNextTask?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: "plan-task" },
   });
   const resolvedOrderId = resolveTaskOrderId?.(task) ?? null;
   const effectiveOrderIds = resolvedOrderId ? [resolvedOrderId] : effectiveTaskOrderIds(task, planTaskLinks);
-  const assignedOrderId = assignedOrderIdForTask(task, planTaskLinks);
   const isSelectedOrderTask = selectedOrder ? effectiveOrderIds.includes(selectedOrder.id) || planTaskMatchesOrder(task, selectedOrder) : false;
   const isUnlinkedTask = effectiveOrderIds.length === 0;
   const personVisual = PERSON_VISUALS[task.person];
+  const orderConnection = planTaskLinksLoaded
+    ? orderConnectionLabel(task, planTaskLinks, resolvedOrderId)
+    : { state: "connected" as OrderConnectionState, label: "Checking", detail: "Checking order link" };
+  const orderConnectionVisual = orderConnectionStyle(orderConnection.state, isSelectedOrderTask);
   const taskBackground = isSelectedOrderTask
     ? "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
     : isNextTask && !isUnlinkedTask
@@ -3098,6 +3974,9 @@ function SortablePlanTaskCard({
         ? "rgba(125,122,115,0.24)"
         : personVisual.taskBorder;
   const taskStripe = isUnlinkedTask ? personVisual.stripeMuted : personVisual.stripe;
+  const displayTaskText = friendlyWorkshopTaskText(task.text);
+  const displayCustomerName = taskCustomerDisplayName(task);
+  const orderConnectionNeedsAttention = orderConnection.state === "needs-order" || orderConnection.state === "possible";
   const taskShadow = isDragging
     ? "0 0 0 2px rgba(110,138,106,0.12)"
     : isSelectedOrderTask
@@ -3105,17 +3984,14 @@ function SortablePlanTaskCard({
       : isNextTask && !isUnlinkedTask
         ? "0 2px 8px rgba(110,138,106,0.08)"
         : "0 1px 2px rgba(0,0,0,0.025)";
-  const taskBadge = isUnlinkedTask ? "Assign" : assignedOrderId ? "Tuesday" : task.linkedOrderIds.length > 0 ? "Monday" : null;
-
   return (
     <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
       data-plan-task-id={task.id}
+      data-qa-plan-task={task.id}
       role="button"
       tabIndex={0}
-      onClick={() => onTaskSelect?.(task)}
+      onClick={() => onTaskEdit?.(task) ?? onTaskSelect?.(task)}
       onDoubleClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -3127,7 +4003,7 @@ function SortablePlanTaskCard({
           onTaskSelect?.(task);
         }
       }}
-      title="Drag to reorder or move to another day or lane"
+      title={isUnlinkedTask ? "Needs order link before this task can start" : "Click to edit task, or drag to move it"}
       style={{
         display: "block",
         width: "100%",
@@ -3138,32 +4014,213 @@ function SortablePlanTaskCard({
         textDecoration: "none",
         color: isUnlinkedTask ? "#4f4b46" : DT.textPrimary,
         background: taskBackground,
-        border: `${isSelectedOrderTask ? 2 : 1}px ${isUnlinkedTask ? "dashed" : "solid"} ${taskBorder}`,
-        borderLeft: (isSelectedOrderTask ? "7px solid " : "5px solid ") + taskStripe,
-        borderRadius: 8,
-        padding: isSelectedOrderTask ? "8px 8px" : isNextTask ? "7px 7px" : "5px 6px",
-        cursor: isDragging ? "grabbing" : "grab",
+        borderStyle: isUnlinkedTask ? "dashed" : "solid",
+        borderTopWidth: isSelectedOrderTask ? 2 : 1,
+        borderRightWidth: isSelectedOrderTask ? 2 : 1,
+        borderBottomWidth: isSelectedOrderTask ? 2 : 1,
+        borderLeftWidth: isSelectedOrderTask ? 7 : 5,
+        borderTopColor: taskBorder,
+        borderRightColor: taskBorder,
+        borderBottomColor: taskBorder,
+        borderLeftColor: taskStripe,
+        borderRadius: 10,
+        minHeight: isSelectedOrderTask ? 96 : 88,
+        padding: isSelectedOrderTask ? "9px 9px" : isNextTask ? "8px 8px" : "7px 8px",
+        cursor: "default",
         opacity: isDragging ? 0.28 : 1,
         boxShadow: taskShadow,
         outline: "none",
         transform: CSS.Transform.toString(transform),
         transition: transition ?? "transform 180ms ease, opacity 120ms ease, box-shadow 120ms ease",
-        touchAction: "none",
+        touchAction: "manipulation",
       }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
-        <div style={{ minWidth: 0 }}>
-          {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
-            <span style={{ display: "inline-flex", marginBottom: 4, border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Start here</span>
-          )}
-          <div style={{ fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 780 : 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
-          <div style={{ marginTop: 3, fontSize: 10, color: isUnlinkedTask ? "#8d8880" : DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
+      <div
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        data-task-card-main="task-card-main"
+        data-task-card-clean-layout="true"
+        style={{ display: "grid", gridTemplateRows: "auto 1fr auto", gap: 7, minHeight: "100%", minWidth: 0, cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "start", gap: 7, minWidth: 0 }}>
+          <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
+            <div data-task-card-meta="task-card-meta" style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flexWrap: "wrap" }}>
+              {!isSelectedOrderTask && isNextTask && !isUnlinkedTask && (
+                <span style={{ display: "inline-flex", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.10)", color: DT.sage, borderRadius: 999, padding: "1px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>Start here</span>
+              )}
+              {orderConnectionNeedsAttention && (
+                <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
+              )}
+            </div>
+            <div data-customer-left-label="customer-left-label" style={{ fontSize: isSelectedOrderTask ? 11 : 10, color: isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>
+          </div>
+          <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-          <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>1h</span>
-          {taskBadge && (
-            <span style={{ color: isSelectedOrderTask ? "#8a5d08" : isUnlinkedTask ? "#7d7a73" : DT.teal, background: isSelectedOrderTask ? "rgba(255,246,199,0.96)" : isUnlinkedTask ? "rgba(125,122,115,0.08)" : DT.tealSoft, border: `1px solid ${isSelectedOrderTask ? "rgba(190,137,24,0.34)" : isUnlinkedTask ? "rgba(125,122,115,0.16)" : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{taskBadge}</span>
-          )}
+        <div data-task-card-title="task-card-title" style={{ alignSelf: "center", fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 820 : 930, lineHeight: 1.18, overflowWrap: "break-word", wordBreak: "normal", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{displayTaskText}</div>
+        <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 5, minWidth: 0, flexWrap: "nowrap" }}>
+          <button
+            type="button"
+            data-task-card-done-button="task-card-done-button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const cardElement = event.currentTarget.closest("[data-plan-task-id]") as HTMLElement | null;
+              onTaskDoneToggle?.(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+            }}
+            style={{ flex: "0 0 auto", border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.82)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
+          >
+            {task.done ? "↩ Undo" : "✓ Done"}
+          </button>
+          <button
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onTaskEdit?.(task);
+            }}
+            style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
+          >
+            Edit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function WorkshopTaskEditor({
+  task,
+  orders,
+  planTaskLinks,
+  onSave,
+  onConnectOrder,
+  onRemoveOrder,
+  onOpenOrder,
+  onClose,
+}: {
+  task: BoardPlanTask;
+  orders: UiOrder[];
+  planTaskLinks: PlanTaskLinks;
+  onSave: (task: BoardPlanTask) => void;
+  onConnectOrder: (task: BoardPlanTask, orderId: number) => void;
+  onRemoveOrder: (task: BoardPlanTask) => void;
+  onOpenOrder: (orderId: number) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState<BoardPlanTask>({ ...task, estimatedHours: cleanTaskEstimatedHours(task.estimatedHours) });
+  const connectedOrderId = assignedOrderIdForTask(task, planTaskLinks) ?? task.linkedOrderIds[0] ?? "";
+  const [orderId, setOrderId] = useState<string>(connectedOrderId ? String(connectedOrderId) : "");
+  const connection = orderConnectionLabel(task, planTaskLinks, connectedOrderId ? Number(connectedOrderId) : null);
+  const connectionVisual = orderConnectionStyle(connection.state);
+  const selectedOrder = orderId ? orders.find((order) => order.id === Number(orderId)) ?? null : null;
+  function saveTask() {
+    onSave({ ...draft, text: draft.text.trim() || task.text, rowName: draft.rowName.trim() || task.rowName, estimatedHours: cleanTaskEstimatedHours(draft.estimatedHours) });
+    if (orderId) onConnectOrder(task, Number(orderId));
+    onClose();
+  }
+  function openSelectedOrderDetails() {
+    if (!orderId) return;
+    onClose();
+    onOpenOrder(Number(orderId));
+  }
+  function markInternal() {
+    const next = { ...draft, rowName: draft.rowName.trim() || "Internal workshop" };
+    setDraft(next);
+    onSave(next);
+    onRemoveOrder(task);
+    onClose();
+  }
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Edit task" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, display: "grid", placeItems: "center", background: "rgba(34,32,26,0.32)", padding: 18 }}>
+      <div data-workshop-task-editor-glow="review-glow" onClick={(event) => event.stopPropagation()} style={{ width: "min(520px, 100%)", borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, borderRadius: 16, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.modalShadow, padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "start" }}>
+          <div>
+            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Fix workshop task</div>
+            <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 23, color: DT.textPrimary }}>Workshop task</h3>
+            <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 750 }}>Use this if the day, person, customer, task wording, or hours are wrong.</div>
+          </div>
+          <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 999, padding: "5px 9px", cursor: "pointer", color: DT.textMuted, fontWeight: 900 }}>Close</button>
+        </div>
+        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+          <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+            What to do
+            <select
+              aria-label="Stage suggestion"
+              value={TABLE_TASK_STAGE_SUGGESTIONS.includes(draft.text as (typeof TABLE_TASK_STAGE_SUGGESTIONS)[number]) ? draft.text : STAGE_CUSTOM_VALUE}
+              onChange={(event) => {
+                if (event.target.value === STAGE_CUSTOM_VALUE) return;
+                setDraft((current) => ({ ...current, text: event.target.value }));
+              }}
+              style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary, background: DT.cardBg, fontWeight: 850 }}
+            >
+              <option value="" disabled>Choose standard table stage…</option>
+              {TABLE_TASK_STAGE_SUGGESTIONS.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+              <option value={STAGE_CUSTOM_VALUE}>Custom task…</option>
+            </select>
+            {!TABLE_TASK_STAGE_SUGGESTIONS.includes(draft.text as (typeof TABLE_TASK_STAGE_SUGGESTIONS)[number]) && (
+              <input aria-label="Custom task" value={draft.text} onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Describe custom task" style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary }} />
+            )}
+          </label>
+          <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+            Customer / order label
+            <input value={draft.rowName} onChange={(event) => setDraft((current) => ({ ...current, rowName: event.target.value }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary }} />
+          </label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+              Day
+              <select value={draft.day} onChange={(event) => setDraft((current) => ({ ...current, day: event.target.value as DayKey }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", color: DT.textPrimary }}>
+                {DAYS.map((day) => <option key={day} value={day}>{DAY_LABELS[day]}</option>)}
+              </select>
+            </label>
+            <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+              Person
+              <select value={draft.person} onChange={(event) => setDraft((current) => ({ ...current, person: event.target.value as Person }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", color: DT.textPrimary }}>
+                {PEOPLE.map((person) => <option key={person} value={person}>{PERSON_LABELS[person]}</option>)}
+              </select>
+            </label>
+          </div>
+          <label style={{ display: "grid", gap: 4, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
+            Hours allocated
+            <input
+              aria-label="Hours allocated"
+              type="number"
+              min="0"
+              step="0.5"
+              value={cleanTaskEstimatedHours(draft.estimatedHours)}
+              onChange={(event) => setDraft((current) => ({ ...current, estimatedHours: cleanTaskEstimatedHours(event.target.value) }))}
+              style={{ border: `1px solid ${REVIEW_GLOW.border}`, borderRadius: 9, padding: "9px 10px", fontSize: 14, color: DT.textPrimary, background: "rgba(255,255,255,0.78)", fontWeight: 850 }}
+            />
+          </label>
+          <div style={{ border: `1px solid ${DT.border}`, borderRadius: 11, padding: 10, background: "rgba(250,248,243,0.72)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Order connection</div>
+              <span style={{ color: connectionVisual.color, background: connectionVisual.bg, border: `1px solid ${connectionVisual.border}`, borderRadius: 999, padding: "2px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{connection.label}</span>
+            </div>
+            <select value={orderId} onChange={(event) => setOrderId(event.target.value)} style={{ marginTop: 8, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", color: DT.textPrimary }}>
+              <option value="">Choose customer/order…</option>
+              {orders.map((order) => <option key={order.id} value={order.id}>{order.customer}</option>)}
+            </select>
+            <div style={{ marginTop: 7, display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <button type="button" onClick={() => orderId && onConnectOrder(task, Number(orderId))} disabled={!orderId} style={{ border: `1px solid rgba(12,124,122,0.18)`, background: orderId ? DT.tealSoft : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Connect order</button>
+              <button type="button" onClick={openSelectedOrderDetails} disabled={!orderId} title={selectedOrder ? `Open ${selectedOrder.customer} full order details` : "Choose an order first"} style={{ border: `1px solid ${orderId ? REVIEW_GLOW.borderStrong : DT.border}`, background: orderId ? REVIEW_GLOW.bgSoft : "rgba(0,0,0,0.035)", color: orderId ? REVIEW_GLOW.color : DT.textFaint, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Open full order details</button>
+              <button type="button" onClick={markInternal} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>No customer / internal</button>
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 13, display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Saves this card in Tuesday only. It does not update Monday yet.</span>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
+            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 12px", fontWeight: 950, cursor: "pointer" }}>Save task edits</button>
+          </div>
         </div>
       </div>
     </div>
@@ -3241,8 +4298,9 @@ function SortableSuggestedStepCard({
         textDecoration: "none",
         color: DT.textPrimary,
         background: REVIEW_GLOW.bg,
-        border: `1px solid ${REVIEW_GLOW.borderStrong}`,
-        borderLeft: `5px solid ${REVIEW_GLOW.color}`,
+        borderWidth: "1px 1px 1px 5px",
+        borderStyle: "solid",
+        borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`,
         borderRadius: 8,
         padding: "6px 7px",
         boxShadow: REVIEW_GLOW.shadow,
@@ -3299,11 +4357,12 @@ function DroppablePlanLane({
     <div
       ref={setNodeRef}
       data-plan-lane-day={day}
+      data-qa-plan-lane={id}
       data-plan-lane-person={person}
       data-plan-lane-date-iso={dateIso}
       data-plan-lane-date-label={dateLabel}
       onDragOver={(event) => event.preventDefault()}
-      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, border: "1px dashed " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder), borderLeft: "3px solid " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
+      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, borderWidth: "1px 1px 1px 3px", borderStyle: "dashed dashed dashed solid", borderColor: (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
     >
       <div style={{ marginBottom: 5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap", minWidth: 0 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9, color: personVisual.text, fontFamily: DT.sans, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: "0 0 0 3px " + personVisual.taskSoft, flex: "0 0 auto" }} />{PERSON_LABELS[person]}</span>
@@ -3326,6 +4385,7 @@ function MonthWeekSection({
   selectedOrder = null,
   appTasks = [],
   planTaskLinks = {},
+  planTaskLinksLoaded = true,
   resolveTaskOrderId,
   activeTaskId = null,
   activeSuggestedStepId = null,
@@ -3335,6 +4395,8 @@ function MonthWeekSection({
   onResetDraftLayout,
   onTaskSelect,
   onTaskOpen,
+  onTaskEdit,
+  onTaskDoneToggle,
   onAppTaskSelect,
   onAppTaskOpen,
   onSuggestedStepMove,
@@ -3352,6 +4414,7 @@ function MonthWeekSection({
   selectedOrder?: UiOrder | null;
   appTasks?: AppPlanTask[];
   planTaskLinks?: PlanTaskLinks;
+  planTaskLinksLoaded?: boolean;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
   activeTaskId?: string | null;
   activeSuggestedStepId?: string | null;
@@ -3361,6 +4424,8 @@ function MonthWeekSection({
   onResetDraftLayout?: () => void;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
+  onTaskEdit?: (task: BoardPlanTask) => void;
+  onTaskDoneToggle?: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
@@ -3374,8 +4439,7 @@ function MonthWeekSection({
   const weekAppTasks = useMemo(() => appTasks.filter((task) => appTaskFallsInWeek(task, week)), [appTasks, week]);
   const isNarrow = useIsNarrow();
   const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
-  const [showFriday, setShowFriday] = useState(false);
-  const visibleDays = showFriday ? DAYS : DAYS.filter((day) => day !== "friday");
+  const visibleDays = DAYS;
   const todayKey = currentDayKey();
   const weekRange = weekRangeFromTitle(week.title);
   const now = new Date();
@@ -3385,10 +4449,11 @@ function MonthWeekSection({
   const showPlanningLanes = forcePlanningLanes || hasVisibleTasks;
 
   return (
-    <section style={{ background: DT.cardBg, border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.05), 0 2px 12px rgba(0,0,0,0.04)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
+    <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ background: DT.cardBg, border: `${isCurrentWeek ? 3 : 1}px solid ${isCurrentWeek ? "rgba(12,124,122,0.58)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 4px rgba(12,124,122,0.10), 0 8px 28px rgba(34,32,26,0.09)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
         <div style={{ padding: "10px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: weekHeaderControl ? "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(110,138,106,0.055))" : undefined }}>
           <div style={{ minWidth: 0 }}>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, lineHeight: 1 }}>{displayWeekTitle(week.title)}</h2>
+            {isCurrentWeek && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
             {weekHeaderControl}
@@ -3402,13 +4467,6 @@ function MonthWeekSection({
                 Reset
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowFriday((value) => !value)}
-              style={{ border: `1px solid ${showFriday ? "rgba(12,124,122,0.26)" : DT.border}`, background: showFriday ? DT.tealSoft : "rgba(255,255,255,0.72)", color: showFriday ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
-            >
-              {showFriday ? "Hide Friday" : "Show Friday"}
-            </button>
             <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "5px 8px", fontSize: 10, color: DT.textMuted, fontFamily: DT.sans, fontWeight: 850 }}>
               {week.rows.length} plan row{week.rows.length === 1 ? "" : "s"}{!hasVisibleTasks ? " · no day assignments" : ""}
             </span>
@@ -3457,9 +4515,12 @@ function MonthWeekSection({
                                 task={task}
                                 selectedOrder={selectedOrder}
                                 planTaskLinks={planTaskLinks}
+                                planTaskLinksLoaded={planTaskLinksLoaded}
                                 resolveTaskOrderId={resolveTaskOrderId}
                                 onTaskSelect={onTaskSelect}
                                 onTaskOpen={onTaskOpen}
+                                onTaskEdit={(item) => onTaskEdit?.(item as BoardPlanTask)}
+                                onTaskDoneToggle={(item, done, origin) => onTaskDoneToggle?.(item as BoardPlanTask, done, origin)}
                                 isNextTask={laneIndex === 0}
                               />
                               {showDropSlot(task.id, true) && dropSlot}
@@ -3492,8 +4553,9 @@ function MonthWeekSection({
                                 overflow: "hidden",
                                 color: DT.textPrimary,
                                 background: "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))",
-                                border: "2px solid rgba(190,137,24,0.86)",
-                                borderLeft: "7px solid " + PERSON_VISUALS[person].stripe,
+                                borderWidth: "2px 2px 2px 7px",
+                                borderStyle: "solid",
+                                borderColor: "rgba(190,137,24,0.86) rgba(190,137,24,0.86) rgba(190,137,24,0.86) " + PERSON_VISUALS[person].stripe,
                                 borderRadius: 8,
                                 padding: "8px 8px",
                                 cursor: onAppTaskSelect ? "pointer" : "default",
@@ -3508,7 +4570,7 @@ function MonthWeekSection({
                                   {selectedOrder && <div style={{ marginTop: 3, fontSize: 9, color: DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedOrder.customer}</div>}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>1h</span>
+                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(1)}</span>
                                   <span style={{ color: DT.teal, background: DT.tealSoft, border: "1px solid rgba(12,124,122,0.14)", borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : "Job"}</span>
                                 </div>
                               </div>
@@ -3548,8 +4610,8 @@ function MonthWeekSection({
 }
 
 
-function MonthView({ weeks, newOrder, orders }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; orders: UiOrder[] }) {
-  return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} />;
+function MonthView({ weeks, newOrder, orders, delightEnabled }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; orders: UiOrder[]; delightEnabled?: boolean }) {
+  return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} delightEnabled={delightEnabled} />;
 }
 
 function WorkshopFocusBar({
@@ -3564,9 +4626,9 @@ function WorkshopFocusBar({
   historyControl?: ReactNode;
 }) {
   const options: Array<{ id: PersonFilter; label: string; sublabel: string }> = [
-    { id: "all", label: "All", sublabel: `${todayCounts.nick + todayCounts.dylan} today` },
-    { id: "nick", label: "Nick", sublabel: `${todayCounts.nick} today` },
-    { id: "dylan", label: "Dylan", sublabel: `${todayCounts.dylan} today` },
+    { id: "all", label: "All", sublabel: `${todayCounts.nick + todayCounts.dylan} tasks today` },
+    { id: "nick", label: "Nick", sublabel: `${todayCounts.nick} tasks today` },
+    { id: "dylan", label: "Dylan", sublabel: `${todayCounts.dylan} tasks today` },
   ];
   return (
     <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
@@ -3589,11 +4651,163 @@ function WorkshopFocusBar({
   );
 }
 
-function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[] }) {
+function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlanMode; onModeChange: (mode: ProductionPlanMode) => void }) {
+  const options: Array<{ id: ProductionPlanMode; label: string; hint: string }> = [
+    { id: "schedule", label: "Schedule", hint: "Day / person capacity" },
+    { id: "orderRows", label: "Order rows", hint: "Customer journey" },
+  ];
+  return (
+    <div aria-label="Production plan view" style={{ display: "flex", gap: 4, padding: 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+      {options.map((option) => {
+        const active = mode === option.id;
+        return (
+          <button key={option.id} type="button" onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, padding: "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function OrderJourneyView({
+  rows,
+  selectedOrder,
+  onTaskEdit,
+  onTaskSelect,
+  onTaskOpen,
+  onOrderOpen,
+  onTaskDoneToggle,
+}: {
+  rows: OrderJourneyRow[];
+  selectedOrder: UiOrder | null;
+  onTaskEdit: (task: OrderJourneyTask) => void;
+  onTaskSelect: (task: OrderJourneyTask) => void;
+  onTaskOpen: (task: OrderJourneyTask) => void;
+  onOrderOpen: (orderId: number) => void;
+  onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) => void;
+}) {
+  const isNarrow = useIsNarrow(880);
+  const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
+  const needsRows = rows.filter((row) => row.health === "internal" || row.health === "unlinked");
+  const renderRow = (row: OrderJourneyRow) => {
+    const selected = Boolean(row.order && selectedOrder?.id === row.order.id);
+    const healthMeta = row.health === "internal"
+      ? { label: "Internal", color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.22)" }
+      : row.health === "unlinked"
+        ? { label: "Needs order", color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.34)" }
+        : HEALTH_META[row.health];
+    const rowStyle = {
+      borderWidth: "1px 1px 1px 4px",
+      borderStyle: "solid",
+      borderColor: `${selected ? REVIEW_GLOW.border : DT.border} ${selected ? REVIEW_GLOW.border : DT.border} ${selected ? REVIEW_GLOW.border : DT.border} ${healthMeta.color}`,
+      background: selected ? REVIEW_GLOW.bgSoft : "rgba(255,255,255,0.86)",
+      boxShadow: selected ? REVIEW_GLOW.shadow : DT.shadow,
+      borderRadius: DT.radius,
+      overflow: "hidden",
+    };
+    return (
+      <article key={row.id} style={rowStyle}>
+        <div data-order-row-week-grid="order-row-week-grid" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "220px repeat(5, minmax(104px, 1fr))", gap: 0 }}>
+          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
+            <div style={{ fontFamily: DT.serif, fontSize: 17, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
+            <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 950 }}>{healthMeta.label}</span>
+              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850 }}>{row.dueLabel}</span>}
+            </div>
+            {row.statusLabel && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>{row.statusLabel}</div>}
+            {row.order && (
+              <button type="button" onClick={() => onOrderOpen(row.order!.id)} style={{ marginTop: 9, border: `1px solid ${DT.border}`, background: DT.headerBg, color: "#fff", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>
+                Open order
+              </button>
+            )}
+          </div>
+          {DAYS.map((day) => {
+            const dayTasks = row.tasks.filter((task) => task.day === day);
+            return (
+              <div key={`${row.id}:${day}`} style={{ minHeight: isNarrow ? 0 : 104, padding: 8, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "rgba(255,255,255,0.50)" : "rgba(232,230,224,0.18)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
+                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{DAY_LABELS[day]}</span>
+                  {dayTasks.length > 1 && <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted }}>{dayTasks.length}</span>}
+                </div>
+                {dayTasks.length === 0 ? (
+                  <div data-empty-order-day-cell="empty-order-day-cell" style={{ minHeight: isNarrow ? 12 : 52, border: `1px dashed rgba(0,0,0,0.045)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(124,116,107,0.48)", fontFamily: DT.sans, fontSize: 9, fontWeight: 850 }}>
+                    No task
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {dayTasks.map((task) => {
+                      const personVisual = PERSON_VISUALS[task.person];
+                      const connection = orderConnectionStyle(task.connectionState, selected);
+                      return (
+                        <div key={task.id} data-order-row-task-id={task.id} style={{ borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, borderRadius: 10, background: personVisual.taskBg, padding: 8, minHeight: 76 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
+                            <span style={{ color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{PERSON_LABELS[task.person]}</span>
+                            <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
+                          </div>
+                          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: task.done ? "line-through" : "none", opacity: task.done ? 0.62 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
+                          <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                            {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
+                            <button
+                              type="button"
+                              data-order-row-done-button="order-row-done-button"
+                              onPointerDown={(event) => event.stopPropagation()}
+                              onMouseDown={(event) => event.stopPropagation()}
+                              onTouchStart={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
+                                onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+                              }}
+                              style={{ border: `1px solid ${task.done ? "rgba(110,138,106,0.28)" : DT.border}`, background: task.done ? "rgba(110,138,106,0.11)" : "rgba(255,255,255,0.72)", color: task.done ? DT.sage : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}
+                            >
+                              {task.done ? "↩ Undo" : "✓ Done"}
+                            </button>
+                            <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Edit task</button>
+                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Details</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </article>
+    );
+  };
+
+  if (rows.length === 0) {
+    return <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this window.</section>;
+  }
+
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,253,249,0.82)", padding: 12, boxShadow: DT.shadow }}>
+        <div style={{ fontFamily: DT.serif, fontSize: 22, color: DT.textPrimary, fontWeight: 760 }}>Customer / order journey</div>
+      </div>
+      {activeRows.map(renderRow)}
+      {needsRows.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ padding: "4px 2px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>Needs order / internal</div>
+          {needsRows.map(renderRow)}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MonthViewState({ weeks, newOrder, ordersForHealth, delightEnabled = false }: { weeks: PlanWeek[]; newOrder: NewOrderPlanCandidate | null; ordersForHealth: UiOrder[]; delightEnabled?: boolean }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
   const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
-  const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks), [visibleProductionWeeks]);
+  const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>({});
+  const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
+  const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
+  const [delightBurst, setDelightBurst] = useState<{ id: number; origin: DelightOrigin } | null>(null);
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
@@ -3606,7 +4820,12 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   const [openOrderId, setOpenOrderId] = useState<number | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState<OrderWorkflowState | null>(null);
   const [selectedAssignmentTask, setSelectedAssignmentTask] = useState<AssignablePlanTask | null>(null);
+  const [editingTask, setEditingTask] = useState<BoardPlanTask | null>(null);
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
+  const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(false);
+  const [planTaskLinksStorage, setPlanTaskLinksStorage] = useState<PlanTaskLinksStorage>("blob");
+  const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
+  const planTaskLinksUpdatedAtRef = useRef<string | null>(null);
   const [assignmentStatus, setAssignmentStatus] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
@@ -3635,6 +4854,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   );
   const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
+  const weekTitleById = useMemo(() => new Map(visibleProductionWeeks.map((week) => [week.id, displayWeekTitle(week.title)])), [visibleProductionWeeks]);
   const isDraftChanged = !boardPlanLayoutsEqual(sourceBoardTasks, boardTasks);
   const keepOverlayWorkflow = useCallback((workflow: OrderWorkflowState | null) => {
     if (workflow) setSelectedWorkflow(workflow);
@@ -3659,7 +4879,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }, [visibleProductionWeeks]);
 
   useEffect(() => {
-    setBoardTasks(sourceBoardTasks);
+    setBoardTasks(loadDraftTasks("six-week-board", sourceBoardTasks));
     undoBoardLayoutsRef.current = [];
     dragStartBoardTasksRef.current = null;
     lastBoardPreviewRef.current = null;
@@ -3667,7 +4887,84 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
-  function resolveOrderIdForPlanTask(task: DraggablePlanTask) {
+  const delightBurstTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (delightBurstTimeoutRef.current) {
+        window.clearTimeout(delightBurstTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function triggerDelightBurst(origin?: DelightOrigin) {
+    if (!delightEnabled) return;
+    const burstId = Date.now();
+    if (delightBurstTimeoutRef.current) {
+      window.clearTimeout(delightBurstTimeoutRef.current);
+    }
+    setDelightBurst({ id: burstId, origin: origin ?? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight * 0.34) } });
+    delightBurstTimeoutRef.current = window.setTimeout(() => {
+      setDelightBurst((current) => current?.id === burstId ? null : current);
+      delightBurstTimeoutRef.current = null;
+    }, 3100);
+  }
+
+  function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
+    const taskKey = stablePlanTaskKey(nextTask);
+    setBoardTasks((current) => {
+      const next = current.map((task) => task.id === nextTask.id ? nextTask : task);
+      saveDraftTasks("six-week-board", next);
+      return next;
+    });
+    startTransition(() => {
+      setPlanTaskEdits((current) => ({
+        ...current,
+        [taskKey]: {
+          text: nextTask.text,
+          rowName: nextTask.rowName,
+          day: nextTask.day,
+          person: nextTask.person,
+          estimatedHours: nextTask.estimatedHours,
+          internal: /internal workshop/i.test(nextTask.rowName),
+          done: nextTask.done,
+        },
+      }));
+    });
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: taskKey,
+        legacyTaskId: nextTask.id,
+        taskEdit: {
+          text: nextTask.text,
+          rowName: nextTask.rowName,
+          day: nextTask.day,
+          person: nextTask.person,
+          estimatedHours: nextTask.estimatedHours,
+          internal: /internal workshop/i.test(nextTask.rowName),
+          done: nextTask.done,
+        },
+      }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Task edit save failed"))))
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus("Task saved in Tuesday");
+      })
+      .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Task edit save failed"));
+    if (keepEditorOpen) setEditingTask(nextTask);
+  }
+
+  function toggleBoardTaskDone(task: BoardPlanTask, done: boolean, origin?: DelightOrigin) {
+    if (done) triggerDelightBurst(origin);
+    updateBoardTaskFromEditor({ ...task, done }, false);
+  }
+
+  const resolveOrderIdForPlanTask = useCallback((task: DraggablePlanTask) => {
     const assignedId = assignedOrderIdForTask(task, planTaskLinks);
     if (assignedId && ordersForHealth.some((order) => order.id === assignedId)) return assignedId;
     const linkedId = task.linkedOrderIds.find((id) => ordersForHealth.some((order) => order.id === id));
@@ -3677,7 +4974,15 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       .filter(({ score }) => score >= 2)
       .sort((a, b) => b.score - a.score || ((orderDaysUntil(a.order.shipDate) ?? 999) - (orderDaysUntil(b.order.shipDate) ?? 999)));
     return scored[0]?.order.id ?? null;
-  }
+  }, [ordersForHealth, planTaskLinks]);
+
+  const orderJourneyRows = useMemo(() => buildOrderJourneyRows({
+    tasks: boardTasks,
+    orders: ordersForHealth,
+    planTaskLinks,
+    resolveOrderId: resolveOrderIdForPlanTask,
+    weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
+  }), [boardTasks, ordersForHealth, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
 
   function selectOrder(id: number) {
     setSelectedAssignmentTask(null);
@@ -3691,22 +4996,88 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     setOpenOrderId(id);
   }
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/production/plan-task-links")
+  const applyPlanTaskLinkState = useCallback((state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }) => {
+    setPlanTaskLinks(state?.links ?? {});
+    setPlanTaskEdits(state?.taskEdits ?? {});
+    setPlanTaskLinksLoaded(true);
+    if (state?.updatedAt) planTaskLinksUpdatedAtRef.current = state.updatedAt;
+  }, []);
+
+  const loadPlanTaskLinkState = useCallback((statusMessage = "", options: { showStatusIfUnchanged?: boolean } = {}) => {
+    fetch("/api/production/plan-task-links", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Task links unavailable")))
-      .then((data: { state?: { links?: PlanTaskLinks }; disabledReason?: string }) => {
-        if (cancelled) return;
-        setPlanTaskLinks(data.state?.links ?? {});
-        setAssignmentStatus(data.disabledReason ?? "");
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage; disabledReason?: string }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        const updatedAt = data.state?.updatedAt ?? null;
+        const isInitialLoad = !planTaskLinksLoaded;
+        const changedSinceLastLoad = Boolean(updatedAt && updatedAt !== planTaskLinksUpdatedAtRef.current);
+        if (isInitialLoad || changedSinceLastLoad || !updatedAt) {
+          startTransition(() => applyPlanTaskLinkState(data.state));
+          if (data.disabledReason || statusMessage) setAssignmentStatus(data.disabledReason ?? statusMessage);
+          return;
+        }
+        if (data.disabledReason || options.showStatusIfUnchanged) setAssignmentStatus(data.disabledReason ?? statusMessage);
       })
       .catch((err) => {
-        if (!cancelled) setAssignmentStatus(err instanceof Error ? err.message : "Task links unavailable");
+        setPlanTaskLinksLoaded(true);
+        setAssignmentStatus(err instanceof Error ? err.message : "Task links unavailable");
       });
+  }, [applyPlanTaskLinkState, planTaskLinksLoaded]);
+
+  const handlePlanTaskLinksRealtimeChange = useCallback(() => {
+    loadPlanTaskLinkState("Updated from another screen", { showStatusIfUnchanged: true });
+  }, [loadPlanTaskLinkState]);
+
+  useRealtimeRefresh({
+    channelName: "production-plan-task-links:current",
+    table: "production_order_workflows",
+    filter: "order_id=eq.0",
+    refreshOnChange: false,
+    enabled: planTaskLinksStorage === "supabase",
+    onChange: handlePlanTaskLinksRealtimeChange,
+  });
+
+  const broadcastPlanTaskLinkChange = useCallback((updatedAt?: string) => {
+    if (planTaskLinksStorage === "supabase") return;
+    void planTaskLinksRealtimeRef.current?.send({
+      type: "broadcast",
+      event: PLAN_TASK_LINKS_REALTIME_EVENT,
+      payload: { updatedAt: updatedAt ?? new Date().toISOString() },
+    });
+  }, [planTaskLinksStorage]);
+
+  useEffect(() => {
+    loadPlanTaskLinkState();
+  }, [loadPlanTaskLinkState]);
+
+  useEffect(() => {
+    const refreshOpenBoard = () => loadPlanTaskLinkState();
+    const intervalId = window.setInterval(refreshOpenBoard, 30000);
+    window.addEventListener("focus", refreshOpenBoard);
+    document.addEventListener("visibilitychange", refreshOpenBoard);
     return () => {
-      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshOpenBoard);
+      document.removeEventListener("visibilitychange", refreshOpenBoard);
     };
-  }, []);
+  }, [loadPlanTaskLinkState]);
+
+  useEffect(() => {
+    if (planTaskLinksStorage !== "blob") return;
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase.ok) return;
+    const channel = supabase.client
+      .channel(PLAN_TASK_LINKS_REALTIME_CHANNEL)
+      .on("broadcast", { event: PLAN_TASK_LINKS_REALTIME_EVENT }, () => {
+        loadPlanTaskLinkState("Updated from another screen", { showStatusIfUnchanged: true });
+      })
+      .subscribe();
+    planTaskLinksRealtimeRef.current = channel;
+    return () => {
+      if (planTaskLinksRealtimeRef.current === channel) planTaskLinksRealtimeRef.current = null;
+      void supabase.client.removeChannel(channel);
+    };
+  }, [loadPlanTaskLinkState, planTaskLinksStorage]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -3864,7 +5235,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }
 
   function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) {
-    const taskKey = planTaskLinkKey(task);
+    const taskKey = stablePlanTaskKey(task);
     const linkValue = linkValueForPlanTaskSave(orderId, placement);
     setPlanTaskLinks((current) => ({ ...current, [taskKey]: linkValue }));
     setAssignmentStatus("Saving link...");
@@ -3874,9 +5245,12 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId, placement }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.links) setPlanTaskLinks(data.state.links);
-        setAssignmentStatus("Linked in Tuesday");
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus("Order linked");
         selectOrder(orderId);
       })
       .catch((err) => {
@@ -3890,7 +5264,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   }
 
   function removePlanTaskLink(task: AssignablePlanTask) {
-    const taskKey = planTaskLinkKey(task);
+    const taskKey = stablePlanTaskKey(task);
     setPlanTaskLinks((current) => {
       const next = { ...current };
       delete next[taskKey];
@@ -3904,9 +5278,12 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId: null }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks } }) => {
+      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.links) setPlanTaskLinks(data.state.links);
-        setAssignmentStatus("Link removed");
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus("Order connection removed");
       })
       .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Save failed"));
   }
@@ -4007,7 +5384,10 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
   ) : null;
 
   const workshopHeaderControl = (
-    <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+      <ProductionPlanModeToggle mode={planViewMode} onModeChange={setPlanViewMode} />
+      <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
+    </div>
   );
 
   const newOrderPanel = showNewOrder ? (
@@ -4049,6 +5429,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       selectedOrder={selectedOrder}
       appTasks={selectedAppTasks}
       planTaskLinks={planTaskLinks}
+      planTaskLinksLoaded={planTaskLinksLoaded}
       activeTaskId={activeTaskId}
       dropPreview={dropPreview}
       isDraftChanged={isDraftChanged}
@@ -4058,13 +5439,15 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       resolveTaskOrderId={resolveOrderIdForPlanTask}
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
       onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+      onTaskEdit={setEditingTask}
+      onTaskDoneToggle={toggleBoardTaskDone}
       onAppTaskSelect={selectOrderForAppTask}
       onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
       onSuggestedStepMove={moveSuggestedStep}
       onSuggestedStepSelect={selectNewOrderReview}
       onSuggestedStepOpen={openNewOrderOverview}
       suggestedStepCustomer={newOrder?.customer}
-      weekHeaderControl={index === 0 ? workshopHeaderControl : undefined}
+      weekHeaderControl={undefined}
       forcePlanningLanes
     />
   ));
@@ -4080,10 +5463,13 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
           selectedOrder={selectedOrder}
           appTasks={selectedAppTasks}
           planTaskLinks={planTaskLinks}
+          planTaskLinksLoaded={planTaskLinksLoaded}
           personFilter={personFilter}
           resolveTaskOrderId={resolveOrderIdForPlanTask}
           onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
           onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
+          onTaskEdit={setEditingTask}
+          onTaskDoneToggle={toggleBoardTaskDone}
           onAppTaskSelect={selectOrderForAppTask}
           onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
         />
@@ -4101,9 +5487,37 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       onDragCancel={handleBoardDragCancel}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-        {newOrderPanel}
-        {weekSections}
-        {historySections}
+        {workshopHeaderControl}
+        {planViewMode === "schedule" ? (
+          <>
+            {newOrderPanel}
+            {weekSections}
+            {historySections}
+          </>
+        ) : (
+          <OrderJourneyView
+            rows={orderJourneyRows}
+            selectedOrder={selectedOrder}
+            onTaskEdit={setEditingTask}
+            onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+            onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+            onOrderOpen={openOrderOverview}
+            onTaskDoneToggle={toggleBoardTaskDone}
+          />
+        )}
+        {editingTask && (
+          <WorkshopTaskEditor
+            key={editingTask.id}
+            task={editingTask}
+            orders={ordersForHealth}
+            planTaskLinks={planTaskLinks}
+            onSave={updateBoardTaskFromEditor}
+            onConnectOrder={(task, orderId) => assignPlanTaskToOrder({ ...task, weekTitle: "Production Plan" }, orderId)}
+            onRemoveOrder={(task) => removePlanTaskLink({ ...task, weekTitle: "Production Plan" })}
+            onOpenOrder={openOrderOverview}
+            onClose={() => setEditingTask(null)}
+          />
+        )}
       </div>
       <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : null}</DragOverlay>
     </DndContext>
@@ -4137,6 +5551,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {planningBoard}
+        {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
@@ -4153,6 +5568,7 @@ function MonthViewState({ weeks, newOrder, ordersForHealth }: { weeks: PlanWeek[
       }}
     >
       {planningBoard}
+      {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
       {orderRail}
       {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
@@ -4165,6 +5581,8 @@ export type PlanClientProps = {
   syncedAt: string;
   source: "fresh" | "cache" | "snapshot" | "none";
   mondayError?: string;
+  delightEnabled?: boolean;
+  qaFixtureMode?: boolean;
 };
 
 export default function PlanClient({
@@ -4173,6 +5591,8 @@ export default function PlanClient({
   syncedAt,
   source,
   mondayError,
+  delightEnabled = false,
+  qaFixtureMode = false,
 }: PlanClientProps) {
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => {
@@ -4198,6 +5618,24 @@ export default function PlanClient({
       pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} /> : undefined}
       maxWidth={1500}
     >
+        {qaFixtureMode && (
+          <div
+            data-qa-plan-fixture="true"
+            style={{
+              marginBottom: 12,
+              border: "1px solid rgba(190,137,24,0.26)",
+              background: "rgba(255,246,199,0.72)",
+              color: "#8a5d08",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontFamily: DT.sans,
+              fontSize: 12,
+              fontWeight: 850,
+            }}
+          >
+            QA fixture mode: local browser-test data only. No Monday, Supabase, Xero, or customer records are used.
+          </div>
+        )}
         {rows.length === 0 ? (
           <div
             style={{
@@ -4210,21 +5648,10 @@ export default function PlanClient({
           >
             No Production Plan rows. {mondayError && `(${mondayError})`}
           </div>
-        ) : !hasMounted ? (
-          <div
-            style={{
-              padding: "60px 20px",
-              textAlign: "center",
-              fontSize: 13,
-              color: DT.textFaint,
-              fontFamily: DT.sans,
-            }}
-          >
-            Loading Production Plan...
-          </div>
         ) : (
-          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} />
+          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} delightEnabled={delightEnabled} />
         )}
+        {delightEnabled && <DelightUnicorn />}
     </MissionControlShell>
   );
 }

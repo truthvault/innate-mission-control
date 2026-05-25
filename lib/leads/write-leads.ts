@@ -2,6 +2,7 @@ import type { LeadPriority, LeadStatus } from "./types";
 
 const VALID_STATUSES = new Set<LeadStatus>(["new", "qualifying", "quoted", "follow_up_due", "waiting_on_customer", "won", "lost", "parked"]);
 const VALID_PRIORITIES = new Set<LeadPriority>(["hot", "normal", "low"]);
+const VALID_SAMPLE_STATUSES = new Set(["requested", "packed", "sent", "delivered", "followed_up", "converted", "parked"]);
 
 export type LeadWriteInput = {
   customerName?: unknown;
@@ -15,10 +16,17 @@ export type LeadWriteInput = {
   priority?: unknown;
   owner?: unknown;
   nextFollowUpAt?: unknown;
+  lastInteractionAt?: unknown;
   lastInteractionSummary?: unknown;
   nextAction?: unknown;
   notes?: unknown;
   sourceUrl?: unknown;
+  sampleSentAt?: unknown;
+  sampleDeliveredAt?: unknown;
+  sampleSpecies?: unknown;
+  sampleStatus?: unknown;
+  sampleTrackingUrl?: unknown;
+  sampleNextAction?: unknown;
 };
 
 function supabaseConfig() {
@@ -70,6 +78,13 @@ function cleanPriority(value: unknown): LeadPriority | undefined {
   return value as LeadPriority;
 }
 
+function cleanSampleStatus(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === "") return null;
+  if (typeof value !== "string" || !VALID_SAMPLE_STATUSES.has(value)) throw new Error("Invalid sample status");
+  return value;
+}
+
 export function createLeadRow(input: LeadWriteInput) {
   const customerName = cleanText(input.customerName, 240);
   if (!customerName) throw new Error("Customer name is required");
@@ -85,10 +100,17 @@ export function createLeadRow(input: LeadWriteInput) {
     priority: cleanPriority(input.priority) ?? "normal",
     owner: cleanText(input.owner, 120) ?? null,
     next_follow_up_at: cleanDate(input.nextFollowUpAt) ?? null,
+    last_interaction_at: cleanText(input.lastInteractionAt, 40) ?? null,
     last_interaction_summary: cleanText(input.lastInteractionSummary, 1000) ?? null,
     next_action: cleanText(input.nextAction, 1000) ?? null,
     notes: cleanText(input.notes, 4000) ?? null,
     source_url: cleanText(input.sourceUrl, 1000) ?? null,
+    sample_sent_at: cleanDate(input.sampleSentAt) ?? null,
+    sample_delivered_at: cleanDate(input.sampleDeliveredAt) ?? null,
+    sample_species: cleanText(input.sampleSpecies, 240) ?? null,
+    sample_status: cleanSampleStatus(input.sampleStatus) ?? null,
+    sample_tracking_url: cleanText(input.sampleTrackingUrl, 1000) ?? null,
+    sample_next_action: cleanText(input.sampleNextAction, 1000) ?? null,
     source_system: "supabase",
   };
 }
@@ -107,10 +129,17 @@ export function updateLeadRow(input: LeadWriteInput) {
     ["priority", "priority", cleanPriority],
     ["owner", "owner", (value) => cleanText(value, 120)],
     ["nextFollowUpAt", "next_follow_up_at", cleanDate],
+    ["lastInteractionAt", "last_interaction_at", (value) => cleanText(value, 40)],
     ["lastInteractionSummary", "last_interaction_summary", (value) => cleanText(value, 1000)],
     ["nextAction", "next_action", (value) => cleanText(value, 1000)],
     ["notes", "notes", (value) => cleanText(value, 4000)],
     ["sourceUrl", "source_url", (value) => cleanText(value, 1000)],
+    ["sampleSentAt", "sample_sent_at", cleanDate],
+    ["sampleDeliveredAt", "sample_delivered_at", cleanDate],
+    ["sampleSpecies", "sample_species", (value) => cleanText(value, 240)],
+    ["sampleStatus", "sample_status", cleanSampleStatus],
+    ["sampleTrackingUrl", "sample_tracking_url", (value) => cleanText(value, 1000)],
+    ["sampleNextAction", "sample_next_action", (value) => cleanText(value, 1000)],
   ];
 
   for (const [inputKey, outputKey, cleaner] of mappings) {

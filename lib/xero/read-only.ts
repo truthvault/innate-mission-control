@@ -7,6 +7,7 @@ type XeroConnection = { tenantId?: string; tenantName?: string };
 type XeroInvoice = {
   InvoiceID?: string;
   InvoiceNumber?: string;
+  Type?: "ACCREC" | "ACCPAY" | string;
   Status?: string;
   Reference?: string;
   DateString?: string;
@@ -32,7 +33,7 @@ export type XeroReadiness = {
 const TOKEN_URL = "https://identity.xero.com/connect/token";
 const CONNECTIONS_URL = "https://api.xero.com/connections";
 const ACCOUNTING_URL = "https://api.xero.com/api.xro/2.0";
-const SCOPE = "accounting.invoices accounting.contacts accounting.settings accounting.reports.read";
+const SCOPE = "accounting.transactions.read accounting.contacts.read accounting.settings.read";
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -173,5 +174,122 @@ export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string
     source: result.source,
     tenantName: result.tenantName,
     invoices: (result.body.Invoices || []).map((invoice) => summary(invoice, Boolean(options.includeLineItems))),
+  };
+}
+
+export type XeroCashRiskStatus = "green" | "yellow" | "red";
+export type XeroCashInvoiceSummary = ReturnType<typeof summary>;
+export type XeroCashDueBucket = {
+  label: "7 days" | "14 days" | "30 days";
+  count: number;
+  amountDue: number;
+  invoices: XeroCashInvoiceSummary[];
+};
+export type XeroCashSummary = {
+  syncedAt: string;
+  tenantName: string | null;
+  riskStatus: XeroCashRiskStatus;
+  overdueReceivables: {
+    count: number;
+    amountDue: number;
+    invoices: XeroCashInvoiceSummary[];
+  };
+  payableBuckets: XeroCashDueBucket[];
+};
+
+function parseXeroDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const msMatch = value.match(/\/Date\((\d+)(?:[+-]\d+)?\)\//);
+  const date = msMatch ? new Date(Number(msMatch[1])) : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function dueInDays(now: Date, dueDate: string | null | undefined): number | null {
+  const parsed = parseXeroDate(dueDate);
+  if (!parsed) return null;
+  return Math.ceil((startOfDay(parsed).getTime() - startOfDay(now).getTime()) / (24 * 60 * 60 * 1000));
+}
+
+async function listOpenXeroInvoicesByType(type: "ACCREC" | "ACCPAY") {
+  const pageSize = 100;
+  const invoices: XeroCashInvoiceSummary[] = [];
+  let tenantName: string | undefined;
+
+  for (let page = 1; page <= 10; page += 1) {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+    params.set("summaryOnly", "true");
+    params.set("where", `Type==\"${type}\"&&Status==\"AUTHORISED\"`);
+    const result = await get<InvoiceResponse>("/Invoices", params);
+    tenantName ||= result.tenantName || undefined;
+    const pageInvoices = (result.body.Invoices || [])
+      .filter((invoice) => (invoice.AmountDue ?? 0) > 0)
+      .map((invoice) => summary(invoice, false));
+    invoices.push(...pageInvoices);
+    if ((result.body.Invoices || []).length < pageSize) break;
+  }
+
+  return {
+    tenantName,
+    invoices: invoices.sort((a, b) => {
+      const aDue = parseXeroDate(a.dueDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const bDue = parseXeroDate(b.dueDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return aDue - bDue;
+    }),
+  };
+}
+
+function totalDue(invoices: XeroCashInvoiceSummary[]): number {
+  return invoices.reduce((sum, invoice) => sum + (invoice.amountDue || 0), 0);
+}
+
+function payableBucket(label: XeroCashDueBucket["label"], maxDays: number, now: Date, invoices: XeroCashInvoiceSummary[]): XeroCashDueBucket {
+  const bucketInvoices = invoices.filter((invoice) => {
+    const dueIn = dueInDays(now, invoice.dueDate);
+    return dueIn !== null && dueIn >= 0 && dueIn <= maxDays;
+  });
+  return {
+    label,
+    count: bucketInvoices.length,
+    amountDue: totalDue(bucketInvoices),
+    invoices: bucketInvoices.slice(0, 5),
+  };
+}
+
+export async function getXeroCashSummary(options: { now?: string } = {}): Promise<XeroCashSummary> {
+  const now = parseXeroDate(options.now) || new Date();
+  const [receivables, payables] = await Promise.all([
+    listOpenXeroInvoicesByType("ACCREC"),
+    listOpenXeroInvoicesByType("ACCPAY"),
+  ]);
+
+  const overdueReceivables = receivables.invoices.filter((invoice) => {
+    const dueIn = dueInDays(now, invoice.dueDate);
+    return dueIn !== null && dueIn < 0;
+  });
+  const payableBuckets: XeroCashDueBucket[] = [
+    payableBucket("7 days", 7, now, payables.invoices),
+    payableBucket("14 days", 14, now, payables.invoices),
+    payableBucket("30 days", 30, now, payables.invoices),
+  ];
+  const dueSoonPayables = payableBuckets[0].amountDue;
+  const overdueAmount = totalDue(overdueReceivables);
+  const riskStatus: XeroCashRiskStatus = overdueAmount > 10000 || dueSoonPayables > 10000 ? "red" : overdueAmount > 0 || dueSoonPayables > 0 ? "yellow" : "green";
+
+  return {
+    syncedAt: new Date().toISOString(),
+    tenantName: receivables.tenantName || payables.tenantName || null,
+    riskStatus,
+    overdueReceivables: {
+      count: overdueReceivables.length,
+      amountDue: overdueAmount,
+      invoices: overdueReceivables.slice(0, 5),
+    },
+    payableBuckets,
   };
 }
