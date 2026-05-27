@@ -9,13 +9,15 @@
     "lint": "eslint",
     "check:mutations": "bash scripts/check-no-monday-mutations.sh",
     "smoke:tuesday": "node scripts/smoke-tuesday.mjs",
+    "test:workshop-handoff": "node scripts/test-workshop-handoff-health.mjs && node scripts/test-invoice-expectation.mjs",
     "smoke:freight": "node scripts/smoke-freight.mjs",
-    "test:planning": "node scripts/test-new-order-planning.mjs && node scripts/test-plan-new-order-colours.mjs && node scripts/test-plan-drag-stress.mjs"
+    "test:planning": "node scripts/test-new-order-planning.mjs && node scripts/test-plan-new-order-colours.mjs && node scripts/test-plan-drag-stress.mjs && node scripts/test-plan-task-stage-suggestions.mjs && node scripts/test-plan-nick-feedback.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@supabase/supabase-js": "^2.106.1",
     "@vercel/blob": "^2.3.3",
     "airtable": "^0.12.2",
     "next": "^16.2.6",

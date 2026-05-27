@@ -6,12 +6,15 @@ const PEOPLE: readonly Person[] = ['nick', 'dylan'];
 
 export type DraggablePlanTask = {
   id: string;
+  taskKey?: string;
   rowId: string;
   rowName: string;
   rowNotes: string | null;
   day: DayKey;
   person: Person;
   text: string;
+  estimatedHours?: number;
+  done?: boolean;
   linkedOrderIds: number[];
   linkedOrders: Array<{ mondayItemId: string; name: string; boardId: string; boardName: string }>;
 };
