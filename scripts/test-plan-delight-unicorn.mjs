@@ -17,6 +17,10 @@ const clientMustHave = [
   ['unicorn is findable in live bundle', 'Tuesday delight unicorn'],
   ['unicorn emoji is present', '🦄'],
   ['unicorn badge is parked away from the order rail', 'data-delight-badge-placement="in-flow-safe"'],
+  ['order-detail workflow tasks receive a done delight callback', 'onWorkflowTaskDoneToggle'],
+  ['workflow task checkbox anchors the burst to the checked card', 'data-order-workflow-task-card="order-workflow-task-card"'],
+  ['order-detail workflow task done path triggers delight', 'onWorkflowTaskDoneToggle?.(checked, {'],
+  ['order-detail plan task checkbox passes a burst origin', 'data-order-plan-task-card="order-plan-task-card"'],
 ];
 
 const clientMustNotHave = [

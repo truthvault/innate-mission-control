@@ -2258,6 +2258,7 @@ function OrderOverviewOverlay({
   planTasks,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
+  onWorkflowTaskDoneToggle,
   onRemoveTaskLink,
   onClose,
   onWorkflowChange,
@@ -2266,6 +2267,7 @@ function OrderOverviewOverlay({
   planTasks: OrderJourneyTask[];
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onWorkflowTaskDoneToggle: (done: boolean, origin?: DelightOrigin) => void;
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
   onClose: () => void;
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
@@ -2395,7 +2397,7 @@ function OrderOverviewOverlay({
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <OrderTasksPanel key={order.id} order={order} workflow={workflow} planTasks={planTasks} onWorkflowChange={updateWorkflow} onPlanTaskEdit={onPlanTaskEdit} onPlanTaskDoneToggle={onPlanTaskDoneToggle} onRemoveTaskLink={onRemoveTaskLink} />
+              <OrderTasksPanel key={order.id} order={order} workflow={workflow} planTasks={planTasks} onWorkflowChange={updateWorkflow} onPlanTaskEdit={onPlanTaskEdit} onPlanTaskDoneToggle={onPlanTaskDoneToggle} onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle} onRemoveTaskLink={onRemoveTaskLink} />
               <CollectionControl workflow={workflow} status={workflowStatus} onChange={updateWorkflow} />
               <QcChecklist order={order} workflow={workflow} onChange={updateWorkflow} />
               <OrderPhotoTray orderId={order.id} />
@@ -2576,6 +2578,7 @@ function OrderTasksPanel({
   onWorkflowChange,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
+  onWorkflowTaskDoneToggle,
   onRemoveTaskLink,
 }: {
   order: UiOrder;
@@ -2584,6 +2587,7 @@ function OrderTasksPanel({
   onWorkflowChange: (patch: (state: OrderWorkflowState) => OrderWorkflowState) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onWorkflowTaskDoneToggle?: (done: boolean, origin?: DelightOrigin) => void;
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -2738,12 +2742,17 @@ function OrderTasksPanel({
         {orderedWorkflowTasks.map((task) => {
           const done = Boolean(task.done);
           return (
-            <div key={`workflow-${task.id}`} style={taskCardStyle(done)}>
+            <div key={`workflow-${task.id}`} data-order-workflow-task-card="order-workflow-task-card" style={taskCardStyle(done)}>
               <input
                 type="checkbox"
                 checked={done}
                 onChange={(event) => {
                   const checked = event.target.checked;
+                  if (checked) {
+                    const checkboxRect = event.currentTarget.getBoundingClientRect();
+                    const cardElement = event.currentTarget.closest("[data-order-workflow-task-card]") as HTMLElement | null;
+                    onWorkflowTaskDoneToggle?.(checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
+                  }
                   updateWorkflowTask(task.id, {
                     done: checked,
                     completedAt: checked ? new Date().toISOString() : null,
@@ -2797,11 +2806,16 @@ function OrderTasksPanel({
           const done = Boolean(task.done);
           const placementLabel = planTaskPlacementLabel(task);
           return (
-            <div key={`plan-${task.id}`} style={taskCardStyle(done)}>
+            <div key={`plan-${task.id}`} data-order-plan-task-card="order-plan-task-card" style={taskCardStyle(done)}>
               <input
                 type="checkbox"
                 checked={done}
-                onChange={(event) => onPlanTaskDoneToggle(task, event.target.checked)}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  const checkboxRect = event.currentTarget.getBoundingClientRect();
+                  const cardElement = event.currentTarget.closest("[data-order-plan-task-card]") as HTMLElement | null;
+                  onPlanTaskDoneToggle(task, checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
+                }}
                 style={{ marginTop: 7 }}
               />
               <div style={{ minWidth: 0 }}>
@@ -5523,6 +5537,10 @@ function MonthViewState({
     updateBoardTaskFromEditor({ ...task, done }, false);
   }
 
+  function handleWorkflowTaskDoneToggle(done: boolean, origin?: DelightOrigin) {
+    if (done) triggerDelightBurst(origin);
+  }
+
   function persistBoardTaskMove(nextTask: BoardPlanTask, originalLayout: BoardPlanTask[]) {
     const taskKey = stablePlanTaskKey(nextTask);
     const taskEdit = taskEditForBoardTask(nextTask);
@@ -6175,7 +6193,7 @@ function MonthViewState({
         {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
-        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     );
   }
@@ -6192,7 +6210,7 @@ function MonthViewState({
       {planningBoard}
       {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
       {orderRail}
-      {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+      {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
   );
 }
