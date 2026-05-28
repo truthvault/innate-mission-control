@@ -22,7 +22,7 @@ const NAV: MissionControlNavItem[] = tuesdayNavigationSections.map((item) => ({
   status: item.status,
 }));
 
-const PRODUCTION_SECTIONS: MissionControlSection[] = ["orders", "production", "plan", "samples", "dispatch", "test"];
+const PRODUCTION_PLAN_SECTIONS: MissionControlSection[] = ["production", "plan", "dispatch", "test"];
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -43,7 +43,7 @@ function scopeFor(section: MissionControlSection): string {
 }
 
 function navItemIsActive(section: MissionControlSection, pathname: string, item: MissionControlNavItem): boolean {
-  if (item.section === "production") return PRODUCTION_SECTIONS.includes(section) || pathname.startsWith("/production/plan");
+  if (item.section === "production") return PRODUCTION_PLAN_SECTIONS.includes(section) || pathname.startsWith("/production/plan");
   if (item.section === "stock") return section === "samples" || pathname.startsWith("/production/samples");
   return item.section === section || pathname === item.href;
 }
