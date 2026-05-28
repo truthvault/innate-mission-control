@@ -899,13 +899,77 @@ type WorkflowTask = {
 };
 type AppPlanTask = {
   id: string;
-  orderId: number;
+  orderId: number | null;
+  orderUuid?: string;
   title: string;
+  detail?: string | null;
+  customer?: string | null;
   scheduledDate: string;
   day: DayKey;
   person: Person;
   done: boolean;
+  estimatedHours?: number;
+  source?: "workflow" | "intake";
 };
+type OrderIntakeReviewState = "awaiting_payment" | "paid_needs_review" | "needs_review" | "approved";
+type OrderIntakeOwner = "Nick" | "Dylan" | "Guido" | "Other";
+type OrderIntakeTaskDraft = {
+  id: string;
+  title: string;
+  detail: string;
+  owner: OrderIntakeOwner;
+  person: Person;
+  scheduledDate: string;
+  day: DayKey;
+  estimatedHours: number;
+  sortOrder: number;
+};
+type OrderIntakeLineItem = { description: string; quantity: number | null; unitAmount: number | null; lineAmount: number | null };
+type OrderIntakePaymentEvidence = { id: string; sourceSystem: string; paymentDate: string | null; amount: number; payerName: string | null; reference: string | null; matchStatus: string; matchConfidence: number | null };
+type OrderIntakeApprovedTask = {
+  id: string;
+  orderId: string;
+  title: string;
+  detail: string | null;
+  owner: OrderIntakeOwner;
+  person: Person;
+  scheduledDate: string;
+  day: DayKey;
+  estimatedHours: number;
+  status: "planned" | "done" | "deleted";
+  completedAt: string | null;
+  completedBy: string | null;
+};
+type OrderIntakeItem = {
+  orderId: string;
+  reviewId: string;
+  customerName: string;
+  orderStatus: string;
+  paidOnDate: string | null;
+  productSummary: string | null;
+  itemCategory: string | null;
+  invoiceNumber: string | null;
+  invoiceStatus: string | null;
+  invoiceDate: string | null;
+  invoiceDueDate: string | null;
+  xeroUrl: string | null;
+  total: number | null;
+  amountPaid: number | null;
+  amountDue: number | null;
+  reviewState: OrderIntakeReviewState;
+  stateLabel: string;
+  stateDetail: string;
+  sourceSummary: Record<string, unknown>;
+  lineItems: OrderIntakeLineItem[];
+  payments: OrderIntakePaymentEvidence[];
+  suggestedTasks: OrderIntakeTaskDraft[];
+  draftTasks: OrderIntakeTaskDraft[];
+  approvedTasks: OrderIntakeApprovedTask[];
+  approvedAt: string | null;
+  lastReconciledAt: string | null;
+};
+type OrderIntakeApiResponse = { ok?: boolean; items?: OrderIntakeItem[]; error?: string };
+type OrderIntakeReconcileResponse = OrderIntakeApiResponse & { scanned?: number; accepted?: number; createdOrUpdated?: number; warnings?: string[] };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
 type PlanTaskEditValue = { text?: string; rowName?: string; weekId?: string; day?: DayKey; person?: Person; estimatedHours?: number; sortOrder?: number; internal?: boolean; done?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
@@ -1547,6 +1611,8 @@ function workflowTasksForPlan(workflow: OrderWorkflowState | null): AppPlanTask[
       day,
       person,
       done: task.done,
+      estimatedHours: 1,
+      source: "workflow" as const,
     }];
   });
 }
@@ -1866,6 +1932,250 @@ function NewOrderRailCard({
       >
         {approved ? "Draft approved" : "Approve draft plan"}
       </button>
+    </div>
+  );
+}
+
+
+const INTAKE_STATE_META: Record<OrderIntakeReviewState, { color: string; bg: string; border: string }> = {
+  awaiting_payment: { color: DT.textMuted, bg: "rgba(232,230,224,0.42)", border: "rgba(0,0,0,0.08)" },
+  paid_needs_review: { color: DT.teal, bg: "rgba(12,124,122,0.08)", border: "rgba(12,124,122,0.22)" },
+  needs_review: { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.24)" },
+  approved: { color: "#15803d", bg: "rgba(21,128,61,0.08)", border: "rgba(21,128,61,0.22)" },
+};
+
+function intakeOwnerToPerson(owner: OrderIntakeOwner): Person {
+  return owner === "Dylan" ? "dylan" : "nick";
+}
+
+function intakeStateSort(state: OrderIntakeReviewState) {
+  if (state === "paid_needs_review") return 0;
+  if (state === "needs_review") return 1;
+  if (state === "awaiting_payment") return 2;
+  return 3;
+}
+
+function OrderIntakeRailCard({
+  items,
+  status,
+  busy,
+  onRefresh,
+  onOpen,
+}: {
+  items: OrderIntakeItem[];
+  status: string;
+  busy: boolean;
+  onRefresh: () => void;
+  onOpen: (orderId: string) => void;
+}) {
+  const sorted = [...items].sort((a, b) => intakeStateSort(a.reviewState) - intakeStateSort(b.reviewState) || a.customerName.localeCompare(b.customerName));
+  const actionableCount = sorted.filter((item) => item.reviewState !== "approved").length;
+  return (
+    <section style={{ marginBottom: 10, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.88)", boxShadow: DT.shadow, padding: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.teal, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
+          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{actionableCount}</div>
+        </div>
+        <button type="button" onClick={onRefresh} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>
+          {busy ? "Checking" : "Refresh"}
+        </button>
+      </div>
+      {status && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>{status}</div>}
+      <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 7 }}>
+        {sorted.length === 0 ? (
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>No pending intake orders loaded.</div>
+        ) : sorted.slice(0, 7).map((item) => {
+          const meta = INTAKE_STATE_META[item.reviewState];
+          return (
+            <button key={item.orderId} type="button" onClick={() => onOpen(item.orderId)} style={{ textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${meta.border} ${meta.border} ${meta.border} ${meta.color}`, background: "rgba(255,255,255,0.82)", borderRadius: 10, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.025)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.customerName}</div>
+                  <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.invoiceNumber || "No invoice"} · {formatXeroMoney(item.total)}</div>
+                </div>
+                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: meta.bg, color: meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function OrderIntakeReviewModal({
+  item,
+  dateOptions,
+  busy,
+  onClose,
+  onSave,
+  onApprove,
+}: {
+  item: OrderIntakeItem;
+  dateOptions: SuggestedDateOption[];
+  busy: boolean;
+  onClose: () => void;
+  onSave: (tasks: OrderIntakeTaskDraft[]) => Promise<void>;
+  onApprove: (tasks: OrderIntakeTaskDraft[]) => Promise<void>;
+}) {
+  const [tasks, setTasks] = useState<OrderIntakeTaskDraft[]>(() => item.draftTasks.length ? item.draftTasks : item.suggestedTasks);
+  const [modalStatus, setModalStatus] = useState("");
+  const meta = INTAKE_STATE_META[item.reviewState];
+  const canApprove = item.reviewState === "paid_needs_review" || item.reviewState === "approved";
+
+
+  function patchTask(id: string, patch: Partial<OrderIntakeTaskDraft>) {
+    setTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch } : task));
+  }
+
+  function chooseTaskDate(id: string, dateIso: string) {
+    const option = dateOptions.find((candidate) => candidate.dateIso === dateIso);
+    const day = option?.day ?? dateToDayKey(dateIso) ?? "monday";
+    patchTask(id, { scheduledDate: dateIso, day });
+  }
+
+  function chooseOwner(id: string, owner: OrderIntakeOwner) {
+    patchTask(id, { owner, person: intakeOwnerToPerson(owner) });
+  }
+
+  function addTask() {
+    const firstOption = dateOptions[0];
+    const dateIso = firstOption?.dateIso ?? new Date().toISOString().slice(0, 10);
+    setTasks((current) => [...current, {
+      id: `manual-${Date.now()}`,
+      title: "New task",
+      detail: "",
+      owner: "Nick",
+      person: "nick",
+      scheduledDate: dateIso,
+      day: firstOption?.day ?? dateToDayKey(dateIso) ?? "monday",
+      estimatedHours: 1,
+      sortOrder: (current.length + 1) * 10,
+    }]);
+  }
+
+  async function saveDraft() {
+    setModalStatus("Saving draft...");
+    try {
+      await onSave(tasks);
+      setModalStatus("Draft saved");
+    } catch (error) {
+      setModalStatus(error instanceof Error ? error.message : "Draft save failed");
+    }
+  }
+
+  async function approveDraft() {
+    setModalStatus("Approving tasks...");
+    try {
+      await onApprove(tasks);
+      setModalStatus("Approved");
+    } catch (error) {
+      setModalStatus(error instanceof Error ? error.message : "Approval failed");
+    }
+  }
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}>
+      <section style={{ width: "min(1160px, calc(100vw - 44px))", maxHeight: "calc(100vh - 44px)", overflow: "auto", border: `1px solid ${DT.border}`, borderRadius: 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
+        <header style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(251,250,247,0.96)", borderBottom: `1px solid ${DT.border}`, padding: "18px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 34, lineHeight: 1.02, color: DT.textPrimary }}>{item.customerName}</h2>
+              <span style={{ border: `1px solid ${meta.border}`, background: meta.bg, color: meta.color, borderRadius: 999, padding: "4px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{item.stateLabel}</span>
+            </div>
+            <div style={{ marginTop: 7, display: "flex", gap: 12, flexWrap: "wrap", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>
+              <span>{item.invoiceNumber || "No invoice number"}</span>
+              <span>{formatXeroMoney(item.total)}</span>
+              <span>Due {formatShortDate(item.invoiceDueDate)}</span>
+              <span>{item.itemCategory || "Order"}</span>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "9px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}>Close</button>
+        </header>
+        <div style={{ padding: 20, display: "grid", gridTemplateColumns: "minmax(280px, 0.72fr) minmax(460px, 1.28fr)", gap: 16 }}>
+          <aside style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.78)", padding: 14 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice facts</div>
+              <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+                {[['Status', item.invoiceStatus || 'Unknown'], ['Invoice date', formatShortDate(item.invoiceDate)], ['Due date', formatShortDate(item.invoiceDueDate)], ['Paid', item.paidOnDate ? formatShortDate(item.paidOnDate) : 'Not confirmed by Akahu']].map(([label, value]) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontFamily: DT.sans, fontSize: 12 }}>
+                    <span style={{ color: DT.textMuted, fontWeight: 850 }}>{label}</span>
+                    <span style={{ color: DT.textPrimary, fontWeight: 950, textAlign: "right" }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+              {item.xeroUrl && <a href={item.xeroUrl} target="_blank" rel="noreferrer" style={{ marginTop: 12, display: "inline-flex", border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "7px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, textDecoration: "none" }}>Open Xero</a>}
+            </section>
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.78)", padding: 14 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payment proof</div>
+              <p style={{ margin: "8px 0 0", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.35, color: DT.textMuted, fontWeight: 800 }}>{item.stateDetail}</p>
+              <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
+                {item.payments.length === 0 ? (
+                  <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: 10, fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No exact Akahu match stored yet.</div>
+                ) : item.payments.map((payment) => (
+                  <div key={payment.id} style={{ border: `1px solid rgba(12,124,122,0.12)`, borderRadius: 10, padding: 10, background: "rgba(12,124,122,0.045)" }}>
+                    <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary }}>{formatXeroMoney(payment.amount)} · {payment.paymentDate ? formatShortDate(payment.paymentDate) : "No date"}</div>
+                    <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800 }}>{payment.sourceSystem.toUpperCase()} · {payment.reference || payment.payerName || "Matched payment"}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.78)", padding: 14 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice line items</div>
+              <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
+                {item.lineItems.length === 0 ? <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div> : item.lineItems.map((line, index) => (
+                  <div key={`${line.description}:${index}`} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, padding: 10, background: "rgba(255,255,255,0.76)" }}>
+                    <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.25 }}>{line.description}</div>
+                    <div style={{ marginTop: 5, display: "flex", gap: 8, flexWrap: "wrap", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>
+                      <span>Qty {formatXeroQuantity(line.quantity)}</span>
+                      <span>{formatXeroMoney(line.lineAmount)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
+          <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 14, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production tasks</div>
+                <p style={{ margin: "6px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 800, lineHeight: 1.35 }}>Review the suggested steps, owners, dates, and hours before approving them into the live schedule.</p>
+              </div>
+              <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Add task</button>
+            </div>
+            <div style={{ marginTop: 13, display: "grid", gap: 10 }}>
+              {tasks.map((task, index) => {
+                const dateKnown = dateOptions.some((option) => option.dateIso === task.scheduledDate);
+                return (
+                  <div key={task.id} style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(251,250,247,0.82)", padding: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1.2fr) 130px 170px 90px auto", gap: 8, alignItems: "center" }}>
+                      <input value={task.title} onChange={(event) => patchTask(task.id, { title: event.target.value })} aria-label={`Task ${index + 1} title`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, background: "#fff" }} />
+                      <select value={task.owner} onChange={(event) => chooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
+                        {(["Nick", "Dylan", "Guido", "Other"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+                      </select>
+                      <select value={task.scheduledDate} onChange={(event) => chooseTaskDate(task.id, event.target.value)} aria-label={`Task ${index + 1} date`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
+                        {!dateKnown && <option value={task.scheduledDate}>{task.scheduledDate}</option>}
+                        {dateOptions.map((option) => <option key={`${task.id}:${option.dateIso}`} value={option.dateIso}>{option.dateLabel}</option>)}
+                      </select>
+                      <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => patchTask(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, background: "#fff" }} />
+                      <button type="button" onClick={() => setTasks((current) => current.filter((candidate) => candidate.id !== task.id))} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Remove</button>
+                    </div>
+                    <textarea value={task.detail} onChange={(event) => patchTask(task.id, { detail: event.target.value })} aria-label={`Task ${index + 1} detail`} rows={2} style={{ marginTop: 8, width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, background: "#fff", resize: "vertical" }} />
+                  </div>
+                );
+              })}
+            </div>
+            <footer style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 12, color: canApprove ? DT.textMuted : "#9a5b12", fontWeight: 850 }}>{modalStatus || (canApprove ? "Approval writes Supabase production tasks only." : "Waiting for exact Akahu payment evidence before approval.")}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" onClick={saveDraft} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
+                <button type="button" onClick={approveDraft} disabled={busy || !canApprove} style={{ border: `1px solid ${canApprove ? "rgba(12,124,122,0.28)" : DT.border}`, background: canApprove ? DT.teal : "rgba(232,230,224,0.55)", color: canApprove ? "#fff" : DT.textMuted, borderRadius: 999, padding: "10px 15px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: busy ? "wait" : canApprove ? "pointer" : "not-allowed" }}>Approve to schedule</button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      </section>
     </div>
   );
 }
@@ -3809,6 +4119,8 @@ function withMovedTaskSortOrder(tasks: BoardPlanTask[], taskId: string) {
 }
 
 function saveDraftTasks(_weekId: string, _tasks: DraggablePlanTask[]) {
+  void _weekId;
+  void _tasks;
   // Drag/drop is live-backed through Supabase task edits; browser-local board drafts would make two screens disagree.
 }
 
@@ -5043,7 +5355,8 @@ function MonthWeekSection({
                       const laneOpenAppTasks = laneAppTasks.filter((task) => !task.done);
                       const laneSuggestions = suggestedSteps.filter((step) => step.day === day && step.person === person);
                       const laneDraftHours = laneSuggestions.reduce((sum, step) => sum + Number(step.estimatedHours || 0), 0);
-                      const capacity = summarizeLaneCapacity({ existingTaskCount: laneTasks.length, draftHours: laneDraftHours + laneOpenAppTasks.length });
+                      const laneAppHours = laneOpenAppTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
+                      const capacity = summarizeLaneCapacity({ existingTaskCount: laneTasks.length, draftHours: laneDraftHours + laneAppHours });
                       const laneId = boardPlanLaneId(week.id, day, person);
                       const isDropTarget = Boolean((activeTaskId || activeSuggestedStepId) && dropPreview?.weekId === week.id && dropPreview.day === day && dropPreview.person === person);
                       const showDropSlot = (itemId?: string, insertAfter = false) => Boolean(isDropTarget && dropPreview?.overId === itemId && Boolean(dropPreview?.insertAfter) === insertAfter);
@@ -5120,11 +5433,11 @@ function MonthWeekSection({
                               <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
                                 <div style={{ minWidth: 0 }}>
                                   <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 980, lineHeight: 1.2, overflowWrap: "anywhere", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecoration: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined }}>{task.title}</div>
-                                  {selectedOrder && <div style={{ marginTop: 3, fontSize: 9, color: task.done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedOrder.customer}</div>}
+                                  {(task.customer || selectedOrder?.customer) && <div style={{ marginTop: 3, fontSize: 9, color: task.done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer}</div>}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(1)}</span>
-                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : "Job"}</span>
+                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : task.source === "intake" ? "Order" : "Job"}</span>
                                 </div>
                               </div>
                             </div>
@@ -5410,6 +5723,10 @@ function MonthViewState({
   const planTaskLinksUpdatedAtRef = useRef<string | null>(null);
   const [assignmentStatus, setAssignmentStatus] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [orderIntakeItems, setOrderIntakeItems] = useState<OrderIntakeItem[]>([]);
+  const [orderIntakeStatus, setOrderIntakeStatus] = useState("");
+  const [orderIntakeBusy, setOrderIntakeBusy] = useState(false);
+  const [openIntakeOrderId, setOpenIntakeOrderId] = useState<string | null>(null);
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
   const dragStartBoardTasksRef = useRef<BoardPlanTask[] | null>(null);
   const lastBoardPreviewRef = useRef<string | null>(null);
@@ -5418,6 +5735,35 @@ function MonthViewState({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+  const loadOrderIntake = useCallback(async (quiet = false) => {
+    if (!quiet) setOrderIntakeStatus("Checking pending new orders...");
+    try {
+      const response = await fetch("/api/production/order-intake", { cache: "no-store" });
+      const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
+      setOrderIntakeItems(Array.isArray(data.items) ? data.items : []);
+      setOrderIntakeStatus(data.error || "");
+    } catch (error) {
+      setOrderIntakeStatus(error instanceof Error ? error.message : "Order intake unavailable");
+    }
+  }, []);
+  useEffect(() => {
+    void loadOrderIntake(true);
+  }, [loadOrderIntake]);
+  const handleOrderIntakeRealtimeChange = useCallback(() => {
+    void loadOrderIntake(true);
+  }, [loadOrderIntake]);
+  useRealtimeRefresh({
+    channelName: "production-order-intake-reviews",
+    table: "order_intake_reviews",
+    refreshOnChange: false,
+    onChange: handleOrderIntakeRealtimeChange,
+  });
+  useRealtimeRefresh({
+    channelName: "production-order-tasks",
+    table: "production_order_tasks",
+    refreshOnChange: false,
+    onChange: handleOrderIntakeRealtimeChange,
+  });
   const selectedOrder = useMemo(
     () => ordersForHealth.find((order) => order.id === selectedOrderId) ?? null,
     [ordersForHealth, selectedOrderId]
@@ -5427,6 +5773,26 @@ function MonthViewState({
     [ordersForHealth, openOrderId]
   );
   const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
+  const approvedIntakeAppTasks = useMemo<AppPlanTask[]>(() => orderIntakeItems.flatMap((item) => item.approvedTasks.flatMap((task) => {
+    const day = task.day || dateToDayKey(task.scheduledDate);
+    if (!day || !task.title.trim()) return [];
+    return [{
+      id: `intake-${task.id}`,
+      orderId: null,
+      orderUuid: item.orderId,
+      title: task.title,
+      detail: task.detail,
+      customer: item.customerName,
+      scheduledDate: task.scheduledDate,
+      day,
+      person: task.person,
+      done: task.status === "done",
+      estimatedHours: task.estimatedHours,
+      source: "intake" as const,
+    }];
+  })), [orderIntakeItems]);
+  const visibleAppTasks = useMemo(() => [...selectedAppTasks, ...approvedIntakeAppTasks], [selectedAppTasks, approvedIntakeAppTasks]);
+  const openIntakeItem = useMemo(() => orderIntakeItems.find((item) => item.orderId === openIntakeOrderId) ?? null, [openIntakeOrderId, orderIntakeItems]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
   const weekTitleById = useMemo(() => new Map(visibleProductionWeeks.map((week) => [week.id, displayWeekTitle(week.title)])), [visibleProductionWeeks]);
   const isDraftChanged = !boardPlanLayoutsEqual(sourceBoardTasks, boardTasks);
@@ -5706,6 +6072,7 @@ function MonthViewState({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setOpenOrderId(null);
+      setOpenIntakeOrderId(null);
       setSelectedAssignmentTask(null);
       setShowNewOrder(false);
       if (activeTaskId) handleBoardDragCancel();
@@ -5849,7 +6216,20 @@ function MonthViewState({
     saveDraftTasks("six-week-board", sourceBoardTasks);
   }
 
+  function openIntakeReview(orderId: string) {
+    setSelectedAssignmentTask(null);
+    setSelectedWorkflow(null);
+    setSelectedOrderId(null);
+    setOpenOrderId(null);
+    setOpenIntakeOrderId(orderId);
+  }
+
   function selectOrderForAppTask(task: AppPlanTask) {
+    if (task.orderUuid) {
+      openIntakeReview(task.orderUuid);
+      return;
+    }
+    if (task.orderId == null) return;
     if (selectedOrderId === task.orderId) {
       setSelectedAssignmentTask(null);
       setSelectedWorkflow(null);
@@ -5857,6 +6237,14 @@ function MonthViewState({
       return;
     }
     selectOrder(task.orderId);
+  }
+
+  function openAppTask(task: AppPlanTask) {
+    if (task.orderUuid) {
+      openIntakeReview(task.orderUuid);
+      return;
+    }
+    if (task.orderId != null) openOrderOverview(task.orderId);
   }
 
   function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) {
@@ -5978,6 +6366,59 @@ function MonthViewState({
     setShowTasksInMonth(true);
   }
 
+  async function refreshOrderIntakeFromSources() {
+    setOrderIntakeBusy(true);
+    setOrderIntakeStatus("Checking Xero invoices and Akahu payment evidence...");
+    try {
+      const response = await fetch("/api/production/order-intake/reconcile", { method: "POST" });
+      const data = await response.json().catch(() => ({})) as OrderIntakeReconcileResponse;
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Order intake refresh failed");
+      setOrderIntakeItems(Array.isArray(data.items) ? data.items : []);
+      const warning = data.warnings?.length ? ` · ${data.warnings.length} warning${data.warnings.length === 1 ? "" : "s"}` : "";
+      setOrderIntakeStatus(`Checked ${data.scanned ?? 0} Xero invoice${data.scanned === 1 ? "" : "s"}; ${data.createdOrUpdated ?? 0} intake item${data.createdOrUpdated === 1 ? "" : "s"} updated${warning}.`);
+    } catch (error) {
+      setOrderIntakeStatus(error instanceof Error ? error.message : "Order intake refresh failed");
+    } finally {
+      setOrderIntakeBusy(false);
+    }
+  }
+
+  async function saveIntakeDraft(orderId: string, tasks: OrderIntakeTaskDraft[]) {
+    setOrderIntakeBusy(true);
+    try {
+      const response = await fetch(`/api/production/order-intake/${orderId}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks }),
+      });
+      const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Draft save failed");
+      await loadOrderIntake(true);
+      setOrderIntakeStatus("Draft saved");
+    } finally {
+      setOrderIntakeBusy(false);
+    }
+  }
+
+  async function approveIntakeOrder(orderId: string, tasks: OrderIntakeTaskDraft[]) {
+    setOrderIntakeBusy(true);
+    try {
+      const response = await fetch(`/api/production/order-intake/${orderId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks, approvedBy: "Nick" }),
+      });
+      const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Approval failed");
+      if (Array.isArray(data.items)) setOrderIntakeItems(data.items);
+      await loadOrderIntake(true);
+      setOrderIntakeStatus("Approved to Supabase production schedule");
+      setOpenIntakeOrderId(null);
+    } finally {
+      setOrderIntakeBusy(false);
+    }
+  }
+
   const capacityByLane = useMemo<CapacityByLane>(() => {
     const summaries: CapacityByLane = {};
     for (const week of visibleProductionWeeks) {
@@ -5990,13 +6431,16 @@ function MonthViewState({
           const draftHours = editableSteps
             .filter((step) => step.dateIso === option.dateIso && step.person === person)
             .reduce((sum, step) => sum + Number(step.estimatedHours || 0), 0);
-          summaries[dateCapacityKey(option.dateIso, person)] = summarizeLaneCapacity({ existingTaskCount, draftHours });
+          const intakeHours = approvedIntakeAppTasks
+            .filter((task) => task.scheduledDate === option.dateIso && task.person === person && !task.done)
+            .reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
+          summaries[dateCapacityKey(option.dateIso, person)] = summarizeLaneCapacity({ existingTaskCount, draftHours: draftHours + intakeHours });
           summaries[laneCapacityKey(day, person)] = summaries[dateCapacityKey(option.dateIso, person)];
         }
       }
     }
     return summaries;
-  }, [visibleProductionWeeks, editableSteps, boardTasks]);
+  }, [visibleProductionWeeks, editableSteps, boardTasks, approvedIntakeAppTasks]);
 
   const historyControl = previous.length > 0 ? (
     <button
@@ -6040,18 +6484,27 @@ function MonthViewState({
   ) : null;
 
   const railNewOrderCard = (
-    <NewOrderRailCard
-      order={newOrder}
-      showingInMonth={showTasksInMonth || approvedSteps}
-      approved={approvedSteps}
-      onOpen={toggleNewOrderPanel}
-      onOpenOrder={() => {
-        if (newOrder) openOrderOverview(newOrder.id);
-      }}
-      onToggleMonthTasks={toggleNewOrderTasksInSchedule}
-      onApprove={approveNewOrderTasks}
-      fullListOpen={showNewOrder}
-    />
+    <>
+      <OrderIntakeRailCard
+        items={orderIntakeItems}
+        status={orderIntakeStatus}
+        busy={orderIntakeBusy}
+        onRefresh={refreshOrderIntakeFromSources}
+        onOpen={openIntakeReview}
+      />
+      <NewOrderRailCard
+        order={newOrder}
+        showingInMonth={showTasksInMonth || approvedSteps}
+        approved={approvedSteps}
+        onOpen={toggleNewOrderPanel}
+        onOpenOrder={() => {
+          if (newOrder) openOrderOverview(newOrder.id);
+        }}
+        onToggleMonthTasks={toggleNewOrderTasksInSchedule}
+        onApprove={approveNewOrderTasks}
+        fullListOpen={showNewOrder}
+      />
+    </>
   );
 
   const weekSections = visibleProductionWeeks.map((week, index) => (
@@ -6062,7 +6515,7 @@ function MonthViewState({
       suggestedSteps={(showTasksInMonth || approvedSteps) ? editableSteps.filter((step) => suggestedStepFallsInWeek(step, week)) : []}
       approvedSuggestions={approvedSteps}
       selectedOrder={selectedOrder}
-      appTasks={selectedAppTasks}
+      appTasks={visibleAppTasks}
       planTaskLinks={planTaskLinks}
       planTaskLinksLoaded={planTaskLinksLoaded}
       activeTaskId={activeTaskId}
@@ -6077,7 +6530,7 @@ function MonthViewState({
       onTaskEdit={setEditingTask}
       onTaskDoneToggle={toggleBoardTaskDone}
       onAppTaskSelect={selectOrderForAppTask}
-      onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
+      onAppTaskOpen={openAppTask}
       onSuggestedStepMove={moveSuggestedStep}
       onSuggestedStepSelect={selectNewOrderReview}
       onSuggestedStepOpen={openNewOrderOverview}
@@ -6096,7 +6549,7 @@ function MonthViewState({
           week={week}
           tasks={sourceTasksForBoardWeeks([week])}
           selectedOrder={selectedOrder}
-          appTasks={selectedAppTasks}
+          appTasks={visibleAppTasks}
           planTaskLinks={planTaskLinks}
           planTaskLinksLoaded={planTaskLinksLoaded}
           personFilter={personFilter}
@@ -6106,14 +6559,27 @@ function MonthViewState({
           onTaskEdit={setEditingTask}
           onTaskDoneToggle={toggleBoardTaskDone}
           onAppTaskSelect={selectOrderForAppTask}
-          onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
+          onAppTaskOpen={openAppTask}
         />
       ))}
     </section>
   ) : null;
 
+  const intakeReviewModal = openIntakeItem ? (
+    <OrderIntakeReviewModal
+      key={openIntakeItem.orderId}
+      item={openIntakeItem}
+      dateOptions={suggestedDateOptions}
+      busy={orderIntakeBusy}
+      onClose={() => setOpenIntakeOrderId(null)}
+      onSave={(tasks) => saveIntakeDraft(openIntakeItem.orderId, tasks)}
+      onApprove={(tasks) => approveIntakeOrder(openIntakeItem.orderId, tasks)}
+    />
+  ) : null;
+
   const planningBoard = (
     <DndContext
+      id="production-plan-board"
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleBoardDragStart}
@@ -6193,6 +6659,7 @@ function MonthViewState({
         {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
+        {intakeReviewModal}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     );
@@ -6210,6 +6677,7 @@ function MonthViewState({
       {planningBoard}
       {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
       {orderRail}
+      {intakeReviewModal}
       {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
   );

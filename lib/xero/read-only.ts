@@ -7,10 +7,12 @@ type XeroConnection = { tenantId?: string; tenantName?: string };
 type XeroInvoice = {
   InvoiceID?: string;
   InvoiceNumber?: string;
+  Type?: string;
   Status?: string;
   Reference?: string;
   DateString?: string;
   DueDateString?: string;
+  SentToContact?: boolean;
   Contact?: { Name?: string };
   Total?: number;
   AmountDue?: number;
@@ -21,6 +23,8 @@ type XeroInvoice = {
 
 type InvoiceResponse = { Invoices?: XeroInvoice[] };
 type OrganisationResponse = { Organisations?: Array<{ Name?: string; OrganisationID?: string; ShortCode?: string }> };
+
+export type XeroInvoiceSummary = ReturnType<typeof summary>;
 
 export type XeroReadiness = {
   configured: boolean;
@@ -128,11 +132,13 @@ function summary(invoice: XeroInvoice, includeLineItems: boolean) {
   return {
     invoiceId: invoice.InvoiceID || null,
     invoiceNumber: invoice.InvoiceNumber || null,
+    type: invoice.Type || null,
     contact: invoice.Contact?.Name || null,
     status: invoice.Status || null,
     reference: invoice.Reference || null,
     date: invoice.DateString || null,
     dueDate: invoice.DueDateString || null,
+    sentToContact: typeof invoice.SentToContact === "boolean" ? invoice.SentToContact : null,
     total: typeof invoice.Total === "number" ? invoice.Total : null,
     amountDue: typeof invoice.AmountDue === "number" ? invoice.AmountDue : null,
     amountPaid: typeof invoice.AmountPaid === "number" ? invoice.AmountPaid : null,
@@ -160,10 +166,10 @@ export async function getXeroOrganisation() {
   };
 }
 
-export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string | null; search?: string | null; includeLineItems?: boolean }) {
+export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string | null; search?: string | null; includeLineItems?: boolean; pageSize?: number }) {
   const params = new URLSearchParams();
   params.set("page", "1");
-  params.set("pageSize", "10");
+  params.set("pageSize", String(Math.max(1, Math.min(100, options.pageSize ?? 10))));
   params.set("summaryOnly", options.includeLineItems ? "false" : "true");
   params.set("order", "UpdatedDateUTC DESC");
   if (options.invoiceNumber) params.append("InvoiceNumbers", options.invoiceNumber);
@@ -174,4 +180,7 @@ export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string
     tenantName: result.tenantName,
     invoices: (result.body.Invoices || []).map((invoice) => summary(invoice, Boolean(options.includeLineItems))),
   };
+}
+export async function listRecentXeroInvoiceSummaries(options: { includeLineItems?: boolean; pageSize?: number } = {}) {
+  return listXeroInvoiceSummaries({ includeLineItems: options.includeLineItems, pageSize: options.pageSize ?? 50 });
 }
