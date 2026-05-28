@@ -229,8 +229,14 @@ function inferCategory(invoice: XeroInvoiceSummary) {
   if (/ecobeans|bean\s*bag|beanbag|bag fill|filling|consumable|hardware/.test(text)) return "Supply";
   if (/dining table|table|bench|base|steel|leg/.test(text)) return "Table";
   if (/\bsamples?\b|sample panel|colour sample|color sample|engrave/.test(firstLineText) || /sample panel|colour sample|color sample|engrave/.test(text)) return "Sample";
+  if (isRawTimberSupply(text)) return "Timber supply";
   if (/benchtop|bench top|panel|plank|board|timber|slab|raw|uncoated|dressed/.test(text)) return "Panel";
   return "Other";
+}
+
+function isRawTimberSupply(text: string) {
+  return /raw|uncoated|dressed|plank|board|timber|panel/.test(text)
+    && !/blackwash|whitewash|clear\s*coat|oil|lacquer|polyurethane|sand\s+and\s+coat|table|bench|benchtop/.test(text);
 }
 
 function suggestionSignature(invoice: XeroInvoiceSummary) {
@@ -291,9 +297,7 @@ export function buildIntakeSuggestedTasks(input: { invoice: XeroInvoiceSummary; 
   const start = nextWorkshopDay();
   const category = inferCategory(input.invoice);
   const text = lineItems(input.invoice).map((line) => line.description).join("\n").toLowerCase();
-  const supplyOnly = category === "Panel"
-    && /raw|uncoated|dressed|plank|board|timber|panel/.test(text)
-    && !/blackwash|whitewash|clear\s*coat|oil|lacquer|polyurethane|sand\s+and\s+coat|table|bench|benchtop/.test(text);
+  const supplyOnly = category === "Timber supply" || (category === "Panel" && isRawTimberSupply(text));
   if (category === "Supply") {
     return [
       task(`${input.orderId}:spec-check`, "Material + spec check", "Confirm the invoice item, quantity, delivery/collection requirement, and whether this is stock supply rather than workshop production.", "Nick", start, 0.5, 10),
@@ -384,6 +388,22 @@ async function rowsByOrder<T extends { order_id: string | null }>(table: string,
   return supabaseRequest<T[]>(`${table}?select=${select}&order_id=in.(${orderIds.map(quote).join(",")})`);
 }
 
+function paymentDedupeKey(row: PaymentRow, invoiceNumber = "") {
+  return row.match_status === "ignored"
+    ? `${row.source_system}:${row.match_status}:${row.xero_invoice_number || invoiceNumber}:${row.payment_date || "no-date"}:${row.amount}`
+    : `${row.source_system}:${row.external_transaction_id || row.id}:${row.match_status}:${row.amount}`;
+}
+
+function dedupePaymentRows(rows: PaymentRow[], invoiceNumber = "") {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = paymentDedupeKey(row, invoiceNumber);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
   const reviews = await supabaseRequest<IntakeReviewRow[]>("order_intake_reviews?select=*&order=updated_at.desc&limit=40");
   const orderIds = reviews.map((review) => review.order_id);
@@ -400,7 +420,8 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
     const document = documents.find((item) => item.order_id === order.id) || null;
     const reviewTasks = cleanTasks(review.suggested_tasks);
     const draftTasks = cleanTasks(review.draft_tasks);
-    const paymentEvidence = payments.filter((item) => item.order_id === order.id).map((payment) => ({
+    const paymentRows = dedupePaymentRows(payments.filter((item) => item.order_id === order.id), document?.xero_invoice_number || order.xero_invoice_number || "");
+    const paymentEvidence = paymentRows.map((payment) => ({
       id: payment.id,
       sourceSystem: payment.source_system,
       paymentDate: payment.payment_date,
@@ -462,13 +483,7 @@ async function paymentCandidates(invoiceNumber: string, orderId: string, total: 
     if (row.source_system !== "akahu") return false;
     return typeof total === "number" ? Math.abs(Number(row.amount) - total) < 0.02 : true;
   });
-  const dedupeKey = (row: PaymentRow) => row.match_status === "ignored"
-    ? `${row.source_system}:${row.match_status}:${row.xero_invoice_number || invoiceNumber}:${row.payment_date || "no-date"}:${row.amount}`
-    : `${row.source_system}:${row.external_transaction_id || row.id}:${row.match_status}:${row.amount}`;
-  const deduped = amountMatches.filter((row, index, list) => {
-    const key = dedupeKey(row);
-    return list.findIndex((candidate) => dedupeKey(candidate) === key) === index;
-  });
+  const deduped = dedupePaymentRows(amountMatches, invoiceNumber);
   return {
     all: deduped,
     exact: deduped.filter((row) => row.match_status === "matched" && Number(row.match_confidence ?? 0) >= 0.98),
