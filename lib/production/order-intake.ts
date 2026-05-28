@@ -123,6 +123,7 @@ type PaymentRow = {
   id: string;
   order_id: string | null;
   source_system: string;
+  external_transaction_id: string | null;
   payment_date: string | null;
   amount: number;
   payer_name: string | null;
@@ -222,10 +223,12 @@ function lineItems(invoice: XeroInvoiceSummary): IntakeLineItem[] {
 }
 
 function inferCategory(invoice: XeroInvoiceSummary) {
-  const text = lineItems(invoice).map((line) => line.description).join("\n").toLowerCase();
-  if (/\bsamples?\b|sample panel|colour sample|color sample|engrave/.test(text)) return "Sample";
+  const items = lineItems(invoice);
+  const text = items.map((line) => line.description).join("\n").toLowerCase();
+  const firstLineText = items.map((line) => line.description.split(/\r?\n/)[0] || "").join("\n").toLowerCase();
   if (/ecobeans|bean\s*bag|beanbag|bag fill|filling|consumable|hardware/.test(text)) return "Supply";
   if (/dining table|table|bench|base|steel|leg/.test(text)) return "Table";
+  if (/\bsamples?\b|sample panel|colour sample|color sample|engrave/.test(firstLineText) || /sample panel|colour sample|color sample|engrave/.test(text)) return "Sample";
   if (/benchtop|bench top|panel|plank|board|timber|slab|raw|uncoated|dressed/.test(text)) return "Panel";
   return "Other";
 }
@@ -287,7 +290,9 @@ export function buildIntakeSuggestedTasks(input: { invoice: XeroInvoiceSummary; 
   const start = nextWorkshopDay();
   const category = inferCategory(input.invoice);
   const text = lineItems(input.invoice).map((line) => line.description).join("\n").toLowerCase();
-  const supplyOnly = category === "Panel" && /raw|uncoated|dressed|plank|board|timber/.test(text) && !/coat|finish|blackwash|whitewash|table/.test(text);
+  const supplyOnly = category === "Panel"
+    && /raw|uncoated|dressed|plank|board|timber|panel/.test(text)
+    && !/blackwash|whitewash|clear\s*coat|oil|lacquer|polyurethane|sand\s+and\s+coat|table|bench|benchtop/.test(text);
   if (category === "Supply") {
     return [
       task(`${input.orderId}:spec-check`, "Material + spec check", "Confirm the invoice item, quantity, delivery/collection requirement, and whether this is stock supply rather than workshop production.", "Nick", start, 0.5, 10),
@@ -456,10 +461,14 @@ async function paymentCandidates(invoiceNumber: string, orderId: string, total: 
     if (row.source_system !== "akahu") return false;
     return typeof total === "number" ? Math.abs(Number(row.amount) - total) < 0.02 : true;
   });
+  const deduped = amountMatches.filter((row, index, list) => {
+    const key = `${row.source_system}:${row.external_transaction_id || row.id}:${row.match_status}:${row.amount}`;
+    return list.findIndex((candidate) => `${candidate.source_system}:${candidate.external_transaction_id || candidate.id}:${candidate.match_status}:${candidate.amount}` === key) === index;
+  });
   return {
-    all: amountMatches,
-    exact: amountMatches.filter((row) => row.match_status === "matched" && Number(row.match_confidence ?? 0) >= 0.98),
-    probable: amountMatches.filter((row) => row.match_status === "probable"),
+    all: deduped,
+    exact: deduped.filter((row) => row.match_status === "matched" && Number(row.match_confidence ?? 0) >= 0.98),
+    probable: deduped.filter((row) => row.match_status === "probable"),
   };
 }
 
@@ -486,20 +495,25 @@ async function upsertOrderForInvoice(invoice: XeroInvoiceSummary, paid: boolean)
   const invoiceNumber = normalizeInvoiceNumber(invoice.invoiceNumber);
   if (!invoiceNumber) throw new Error("Cannot upsert order without invoice number");
   const existing = await findOrderByInvoice(invoiceNumber);
+  const category = inferCategory(invoice);
+  const invoicePatch = {
+    item_category: category,
+    product_summary: productSummary(invoice),
+    spec: { source: "xero_invoice", line_items: lineItems(invoice) },
+  };
   if (existing) {
-    if (!paid) return existing;
     const rows = await supabaseRequest<SupabaseOrder[]>(`orders?id=eq.${quote(existing.id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
+      body: JSON.stringify(paid ? {
+        ...invoicePatch,
         status: "active",
         paid_on_date: existing.paid_on_date || nzDate(),
         next_action: "Paid. Nick to review and approve the production task plan.",
-      }),
+      } : invoicePatch),
     });
-    return rows[0] || { ...existing, status: "active", paid_on_date: existing.paid_on_date || nzDate() };
+    return rows[0] || { ...existing, ...invoicePatch };
   }
-  const category = inferCategory(invoice);
   const response = await supabaseRequest<SupabaseOrder[]>("orders?on_conflict=xero_invoice_number", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
@@ -591,8 +605,9 @@ async function upsertReview(order: SupabaseOrder, invoice: XeroInvoiceSummary, s
   const generated = buildIntakeSuggestedTasks({ invoice, orderId: order.id, paid: state === "paid_needs_review" });
   const shouldRegenerate = previousSignature !== signature;
   const previousDraftWasJustSuggested = previousDraft.length === 0 || JSON.stringify(previousDraft) === JSON.stringify(previousSuggested);
+  const previousDraftHasManualTask = previousDraft.some((item) => item.id.startsWith("manual-"));
   const suggested = !shouldRegenerate && previousSuggested.length > 0 ? previousSuggested : generated;
-  const draft = previousDraft.length > 0 && (!shouldRegenerate || !previousDraftWasJustSuggested) ? previousDraft : suggested;
+  const draft = previousDraft.length > 0 && (!shouldRegenerate || (previousDraftHasManualTask && !previousDraftWasJustSuggested)) ? previousDraft : suggested;
   const nextState: IntakeReviewState = previous?.review_state === "approved" ? "approved" : state;
   const reviews = await supabaseRequest<IntakeReviewRow[]>("order_intake_reviews?on_conflict=order_id", {
     method: "POST",
