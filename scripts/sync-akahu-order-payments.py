@@ -312,6 +312,29 @@ def sync(start: str, end: str, *, account_name: str, refresh: bool, include_pend
         )
     pending_transactions = pending_account_transactions(akahu, account) if include_pending else []
     pending_matches = pending_summaries(pending_transactions, documents)
+    settled_external_ids = {str(row.get("external_transaction_id") or "") for row in rows}
+    pending_rows: list[dict[str, Any]] = []
+    for item in pending_transactions:
+        if str(item.get("_id") or "") in settled_external_ids:
+            continue
+        try:
+            amount = qmoney(item.get("amount", 0))
+        except Exception:
+            continue
+        siblings = [doc for doc in documents if abs(amount - qmoney(doc.get("total", 0))) <= CENT]
+        for document in siblings:
+            classified = classify_match(item, document, len(siblings))
+            if not classified:
+                continue
+            _status, confidence, reasons = classified
+            pending_rows.append(payment_row(item, document, "ignored", confidence, ["pending_akahu_transaction", *reasons], account_name))
+    if pending_rows:
+        supabase(
+            "order_payments?on_conflict=source_system,external_transaction_id",
+            method="POST",
+            body=pending_rows,
+            prefer="resolution=merge-duplicates,return=minimal",
+        )
     return {
         "ok": True,
         "start": start,
@@ -324,6 +347,7 @@ def sync(start: str, end: str, *, account_name: str, refresh: bool, include_pend
         "transactions": len(transactions),
         "pending_transactions": len(pending_transactions),
         "upserted": len(rows),
+        "pending_upserted": len(pending_rows),
         "matched": sum(1 for row in rows if row["match_status"] == "matched"),
         "probable": sum(1 for row in rows if row["match_status"] == "probable"),
         "pending_matches": len(pending_matches),

@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, type CSSProperties, type DragEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, startTransition, type CSSProperties, type DragEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   closestCorners,
   DndContext,
@@ -925,7 +925,7 @@ type OrderIntakeTaskDraft = {
   sortOrder: number;
 };
 type OrderIntakeLineItem = { description: string; quantity: number | null; unitAmount: number | null; lineAmount: number | null };
-type OrderIntakePaymentEvidence = { id: string; sourceSystem: string; paymentDate: string | null; amount: number; payerName: string | null; reference: string | null; matchStatus: string; matchConfidence: number | null };
+type OrderIntakePaymentEvidence = { id: string; sourceSystem: string; paymentDate: string | null; amount: number; payerName: string | null; reference: string | null; matchStatus: string; matchConfidence: number | null; matchReasons: string[] };
 type OrderIntakeApprovedTask = {
   id: string;
   orderId: string;
@@ -2023,7 +2023,8 @@ function OrderIntakeReviewModal({
   const [modalStatus, setModalStatus] = useState("");
   const meta = INTAKE_STATE_META[item.reviewState];
   const canApprove = item.reviewState === "paid_needs_review" || item.reviewState === "approved";
-
+  const pendingPayments = item.payments.filter(isPendingAkahuPayment);
+  const confirmedPayments = item.payments.filter((payment) => !isPendingAkahuPayment(payment));
 
   function patchTask(id: string, patch: Partial<OrderIntakeTaskDraft>) {
     setTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch } : task));
@@ -2044,7 +2045,7 @@ function OrderIntakeReviewModal({
     const dateIso = firstOption?.dateIso ?? new Date().toISOString().slice(0, 10);
     setTasks((current) => [...current, {
       id: `manual-${Date.now()}`,
-      title: "New task",
+      title: "Material + spec check",
       detail: "",
       owner: "Nick",
       person: "nick",
@@ -2076,12 +2077,12 @@ function OrderIntakeReviewModal({
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: "center", justifyContent: "center", padding: 22 }}>
-      <section style={{ width: "min(1160px, calc(100vw - 44px))", maxHeight: "calc(100vh - 44px)", overflow: "auto", border: `1px solid ${DT.border}`, borderRadius: 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
-        <header style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(251,250,247,0.96)", borderBottom: `1px solid ${DT.border}`, padding: "18px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
+    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: 74, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "18px 20px 20px", overflow: "hidden" }}>
+      <section style={{ width: "min(1320px, calc(100vw - 40px))", maxHeight: "calc(100vh - 112px)", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${DT.border}`, borderRadius: 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
+        <header style={{ flex: "0 0 auto", background: "rgba(251,250,247,0.98)", borderBottom: `1px solid ${DT.border}`, padding: "17px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 34, lineHeight: 1.02, color: DT.textPrimary }}>{item.customerName}</h2>
+              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 30, lineHeight: 1.02, color: DT.textPrimary }}>{item.customerName}</h2>
               <span style={{ border: `1px solid ${meta.border}`, background: meta.bg, color: meta.color, borderRadius: 999, padding: "4px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{item.stateLabel}</span>
             </div>
             <div style={{ marginTop: 7, display: "flex", gap: 12, flexWrap: "wrap", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>
@@ -2093,7 +2094,7 @@ function OrderIntakeReviewModal({
           </div>
           <button type="button" onClick={onClose} style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "9px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}>Close</button>
         </header>
-        <div style={{ padding: 20, display: "grid", gridTemplateColumns: "minmax(280px, 0.72fr) minmax(460px, 1.28fr)", gap: 16 }}>
+        <div style={{ flex: "1 1 auto", minHeight: 0, padding: 20, display: "grid", gridTemplateColumns: "minmax(300px, 380px) minmax(0, 1fr)", gap: 16, overflowY: "auto", overflowX: "hidden" }}>
           <aside style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
             <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.78)", padding: 14 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice facts</div>
@@ -2111,12 +2112,19 @@ function OrderIntakeReviewModal({
               <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payment proof</div>
               <p style={{ margin: "8px 0 0", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.35, color: DT.textMuted, fontWeight: 800 }}>{item.stateDetail}</p>
               <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
-                {item.payments.length === 0 ? (
-                  <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: 10, fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No exact Akahu match stored yet.</div>
-                ) : item.payments.map((payment) => (
+                {pendingPayments.map((payment) => (
+                  <div key={payment.id} style={{ border: "1px solid rgba(154,91,18,0.20)", borderRadius: 10, padding: 10, background: "rgba(250,204,21,0.10)" }}>
+                    <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9a5b12" }}>Payment pending in Akahu</div>
+                    <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary }}>{formatXeroMoney(payment.amount)} - {payment.paymentDate ? formatShortDate(payment.paymentDate) : "No date"}</div>
+                    <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800 }}>{payment.reference || payment.payerName || "Pending bank transaction"}</div>
+                  </div>
+                ))}
+                {confirmedPayments.length === 0 && pendingPayments.length === 0 ? (
+                  <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: 10, fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No settled Akahu payment stored yet.</div>
+                ) : confirmedPayments.map((payment) => (
                   <div key={payment.id} style={{ border: `1px solid rgba(12,124,122,0.12)`, borderRadius: 10, padding: 10, background: "rgba(12,124,122,0.045)" }}>
-                    <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary }}>{formatXeroMoney(payment.amount)} · {payment.paymentDate ? formatShortDate(payment.paymentDate) : "No date"}</div>
-                    <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800 }}>{payment.sourceSystem.toUpperCase()} · {payment.reference || payment.payerName || "Matched payment"}</div>
+                    <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary }}>{formatXeroMoney(payment.amount)} - {payment.paymentDate ? formatShortDate(payment.paymentDate) : "No date"}</div>
+                    <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800 }}>{payment.sourceSystem.toUpperCase()} - {payment.reference || payment.payerName || "Matched payment"}</div>
                   </div>
                 ))}
               </div>
@@ -2124,33 +2132,50 @@ function OrderIntakeReviewModal({
             <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.78)", padding: 14 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice line items</div>
               <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
-                {item.lineItems.length === 0 ? <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div> : item.lineItems.map((line, index) => (
-                  <div key={`${line.description}:${index}`} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, padding: 10, background: "rgba(255,255,255,0.76)" }}>
-                    <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.25 }}>{line.description}</div>
-                    <div style={{ marginTop: 5, display: "flex", gap: 8, flexWrap: "wrap", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>
-                      <span>Qty {formatXeroQuantity(line.quantity)}</span>
-                      <span>{formatXeroMoney(line.lineAmount)}</span>
+                {item.lineItems.length === 0 ? <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div> : item.lineItems.map((line, index) => {
+                  const parsed = parseIntakeInvoiceLine(line.description);
+                  return (
+                    <div key={`${line.description}:${index}`} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, padding: 10, background: "rgba(255,255,255,0.76)" }}>
+                      <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.2 }}>{parsed.title}</div>
+                      {parsed.facts.length > 0 && (
+                        <dl style={{ margin: "9px 0 0", display: "grid", gridTemplateColumns: "88px minmax(0, 1fr)", gap: "6px 8px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.3 }}>
+                          {parsed.facts.map((fact) => (
+                            <Fragment key={`${fact.label}:${fact.value}`}>
+                              <dt style={{ margin: 0, color: DT.textFaint, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.05em" }}>{fact.label}</dt>
+                              <dd style={{ margin: 0, color: DT.textPrimary, fontWeight: 850, minWidth: 0, overflowWrap: "anywhere" }}>{fact.value}</dd>
+                            </Fragment>
+                          ))}
+                        </dl>
+                      )}
+                      {parsed.notes.map((note) => <div key={note} style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800, lineHeight: 1.3 }}>{note}</div>)}
+                      <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>
+                        <span>Qty {formatXeroQuantity(line.quantity)}</span>
+                        <span>{formatXeroMoney(line.lineAmount)}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           </aside>
-          <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 14, minWidth: 0 }}>
+          <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 14, minWidth: 0, alignSelf: "start" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
               <div>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production tasks</div>
                 <p style={{ margin: "6px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 800, lineHeight: 1.35 }}>Review the suggested steps, owners, dates, and hours before approving them into the live schedule.</p>
               </div>
-              <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Add task</button>
+              <button type="button" onClick={addTask} style={{ flex: "0 0 auto", border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Add task</button>
             </div>
             <div style={{ marginTop: 13, display: "grid", gap: 10 }}>
               {tasks.map((task, index) => {
                 const dateKnown = dateOptions.some((option) => option.dateIso === task.scheduledDate);
+                const taskTitleOptions = Array.from(new Set([...JOB_TASK_PRESETS, task.title].filter(Boolean))) as string[];
                 return (
-                  <div key={task.id} style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(251,250,247,0.82)", padding: 12 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1.2fr) 130px 170px 90px auto", gap: 8, alignItems: "center" }}>
-                      <input value={task.title} onChange={(event) => patchTask(task.id, { title: event.target.value })} aria-label={`Task ${index + 1} title`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, background: "#fff" }} />
+                  <div key={task.id} style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(251,250,247,0.82)", padding: 12, minWidth: 0 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(180px, 1fr) 116px 160px 76px 72px", gap: 8, alignItems: "center" }}>
+                      <select value={task.title} onChange={(event) => patchTask(task.id, { title: event.target.value })} aria-label={`Task ${index + 1} title`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
+                        {taskTitleOptions.map((title) => <option key={`${task.id}:${title}`} value={title}>{title}</option>)}
+                      </select>
                       <select value={task.owner} onChange={(event) => chooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
                         {(["Nick", "Dylan", "Guido", "Other"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
                       </select>
@@ -2158,8 +2183,8 @@ function OrderIntakeReviewModal({
                         {!dateKnown && <option value={task.scheduledDate}>{task.scheduledDate}</option>}
                         {dateOptions.map((option) => <option key={`${task.id}:${option.dateIso}`} value={option.dateIso}>{option.dateLabel}</option>)}
                       </select>
-                      <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => patchTask(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, background: "#fff" }} />
-                      <button type="button" onClick={() => setTasks((current) => current.filter((candidate) => candidate.id !== task.id))} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Remove</button>
+                      <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => patchTask(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 9px", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, background: "#fff" }} />
+                      <button type="button" onClick={() => setTasks((current) => current.filter((candidate) => candidate.id !== task.id))} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Delete</button>
                     </div>
                     <textarea value={task.detail} onChange={(event) => patchTask(task.id, { detail: event.target.value })} aria-label={`Task ${index + 1} detail`} rows={2} style={{ marginTop: 8, width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, background: "#fff", resize: "vertical" }} />
                   </div>
@@ -2167,7 +2192,7 @@ function OrderIntakeReviewModal({
               })}
             </div>
             <footer style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <div style={{ fontFamily: DT.sans, fontSize: 12, color: canApprove ? DT.textMuted : "#9a5b12", fontWeight: 850 }}>{modalStatus || (canApprove ? "Approval writes Supabase production tasks only." : "Waiting for exact Akahu payment evidence before approval.")}</div>
+              <div style={{ fontFamily: DT.sans, fontSize: 12, color: canApprove ? DT.textMuted : "#9a5b12", fontWeight: 850 }}>{modalStatus || (canApprove ? "Approval writes Supabase production tasks only." : "Waiting for settled Akahu payment evidence before approval.")}</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" onClick={saveDraft} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
                 <button type="button" onClick={approveDraft} disabled={busy || !canApprove} style={{ border: `1px solid ${canApprove ? "rgba(12,124,122,0.28)" : DT.border}`, background: canApprove ? DT.teal : "rgba(232,230,224,0.55)", color: canApprove ? "#fff" : DT.textMuted, borderRadius: 999, padding: "10px 15px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: busy ? "wait" : canApprove ? "pointer" : "not-allowed" }}>Approve to schedule</button>
@@ -3313,6 +3338,56 @@ function formatXeroMoney(value: number | null | undefined) {
 function formatXeroQuantity(value: number | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(value)) return "-";
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+type ParsedIntakeInvoiceLine = { title: string; facts: Array<{ label: string; value: string }>; notes: string[] };
+
+function cleanInvoiceText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeInvoiceLineTitle(value: string) {
+  const clean = cleanInvoiceText(value).replace(/^custom\s+/i, "");
+  if (/dining\s+table/i.test(clean)) return "Dining Table";
+  if (/local\s+delivery/i.test(clean)) return "Local Delivery";
+  if (/ecobeans|bean\s*bag/i.test(clean)) return "EcoBeans bean bag fill";
+  return clean || "Invoice item";
+}
+
+function normalizeInvoiceFactLabel(label: string) {
+  const clean = cleanInvoiceText(label).replace(/\/$/, "");
+  if (/^dimensions?$/i.test(clean)) return "Dimensions";
+  if (/^timber$/i.test(clean)) return "Timber";
+  if (/^colo(u)?r\s*\/?\s*finish$/i.test(clean) || /^colo(u)?r$/i.test(clean) || /^finish$/i.test(clean)) return "Finish";
+  if (/^base$/i.test(clean)) return "Style";
+  if (/^extras?$/i.test(clean)) return "Notes";
+  if (/^location$/i.test(clean)) return "Location";
+  if (/^address$/i.test(clean)) return "Address";
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Detail";
+}
+
+function parseIntakeInvoiceLine(description: string): ParsedIntakeInvoiceLine {
+  const compact = cleanInvoiceText(description);
+  if (!compact) return { title: "Invoice item", facts: [], notes: [] };
+  const keyPattern = /\b(Dimensions?|Timber|Colou?r\s*\/\s*finish|Colou?r|Finish|Base|Extras?|Location|Address):\s*/gi;
+  const matches = Array.from(compact.matchAll(keyPattern));
+  if (matches.length === 0) {
+    const [first, ...rest] = description.split(/\r?\n/).map((line) => cleanInvoiceText(line)).filter(Boolean);
+    return { title: normalizeInvoiceLineTitle(first || compact), facts: [], notes: rest };
+  }
+  const title = normalizeInvoiceLineTitle(compact.slice(0, matches[0].index ?? 0));
+  const facts = matches.flatMap((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = index + 1 < matches.length ? (matches[index + 1].index ?? compact.length) : compact.length;
+    const value = cleanInvoiceText(compact.slice(start, end));
+    if (!value) return [];
+    return [{ label: normalizeInvoiceFactLabel(match[1]), value }];
+  });
+  return { title, facts, notes: [] };
+}
+
+function isPendingAkahuPayment(payment: OrderIntakePaymentEvidence) {
+  return payment.matchStatus === "ignored" && Array.isArray(payment.matchReasons) && payment.matchReasons.includes("pending_akahu_transaction");
 }
 
 function formatOrderQuantity(value: number | null | undefined) {

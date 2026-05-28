@@ -34,6 +34,7 @@ export type IntakePaymentEvidence = {
   reference: string | null;
   matchStatus: string;
   matchConfidence: number | null;
+  matchReasons: string[];
 };
 
 export type ProductionOrderTask = {
@@ -131,6 +132,7 @@ type PaymentRow = {
   xero_invoice_number: string | null;
   match_status: string;
   match_confidence: number | null;
+  match_reasons: unknown;
 };
 type ProductionTaskRow = {
   id: string;
@@ -221,10 +223,22 @@ function lineItems(invoice: XeroInvoiceSummary): IntakeLineItem[] {
 
 function inferCategory(invoice: XeroInvoiceSummary) {
   const text = lineItems(invoice).map((line) => line.description).join("\n").toLowerCase();
-  if (/sample|colour|color/.test(text)) return "Sample";
-  if (/panel|plank|board|timber|slab|benchtop|bench top|raw|uncoated|dressed/.test(text)) return "Panel";
-  if (/table|bench|base|steel/.test(text)) return "Table";
+  if (/\bsamples?\b|sample panel|colour sample|color sample|engrave/.test(text)) return "Sample";
+  if (/ecobeans|bean\s*bag|beanbag|bag fill|filling|consumable|hardware/.test(text)) return "Supply";
+  if (/dining table|table|bench|base|steel|leg/.test(text)) return "Table";
+  if (/benchtop|bench top|panel|plank|board|timber|slab|raw|uncoated|dressed/.test(text)) return "Panel";
   return "Other";
+}
+
+function suggestionSignature(invoice: XeroInvoiceSummary) {
+  return JSON.stringify({
+    category: inferCategory(invoice),
+    items: lineItems(invoice).map((line) => ({
+      description: line.description,
+      quantity: line.quantity,
+      lineAmount: line.lineAmount,
+    })),
+  });
 }
 
 function productSummary(invoice: XeroInvoiceSummary) {
@@ -274,35 +288,49 @@ export function buildIntakeSuggestedTasks(input: { invoice: XeroInvoiceSummary; 
   const category = inferCategory(input.invoice);
   const text = lineItems(input.invoice).map((line) => line.description).join("\n").toLowerCase();
   const supplyOnly = category === "Panel" && /raw|uncoated|dressed|plank|board|timber/.test(text) && !/coat|finish|blackwash|whitewash|table/.test(text);
+  if (category === "Supply") {
+    return [
+      task(`${input.orderId}:spec-check`, "Material + spec check", "Confirm the invoice item, quantity, delivery/collection requirement, and whether this is stock supply rather than workshop production.", "Nick", start, 0.5, 10),
+      task(`${input.orderId}:pack-wrap`, "Pack / wrap", "Pick, count, label, and pack the supplied goods against the invoice.", "Dylan", addWorkshopDays(start, 1), 0.75, 20),
+      task(`${input.orderId}:customer-update`, "Customer update", "Confirm pickup/courier details and send the customer update.", "Nick", addWorkshopDays(start, 1), 0.25, 30),
+    ];
+  }
   if (supplyOnly) {
     return [
-      task(`${input.orderId}:confirm-pack`, "Confirm timber pack", "Check invoice sizes, quantity, species, and whether this is collection or delivery before pulling stock.", "Nick", start, 0.5, 10),
-      task(`${input.orderId}:pull-dress`, "Pull and dress timber", "Pull the timber/plank/panel items and dress/check them against the invoice line items.", "Dylan", addWorkshopDays(start, 1), 1.5, 20),
-      task(`${input.orderId}:collection-ready`, "Final check + customer collection", "Final count/quality check, label the pack, and confirm collection or delivery details.", "Nick", addWorkshopDays(start, 2), 0.5, 30),
+      task(`${input.orderId}:spec-check`, "Material + spec check", "Confirm sizes, quantity, species, and whether this is collection or delivery before pulling stock.", "Nick", start, 0.5, 10),
+      task(`${input.orderId}:timber-pulled`, "Timber pulled", "Pull and check the plank/panel/timber items against the invoice line items.", "Dylan", addWorkshopDays(start, 1), 1.5, 20),
+      task(`${input.orderId}:pack-wrap`, "Pack / wrap", "Final count/quality check, label the pack, and prepare it for collection or delivery.", "Nick", addWorkshopDays(start, 2), 0.5, 30),
+      task(`${input.orderId}:customer-update`, "Customer update", "Confirm collection/delivery details with the customer.", "Nick", addWorkshopDays(start, 2), 0.25, 40),
     ];
   }
   if (category === "Sample") {
     return [
-      task(`${input.orderId}:sample-check`, "Check sample spec", "Confirm species, colour, size, quantity, engraving/label needs, and customer address from the invoice.", "Nick", start, 0.5, 10),
-      task(`${input.orderId}:sample-pack`, "Pack samples", "Prepare, label, photograph, and pack the sample set.", "Dylan", addWorkshopDays(start, 1), 1, 20),
-      task(`${input.orderId}:sample-send`, "Send + follow-up note", "Confirm courier/collection and set the follow-up date.", "Nick", addWorkshopDays(start, 2), 0.5, 30),
+      task(`${input.orderId}:spec-check`, "Material + spec check", "Confirm species, colour, size, quantity, engraving/label needs, and customer address from the invoice.", "Nick", start, 0.5, 10),
+      task(`${input.orderId}:pack-wrap`, "Pack / wrap", "Prepare, label, photograph, and pack the sample set.", "Dylan", addWorkshopDays(start, 1), 1, 20),
+      task(`${input.orderId}:customer-update`, "Customer update", "Confirm courier/collection and set the follow-up date.", "Nick", addWorkshopDays(start, 2), 0.5, 30),
     ];
   }
   const first = task(`${input.orderId}:spec-check`, "Material + spec check", "Confirm line items, dimensions, timber, finish, base/hardware, delivery and any missing customer decisions.", "Nick", start, 1, 10);
   if (category === "Panel") {
     return [
       first,
-      task(`${input.orderId}:cut-machine`, "Cut / machine / flatten", "Prepare the panel or benchtop blank and resolve stock/yield questions.", "Dylan", addWorkshopDays(start, 1), 1, 20),
-      task(`${input.orderId}:sand-coat`, "Sand and coat", "Final sand and first/primary finish stage.", "Dylan", addWorkshopDays(start, 2), 1, 30),
-      task(`${input.orderId}:qc-wrap`, "QC photos + wrap", "Final proof photos, packaging decision, and customer update trigger.", "Nick", addWorkshopDays(start, 4), 1, 40),
+      task(`${input.orderId}:cut-prep`, "Cut / machine / prep", "Prepare the panel or benchtop blank and resolve stock/yield questions.", "Dylan", addWorkshopDays(start, 1), 1, 20),
+      task(`${input.orderId}:sand-coat`, "Sand and coat", "Surface prep and primary finish stage.", "Dylan", addWorkshopDays(start, 2), 1, 30),
+      task(`${input.orderId}:qc-photos`, "QC + photos", "Final proof photos and quality check before packing.", "Nick", addWorkshopDays(start, 4), 1, 40),
+      task(`${input.orderId}:pack-wrap`, "Pack / wrap", "Package safely and confirm courier or collection details.", "Dylan", addWorkshopDays(start, 4), 0.5, 50),
     ];
   }
+  const finalCoat = /blackwash|whitewash|colour|color/.test(text) ? "4th coat (blackwash final)" : "3rd coat (clear final)";
   return [
     first,
-    task(`${input.orderId}:pull-timber`, "Pull timber", "Pull/check timber against invoice and flag material or PO gaps before scheduling workshop work.", "Dylan", addWorkshopDays(start, 1), 1, 20),
-    task(`${input.orderId}:cut-prep`, "Cut / machine / prep", "Prepare components and resolve machining details before finish work starts.", "Nick", addWorkshopDays(start, 2), 1, 30),
-    task(`${input.orderId}:sand-coat`, "Sand and coat", "Surface prep, first finish, and quality photo while issues can still be caught.", "Dylan", addWorkshopDays(start, 3), 1, 40),
-    task(`${input.orderId}:qc-dispatch`, "QC photos + dispatch prep", "Final proof photos, pack/assembly decision, freight or collection trigger.", "Nick", addWorkshopDays(start, 6), 1, 50),
+    task(`${input.orderId}:timber-pulled`, "Timber pulled", "Pull/check timber against invoice and flag material or PO gaps before workshop work starts.", "Dylan", addWorkshopDays(start, 1), 1, 20),
+    task(`${input.orderId}:stress-cuts`, "Stress cuts", "Break down timber and let movement show before final machining.", "Dylan", addWorkshopDays(start, 1), 1, 30),
+    task(`${input.orderId}:cut-prep`, "Cut / machine / prep", "Machine components and resolve construction details before finish work starts.", "Nick", addWorkshopDays(start, 2), 1.5, 40),
+    task(`${input.orderId}:sand-coat`, "Sand and coat", "Surface prep and first/primary finish stage.", "Dylan", addWorkshopDays(start, 3), 1, 50),
+    task(`${input.orderId}:final-coat`, finalCoat, "Complete the final finish stage required by the invoice spec.", "Dylan", addWorkshopDays(start, 4), 1, 60),
+    task(`${input.orderId}:qc-photos`, "QC + photos", "Final proof photos, spec check, and customer-ready quality review.", "Nick", addWorkshopDays(start, 6), 1, 70),
+    task(`${input.orderId}:pack-wrap`, "Pack / wrap", "Pack, protect, and prepare for delivery or collection.", "Dylan", addWorkshopDays(start, 6), 0.75, 80),
+    task(`${input.orderId}:book-freight`, "Book freight", "Book freight or confirm local delivery/collection details.", "Nick", addWorkshopDays(start, 6), 0.5, 90),
   ];
 }
 
@@ -366,6 +394,18 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
     const document = documents.find((item) => item.order_id === order.id) || null;
     const reviewTasks = cleanTasks(review.suggested_tasks);
     const draftTasks = cleanTasks(review.draft_tasks);
+    const paymentEvidence = payments.filter((item) => item.order_id === order.id).map((payment) => ({
+      id: payment.id,
+      sourceSystem: payment.source_system,
+      paymentDate: payment.payment_date,
+      amount: payment.amount,
+      payerName: payment.payer_name,
+      reference: payment.bank_reference || payment.bank_particulars || payment.bank_code,
+      matchStatus: payment.match_status,
+      matchConfidence: payment.match_confidence,
+      matchReasons: Array.isArray(payment.match_reasons) ? payment.match_reasons.map(String) : [],
+    }));
+    const hasPendingAkahu = paymentEvidence.some((payment) => payment.matchStatus === "ignored" && payment.matchReasons.includes("pending_akahu_transaction"));
     return [{
       orderId: order.id,
       reviewId: review.id,
@@ -383,20 +423,11 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
       amountPaid: document?.amount_paid ?? null,
       amountDue: document?.amount_due ?? null,
       reviewState: review.review_state,
-      stateLabel: reviewLabel(review.review_state),
-      stateDetail: reviewDetail(review.review_state),
+      stateLabel: hasPendingAkahu && review.review_state === "awaiting_payment" ? "Payment pending" : reviewLabel(review.review_state),
+      stateDetail: hasPendingAkahu && review.review_state === "awaiting_payment" ? "Payment is pending in Akahu. Approval stays locked until the bank transaction settles." : reviewDetail(review.review_state),
       sourceSummary: review.source_summary || {},
       lineItems: document?.line_items || [],
-      payments: payments.filter((item) => item.order_id === order.id).map((payment) => ({
-        id: payment.id,
-        sourceSystem: payment.source_system,
-        paymentDate: payment.payment_date,
-        amount: payment.amount,
-        payerName: payment.payer_name,
-        reference: payment.bank_reference || payment.bank_particulars || payment.bank_code,
-        matchStatus: payment.match_status,
-        matchConfidence: payment.match_confidence,
-      })),
+      payments: paymentEvidence,
       suggestedTasks: reviewTasks,
       draftTasks: draftTasks.length > 0 ? draftTasks : reviewTasks,
       approvedTasks: tasks.filter((item) => item.order_id === order.id && item.status !== "deleted").map((row) => ({
@@ -555,8 +586,13 @@ async function upsertReview(order: SupabaseOrder, invoice: XeroInvoiceSummary, s
   const previous = existing[0];
   const previousSuggested = previous ? cleanTasks(previous.suggested_tasks) : [];
   const previousDraft = previous ? cleanTasks(previous.draft_tasks) : [];
-  const suggested = previousSuggested.length > 0 ? previousSuggested : buildIntakeSuggestedTasks({ invoice, orderId: order.id, paid: state === "paid_needs_review" });
-  const draft = previousDraft.length > 0 ? previousDraft : suggested;
+  const signature = suggestionSignature(invoice);
+  const previousSignature = typeof previous?.source_summary?.suggestion_signature === "string" ? previous.source_summary.suggestion_signature : null;
+  const generated = buildIntakeSuggestedTasks({ invoice, orderId: order.id, paid: state === "paid_needs_review" });
+  const shouldRegenerate = previousSignature !== signature;
+  const previousDraftWasJustSuggested = previousDraft.length === 0 || JSON.stringify(previousDraft) === JSON.stringify(previousSuggested);
+  const suggested = !shouldRegenerate && previousSuggested.length > 0 ? previousSuggested : generated;
+  const draft = previousDraft.length > 0 && (!shouldRegenerate || !previousDraftWasJustSuggested) ? previousDraft : suggested;
   const nextState: IntakeReviewState = previous?.review_state === "approved" ? "approved" : state;
   const reviews = await supabaseRequest<IntakeReviewRow[]>("order_intake_reviews?on_conflict=order_id", {
     method: "POST",
@@ -564,7 +600,7 @@ async function upsertReview(order: SupabaseOrder, invoice: XeroInvoiceSummary, s
     body: JSON.stringify([{
       order_id: order.id,
       review_state: nextState,
-      source_summary: { source: "xero_authorised_invoice", payment_gate: "akahu_exact_match", invoice_number: order.xero_invoice_number, payment_count: payments.length },
+      source_summary: { source: "xero_authorised_invoice", payment_gate: "akahu_exact_match", invoice_number: order.xero_invoice_number, payment_count: payments.length, suggestion_signature: signature, item_category: inferCategory(invoice) },
       suggested_tasks: suggested,
       draft_tasks: draft,
       last_reconciled_at: new Date().toISOString(),
