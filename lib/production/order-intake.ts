@@ -235,6 +235,7 @@ function inferCategory(invoice: XeroInvoiceSummary) {
 
 function suggestionSignature(invoice: XeroInvoiceSummary) {
   return JSON.stringify({
+    version: 2,
     category: inferCategory(invoice),
     items: lineItems(invoice).map((line) => ({
       description: line.description,
@@ -461,9 +462,12 @@ async function paymentCandidates(invoiceNumber: string, orderId: string, total: 
     if (row.source_system !== "akahu") return false;
     return typeof total === "number" ? Math.abs(Number(row.amount) - total) < 0.02 : true;
   });
+  const dedupeKey = (row: PaymentRow) => row.match_status === "ignored"
+    ? `${row.source_system}:${row.match_status}:${row.xero_invoice_number || invoiceNumber}:${row.payment_date || "no-date"}:${row.amount}`
+    : `${row.source_system}:${row.external_transaction_id || row.id}:${row.match_status}:${row.amount}`;
   const deduped = amountMatches.filter((row, index, list) => {
-    const key = `${row.source_system}:${row.external_transaction_id || row.id}:${row.match_status}:${row.amount}`;
-    return list.findIndex((candidate) => `${candidate.source_system}:${candidate.external_transaction_id || candidate.id}:${candidate.match_status}:${candidate.amount}` === key) === index;
+    const key = dedupeKey(row);
+    return list.findIndex((candidate) => dedupeKey(candidate) === key) === index;
   });
   return {
     all: deduped,
@@ -605,9 +609,8 @@ async function upsertReview(order: SupabaseOrder, invoice: XeroInvoiceSummary, s
   const generated = buildIntakeSuggestedTasks({ invoice, orderId: order.id, paid: state === "paid_needs_review" });
   const shouldRegenerate = previousSignature !== signature;
   const previousDraftWasJustSuggested = previousDraft.length === 0 || JSON.stringify(previousDraft) === JSON.stringify(previousSuggested);
-  const previousDraftHasManualTask = previousDraft.some((item) => item.id.startsWith("manual-"));
   const suggested = !shouldRegenerate && previousSuggested.length > 0 ? previousSuggested : generated;
-  const draft = previousDraft.length > 0 && (!shouldRegenerate || (previousDraftHasManualTask && !previousDraftWasJustSuggested)) ? previousDraft : suggested;
+  const draft = previousDraft.length > 0 && (!shouldRegenerate || !previousDraftWasJustSuggested) ? previousDraft : suggested;
   const nextState: IntakeReviewState = previous?.review_state === "approved" ? "approved" : state;
   const reviews = await supabaseRequest<IntakeReviewRow[]>("order_intake_reviews?on_conflict=order_id", {
     method: "POST",
