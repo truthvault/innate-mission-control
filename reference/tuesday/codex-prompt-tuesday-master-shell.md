@@ -49,7 +49,9 @@ Read these before proposing or making changes:
 - `reference/quoting/README.md`
 - `components/mission-control-shell.tsx`
 - `app/page.tsx`
-- `app/quoting/page.tsx`
+- `app/quoting/page.tsx` if present
+
+If `app/quoting/page.tsx` is not present in this clean worktree, do **not** pull in the dirty untracked quoting implementation from another worktree. Use a safe internal demo/architecture route for the first application of the pattern instead.
 
 Read these only if needed, and treat Production Plan as high-risk/read-mostly:
 
