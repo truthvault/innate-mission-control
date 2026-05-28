@@ -2,16 +2,27 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState, useTransition } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
+import { tuesdayNavigationSections, type TuesdaySectionKey } from "@/lib/tuesday/sections";
 
-export type MissionControlSection = "orders" | "leads" | "plan" | "samples" | "dispatch" | "test";
+export type MissionControlSection = TuesdaySectionKey | "plan" | "samples" | "dispatch" | "test";
 
-const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
-  { section: "leads", label: "Leads", href: "/leads" },
-  { section: "plan", label: "Production Plan", href: "/production/plan" },
-  { section: "samples", label: "Samples", href: "/production/samples" },
-];
+type MissionControlNavItem = {
+  section: TuesdaySectionKey;
+  label: string;
+  href?: string;
+  status: "live" | "planned" | "disabled";
+};
+
+const NAV: MissionControlNavItem[] = tuesdayNavigationSections.map((item) => ({
+  section: item.key,
+  label: item.shortLabel || item.label,
+  href: item.href,
+  status: item.status,
+}));
+
+const PRODUCTION_SECTIONS: MissionControlSection[] = ["orders", "production", "plan", "samples", "dispatch", "test"];
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -25,10 +36,16 @@ function relativeAge(iso: string): string {
 
 function scopeFor(section: MissionControlSection): string {
   if (section === "leads") return "leads";
-  if (section === "plan") return "plan";
+  if (section === "plan" || section === "production") return "plan";
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
   return "orders";
+}
+
+function navItemIsActive(section: MissionControlSection, pathname: string, item: MissionControlNavItem): boolean {
+  if (item.section === "production") return PRODUCTION_SECTIONS.includes(section) || pathname.startsWith("/production/plan");
+  if (item.section === "stock") return section === "samples" || pathname.startsWith("/production/samples");
+  return item.section === section || pathname === item.href;
 }
 
 function SyncBadge({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
@@ -193,6 +210,7 @@ export function MissionControlShell({
   children,
   pageTitleAccessory,
   maxWidth = MC_WIDTH,
+  showRefresh = true,
 }: {
   section: MissionControlSection;
   pageTitle: string;
@@ -203,6 +221,7 @@ export function MissionControlShell({
   children: ReactNode;
   pageTitleAccessory?: ReactNode;
   maxWidth?: number;
+  showRefresh?: boolean;
 }) {
   const pathname = usePathname();
   const isNarrow = useIsNarrow();
@@ -213,33 +232,33 @@ export function MissionControlShell({
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           <nav style={{ display: "flex", alignItems: "center", justifyContent: isNarrow ? "flex-start" : "center", gap: 6, flexWrap: "nowrap", overflowX: isNarrow ? "auto" : "visible", paddingBottom: isNarrow ? 2 : 0, WebkitOverflowScrolling: "touch" }} aria-label="Mission Control sections">
             {NAV.map((item) => {
-              const active = item.section === section || pathname === item.href;
-              return (
-                <Link
-                  key={item.section}
-                  href={item.href}
-                  style={{
-                    color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
-                    background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
-                    border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
-                    boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
-                    borderRadius: 999,
-                    padding: "6px 12px",
-                    minWidth: item.section === "dispatch" ? 92 : item.section === "plan" ? 124 : 74,
-                    fontSize: 11,
-                    textDecoration: "none",
-                    fontFamily: DT.sans,
-                    fontWeight: 700,
-                    letterSpacing: "0.01em",
-                    textAlign: "center",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              );
+              const active = navItemIsActive(section, pathname, item);
+              const planned = item.status !== "live" || !item.href;
+              const itemStyle: CSSProperties = {
+                color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
+                background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
+                border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
+                boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
+                borderRadius: 999,
+                padding: "6px 11px",
+                minWidth: item.section === "production" ? 96 : item.section === "suppliers" ? 92 : 68,
+                fontSize: 11,
+                textDecoration: "none",
+                fontFamily: DT.sans,
+                fontWeight: 700,
+                letterSpacing: "0.01em",
+                textAlign: "center",
+                opacity: planned ? 0.62 : 1,
+                cursor: planned ? "default" : "pointer",
+                whiteSpace: "nowrap",
+              };
+              if (planned) {
+                return <span key={item.section} title="Planned Tuesday section" style={itemStyle}>{item.label}</span>;
+              }
+              return <Link key={item.section} href={item.href || "/"} style={itemStyle}>{item.label}</Link>;
             })}
           </nav>
-          <div style={{ justifySelf: isNarrow ? "start" : "end" }}><RefreshButton section={section} /></div>
+          <div style={{ justifySelf: isNarrow ? "start" : "end" }}>{showRefresh && <RefreshButton section={section} />}</div>
         </div>
         <div style={{ height: 3, background: `linear-gradient(90deg, ${DT.clay} 0%, ${DT.gold} 38%, ${DT.sage} 72%, ${DT.teal} 100%)` }} />
       </header>
