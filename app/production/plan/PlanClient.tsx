@@ -970,6 +970,7 @@ type OrderIntakeItem = {
 };
 type OrderIntakeApiResponse = { ok?: boolean; items?: OrderIntakeItem[]; error?: string };
 type OrderIntakeReconcileResponse = OrderIntakeApiResponse & { scanned?: number; accepted?: number; createdOrUpdated?: number; warnings?: string[] };
+type OrderWorkflowApiResponse = { state?: OrderWorkflowState; states?: Record<string, OrderWorkflowState>; disabledReason?: string; error?: string };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
 type PlanTaskEditValue = { text?: string; rowName?: string; weekId?: string; day?: DayKey; person?: Person; estimatedHours?: number; sortOrder?: number; internal?: boolean; done?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
@@ -1218,6 +1219,11 @@ const HEALTH_META: Record<OrderHealthLevel, { label: string; color: string; bg: 
 function formatShortDate(date: string | null) {
   if (!date) return "No due date";
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
+}
+
+function formatTaskDateLabel(date: string | null | undefined) {
+  if (!date) return "No date";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short" });
 }
 
 function formatRailDueDate(order: UiOrder) {
@@ -1597,16 +1603,18 @@ function dateToDayKey(value: string): DayKey | null {
   return null;
 }
 
-function workflowTasksForPlan(workflow: OrderWorkflowState | null): AppPlanTask[] {
+function workflowTasksForPlan(workflow: OrderWorkflowState | null, order: UiOrder | null = null): AppPlanTask[] {
   if (!workflow) return [];
   return workflow.tasks.flatMap((task) => {
     const person = workflowOwnerToPerson(task.owner);
     const day = dateToDayKey(task.scheduledDate);
     if (!person || !day || !task.title.trim()) return [];
     return [{
-      id: task.id,
+      id: `workflow-${workflow.orderId}-${task.id}`,
       orderId: workflow.orderId,
       title: task.title,
+      detail: task.notes || null,
+      customer: order?.customer ?? null,
       scheduledDate: task.scheduledDate,
       day,
       person,
@@ -3188,7 +3196,7 @@ function OrderTasksPanel({
                     )}
                   </div>
                 </div>
-                <div style={{ marginTop: 5, ...taskMetaStyle(done) }}>{task.dateLabel} · {DAY_LABELS[task.day]} · {PERSON_LABELS[task.person]} · {task.rowName}</div>
+                <div style={{ marginTop: 5, ...taskMetaStyle(done) }}>{task.dateLabel} · {PERSON_LABELS[task.person]} · {task.rowName}</div>
                 {task.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.notes}</div>}
               </div>
             </div>
@@ -3867,6 +3875,8 @@ type OrderJourneyTask = BoardPlanTask & {
   notes: string | null;
   assignedViaTuesday?: boolean;
   placement?: PlanTaskPlacement;
+  sourceKind?: "plan" | "workflow" | "intake";
+  appTask?: AppPlanTask;
 };
 type OrderJourneyRow = {
   id: string;
@@ -3920,6 +3930,14 @@ function suggestedDateOptionForWeekDay(week: PlanWeek, day: DayKey): SuggestedDa
     weekId: week.id,
     weekTitle: displayWeekTitle(week.title),
   };
+}
+
+function dateLabelForWeekTitleDay(weekTitle: string, day: DayKey) {
+  const range = weekRangeFromTitle(weekTitle);
+  if (!range) return `${displayWeekTitle(weekTitle)} · ${DAY_LABELS[day]}`;
+  const date = new Date(range.start);
+  date.setDate(range.start.getDate() + DAYS.indexOf(day));
+  return formatTaskDateLabel(isoDateFromDate(date));
 }
 
 function suggestedStepFallsInWeek(step: SuggestedOrderPlanStep, week: PlanWeek) {
@@ -4057,12 +4075,16 @@ function orderJourneyTaskSortKey(task: BoardPlanTask, weekTitle: string) {
 
 function buildOrderJourneyRows({
   tasks,
+  appTasks = [],
+  weeks = [],
   orders,
   planTaskLinks,
   resolveOrderId,
   weekTitleForTask,
 }: {
   tasks: BoardPlanTask[];
+  appTasks?: AppPlanTask[];
+  weeks?: PlanWeek[];
   orders: UiOrder[];
   planTaskLinks: PlanTaskLinks;
   resolveOrderId: (task: BoardPlanTask) => number | null;
@@ -4092,12 +4114,55 @@ function buildOrderJourneyRows({
       orderId,
       orderName: row.name,
       weekTitle: displayWeekTitle(weekTitle),
-      dateLabel: `${displayWeekTitle(weekTitle)} · ${DAY_LABELS[task.day]}`,
+      dateLabel: dateLabelForWeekTitleDay(weekTitle, task.day),
       sortKey: orderJourneyTaskSortKey(task, weekTitle),
       connectionState: connection.state,
       notes: task.rowNotes,
       assignedViaTuesday: Boolean(orderId && assignedOrderIdForTask(task, planTaskLinks) === orderId && !task.linkedOrderIds.includes(orderId)),
       placement: placementForTask(task, planTaskLinks),
+      sourceKind: "plan",
+    });
+    rows.set(id, row);
+  }
+
+  for (const task of appTasks) {
+    const week = weeks.find((candidate) => appTaskFallsInWeek(task, candidate));
+    if (!week) continue;
+    const order = task.orderId ? ordersById.get(task.orderId) ?? null : null;
+    const id = order ? `order:${order.id}` : `${task.source === "intake" ? "intake" : "workflow"}:${task.orderUuid ?? task.orderId ?? normalizeOrderText(task.customer) ?? task.id}`;
+    const row = rows.get(id) ?? {
+      id,
+      order,
+      name: order?.customer ?? task.customer ?? "Tuesday order",
+      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : task.source === "intake" ? "Approved intake tasks" : "Tuesday tasks",
+      health: order ? orderHealth(order) : "onTrack",
+      tasks: [],
+    };
+    row.tasks.push({
+      id: task.id,
+      taskKey: task.id,
+      rowId: `${task.source ?? "app"}:${task.orderUuid ?? task.orderId ?? task.id}`,
+      rowName: task.customer ?? order?.customer ?? "Tuesday task",
+      rowNotes: task.detail ?? null,
+      weekId: week.id,
+      sortOrder: 0,
+      day: task.day,
+      person: task.person,
+      text: task.title,
+      estimatedHours: task.estimatedHours ?? 1,
+      done: task.done,
+      linkedOrderIds: task.orderId ? [task.orderId] : [],
+      linkedOrders: [],
+      orderId: task.orderId,
+      orderName: row.name,
+      weekTitle: displayWeekTitle(week.title),
+      dateLabel: task.scheduledDate ? formatTaskDateLabel(task.scheduledDate) : dateLabelForWeekTitleDay(week.title, task.day),
+      sortKey: [task.scheduledDate || "9999-99-99", DAYS.indexOf(task.day), PEOPLE.indexOf(task.person), row.name, task.id].join(":"),
+      connectionState: order ? "connected" : "internal",
+      notes: task.detail ?? null,
+      sourceKind: task.source ?? "workflow",
+      appTask: task,
     });
     rows.set(id, row);
   }
@@ -4108,7 +4173,7 @@ function buildOrderJourneyRows({
     .sort((a, b) => {
       const dueA = a.order?.shipDate ? new Date(a.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
       const dueB = b.order?.shipDate ? new Date(b.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
-      return (healthOrder[a.health] - healthOrder[b.health]) || (dueA - dueB) || a.name.localeCompare(b.name);
+      return healthOrder[a.health] - healthOrder[b.health] || dueA - dueB || a.name.localeCompare(b.name);
     });
 }
 
@@ -5419,7 +5484,7 @@ function MonthWeekSection({
             return (
               <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: showPlanningLanes ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.08), rgba(255,255,255,0))" : undefined }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, marginBottom: showPlanningLanes ? 7 : 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 900, color: isTodayColumn ? DT.teal : DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: DT.sans }}>{DAY_LABELS[day]}</span>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: isTodayColumn ? DT.teal : DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: DT.sans }}>{dateOption?.dateLabel ?? DAY_LABELS[day]}</span>
                   {isTodayColumn && <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Today</span>}
                 </div>
                 {showPlanningLanes && (
@@ -5627,7 +5692,13 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
 
 function OrderJourneyView({
   rows,
+  week,
+  weekIndex,
+  weekCount,
   selectedOrder,
+  onPreviousWeek,
+  onThisWeek,
+  onNextWeek,
   onTaskEdit,
   onTaskSelect,
   onTaskOpen,
@@ -5635,7 +5706,13 @@ function OrderJourneyView({
   onTaskDoneToggle,
 }: {
   rows: OrderJourneyRow[];
+  week: PlanWeek;
+  weekIndex: number;
+  weekCount: number;
   selectedOrder: UiOrder | null;
+  onPreviousWeek: () => void;
+  onThisWeek: () => void;
+  onNextWeek: () => void;
   onTaskEdit: (task: OrderJourneyTask) => void;
   onTaskSelect: (task: OrderJourneyTask) => void;
   onTaskOpen: (task: OrderJourneyTask) => void;
@@ -5645,6 +5722,7 @@ function OrderJourneyView({
   const isNarrow = useIsNarrow(880);
   const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
   const needsRows = rows.filter((row) => row.health === "internal" || row.health === "unlinked");
+  const weekLabel = displayWeekTitle(week.title);
   const renderRow = (row: OrderJourneyRow) => {
     const selected = Boolean(row.order && selectedOrder?.id === row.order.id);
     const healthMeta = row.health === "internal"
@@ -5682,7 +5760,7 @@ function OrderJourneyView({
             return (
               <div key={`${row.id}:${day}`} style={{ minHeight: isNarrow ? 0 : 104, padding: 8, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "rgba(255,255,255,0.50)" : "rgba(232,230,224,0.18)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
-                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{DAY_LABELS[day]}</span>
+                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
                   {dayTasks.length > 1 && <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted }}>{dayTasks.length}</span>}
                 </div>
                 {dayTasks.length === 0 ? (
@@ -5695,6 +5773,7 @@ function OrderJourneyView({
                       const personVisual = PERSON_VISUALS[task.person];
                       const connection = orderConnectionStyle(task.connectionState, selected);
                       const taskDone = Boolean(task.done);
+                      const appTask = task.appTask;
                       const orderRowTaskBorder = taskDone ? DONE_TASK_VISUAL.border : personVisual.taskBorder;
                       const orderRowTaskStripe = taskDone ? DONE_TASK_VISUAL.stripe : personVisual.stripe;
                       const orderRowTaskBg = taskDone ? DONE_TASK_VISUAL.bg : personVisual.taskBg;
@@ -5707,24 +5786,26 @@ function OrderJourneyView({
                           <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
                           <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
                             {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
-                            <button
-                              type="button"
-                              data-order-row-done-button="order-row-done-button"
-                              onPointerDown={(event) => event.stopPropagation()}
-                              onMouseDown={(event) => event.stopPropagation()}
-                              onTouchStart={(event) => event.stopPropagation()}
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
-                                onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
-                              }}
-                              style={{ border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : DT.border}`, background: task.done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.72)", color: task.done ? DONE_TASK_VISUAL.title : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}
-                            >
-                              {task.done ? "↩ Undo" : "✓ Done"}
-                            </button>
-                            <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Edit task</button>
-                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Details</button>
+                            {!appTask && (
+                              <button
+                                type="button"
+                                data-order-row-done-button="order-row-done-button"
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onMouseDown={(event) => event.stopPropagation()}
+                                onTouchStart={(event) => event.stopPropagation()}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
+                                  onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+                                }}
+                                style={{ border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : DT.border}`, background: task.done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.72)", color: task.done ? DONE_TASK_VISUAL.title : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}
+                              >
+                                {task.done ? "↩ Undo" : "✓ Done"}
+                              </button>
+                            )}
+                            {!appTask && <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Edit task</button>}
+                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>{appTask ? "Open" : "Details"}</button>
                           </div>
                         </div>
                       );
@@ -5739,12 +5820,27 @@ function OrderJourneyView({
     );
   };
 
+  const header = (
+    <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>Orders</div>
+        <div style={{ marginTop: 2, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22, lineHeight: 1 }}>{weekLabel}</div>
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+        <button type="button" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: "7px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer" }}>Previous week</button>
+        <button type="button" onClick={onThisWeek} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "7px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>This week</button>
+        <button type="button" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: "7px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer" }}>Next week</button>
+      </div>
+    </div>
+  );
+
   if (rows.length === 0) {
-    return <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this window.</section>;
+    return <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>{header}<div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this week.</div></section>;
   }
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {header}
       {activeRows.map(renderRow)}
       {needsRows.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -5777,6 +5873,7 @@ function MonthViewState({
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
+  const [orderRowsWeekIndex, setOrderRowsWeekIndex] = useState(0);
   const [delightBurst, setDelightBurst] = useState<{ id: number; origin: DelightOrigin } | null>(null);
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
@@ -5802,6 +5899,7 @@ function MonthViewState({
   const [orderIntakeStatus, setOrderIntakeStatus] = useState("");
   const [orderIntakeBusy, setOrderIntakeBusy] = useState(false);
   const [openIntakeOrderId, setOpenIntakeOrderId] = useState<string | null>(null);
+  const [orderWorkflowsById, setOrderWorkflowsById] = useState<Record<string, OrderWorkflowState>>({});
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
   const dragStartBoardTasksRef = useRef<BoardPlanTask[] | null>(null);
   const lastBoardPreviewRef = useRef<string | null>(null);
@@ -5810,6 +5908,31 @@ function MonthViewState({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+  const orderIdsKey = useMemo(() => ordersForHealth.map((order) => order.id).sort((a, b) => a - b).join(","), [ordersForHealth]);
+  const loadOrderWorkflows = useCallback(async () => {
+    if (!orderIdsKey) {
+      setOrderWorkflowsById({});
+      return;
+    }
+    const response = await fetch(`/api/production/order-workflow?orderIds=${encodeURIComponent(orderIdsKey)}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({})) as OrderWorkflowApiResponse;
+    if (!response.ok) throw new Error(data.error || "Workflow tasks unavailable");
+    setOrderWorkflowsById(data.states ?? {});
+  }, [orderIdsKey]);
+  useEffect(() => {
+    void loadOrderWorkflows().catch(() => undefined);
+  }, [loadOrderWorkflows]);
+  const handleAllWorkflowRealtimeChange = useCallback((payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
+    const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
+    const orderId = Number(row?.order_id ?? 0);
+    if (orderId > 0) void loadOrderWorkflows().catch(() => undefined);
+  }, [loadOrderWorkflows]);
+  useRealtimeRefresh({
+    channelName: "production-order-workflows:all",
+    table: "production_order_workflows",
+    refreshOnChange: false,
+    onChange: handleAllWorkflowRealtimeChange,
+  });
   const loadOrderIntake = useCallback(async (quiet = false) => {
     if (!quiet) setOrderIntakeStatus("Checking pending new orders...");
     try {
@@ -5847,7 +5970,13 @@ function MonthViewState({
     () => ordersForHealth.find((order) => order.id === openOrderId) ?? null,
     [ordersForHealth, openOrderId]
   );
-  const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
+  const ordersByIdForWorkflow = useMemo(() => new Map(ordersForHealth.map((order) => [order.id, order])), [ordersForHealth]);
+  const effectiveOrderWorkflows = useMemo(() => {
+    const next = { ...orderWorkflowsById };
+    if (selectedWorkflow) next[String(selectedWorkflow.orderId)] = selectedWorkflow;
+    return next;
+  }, [orderWorkflowsById, selectedWorkflow]);
+  const workflowAppTasks = useMemo(() => Object.values(effectiveOrderWorkflows).flatMap((workflow) => workflowTasksForPlan(workflow, ordersByIdForWorkflow.get(workflow.orderId) ?? null)), [effectiveOrderWorkflows, ordersByIdForWorkflow]);
   const approvedIntakeAppTasks = useMemo<AppPlanTask[]>(() => orderIntakeItems.flatMap((item) => item.approvedTasks.flatMap((task) => {
     const day = task.day || dateToDayKey(task.scheduledDate);
     if (!day || !task.title.trim()) return [];
@@ -5866,13 +5995,19 @@ function MonthViewState({
       source: "intake" as const,
     }];
   })), [orderIntakeItems]);
-  const visibleAppTasks = useMemo(() => [...selectedAppTasks, ...approvedIntakeAppTasks], [selectedAppTasks, approvedIntakeAppTasks]);
+  const visibleAppTasks = useMemo(() => [...workflowAppTasks, ...approvedIntakeAppTasks], [workflowAppTasks, approvedIntakeAppTasks]);
   const openIntakeItem = useMemo(() => orderIntakeItems.find((item) => item.orderId === openIntakeOrderId) ?? null, [openIntakeOrderId, orderIntakeItems]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
   const weekTitleById = useMemo(() => new Map(visibleProductionWeeks.map((week) => [week.id, displayWeekTitle(week.title)])), [visibleProductionWeeks]);
   const isDraftChanged = !boardPlanLayoutsEqual(sourceBoardTasks, boardTasks);
+  const handleSelectedWorkflowChange = useCallback((workflow: OrderWorkflowState | null) => {
+    setSelectedWorkflow(workflow);
+    if (workflow) setOrderWorkflowsById((current) => ({ ...current, [String(workflow.orderId)]: workflow }));
+  }, []);
   const keepOverlayWorkflow = useCallback((workflow: OrderWorkflowState | null) => {
-    if (workflow) setSelectedWorkflow(workflow);
+    if (!workflow) return;
+    setSelectedWorkflow(workflow);
+    setOrderWorkflowsById((current) => ({ ...current, [String(workflow.orderId)]: workflow }));
   }, []);
   const closeOrderOverview = useCallback(() => {
     setOpenOrderId(null);
@@ -6026,21 +6161,35 @@ function MonthViewState({
     return scored[0]?.order.id ?? null;
   }, [ordersForHealth, planTaskLinks]);
 
-  const orderJourneyRows = useMemo(() => buildOrderJourneyRows({
+  useEffect(() => {
+    setOrderRowsWeekIndex((current) => Math.min(current, Math.max(visibleProductionWeeks.length - 1, 0)));
+  }, [visibleProductionWeeks.length]);
+  const orderRowsWeek = visibleProductionWeeks[orderRowsWeekIndex] ?? visibleProductionWeeks[0] ?? null;
+  const boardOrderJourneyRows = useMemo(() => buildOrderJourneyRows({
     tasks: boardTasks,
+    weeks: visibleProductionWeeks,
     orders: ordersForHealth,
     planTaskLinks,
     resolveOrderId: resolveOrderIdForPlanTask,
     weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
-  }), [boardTasks, ordersForHealth, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
+  }), [boardTasks, visibleProductionWeeks, ordersForHealth, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
+  const orderJourneyRows = useMemo(() => orderRowsWeek ? buildOrderJourneyRows({
+    tasks: boardTasks.filter((task) => task.weekId === orderRowsWeek.id),
+    appTasks: visibleAppTasks.filter((task) => appTaskFallsInWeek(task, orderRowsWeek)),
+    weeks: [orderRowsWeek],
+    orders: ordersForHealth,
+    planTaskLinks,
+    resolveOrderId: resolveOrderIdForPlanTask,
+    weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
+  }) : [], [orderRowsWeek, boardTasks, visibleAppTasks, ordersForHealth, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
   const openOrderTasks = useMemo(() => {
     if (!openOrder) return [];
-    return orderJourneyRows.find((row) => row.order?.id === openOrder.id)?.tasks ?? [];
-  }, [openOrder, orderJourneyRows]);
+    return boardOrderJourneyRows.find((row) => row.order?.id === openOrder.id)?.tasks ?? [];
+  }, [openOrder, boardOrderJourneyRows]);
   const selectedOrderTasks = useMemo(() => {
     if (!selectedOrder) return [];
-    return orderJourneyRows.find((row) => row.order?.id === selectedOrder.id)?.tasks ?? [];
-  }, [selectedOrder, orderJourneyRows]);
+    return boardOrderJourneyRows.find((row) => row.order?.id === selectedOrder.id)?.tasks ?? [];
+  }, [selectedOrder, boardOrderJourneyRows]);
 
   function selectOrder(id: number) {
     setSelectedAssignmentTask(null);
@@ -6671,15 +6820,25 @@ function MonthViewState({
             {historySections}
           </>
         ) : (
-          <OrderJourneyView
-            rows={orderJourneyRows}
-            selectedOrder={selectedOrder}
-            onTaskEdit={setEditingTask}
-            onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
-            onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
-            onOrderOpen={openOrderOverview}
-            onTaskDoneToggle={toggleBoardTaskDone}
-          />
+          orderRowsWeek ? (
+            <OrderJourneyView
+              rows={orderJourneyRows}
+              week={orderRowsWeek}
+              weekIndex={orderRowsWeekIndex}
+              weekCount={visibleProductionWeeks.length}
+              selectedOrder={selectedOrder}
+              onPreviousWeek={() => setOrderRowsWeekIndex((current) => Math.max(0, current - 1))}
+              onThisWeek={() => setOrderRowsWeekIndex(0)}
+              onNextWeek={() => setOrderRowsWeekIndex((current) => Math.min(visibleProductionWeeks.length - 1, current + 1))}
+              onTaskEdit={setEditingTask}
+              onTaskSelect={(task) => task.appTask ? selectOrderForAppTask(task.appTask) : selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+              onTaskOpen={(task) => task.appTask ? openAppTask(task.appTask) : openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+              onOrderOpen={openOrderOverview}
+              onTaskDoneToggle={toggleBoardTaskDone}
+            />
+          ) : (
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No production weeks available.</section>
+          )
         )}
         {editingTask && (
           <WorkshopTaskEditor
@@ -6713,7 +6872,7 @@ function MonthViewState({
       onPlanTaskDoneToggle={toggleBoardTaskDone}
       canRemoveAssignmentLink={selectedAssignmentTask ? Boolean(assignedOrderIdForTask(selectedAssignmentTask, planTaskLinks)) : false}
       newOrderCard={railNewOrderCard}
-      onWorkflowChange={setSelectedWorkflow}
+      onWorkflowChange={handleSelectedWorkflowChange}
       onSelect={selectOrder}
       onOpenOrder={openOrderOverview}
       onClear={() => {
