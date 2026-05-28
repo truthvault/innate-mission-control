@@ -20,6 +20,7 @@ from urllib import error, parse, request
 ROOT = Path(__file__).resolve().parents[1]
 MIDAS_BASE = Path(os.getenv("MIDAS_FINANCE_DIR", "/Users/mack-mini/.hermes/profiles/midas/midas-finance"))
 MIDAS_AKAHU = MIDAS_BASE / "tools" / "sync_akahu_transactions.py"
+DEFAULT_ACCOUNT_NAME = "Innate Furniture Ltd"
 CENT = Decimal("0.01")
 SENSITIVE_KEYS = {"_user", "_account", "_connection", "account", "connection", "user", "account_number", "formatted_account", "token", "access_token"}
 
@@ -134,6 +135,55 @@ def redacted_raw(value: Any) -> Any:
     return value
 
 
+def safe_tail(value: Any, keep: int = 4) -> str:
+    text = str(value or "")
+    return "[redacted]..." + text[-keep:] if text else "[none]"
+
+
+def selected_account(akahu: Any, account_name: str) -> dict[str, Any]:
+    accounts = akahu.request("/accounts").get("items", [])
+    matches = [account for account in accounts if account.get("name") == account_name]
+    if len(matches) != 1:
+        names = sorted(account.get("name") or "(unnamed)" for account in accounts)
+        raise SystemExit(f"Expected exactly one Akahu account named {account_name!r}; found {len(matches)}. Available names: {names}")
+    return matches[0]
+
+
+def request_account_refresh(akahu: Any, account: dict[str, Any]) -> dict[str, Any]:
+    user, app = akahu.require_tokens()
+    account_id = str(account.get("_id") or "")
+    api = getattr(akahu, "API", "https://api.akahu.io/v1")
+    req = request.Request(
+        f"{api}/refresh/{parse.quote(account_id)}",
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {user}",
+            "X-Akahu-Id": app,
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with request.urlopen(req, timeout=30) as response:
+            return {"requested": True, "ok": 200 <= response.status < 300, "status": response.status}
+    except error.HTTPError as exc:
+        return {"requested": True, "ok": False, "status": exc.code, "message": exc.read().decode(errors="replace")[:220]}
+
+
+def account_transactions(akahu: Any, account: dict[str, Any], start: str, end: str) -> list[dict[str, Any]]:
+    account_id = str(account.get("_id") or "")
+    payload = akahu.request_all_pages(f"/accounts/{account_id}/transactions", {"start": start, "end": end})
+    return payload.get("items", []) if isinstance(payload, dict) else []
+
+
+def pending_account_transactions(akahu: Any, account: dict[str, Any]) -> list[dict[str, Any]]:
+    account_id = str(account.get("_id") or "")
+    try:
+        payload = akahu.request(f"/accounts/{account_id}/transactions/pending")
+    except Exception:
+        return []
+    return payload.get("items", []) if isinstance(payload, dict) else []
+
+
 def fetch_documents() -> list[dict[str, Any]]:
     return supabase(
         "order_financial_documents?select=id,order_id,xero_invoice_number,total,contact_name,status,archived_at&xero_invoice_number=not.is.null&archived_at=is.null&limit=500"
@@ -162,7 +212,7 @@ def classify_match(item: dict[str, Any], document: dict[str, Any], sibling_count
     return None
 
 
-def payment_row(item: dict[str, Any], document: dict[str, Any], status: str, confidence: Decimal, reasons: list[str]) -> dict[str, Any]:
+def payment_row(item: dict[str, Any], document: dict[str, Any], status: str, confidence: Decimal, reasons: list[str], account_name: str) -> dict[str, Any]:
     meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
     merchant = item.get("merchant") if isinstance(item.get("merchant"), dict) else {}
     return {
@@ -177,6 +227,7 @@ def payment_row(item: dict[str, Any], document: dict[str, Any], status: str, con
         "bank_reference": clean_text(meta.get("reference")) or None,
         "bank_particulars": clean_text(meta.get("particulars")) or None,
         "bank_code": clean_text(meta.get("code")) or None,
+        "bank_account_name": account_name,
         "xero_invoice_number": document.get("xero_invoice_number"),
         "match_status": status,
         "match_confidence": str(confidence),
@@ -185,18 +236,7 @@ def payment_row(item: dict[str, Any], document: dict[str, Any], status: str, con
     }
 
 
-def sync(start: str, end: str) -> dict[str, Any]:
-    load_envs()
-    akahu_user = bool(os.getenv("AKAHU_USER_TOKEN"))
-    akahu_app = bool(os.getenv("AKAHU_APP_TOKEN"))
-    if not akahu_user or not akahu_app:
-        raise SystemExit("Missing AKAHU_USER_TOKEN or AKAHU_APP_TOKEN in Midas .env. Values were not printed.")
-    akahu = load_midas_akahu()
-    documents = fetch_documents()
-    if not documents:
-        return {"ok": True, "start": start, "end": end, "documents": 0, "transactions": 0, "upserted": 0, "note": "No Xero intake documents found yet."}
-    payload = akahu.request_all_pages("/transactions", {"start": start, "end": end})
-    transactions = payload.get("items", []) if isinstance(payload, dict) else []
+def matched_rows(transactions: list[dict[str, Any]], documents: list[dict[str, Any]], account_name: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for item in transactions:
         try:
@@ -209,7 +249,60 @@ def sync(start: str, end: str) -> dict[str, Any]:
             if not classified:
                 continue
             status, confidence, reasons = classified
-            rows.append(payment_row(item, document, status, confidence, reasons))
+            rows.append(payment_row(item, document, status, confidence, reasons, account_name))
+    return rows
+
+
+def pending_summaries(transactions: list[dict[str, Any]], documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    for item in transactions:
+        try:
+            amount = qmoney(item.get("amount", 0))
+        except Exception:
+            continue
+        siblings = [doc for doc in documents if abs(amount - qmoney(doc.get("total", 0))) <= CENT]
+        for document in siblings:
+            classified = classify_match(item, document, len(siblings))
+            if not classified:
+                continue
+            status, confidence, reasons = classified
+            summaries.append({
+                "invoice_number": document.get("xero_invoice_number"),
+                "contact_name": document.get("contact_name"),
+                "date": date_only(item.get("date")),
+                "amount": str(amount),
+                "match_status": status,
+                "match_confidence": str(confidence),
+                "match_reasons": reasons,
+            })
+    return summaries
+
+
+def sync(start: str, end: str, *, account_name: str, refresh: bool, include_pending: bool) -> dict[str, Any]:
+    load_envs()
+    akahu_user = bool(os.getenv("AKAHU_USER_TOKEN"))
+    akahu_app = bool(os.getenv("AKAHU_APP_TOKEN"))
+    if not akahu_user or not akahu_app:
+        raise SystemExit("Missing AKAHU_USER_TOKEN or AKAHU_APP_TOKEN in Midas .env. Values were not printed.")
+    akahu = load_midas_akahu()
+    account = selected_account(akahu, account_name)
+    refresh_result = request_account_refresh(akahu, account) if refresh else {"requested": False}
+    documents = fetch_documents()
+    if not documents:
+        return {
+            "ok": True,
+            "start": start,
+            "end": end,
+            "account_name": account.get("name"),
+            "account_id_tail": safe_tail(account.get("_id")),
+            "refresh": refresh_result,
+            "documents": 0,
+            "transactions": 0,
+            "upserted": 0,
+            "note": "No Xero intake documents found yet.",
+        }
+    transactions = account_transactions(akahu, account, start, end)
+    rows = matched_rows(transactions, documents, account_name)
     if rows:
         supabase(
             "order_payments?on_conflict=source_system,external_transaction_id",
@@ -217,7 +310,25 @@ def sync(start: str, end: str) -> dict[str, Any]:
             body=rows,
             prefer="resolution=merge-duplicates,return=minimal",
         )
-    return {"ok": True, "start": start, "end": end, "documents": len(documents), "transactions": len(transactions), "upserted": len(rows), "matched": sum(1 for row in rows if row["match_status"] == "matched"), "probable": sum(1 for row in rows if row["match_status"] == "probable")}
+    pending_transactions = pending_account_transactions(akahu, account) if include_pending else []
+    pending_matches = pending_summaries(pending_transactions, documents)
+    return {
+        "ok": True,
+        "start": start,
+        "end": end,
+        "account_name": account.get("name"),
+        "account_id_tail": safe_tail(account.get("_id")),
+        "refreshed": account.get("refreshed") or {},
+        "refresh": refresh_result,
+        "documents": len(documents),
+        "transactions": len(transactions),
+        "pending_transactions": len(pending_transactions),
+        "upserted": len(rows),
+        "matched": sum(1 for row in rows if row["match_status"] == "matched"),
+        "probable": sum(1 for row in rows if row["match_status"] == "probable"),
+        "pending_matches": len(pending_matches),
+        "pending_match_preview": pending_matches[:5],
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -225,11 +336,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--days", type=int, default=int(os.getenv("ORDER_INTAKE_AKAHU_DAYS", "45")))
     parser.add_argument("--start")
     parser.add_argument("--end")
+    parser.add_argument("--account-name", default=os.getenv("AKAHU_ORDER_ACCOUNT_NAME", DEFAULT_ACCOUNT_NAME))
+    parser.add_argument("--refresh", action="store_true", help="Request an Akahu refresh for the selected account before reading transactions.")
+    parser.add_argument("--no-pending", action="store_true", help="Skip pending transaction review.")
     args = parser.parse_args(argv)
     today = date.today()
     start = args.start or (today - timedelta(days=args.days)).isoformat()
     end = args.end or (today + timedelta(days=1)).isoformat()
-    print(json.dumps(sync(start, end), indent=2))
+    print(json.dumps(sync(start, end, account_name=args.account_name, refresh=args.refresh, include_pending=not args.no_pending), indent=2))
     return 0
 
 
