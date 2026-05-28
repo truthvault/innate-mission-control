@@ -7,6 +7,13 @@ import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 import { tuesdayNavigationSections, type TuesdaySectionKey } from "@/lib/tuesday/sections";
 
 export type MissionControlSection = TuesdaySectionKey | "plan" | "samples" | "dispatch" | "test";
+type MissionControlNavMode = "legacy" | "tuesday-master";
+
+const LEGACY_NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
+  { section: "leads", label: "Leads", href: "/leads" },
+  { section: "plan", label: "Production Plan", href: "/production/plan" },
+  { section: "samples", label: "Samples", href: "/production/samples" },
+];
 
 type MissionControlNavItem = {
   section: TuesdaySectionKey;
@@ -15,7 +22,7 @@ type MissionControlNavItem = {
   status: "live" | "planned" | "disabled";
 };
 
-const NAV: MissionControlNavItem[] = tuesdayNavigationSections.map((item) => ({
+const TUESDAY_NAV: MissionControlNavItem[] = tuesdayNavigationSections.map((item) => ({
   section: item.key,
   label: item.shortLabel || item.label,
   href: item.href,
@@ -211,6 +218,7 @@ export function MissionControlShell({
   pageTitleAccessory,
   maxWidth = MC_WIDTH,
   showRefresh = true,
+  navMode = "legacy",
 }: {
   section: MissionControlSection;
   pageTitle: string;
@@ -222,41 +230,70 @@ export function MissionControlShell({
   pageTitleAccessory?: ReactNode;
   maxWidth?: number;
   showRefresh?: boolean;
+  navMode?: MissionControlNavMode;
 }) {
   const pathname = usePathname();
-  const isNarrow = useIsNarrow();
+  const useTuesdayMasterNavigation = navMode === "tuesday-master";
+  const isNarrow = useIsNarrow(useTuesdayMasterNavigation ? 1120 : 760);
   return (
     <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
       <header style={{ position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "10px 12px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "300px minmax(620px, 1fr) 150px", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflowX: "hidden" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           <nav style={{ display: "flex", alignItems: "center", justifyContent: isNarrow ? "flex-start" : "center", gap: 6, flexWrap: "nowrap", overflowX: isNarrow ? "auto" : "visible", paddingBottom: isNarrow ? 2 : 0, WebkitOverflowScrolling: "touch" }} aria-label="Mission Control sections">
-            {NAV.map((item) => {
-              const active = navItemIsActive(section, pathname, item);
-              const planned = item.status !== "live" || !item.href;
-              const itemStyle: CSSProperties = {
-                color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
-                background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
-                border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
-                boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
-                borderRadius: 999,
-                padding: "6px 11px",
-                minWidth: item.section === "production" ? 96 : item.section === "suppliers" ? 92 : 68,
-                fontSize: 11,
-                textDecoration: "none",
-                fontFamily: DT.sans,
-                fontWeight: 700,
-                letterSpacing: "0.01em",
-                textAlign: "center",
-                opacity: planned ? 0.62 : 1,
-                cursor: planned ? "default" : "pointer",
-                whiteSpace: "nowrap",
-              };
-              if (planned) {
-                return <span key={item.section} title="Planned Tuesday section" style={itemStyle}>{item.label}</span>;
-              }
-              return <Link key={item.section} href={item.href || "/"} style={itemStyle}>{item.label}</Link>;
-            })}
+            {useTuesdayMasterNavigation
+              ? TUESDAY_NAV.map((item) => {
+                  const active = navItemIsActive(section, pathname, item);
+                  const planned = item.status !== "live" || !item.href;
+                  const itemStyle: CSSProperties = {
+                    color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
+                    background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
+                    border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
+                    boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
+                    borderRadius: 999,
+                    padding: "6px 11px",
+                    minWidth: item.section === "production" ? 96 : item.section === "suppliers" ? 92 : 68,
+                    fontSize: 11,
+                    textDecoration: "none",
+                    fontFamily: DT.sans,
+                    fontWeight: 700,
+                    letterSpacing: "0.01em",
+                    textAlign: "center",
+                    opacity: planned ? 0.62 : 1,
+                    cursor: planned ? "default" : "pointer",
+                    whiteSpace: "nowrap",
+                  };
+                  if (planned) {
+                    return <span key={item.section} title="Planned Tuesday section" style={itemStyle}>{item.label}</span>;
+                  }
+                  return <Link key={item.section} href={item.href || "/"} style={itemStyle}>{item.label}</Link>;
+                })
+              : LEGACY_NAV.map((item) => {
+                  const active = item.section === section || pathname === item.href;
+                  return (
+                    <Link
+                      key={item.section}
+                      href={item.href}
+                      style={{
+                        color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
+                        background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
+                        border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
+                        boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
+                        borderRadius: 999,
+                        padding: "6px 12px",
+                        minWidth: item.section === "dispatch" ? 92 : item.section === "plan" ? 124 : 74,
+                        fontSize: 11,
+                        textDecoration: "none",
+                        fontFamily: DT.sans,
+                        fontWeight: 700,
+                        letterSpacing: "0.01em",
+                        textAlign: "center",
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
           </nav>
           <div style={{ justifySelf: isNarrow ? "start" : "end" }}>{showRefresh && <RefreshButton section={section} />}</div>
         </div>

@@ -22,6 +22,7 @@ export default function TuesdayFoundationPage() {
       syncedAt={new Date().toISOString()}
       source="foundation"
       showRefresh={false}
+      navMode="tuesday-master"
     >
       <div style={{ display: "grid", gap: 14 }}>
         <TuesdayOverviewPanel
