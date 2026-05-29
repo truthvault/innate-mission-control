@@ -1642,6 +1642,7 @@ function OrderRail({
   onRemoveTaskLink,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
+  onWorkflowTaskDoneToggle,
   onWorkflowChange,
   onSelect,
   onOpenOrder,
@@ -1662,6 +1663,7 @@ function OrderRail({
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onWorkflowTaskDoneToggle?: (done: boolean, origin?: DelightOrigin) => void;
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onSelect: (id: number) => void;
   onOpenOrder: (id: number) => void;
@@ -1771,6 +1773,7 @@ function OrderRail({
           onOpen={() => onOpenOrder(selectedOrder.id)}
           onPlanTaskEdit={onPlanTaskEdit}
           onPlanTaskDoneToggle={onPlanTaskDoneToggle}
+          onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle}
           onRemoveTaskLink={onRemoveTaskLink}
         />
       ) : (
@@ -2419,6 +2422,7 @@ function OrderRailDetail({
   onOpen,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
+  onWorkflowTaskDoneToggle,
   onRemoveTaskLink,
 }: {
   order: UiOrder;
@@ -2427,20 +2431,124 @@ function OrderRailDetail({
   onOpen: () => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onWorkflowTaskDoneToggle?: (done: boolean, origin?: DelightOrigin) => void;
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
 }) {
   const health = HEALTH_META[orderHealth(order)];
-  const { workflow, workflowStatus } = useOrderWorkflow(order, onWorkflowChange);
-  const openJobTasks = workflow.tasks
-    .filter((task) => !task.done)
-    .sort((a, b) => (a.scheduledDate || "").localeCompare(b.scheduledDate || ""));
+  const { workflow, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
+  const today = new Date().toISOString().slice(0, 10);
+  const taskOptions = jobTaskOptionsForOrder(order);
+  const defaultDraftAction = defaultJobTaskActionForOrder(order, taskOptions);
+  const productionTaskOptions = taskOptions.filter((option) => option.group === "production");
+  const supportTaskOptions = taskOptions.filter((option) => option.group === "support");
+  const activeProductionStep = currentProductionStepForOrder(order);
+  const [draftAction, setDraftAction] = useState<string>(defaultDraftAction);
+  const [draftCustom, setDraftCustom] = useState("");
+  const [draftOwner, setDraftOwner] = useState<WorkshopPerson>("Nick");
+  const [draftDate, setDraftDate] = useState(today);
+  const selectedDraftAction = taskOptions.some((option) => option.label === draftAction) ? draftAction : defaultDraftAction;
+  const draftTitle = selectedDraftAction === "Custom" ? draftCustom.trim() : selectedDraftAction;
+  const orderedWorkflowTasks = [...workflow.tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+  });
+  const openJobTasks = orderedWorkflowTasks.filter((task) => !task.done);
+  const doneJobTasks = orderedWorkflowTasks.filter((task) => task.done);
+  const donePlanTasks = planTasks.filter((task) => task.done);
+  const visibleWorkflowTasks = orderedWorkflowTasks.slice(0, 6);
+  const openPlanTasks = planTasks.filter((task) => !task.done).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   const nextJobTask = openJobTasks[0] ?? null;
-  const nextPlanTask = planTasks[0] ?? null;
-  const visibleTasks = planTasks.slice(0, 5);
+  const nextPlanTask = openPlanTasks[0] ?? planTasks[0] ?? null;
+  const visibleScheduleTasks = [...planTasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return a.sortKey.localeCompare(b.sortKey);
+  }).slice(0, 4);
+  const qcItems = dispatchQcItems(order);
+  const qcDone = qcItems.filter((label) => workflow.qc[label]?.done).length;
+  const dispatch = collectionSummary(workflow);
+
+  function updateWorkflowTask(id: string, patch: Partial<WorkflowTask>) {
+    updateWorkflow((state) => ({
+      ...state,
+      tasks: state.tasks.map((task) => task.id === id ? { ...task, ...patch } : task),
+    }));
+  }
+
+  function deleteWorkflowTask(id: string) {
+    updateWorkflow((state) => ({
+      ...state,
+      tasks: state.tasks.filter((task) => task.id !== id),
+    }));
+  }
+
+  function addWorkflowTask() {
+    if (!draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate) return;
+    updateWorkflow((state) => ({
+      ...state,
+      tasks: [
+        ...state.tasks,
+        {
+          id: `task-${Date.now()}`,
+          title: draftTitle,
+          owner: draftOwner,
+          scheduledDate: draftDate,
+          done: false,
+          completedAt: null,
+          completedBy: "",
+          notes: "",
+        },
+      ],
+    }));
+    if (selectedDraftAction === "Custom") setDraftCustom("");
+  }
+
+  function compactInputStyle(done = false): CSSProperties {
+    return {
+      minWidth: 0,
+      width: "100%",
+      boxSizing: "border-box",
+      border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`,
+      background: done ? "rgba(255,255,255,0.52)" : DT.cardBg,
+      borderRadius: 8,
+      padding: "6px 7px",
+      fontFamily: DT.sans,
+      fontSize: 11,
+      color: done ? DONE_TASK_VISUAL.title : DT.textPrimary,
+      outline: "none",
+    };
+  }
+
+  function compactSelectStyle(): CSSProperties {
+    return {
+      minWidth: 0,
+      width: "100%",
+      boxSizing: "border-box",
+      border: `1px solid ${DT.border}`,
+      background: DT.cardBg,
+      borderRadius: 8,
+      padding: "6px 7px",
+      fontFamily: DT.sans,
+      fontSize: 11,
+      color: DT.textPrimary,
+      outline: "none",
+    };
+  }
+
+  function compactTaskCardStyle(done: boolean): CSSProperties {
+    return {
+      border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`,
+      background: done ? DONE_TASK_VISUAL.bg : DT.cardBg,
+      borderRadius: 10,
+      padding: 8,
+      boxShadow: done ? DONE_TASK_VISUAL.shadow : "none",
+    };
+  }
+
+  const addDisabled = !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate;
 
   return (
-    <div style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.84)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
+    <div data-order-rail-compact-detail="true" style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
+      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.86)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
           <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.04, color: DT.textPrimary }}>{order.customer}</h3>
           <span style={{ flex: "0 0 auto", border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</span>
@@ -2449,30 +2557,133 @@ function OrderRailDetail({
         <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <MiniFact label="Due" value={`${formatShortDate(order.shipDate)} · ${dueLabel(order)}`} />
           <MiniFact label="Item" value={orderItemLabel(order)} />
+          <MiniFact label="Current" value={activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} />
           <MiniFact label="Next" value={nextJobTask?.title ?? nextPlanTask?.text ?? "No task set"} />
-          <MiniFact label="Progress" value={`${orderProgressPct(order)}% · ${order.stepNote || "No step"}`} />
+          <MiniFact label="Tasks" value={`${openJobTasks.length + openPlanTasks.length} open · ${doneJobTasks.length + donePlanTasks.length} done`} />
+          <MiniFact label="QC / dispatch" value={`${qcDone}/${qcItems.length} · ${dispatch.label}`} />
         </div>
         <button
           type="button"
           onClick={onOpen}
-          style={{ marginTop: 9, width: "100%", border: "1px solid rgba(12,124,122,0.24)", background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 20px rgba(12,124,122,0.12)" }}
+          style={{ marginTop: 9, width: "100%", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
         >
-          Open order
+          Full order details
         </button>
         {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
       </div>
+
+      <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.80)", borderRadius: 10, padding: "9px 10px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+          <div>
+            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
+            <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Job tasks</div>
+          </div>
+          <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{workflow.tasks.length}</span>
+        </div>
+        <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(247,249,248,0.82)", borderRadius: 10, padding: 8 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, marginBottom: 6 }}>Quick add order task</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 76px", gap: 6 }}>
+            <select value={selectedDraftAction} onChange={(event) => setDraftAction(event.target.value)} style={compactSelectStyle()}>
+              {productionTaskOptions.length > 0 && (
+                <optgroup label="Production flow">
+                  {productionTaskOptions.map((option) => <option key={option.label} value={option.label}>{option.label}</option>)}
+                </optgroup>
+              )}
+              <optgroup label="Support">
+                {supportTaskOptions.map((option) => <option key={option.label} value={option.label}>{option.label}</option>)}
+              </optgroup>
+            </select>
+            <select value={draftOwner} onChange={(event) => setDraftOwner(event.target.value as WorkshopPerson)} style={compactSelectStyle()}>
+              <option value="Nick">Nick</option>
+              <option value="Dylan">Dylan</option>
+            </select>
+          </div>
+          <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: selectedDraftAction === "Custom" ? "minmax(0,1fr) 108px" : "1fr", gap: 6 }}>
+            {selectedDraftAction === "Custom" && <input value={draftCustom} onChange={(event) => setDraftCustom(event.target.value)} placeholder="Write task" style={compactInputStyle()} />}
+            <input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} style={compactInputStyle()} />
+          </div>
+          <button
+            type="button"
+            onClick={addWorkflowTask}
+            disabled={addDisabled}
+            title="Add task to job"
+            style={{ marginTop: 7, width: "100%", border: `1px solid ${addDisabled ? DT.border : "rgba(12,124,122,0.18)"}`, background: addDisabled ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: addDisabled ? DT.textFaint : DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: addDisabled ? "not-allowed" : "pointer" }}
+          >
+            Add task to job
+          </button>
+        </div>
+        <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
+          {visibleWorkflowTasks.length === 0 ? (
+            <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>No job tasks saved for this order yet.</div>
+          ) : visibleWorkflowTasks.map((task) => {
+            const done = Boolean(task.done);
+            return (
+              <div key={task.id} data-order-workflow-task-card="order-workflow-task-card" style={compactTaskCardStyle(done)}>
+                <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0,1fr)", gap: 7, alignItems: "start" }}>
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      if (checked) {
+                        const checkboxRect = event.currentTarget.getBoundingClientRect();
+                        const cardElement = event.currentTarget.closest("[data-order-workflow-task-card]") as HTMLElement | null;
+                        onWorkflowTaskDoneToggle?.(checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
+                      }
+                      updateWorkflowTask(task.id, {
+                        done: checked,
+                        completedAt: checked ? new Date().toISOString() : null,
+                        completedBy: checked ? (task.completedBy || task.owner) : "",
+                      });
+                    }}
+                    style={{ marginTop: 7 }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <input
+                      aria-label="Edit job task"
+                      value={task.title}
+                      onChange={(event) => updateWorkflowTask(task.id, { title: event.target.value })}
+                      style={{ ...compactInputStyle(done), fontWeight: 900, textDecoration: done ? "line-through" : "none" }}
+                    />
+                    <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                      <PersonSelect value={task.owner} onChange={(value) => updateWorkflowTask(task.id, { owner: value })} />
+                      <input type="date" value={task.scheduledDate || ""} onChange={(event) => updateWorkflowTask(task.id, { scheduledDate: event.target.value })} style={compactInputStyle(done)} />
+                    </div>
+                    <input value={task.notes} onChange={(event) => updateWorkflowTask(task.id, { notes: event.target.value })} placeholder="Task notes" style={{ ...compactInputStyle(done), marginTop: 5, color: done ? DONE_TASK_VISUAL.text : DT.textMuted }} />
+                    <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontWeight: 850 }}>{done && task.completedAt ? `Done ${formatCompletedAt(task.completedAt)}` : task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Delete this task from this order?")) deleteWorkflowTask(task.id);
+                        }}
+                        aria-label="Delete job task"
+                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {workflow.tasks.length > visibleWorkflowTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Full order details for all job tasks</button>}
+        </div>
+      </div>
+
       <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 10px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Schedule</div>
-            <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Tasks on this order</div>
+            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Week schedule</div>
+            <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Tasks on board</div>
           </div>
           <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{planTasks.length}</span>
         </div>
         <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
-          {visibleTasks.length === 0 ? (
-            <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>No scheduled tasks found yet.</div>
-          ) : visibleTasks.map((task) => {
+          {visibleScheduleTasks.length === 0 ? (
+            <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>No scheduled board tasks found yet.</div>
+          ) : visibleScheduleTasks.map((task) => {
             const done = Boolean(task.done);
             return (
               <div key={task.id} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? DONE_TASK_VISUAL.bg : DT.cardBg, borderRadius: 9, padding: "7px 8px" }}>
@@ -2480,13 +2691,13 @@ function OrderRailDetail({
                 <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, lineHeight: 1.25 }}>{task.dateLabel} · {PERSON_LABELS[task.person]}</div>
                 <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>
                   <button type="button" onClick={(event) => onPlanTaskDoneToggle(task, !done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.18)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
-                  <button type="button" onClick={() => onPlanTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
+                  <button type="button" onClick={() => onPlanTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
                   {task.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(task)} style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Unlink</button>}
                 </div>
               </div>
             );
           })}
-          {planTasks.length > visibleTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Open full order for all tasks</button>}
+          {planTasks.length > visibleScheduleTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Full order details for all board tasks</button>}
         </div>
       </div>
     </div>
@@ -6870,6 +7081,7 @@ function MonthViewState({
       onRemoveTaskLink={removePlanTaskLink}
       onPlanTaskEdit={setEditingTask}
       onPlanTaskDoneToggle={toggleBoardTaskDone}
+      onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle}
       canRemoveAssignmentLink={selectedAssignmentTask ? Boolean(assignedOrderIdForTask(selectedAssignmentTask, planTaskLinks)) : false}
       newOrderCard={railNewOrderCard}
       onWorkflowChange={handleSelectedWorkflowChange}

@@ -15,6 +15,8 @@ assert.match(source, /#1f1f1f/, 'Nick feedback: Nick/Dylan colours should be mor
 assert.match(source, /customer-left-label/, 'Nick feedback: customer/order name should be visually led from the left of plan task cards');
 assert.match(source, /Tick the checkbox to mark this task done/, 'Nick question: explain how to tick a task off near job tasks');
 assert.match(source, /Add task to job/, 'Nick question: the add-task control should be explicitly labelled, not just an icon');
+assert.match(source, /Quick add order task/, 'Nick question: compact order rail should let task edits happen without hiding the week');
+assert.match(source, /Full order details/, 'Nick question: full order details should remain available from the compact rail');
 assert.match(source, /Save task edits/, 'Nick question: Save task should be clearer about saving card edits');
 assert.match(source, /Saves this card in Tuesday only/, 'Nick question: explain what the save button does');
 assert.match(source, /3rd coat \(clear final\)/, 'Nick feedback: stage suggestions should include a clear-coat third coat stage');
