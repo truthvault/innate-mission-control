@@ -22,6 +22,7 @@ SCRIPTS_DIR = ROOT / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
+from tuesday_gmail_readonly_adapter import collect_gmail_readback
 from tuesday_supabase_readonly_adapter import collect_tuesday_readback
 
 DEFAULT_CASES = ROOT / "reference" / "tuesday" / "fixtures" / "source_readback_cases.json"
@@ -82,6 +83,7 @@ def find_case(cases: list[dict[str, Any]], case_id: str | None) -> dict[str, Any
 
 def load_env_file(path: Path, env: dict[str, str] | None = None) -> dict[str, str]:
     target = dict(os.environ if env is None else env)
+    target.setdefault("HERMES_HOME", str(Path.home() / ".hermes"))
     if not path.exists():
         return target
     for raw in path.read_text().splitlines():
@@ -221,9 +223,10 @@ def collect_readback(
     live_flags: dict[str, bool],
     env: dict[str, str],
     supabase_get_json: Any | None = None,
+    gmail_client: Any | None = None,
 ) -> dict[str, Any]:
     collected = {
-        "gmail": live_unavailable_status(_G, env) if live_flags.get(_G) else fixture_gmail_status(case),
+        "gmail": collect_gmail_readback(case, env, client=gmail_client) if live_flags.get(_G) else fixture_gmail_status(case),
         "supabase_tuesday": collect_tuesday_readback(case, env, get_json=supabase_get_json) if live_flags.get(_S) else fixture_tuesday_status(case),
         "xero": live_unavailable_status(_X, env) if live_flags.get(_X) else fixture_xero_status(case),
         "quote_spine_margin_delivery": fixture_quote_spine_status(case),
@@ -267,12 +270,13 @@ def build_preflight_pack(
     env: dict[str, str] | None = None,
     report_path: str = "<report-path>",
     supabase_get_json: Any | None = None,
+    gmail_client: Any | None = None,
 ) -> dict[str, Any]:
     flags = {_G: False, _S: False, _X: False, **(live_flags or {})}
     mode = "live_readonly_requested" if any(flags.values()) else "fixture_only"
     env_values = dict(os.environ if env is None else env)
     required = required_sources(case, flags)
-    collected = collect_readback(case, flags, env_values, supabase_get_json=supabase_get_json)
+    collected = collect_readback(case, flags, env_values, supabase_get_json=supabase_get_json, gmail_client=gmail_client)
     missing = missing_sources_from(required, collected)
     blocked = []
     for status in collected.values():
