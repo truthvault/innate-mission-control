@@ -25,6 +25,12 @@ gmail_adapter = importlib.util.module_from_spec(gmail_adapter_spec)
 assert gmail_adapter_spec and gmail_adapter_spec.loader
 gmail_adapter_spec.loader.exec_module(gmail_adapter)
 
+XERO_ADAPTER = ROOT / "scripts" / "tuesday_xero_readonly_adapter.py"
+xero_adapter_spec = importlib.util.spec_from_file_location("tuesday_xero_readonly_adapter", XERO_ADAPTER)
+xero_adapter = importlib.util.module_from_spec(xero_adapter_spec)
+assert xero_adapter_spec and xero_adapter_spec.loader
+xero_adapter_spec.loader.exec_module(xero_adapter)
+
 
 def assert_equal(actual, expected, label):
     if actual != expected:
@@ -168,6 +174,39 @@ class FakeGmailClient:
 
     def users(self):
         return FakeGmailUsers(self)
+
+
+class FakeXeroReadOnlyClient:
+    def __init__(self):
+        self.calls = []
+
+    def get(self, path, params=None):
+        params = dict(params or {})
+        self.calls.append({"path": path, "params": params})
+        if path == "/Invoices":
+            return {
+                "Invoices": [
+                    {
+                        "InvoiceID": "invoice-secret-id-not-output",
+                        "InvoiceNumber": "INV-9999",
+                        "Reference": "INN-456",
+                        "Status": "PAID",
+                        "DateString": "2026-05-29",
+                        "DueDateString": "2026-06-05",
+                        "Total": 1234.56,
+                        "AmountPaid": 1234.56,
+                        "AmountDue": 0,
+                        "Contact": {"ContactID": "contact-secret-id-not-output", "Name": "Renee Wilson", "EmailAddress": "renee@example.test"},
+                        "Payments": [{"PaymentID": "pay-secret-id-not-output", "Date": "2026-05-30", "Amount": 1234.56}],
+                        "LineItems": [{"Description": "Very long private line dump " * 40, "Quantity": 99}],
+                    }
+                ]
+            }
+        if path == "/Contacts":
+            return {"Contacts": [{"ContactID": "contact-secret-id-not-output", "Name": "Renee Wilson", "EmailAddress": "renee@example.test", "ContactStatus": "ACTIVE"}]}
+        if path == "/Quotes":
+            return {"Quotes": [{"QuoteID": "quote-secret-id-not-output", "QuoteNumber": "QU-0114", "Reference": "INN-456", "Status": "ACCEPTED", "Total": 1200.0, "Contact": {"Name": "Renee Wilson"}}]}
+        raise AssertionError(f"unexpected Xero path {path}")
 
 
 def fake_gmail_client_with_thread():
@@ -338,16 +377,77 @@ def main():
     assert_equal(no_config_status["live_called"], False, "missing config does not call network")
     assert_equal(missing_config_fake.calls, [], "no network calls without complete config")
 
+    fake_xero = FakeXeroReadOnlyClient()
+    live_xero_case = live_case_with_inputs()
+    live_xero_case["xero_refs"] = ["INV-9999", "QU-0114"]
+    live_xero_case["quote_number"] = "QU-0114"
+    live_xero_pack = preflight.build_preflight_pack(
+        live_xero_case,
+        live_flags={"xero": True},
+        env={},
+        xero_client=fake_xero,
+    )
+    xero_status = live_xero_pack["readback_collected"]["xero"]
+    assert_equal(xero_status["source"], "xero", "live Xero source recorded")
+    assert_equal(xero_status["status"], "collected", "live Xero summarizes matches")
+    assert_equal(xero_status["live_called"], True, "live Xero fake client called")
+    assert_equal(xero_status["row_counts"]["invoices"], 1, "live Xero invoice count bounded")
+    assert_equal(xero_status["row_counts"]["quotes"], 1, "live Xero quote count bounded")
+    assert_equal(xero_status["row_counts"]["contacts"], 1, "live Xero contact count bounded")
+    assert_equal(xero_status["invoices"][0]["invoice_number"], "INV-9999", "invoice number summarized")
+    assert_equal(xero_status["invoices"][0]["amount_paid"], 1234.56, "payment evidence summarized from invoice")
+    assert_equal(xero_status["payments_evidence"][0]["payment_count"], 1, "payment count summarized without dumping payment ids")
+    assert_equal(xero_status["quotes"][0]["quote_number"], "QU-0114", "quote number summarized")
+    assert_equal(xero_status["contact"]["name"], "Renee Wilson", "contact summarized")
+    assert_equal(len(fake_xero.calls), 3, "live Xero uses bounded invoice/contact/quote reads")
+    for call in fake_xero.calls:
+        assert_in(call["path"], ["/Invoices", "/Contacts", "/Quotes"], "Xero accounting path allowlisted")
+        assert_not_in("method", call, "fake Xero client does not receive mutating method option")
+        assert_equal(call["params"].get("page"), "1", "Xero reads are first-page bounded")
+    xero_report_text = json.dumps(live_xero_pack, sort_keys=True)
+    for secretish in ["invoice-secret-id-not-output", "contact-secret-id-not-output", "quote-secret-id-not-output", "pay-secret-id-not-output"]:
+        assert_not_in(secretish, xero_report_text, "Xero internal ids not included in preflight pack")
+    assert_not_in("Very long private line dump", xero_report_text, "unbounded Xero line items not dumped")
+    for forbidden_secret in ["Bearer", "Basic", "token", "client_secret", "xero-tenant-id"]:
+        assert_not_in(forbidden_secret.lower(), xero_report_text.lower(), f"Xero report excludes {forbidden_secret}")
+
+    missing_xero_fake = FakeXeroReadOnlyClient()
+    no_xero_inputs_pack = preflight.build_preflight_pack(
+        {"id": "no-xero-live-inputs", "title": "No Xero identifiers", "gmail": {"body": "fixture"}},
+        live_flags={"xero": True},
+        env={"XERO_CLIENT_ID": "cid", "XERO_CLIENT_SECRET": "secret"},
+        xero_client=missing_xero_fake,
+    )
+    no_xero_inputs_status = no_xero_inputs_pack["readback_collected"]["xero"]
+    assert_equal(no_xero_inputs_status["status"], "missing", "missing Xero identifiers fail closed")
+    assert_equal(no_xero_inputs_status["live_called"], False, "missing Xero identifiers do not call accounting endpoints")
+    assert_equal(missing_xero_fake.calls, [], "no Xero accounting calls without narrow identifiers")
+
+    missing_xero_config_fake = FakeXeroReadOnlyClient()
+    no_xero_config_pack = preflight.build_preflight_pack(
+        live_xero_case,
+        live_flags={"xero": True},
+        env={"XERO_CLIENT_ID": "cid"},
+        xero_client=None,
+    )
+    no_xero_config_status = no_xero_config_pack["readback_collected"]["xero"]
+    assert_equal(no_xero_config_status["status"], "missing_adapter_or_config", "missing Xero config fails closed like Phase 4A")
+    assert_equal(no_xero_config_status["live_called"], False, "missing Xero config does not call accounting endpoints")
+    assert_equal(missing_xero_config_fake.calls, [], "unused fake has no calls")
+
     script_source = SCRIPT.read_text().lower()
     adapter_source = ADAPTER.read_text().lower()
     gmail_adapter_source = GMAIL_ADAPTER.read_text().lower()
+    xero_adapter_source = XERO_ADAPTER.read_text().lower()
     for forbidden in preflight.FORBIDDEN_MUTATION_TOKENS:
         assert_not_in(forbidden, script_source, f"preflight script excludes mutation token {forbidden}")
     for forbidden in supabase_adapter.FORBIDDEN_MUTATION_TOKENS:
         assert_not_in(forbidden, adapter_source, f"Supabase adapter excludes mutation token {forbidden}")
     for forbidden in gmail_adapter.FORBIDDEN_MUTATION_TOKENS:
         assert_not_in(forbidden, gmail_adapter_source, f"Gmail adapter excludes mutation token {forbidden}")
-    combined_source = script_source + "\n" + adapter_source + "\n" + gmail_adapter_source
+    for forbidden in xero_adapter.FORBIDDEN_ACCOUNTING_MUTATION_TOKENS:
+        assert_not_in(forbidden, xero_adapter_source, f"Xero adapter excludes accounting mutation token {forbidden}")
+    combined_source = script_source + "\n" + adapter_source + "\n" + gmail_adapter_source + "\n" + xero_adapter_source
     for forbidden_name in ["post", "patch", "put", "delete", "upsert", "insert", "update", "rpc"]:
         assert_not_in(f"def {forbidden_name}", combined_source, f"adapter exposes no {forbidden_name} helper")
     for forbidden_name in ["send", "reply", "modify", "trash", "delete"]:
@@ -356,6 +456,14 @@ def main():
     for broad_import in ["google_api", "innate_gmail_supabase_watchdog", "lead_source_of_truth_reconciliation_readonly"]:
         assert_not_in(broad_import, script_source, f"preflight does not import broad Gmail helper {broad_import}")
         assert_not_in(broad_import, gmail_adapter_source, f"Gmail adapter does not import broad Gmail helper {broad_import}")
+    for forbidden_name in ["create", "approve", "void"]:
+        assert_not_in(f"def {forbidden_name}", xero_adapter_source, f"Xero adapter exposes no {forbidden_name} helper")
+        assert_not_in("." + forbidden_name + "(", xero_adapter_source, f"Xero adapter cannot reach {forbidden_name} call")
+    for forbidden_path in ["/invoices/", "/quotes/", "/payments"]:
+        assert_not_in(forbidden_path, xero_adapter_source, f"Xero adapter avoids mutation-prone item/payment path {forbidden_path}")
+    assert_in("token", xero_adapter_source, "Xero adapter may include isolated auth token exchange")
+    assert_in("identity.xero.com/connect/token", xero_adapter_source, "Xero auth token endpoint is isolated from accounting reads")
+    assert_in("api.xero.com/api.xro/2.0", xero_adapter_source, "Xero accounting base is separate from token endpoint")
 
     print("ok: tuesday_live_readback_preflight unit checks passed")
 

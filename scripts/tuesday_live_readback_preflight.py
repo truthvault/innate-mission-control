@@ -24,6 +24,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from tuesday_gmail_readonly_adapter import collect_gmail_readback
 from tuesday_supabase_readonly_adapter import collect_tuesday_readback
+from tuesday_xero_readonly_adapter import collect_xero_readback
 
 DEFAULT_CASES = ROOT / "reference" / "tuesday" / "fixtures" / "source_readback_cases.json"
 DEFAULT_OUTPUT_DIR = ROOT / "output"
@@ -224,11 +225,12 @@ def collect_readback(
     env: dict[str, str],
     supabase_get_json: Any | None = None,
     gmail_client: Any | None = None,
+    xero_client: Any | None = None,
 ) -> dict[str, Any]:
     collected = {
         "gmail": collect_gmail_readback(case, env, client=gmail_client) if live_flags.get(_G) else fixture_gmail_status(case),
         "supabase_tuesday": collect_tuesday_readback(case, env, get_json=supabase_get_json) if live_flags.get(_S) else fixture_tuesday_status(case),
-        "xero": live_unavailable_status(_X, env) if live_flags.get(_X) else fixture_xero_status(case),
+        "xero": collect_xero_readback(case, env, client=xero_client) if live_flags.get(_X) else fixture_xero_status(case),
         "quote_spine_margin_delivery": fixture_quote_spine_status(case),
     }
     return collected
@@ -271,12 +273,13 @@ def build_preflight_pack(
     report_path: str = "<report-path>",
     supabase_get_json: Any | None = None,
     gmail_client: Any | None = None,
+    xero_client: Any | None = None,
 ) -> dict[str, Any]:
     flags = {_G: False, _S: False, _X: False, **(live_flags or {})}
     mode = "live_readonly_requested" if any(flags.values()) else "fixture_only"
     env_values = dict(os.environ if env is None else env)
     required = required_sources(case, flags)
-    collected = collect_readback(case, flags, env_values, supabase_get_json=supabase_get_json, gmail_client=gmail_client)
+    collected = collect_readback(case, flags, env_values, supabase_get_json=supabase_get_json, gmail_client=gmail_client, xero_client=xero_client)
     missing = missing_sources_from(required, collected)
     blocked = []
     for status in collected.values():
