@@ -19,6 +19,12 @@ supabase_adapter = importlib.util.module_from_spec(adapter_spec)
 assert adapter_spec and adapter_spec.loader
 adapter_spec.loader.exec_module(supabase_adapter)
 
+GMAIL_ADAPTER = ROOT / "scripts" / "tuesday_gmail_readonly_adapter.py"
+gmail_adapter_spec = importlib.util.spec_from_file_location("tuesday_gmail_readonly_adapter", GMAIL_ADAPTER)
+gmail_adapter = importlib.util.module_from_spec(gmail_adapter_spec)
+assert gmail_adapter_spec and gmail_adapter_spec.loader
+gmail_adapter_spec.loader.exec_module(gmail_adapter)
+
 
 def assert_equal(actual, expected, label):
     if actual != expected:
@@ -89,6 +95,103 @@ def live_case_with_inputs():
     return case
 
 
+def gmail_message(msg_id, thread_id, from_value, subject, body, *, date="Sat, 30 May 2026 10:00:00 +1200", labels=None):
+    encoded = gmail_adapter.encode_body_for_test(body)
+    return {
+        "id": msg_id,
+        "threadId": thread_id,
+        "internalDate": "1780092000000" if msg_id.endswith("1") else "1780095600000",
+        "labelIds": labels or [],
+        "snippet": body[:80],
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": [
+                {"name": "From", "value": from_value},
+                {"name": "To", "value": "hello@innatefurniture.co.nz"},
+                {"name": "Date", "value": date},
+                {"name": "Subject", "value": subject},
+            ],
+            "body": {"data": encoded},
+        },
+    }
+
+
+class FakeGmailExecute:
+    def __init__(self, owner, result):
+        self.owner = owner
+        self.result = result
+
+    def execute(self):
+        self.owner.calls.append(dict(self.owner.pending_call))
+        return self.result
+
+
+class FakeGmailMessages:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def list(self, **kwargs):
+        self.owner.pending_call = {"kind": "messages.list", "kwargs": kwargs}
+        return FakeGmailExecute(self.owner, {"messages": [{"id": "m1", "threadId": "thread-1"}], "resultSizeEstimate": 1})
+
+    def get(self, **kwargs):
+        self.owner.pending_call = {"kind": "messages.get", "kwargs": kwargs}
+        message = self.owner.messages[kwargs["id"]]
+        return FakeGmailExecute(self.owner, message)
+
+
+class FakeGmailThreads:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def get(self, **kwargs):
+        self.owner.pending_call = {"kind": "threads.get", "kwargs": kwargs}
+        return FakeGmailExecute(self.owner, {"id": kwargs["id"], "messages": list(self.owner.messages.values())})
+
+
+class FakeGmailUsers:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def messages(self):
+        return FakeGmailMessages(self.owner)
+
+    def threads(self):
+        return FakeGmailThreads(self.owner)
+
+
+class FakeGmailClient:
+    def __init__(self, messages):
+        self.messages = messages
+        self.calls = []
+        self.pending_call = {}
+
+    def users(self):
+        return FakeGmailUsers(self)
+
+
+def fake_gmail_client_with_thread():
+    inbound = gmail_message(
+        "m1",
+        "thread-1",
+        "Mara Fitzgerald <mara@example.test>",
+        "Re: Quote approval",
+        "Approved, please go ahead and invoice us. This full body clears the snippet-only blocker. " + "extra " * 80,
+        labels=["INBOX"],
+    )
+    sent = gmail_message(
+        "m2",
+        "thread-1",
+        "Guido <hello@innatefurniture.co.nz>",
+        "Re: Quote approval",
+        "Thanks Mara, we will sort the next step.",
+        date="Sat, 30 May 2026 11:00:00 +1200",
+        labels=["SENT"],
+    )
+    sent["internalDate"] = "1780095600000"
+    return FakeGmailClient({"m1": inbound, "m2": sent})
+
+
 def main():
     allowed_case = load_case("PH2-1-lead-email-reply-candidate")
     allowed_pack = preflight.build_preflight_pack(allowed_case, live_flags={})
@@ -140,6 +243,49 @@ def main():
     assert_in("Gmail full thread/latest inbound/latest sent", live_pack["missing_or_stale_sources"], "live missing Gmail listed")
     assert_in("Supabase/Tuesday row", live_pack["missing_or_stale_sources"], "live missing Supabase listed")
     assert_in("Xero quote/invoice/contact/payment state", live_pack["missing_or_stale_sources"], "live missing Xero listed")
+
+    fake_gmail = fake_gmail_client_with_thread()
+    live_gmail_case = dict(blocked_case)
+    live_gmail_case["gmail"] = dict(blocked_case["gmail"])
+    live_gmail_case["gmail"]["thread_id"] = "thread-1"
+    live_gmail_case["email"] = "mara@example.test"
+    live_gmail_pack = preflight.build_preflight_pack(
+        live_gmail_case,
+        live_flags={"gmail": True},
+        env={},
+        gmail_client=fake_gmail,
+    )
+    gmail_status = live_gmail_pack["readback_collected"]["gmail"]
+    assert_equal(gmail_status["source"], "gmail", "live Gmail source recorded")
+    assert_equal(gmail_status["status"], "collected", "live Gmail full body clears Gmail source")
+    assert_equal(gmail_status["live_called"], True, "live Gmail fake client called")
+    assert_equal(gmail_status["thread_id"], "thread-1", "thread id summarized")
+    assert_equal(gmail_status["message_count"], 2, "thread message count summarized")
+    assert_equal(gmail_status["latest_inbound"]["id"], "m1", "latest inbound summarized")
+    assert_equal(gmail_status["latest_inbound"]["body_present"], True, "latest inbound body presence summarized")
+    assert_equal(gmail_status["latest_sent"]["id"], "m2", "latest sent summarized")
+    assert_equal(gmail_status["has_newer_sent_reply"], True, "sent-after-inbound detected")
+    assert_not_in("fixture Gmail body is empty or snippet-only", " ".join(live_gmail_pack["blocked_because"]), "live body clears snippet-only blocker")
+    assert_equal(live_gmail_pack["safe_to_create_live_gmail_draft"], False, "live Gmail evidence never enables live draft creation")
+    for call in fake_gmail.calls:
+        assert_in(call["kind"], ["threads.get"], "live Gmail uses thread GET only when thread id supplied")
+        assert_equal(call["kwargs"].get("userId"), "me", "Gmail user scoped to me")
+    gmail_report_text = json.dumps(live_gmail_pack, sort_keys=True)
+    assert_not_in("extra " * 50, gmail_report_text, "full unbounded Gmail body not dumped")
+    assert_not_in("Bearer", gmail_report_text, "Gmail report excludes bearer strings")
+    assert_not_in("token", gmail_report_text.lower(), "Gmail report excludes token strings")
+
+    fake_missing = fake_gmail_client_with_thread()
+    missing_gmail_pack = preflight.build_preflight_pack(
+        {"id": "no-gmail-live-inputs", "title": "No Gmail identifiers", "gmail": {"body": "fixture"}},
+        live_flags={"gmail": True},
+        env={"GOOGLE_TOKEN_PATH": "/tmp/fake-google-token.json"},
+        gmail_client=fake_missing,
+    )
+    missing_gmail_status = missing_gmail_pack["readback_collected"]["gmail"]
+    assert_equal(missing_gmail_status["status"], "missing", "missing Gmail identifiers fail closed")
+    assert_equal(missing_gmail_status["live_called"], False, "missing Gmail identifiers do not call network")
+    assert_equal(fake_missing.calls, [], "no Gmail network calls without narrow identifiers")
 
     fake_get = FakeSupabaseGetter()
     secret = "supabase-service-role-secret-do-not-print"
@@ -194,13 +340,22 @@ def main():
 
     script_source = SCRIPT.read_text().lower()
     adapter_source = ADAPTER.read_text().lower()
+    gmail_adapter_source = GMAIL_ADAPTER.read_text().lower()
     for forbidden in preflight.FORBIDDEN_MUTATION_TOKENS:
         assert_not_in(forbidden, script_source, f"preflight script excludes mutation token {forbidden}")
     for forbidden in supabase_adapter.FORBIDDEN_MUTATION_TOKENS:
         assert_not_in(forbidden, adapter_source, f"Supabase adapter excludes mutation token {forbidden}")
-    combined_source = script_source + "\n" + adapter_source
+    for forbidden in gmail_adapter.FORBIDDEN_MUTATION_TOKENS:
+        assert_not_in(forbidden, gmail_adapter_source, f"Gmail adapter excludes mutation token {forbidden}")
+    combined_source = script_source + "\n" + adapter_source + "\n" + gmail_adapter_source
     for forbidden_name in ["post", "patch", "put", "delete", "upsert", "insert", "update", "rpc"]:
         assert_not_in(f"def {forbidden_name}", combined_source, f"adapter exposes no {forbidden_name} helper")
+    for forbidden_name in ["send", "reply", "modify", "trash", "delete"]:
+        assert_not_in(f"def {forbidden_name}", gmail_adapter_source, f"Gmail adapter exposes no {forbidden_name} helper")
+        assert_not_in("." + forbidden_name + "(", gmail_adapter_source, f"Gmail adapter cannot reach {forbidden_name} call")
+    for broad_import in ["google_api", "innate_gmail_supabase_watchdog", "lead_source_of_truth_reconciliation_readonly"]:
+        assert_not_in(broad_import, script_source, f"preflight does not import broad Gmail helper {broad_import}")
+        assert_not_in(broad_import, gmail_adapter_source, f"Gmail adapter does not import broad Gmail helper {broad_import}")
 
     print("ok: tuesday_live_readback_preflight unit checks passed")
 
