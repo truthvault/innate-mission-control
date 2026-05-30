@@ -23,6 +23,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from tuesday_gmail_readonly_adapter import collect_gmail_readback
+from tuesday_quote_spine_readonly_adapter import collect_quote_spine_readback
 from tuesday_supabase_readonly_adapter import collect_tuesday_readback
 from tuesday_xero_readonly_adapter import collect_xero_readback
 
@@ -231,7 +232,7 @@ def collect_readback(
         "gmail": collect_gmail_readback(case, env, client=gmail_client) if live_flags.get(_G) else fixture_gmail_status(case),
         "supabase_tuesday": collect_tuesday_readback(case, env, get_json=supabase_get_json) if live_flags.get(_S) else fixture_tuesday_status(case),
         "xero": collect_xero_readback(case, env, client=xero_client) if live_flags.get(_X) else fixture_xero_status(case),
-        "quote_spine_margin_delivery": fixture_quote_spine_status(case),
+        "quote_spine_margin_delivery": collect_quote_spine_readback(case),
     }
     return collected
 
