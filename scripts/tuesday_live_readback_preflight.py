@@ -18,6 +18,12 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS_DIR = ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from tuesday_supabase_readonly_adapter import collect_tuesday_readback
+
 DEFAULT_CASES = ROOT / "reference" / "tuesday" / "fixtures" / "source_readback_cases.json"
 DEFAULT_OUTPUT_DIR = ROOT / "output"
 LOCAL_REVIEW_LABEL = "LOCAL REVIEW DRAFT ONLY - NOT SENT - NOT CREATED IN GMAIL/XERO"
@@ -210,10 +216,15 @@ def source_label(source: str) -> str:
     return { _G: "Gmail", _S: "Supabase", _X: "Xero" }.get(source, source)
 
 
-def collect_readback(case: dict[str, Any], live_flags: dict[str, bool], env: dict[str, str]) -> dict[str, Any]:
+def collect_readback(
+    case: dict[str, Any],
+    live_flags: dict[str, bool],
+    env: dict[str, str],
+    supabase_get_json: Any | None = None,
+) -> dict[str, Any]:
     collected = {
         "gmail": live_unavailable_status(_G, env) if live_flags.get(_G) else fixture_gmail_status(case),
-        "supabase_tuesday": live_unavailable_status(_S, env) if live_flags.get(_S) else fixture_tuesday_status(case),
+        "supabase_tuesday": collect_tuesday_readback(case, env, get_json=supabase_get_json) if live_flags.get(_S) else fixture_tuesday_status(case),
         "xero": live_unavailable_status(_X, env) if live_flags.get(_X) else fixture_xero_status(case),
         "quote_spine_margin_delivery": fixture_quote_spine_status(case),
     }
@@ -221,7 +232,7 @@ def collect_readback(case: dict[str, Any], live_flags: dict[str, bool], env: dic
 
 
 def status_missing(status: dict[str, Any]) -> bool:
-    return status.get("status") in {"missing", "missing_or_partial", "missing_or_stale", "missing_adapter_or_config"}
+    return status.get("status") in {"missing", "missing_or_partial", "missing_or_stale", "missing_adapter_or_config", "blocked", "error"}
 
 
 def missing_sources_from(required: list[str], collected: dict[str, Any]) -> list[str]:
@@ -255,12 +266,13 @@ def build_preflight_pack(
     live_flags: dict[str, bool] | None = None,
     env: dict[str, str] | None = None,
     report_path: str = "<report-path>",
+    supabase_get_json: Any | None = None,
 ) -> dict[str, Any]:
     flags = {_G: False, _S: False, _X: False, **(live_flags or {})}
     mode = "live_readonly_requested" if any(flags.values()) else "fixture_only"
     env_values = dict(os.environ if env is None else env)
     required = required_sources(case, flags)
-    collected = collect_readback(case, flags, env_values)
+    collected = collect_readback(case, flags, env_values, supabase_get_json=supabase_get_json)
     missing = missing_sources_from(required, collected)
     blocked = []
     for status in collected.values():
