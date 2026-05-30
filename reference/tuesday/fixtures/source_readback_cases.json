@@ -1,0 +1,271 @@
+{
+  "description": "Fixture candidates for the read-only Tuesday/Supabase source-of-truth readback harness. Gmail evidence is fixture/local benchmark only. Xero evidence is looked up from local cache.",
+  "cases": [
+    {
+      "id": "ADV-1-snippet-only-admin",
+      "title": "Tineke accounts email has useful snippet but empty/unretrieved full body",
+      "kind": "admin_email",
+      "customer": "Tineke",
+      "sensitive": true,
+      "gmail": {
+        "source": "local benchmark from innate-final-adversarial-dry-run-2026-05-30.md",
+        "message_id": "19e670dc73133f02",
+        "subject": "Accounts 27-05-2026",
+        "from": "Tineke",
+        "snippet": "Accounts and bank rec are updated; missing paperwork includes Perplexity, Trade Me, OpenAI, Apple, ElevenLabs, Hubdoc/admin items.",
+        "body": ""
+      },
+      "xero_refs": [],
+      "monday_optional": {
+        "available": false,
+        "note": "not relevant; admin/Hubdoc evidence must not become a warm reply or filing action"
+      }
+    },
+    {
+      "id": "ADV-2-quote-conflicts-paid-invoice",
+      "title": "QU-0114 quote appears SENT but same-contact invoice says accepted and paid",
+      "kind": "quote_followup_candidate",
+      "customer": "Janette and Michael Sharp",
+      "xero_refs": [
+        "QU-0114",
+        "INV-1143"
+      ],
+      "gmail": {
+        "source": "fixture placeholder only",
+        "subject": "Possible quote follow-up temptation",
+        "snippet": "Quote status alone looks open, but Xero cache includes paid invoice reference.",
+        "body": "Fixture only; live Gmail not read by this harness."
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "not checked; Monday is not source of truth for deciding quote follow-up"
+      }
+    },
+    {
+      "id": "ADV-3-old-commercial-quote",
+      "title": "Protocol Restaurant 2021 commercial quote can inform structure only",
+      "kind": "historical_quote",
+      "customer": "Protocol Restaurant",
+      "quote_date": "2021-07-09",
+      "xero_refs": [
+        "QU-0015"
+      ],
+      "gmail": {
+        "source": "local benchmark summary",
+        "subject": "Xero quote copy for old commercial project",
+        "snippet": "2021 Xero quote copy, useful-looking total and category match, stale for current pricing.",
+        "body": "Fixture only; no live Gmail read."
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "not checked; old quote is precedent-only regardless"
+      }
+    },
+    {
+      "id": "ADV-4-westimber-supplier-bill",
+      "title": "Westimber supplier bill has useful cost lines but no complete PO/job mapping",
+      "kind": "supplier_bill",
+      "customer": "Westimber Ltd",
+      "xero_refs": [
+        "10682",
+        "PO 1102",
+        "PO 1113"
+      ],
+      "gmail": {
+        "source": "local benchmark summary",
+        "subject": "Supplier bill cost evidence",
+        "snippet": "Bill includes timber dimensions, PO headings, bandsaw, collection, delivery and FAF surcharge lines.",
+        "body": "Fixture only; no live Gmail read."
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "possible PO/job mapping may exist elsewhere, but this harness does not assume it"
+      }
+    },
+    {
+      "id": "ADV-5-latest-sent-supersedes-inbound",
+      "title": "Camilla older inbound is superseded by later substantive sent reply",
+      "kind": "lead_email",
+      "customer": "Camilla",
+      "latest_sent_after_inbound": true,
+      "reply_signal": true,
+      "xero_refs": [],
+      "gmail": {
+        "source": "local reply-desk pilot raw and scored dry-run summaries",
+        "subject": "2m oval Crossroads in red beech clear",
+        "snippet": "Older inbound asked best way forward; later local evidence says Guido answered the newer shape question and no newer inbound was found in pilot set.",
+        "body": "Fixture only; no live Gmail read."
+      },
+      "tuesday_supabase_fixture": [
+        {
+          "table": "leads",
+          "customer_name": "Camilla",
+          "status": "quoted",
+          "source": "fixture_only",
+          "note": "synthetic readback fixture used to exercise non-unavailable path; not a live row claim"
+        }
+      ],
+      "monday_optional": {
+        "available": false,
+        "note": "not required for duplicate-reply guard"
+      }
+    },
+    {
+      "id": "PH2-1-lead-email-reply-candidate",
+      "title": "Lead email reply candidate with full Gmail body and Tuesday row",
+      "kind": "lead_email",
+      "customer": "Renee Wilson",
+      "reply_signal": true,
+      "gmail": {
+        "source": "phase 2 fixture",
+        "subject": "Dining table enquiry",
+        "from": "Renee Wilson",
+        "snippet": "Looking for a 2200 x 1000 table in rimu.",
+        "body": "Hi Innate, we are looking for a 2200 x 1000 dining table in rimu or red beech. Could you let us know the best next step? Thanks, Renee"
+      },
+      "tuesday_supabase_fixture": [
+        {
+          "table": "leads",
+          "customer_name": "Renee Wilson",
+          "status": "new",
+          "source": "fixture_only",
+          "intent": "dining table enquiry"
+        }
+      ],
+      "sent_history": {
+        "available": true,
+        "latest_substantive_sent_after_inbound": false
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "not required for lead reply fixture"
+      }
+    },
+    {
+      "id": "PH2-2-accepted-approval-invoice-blocked",
+      "title": "Accepted customer approval requiring human bridge email and Xero invoice decision but blocked without source readback",
+      "kind": "customer_approval_invoice_candidate",
+      "customer": "Mara Fitzgerald",
+      "reply_signal": true,
+      "gmail": {
+        "source": "phase 2 fixture",
+        "subject": "Re: Quote approval",
+        "from": "Mara Fitzgerald",
+        "snippet": "Approved, please go ahead and invoice us.",
+        "body": ""
+      },
+      "xero_refs": [
+        "QU-2044"
+      ],
+      "monday_optional": {
+        "available": false,
+        "note": "invoice decision must not rely on Monday"
+      }
+    },
+    {
+      "id": "PH2-3-benchtop-quote-control-missing",
+      "title": "Benchtop/customer quote reply needing quote-control margin gate and delivery destination",
+      "kind": "quote_reply_candidate",
+      "customer": "Wanaka Benchtop Lead",
+      "reply_signal": true,
+      "gmail": {
+        "source": "phase 2 fixture",
+        "subject": "Benchtop quote",
+        "from": "Wanaka Benchtop Lead",
+        "snippet": "Can you quote delivered to Wanaka?",
+        "body": "Hi, can you please quote a rimu benchtop around 2400 x 900 and include delivery to Wanaka if possible?"
+      },
+      "tuesday_supabase_fixture": [
+        {
+          "table": "leads",
+          "customer_name": "Wanaka Benchtop Lead",
+          "status": "quoting",
+          "source": "fixture_only"
+        }
+      ],
+      "quote_spine": {
+        "available": false,
+        "margin_checked": false,
+        "delivery_destination": ""
+      },
+      "sent_history": {
+        "available": true
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "not required for quote-control fixture"
+      }
+    },
+    {
+      "id": "PH2-4-xero-quote-local-brief-ready",
+      "title": "Xero quote draft local brief with quote spine margin and delivery proof",
+      "kind": "xero_quote_candidate",
+      "customer": "Fixture Approved Quote Customer",
+      "reply_signal": true,
+      "gmail": {
+        "source": "phase 2 fixture",
+        "subject": "Please prepare quote",
+        "from": "Fixture Approved Quote Customer",
+        "snippet": "Please prepare the formal quote.",
+        "body": "Hi Guido, yes please prepare the formal quote for the 2400 x 1000 dining table in red beech with steel Crossroads base for Christchurch delivery."
+      },
+      "tuesday_supabase_fixture": [
+        {
+          "table": "orders",
+          "customer_name": "Fixture Approved Quote Customer",
+          "status": "quote_approved",
+          "source": "fixture_only"
+        }
+      ],
+      "xero_refs": [
+        "fixture-no-live-xero-doc"
+      ],
+      "quote_spine": {
+        "available": true,
+        "margin_checked": true,
+        "delivery_destination": "Christchurch",
+        "gst_mode": "ex_gst_plus_gst",
+        "account_code_checked": true
+      },
+      "sent_history": {
+        "available": true,
+        "latest_substantive_sent_after_inbound": false
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "not required for complete local brief fixture"
+      },
+      "xero_readback_fixture": {
+        "readback_available": true,
+        "matches": [
+          {
+            "number": "DRAFT-LOCAL-ONLY",
+            "status": "LOCAL_FIXTURE_ONLY",
+            "contact": "Fixture Approved Quote Customer",
+            "type": "quote",
+            "total": "unknown_until_draft"
+          }
+        ],
+        "note": "fixture proves readback shape only; no Xero API call"
+      }
+    },
+    {
+      "id": "PH2-5-payment-settings-admin-case",
+      "title": "Payment/settings/admin case must not produce warm customer reply",
+      "kind": "admin_security_payment_settings",
+      "customer": "Internal admin",
+      "sensitive": true,
+      "gmail": {
+        "source": "phase 2 fixture",
+        "subject": "Payment settings and account login",
+        "from": "system",
+        "snippet": "Update payment settings and account login details.",
+        "body": "Please review payment settings and account login details for the admin account."
+      },
+      "monday_optional": {
+        "available": false,
+        "note": "admin/security cases are not customer replies"
+      }
+    }
+  ]
+}
