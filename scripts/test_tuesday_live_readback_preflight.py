@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +31,12 @@ xero_adapter_spec = importlib.util.spec_from_file_location("tuesday_xero_readonl
 xero_adapter = importlib.util.module_from_spec(xero_adapter_spec)
 assert xero_adapter_spec and xero_adapter_spec.loader
 xero_adapter_spec.loader.exec_module(xero_adapter)
+
+QUOTE_ADAPTER = ROOT / "scripts" / "tuesday_quote_spine_readonly_adapter.py"
+quote_adapter_spec = importlib.util.spec_from_file_location("tuesday_quote_spine_readonly_adapter", QUOTE_ADAPTER)
+quote_adapter = importlib.util.module_from_spec(quote_adapter_spec)
+assert quote_adapter_spec and quote_adapter_spec.loader
+quote_adapter_spec.loader.exec_module(quote_adapter)
 
 
 def assert_equal(actual, expected, label):
@@ -435,10 +442,106 @@ def main():
     assert_equal(no_xero_config_status["live_called"], False, "missing Xero config does not call accounting endpoints")
     assert_equal(missing_xero_config_fake.calls, [], "unused fake has no calls")
 
+    quote_case = dict(live_case_with_inputs())
+    quote_case.update({
+        "id": "quote-spine-complete",
+        "kind": "xero_quote_candidate",
+        "title": "Delivery quote for benchtop",
+        "quote_spine": {
+            "available": True,
+            "margin_checked": True,
+            "markup_percent": 50,
+            "margin_percent": 33.333,
+            "cost_total": 1000,
+            "quote_total": 1500,
+            "delivery_destination": "Riverhead Auckland",
+            "freight_mode": "delivery",
+            "line_items": [
+                {"description": "Batch top set", "quantity": 2, "unit_price": 750, "derived_from_batch_total": True},
+                {"description": "Private detail " * 60, "quantity": 1, "unit_price": 0},
+            ],
+            "quantity_dependent_pricing": True,
+        },
+        "xero_readback_fixture": {"readback_available": True, "matches": [{"ref": "QU-0114"}]},
+        "quote_number": "QU-0114",
+    })
+    quote_pack = preflight.build_preflight_pack(quote_case, live_flags={})
+    quote_status = quote_pack["readback_collected"]["quote_spine_margin_delivery"]
+    assert_equal(quote_status["source"], "fixture", "quote spine fixture source recorded")
+    assert_equal(quote_status["status"], "collected", "complete quote spine clears blockers")
+    assert_equal(quote_status["live_called"], False, "quote spine adapter is local only")
+    assert_equal(quote_status["available"], True, "quote spine availability summarized")
+    assert_equal(quote_status["margin_checked"], True, "quote spine margin check summarized")
+    assert_equal(quote_status["markup_percent"], 50, "markup percent preserved from explicit source")
+    assert_equal(quote_status["delivery_destination"], "Riverhead Auckland", "delivery destination summarized")
+    assert_equal(quote_status["freight_mode"], "delivery", "freight mode normalized")
+    assert_equal(quote_status["line_item_count"], 2, "line item count summarized")
+    assert_equal(len(quote_status["line_items"]), 2, "bounded line item summaries returned")
+    assert_in("quantity-dependent", " ".join(quote_status["caveats"]).lower(), "quantity-dependent pricing caveat included")
+    assert_equal(quote_status["blockers"], [], "complete quote spine has no blockers")
+    assert_not_in("quote spine/margin/delivery destination", quote_pack["missing_or_stale_sources"], "quote spine source no longer stale")
+
+    missing_margin_case = dict(quote_case)
+    missing_margin_case["quote_spine"] = dict(quote_case["quote_spine"])
+    missing_margin_case["quote_spine"].pop("markup_percent")
+    missing_margin_case["quote_spine"].pop("margin_percent")
+    missing_margin_case["quote_spine"].pop("margin_checked")
+    missing_margin_pack = preflight.build_preflight_pack(missing_margin_case, live_flags={})
+    assert_in("margin check missing", missing_margin_pack["blocked_because"], "missing explicit margin/markup blocks quote handoff")
+    assert_in("quote spine/margin/delivery destination", missing_margin_pack["missing_or_stale_sources"], "missing margin lists quote source stale")
+
+    missing_delivery_case = dict(quote_case)
+    missing_delivery_case["quote_spine"] = dict(quote_case["quote_spine"])
+    missing_delivery_case["quote_spine"].pop("delivery_destination")
+    missing_delivery_case["quote_spine"]["freight_mode"] = "delivery"
+    missing_delivery_pack = preflight.build_preflight_pack(missing_delivery_case, live_flags={})
+    assert_in("delivery destination missing", missing_delivery_pack["blocked_because"], "paid delivery quote without destination blocks")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        evidence_file = tmp_path / "evidence.md"
+        evidence_file.write_text("SECRET_TOKEN=do-not-print\nFull customer body " + "private " * 200)
+        spine_file = tmp_path / "quote_spine.json"
+        spine_file.write_text(json.dumps({
+            "available": True,
+            "margin_checked": True,
+            "markup_percent": 50,
+            "cost_total": 200,
+            "quote_total": 300,
+            "freight_mode": "pickup",
+            "line_items": [{"description": "Pickup shelf", "quantity": 1, "unit_price": 300}],
+        }))
+        path_case = dict(quote_case)
+        path_case.pop("quote_spine", None)
+        path_case["quote_spine_path"] = str(spine_file)
+        path_case["quote_evidence_paths"] = [str(evidence_file)]
+        path_pack = preflight.build_preflight_pack(path_case, live_flags={})
+        path_status = path_pack["readback_collected"]["quote_spine_margin_delivery"]
+        assert_equal(path_status["status"], "collected", "local quote spine JSON file can satisfy evidence")
+        assert_equal(path_status["freight_mode"], "pickup", "pickup mode does not require destination")
+        assert_equal(sorted(path_status["evidence_paths"]), sorted([str(evidence_file), str(spine_file)]), "evidence paths only are returned")
+        path_report_text = json.dumps(path_pack, sort_keys=True)
+        assert_not_in("SECRET_TOKEN", path_report_text, "evidence file body/secrets not dumped")
+        assert_not_in("Full customer body", path_report_text, "evidence markdown body not dumped")
+
+        missing_file_case = dict(path_case)
+        missing_file_case["quote_spine_path"] = str(tmp_path / "missing.json")
+        missing_file_pack = preflight.build_preflight_pack(missing_file_case, live_flags={})
+        assert_in("quote spine path missing", " ".join(missing_file_pack["blocked_because"]), "missing quote spine file fails closed")
+
+    missing_quote_adapter_pack = preflight.build_preflight_pack(
+        {"id": "quote-no-local-evidence", "kind": "xero_quote_candidate", "title": "Quote needs spine", "gmail": {"body": "fixture"}, "tuesday_supabase_fixture": [{}], "xero_readback_fixture": {"readback_available": True}},
+        live_flags={},
+    )
+    missing_quote_status = missing_quote_adapter_pack["readback_collected"]["quote_spine_margin_delivery"]
+    assert_equal(missing_quote_status["live_called"], False, "missing quote spine never calls live services")
+    assert_in("quote spine/calculator missing", missing_quote_adapter_pack["blocked_because"], "quote cases without local quote spine block")
+
     script_source = SCRIPT.read_text().lower()
     adapter_source = ADAPTER.read_text().lower()
     gmail_adapter_source = GMAIL_ADAPTER.read_text().lower()
     xero_adapter_source = XERO_ADAPTER.read_text().lower()
+    quote_adapter_source = QUOTE_ADAPTER.read_text().lower()
     for forbidden in preflight.FORBIDDEN_MUTATION_TOKENS:
         assert_not_in(forbidden, script_source, f"preflight script excludes mutation token {forbidden}")
     for forbidden in supabase_adapter.FORBIDDEN_MUTATION_TOKENS:
@@ -447,7 +550,9 @@ def main():
         assert_not_in(forbidden, gmail_adapter_source, f"Gmail adapter excludes mutation token {forbidden}")
     for forbidden in xero_adapter.FORBIDDEN_ACCOUNTING_MUTATION_TOKENS:
         assert_not_in(forbidden, xero_adapter_source, f"Xero adapter excludes accounting mutation token {forbidden}")
-    combined_source = script_source + "\n" + adapter_source + "\n" + gmail_adapter_source + "\n" + xero_adapter_source
+    for forbidden in quote_adapter.FORBIDDEN_MUTATION_TOKENS:
+        assert_not_in(forbidden, quote_adapter_source, f"quote spine adapter excludes mutation token {forbidden}")
+    combined_source = script_source + "\n" + adapter_source + "\n" + gmail_adapter_source + "\n" + xero_adapter_source + "\n" + quote_adapter_source
     for forbidden_name in ["post", "patch", "put", "delete", "upsert", "insert", "update", "rpc"]:
         assert_not_in(f"def {forbidden_name}", combined_source, f"adapter exposes no {forbidden_name} helper")
     for forbidden_name in ["send", "reply", "modify", "trash", "delete"]:
