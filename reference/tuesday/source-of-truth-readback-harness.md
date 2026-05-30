@@ -150,13 +150,62 @@ Phase 3 behavior:
 - Deterministic lint fails on customer-facing em dashes, missing local-review labels, and unguarded live-action claims such as sent/created/updated language.
 - Quote/invoice line descriptions use stacked spec-block style and keep account code/tax/internal review material out of customer-facing line text.
 
+## Phase 4A live readback preflight collector
+
+Phase 4A adds `scripts/tuesday_live_readback_preflight.py` as a bridge between the local generator and any future live Gmail/Xero draft creation. It prepares an evidence/approval pack. It does not create Gmail drafts, send emails, create Xero DRAFTs, update Tuesday/Supabase, update Monday, or touch Shopify/website state.
+
+Default fixture-only run for one case:
+
+```bash
+python3 scripts/tuesday_live_readback_preflight.py --case-id PH2-1-lead-email-reply-candidate
+```
+
+Optional future live-readonly request flags fail closed unless safe adapters/config are wired:
+
+```bash
+python3 scripts/tuesday_live_readback_preflight.py --case-id SOME-ID --live-gmail-readonly --live-supabase-readonly --live-xero-readonly
+```
+
+It writes:
+
+- `output/tuesday-live-readback-preflight-<case-id>-<timestamp>.json`
+- `output/tuesday-live-readback-preflight-<case-id>-<timestamp>.md`
+
+Unit check:
+
+```bash
+python3 scripts/test_tuesday_live_readback_preflight.py
+```
+
+Each Phase 4A preflight pack includes:
+
+- `mode`: `fixture_only` or `live_readonly_requested`
+- `case_id` and `target_summary`
+- `readback_required`: Gmail full thread/latest inbound/latest sent, Supabase/Tuesday row, Xero quote/invoice/contact/payment state, and quote spine/margin/delivery destination where applicable
+- `readback_collected`: source-by-source status with `live_called: false` unless a future GET-only adapter actually runs
+- `missing_or_stale_sources`
+- `safe_to_generate_local_review_draft`
+- `safe_to_create_live_gmail_draft: false`
+- `safe_to_create_xero_draft: false`
+- `approval_pack`: exact later approval phrases scoped to draft-only, unsent, no system updates
+- `blocked_because`
+- `handoff_to_phase3`
+
+Phase 4A makes four boundaries explicit:
+
+1. readback happened or did not happen,
+2. local review draft generation is allowed or blocked,
+3. live Gmail/Xero draft creation still needs exact approval,
+4. sending, approving, publishing, payment/admin work, and system updates remain separate higher-risk approvals.
+
 ## Staged trust path
 
 1. Phase 1 source readback harness: gather local/fixture plus optional GET-only source evidence and classify source conflicts. No drafting.
 2. Phase 2 draft quality gate: decide whether a future draft is allowed, what type it may be, what sources are missing, and what claims/actions are unsafe. No live drafts.
 3. Phase 3 supervised draft generator: generate local-only review material from `draft_brief` after the Phase 2 gate allows it. Drafts are labelled local and preserve explicit unknowns.
-4. Phase 4 exact live readbacks + human approval + Gmail/Xero draft creation, future: only after live Gmail/Xero/Tues/Supabase readback and exact approval may a system create a Gmail draft or Xero DRAFT. Still unsent. Sending, approving, publishing, updating records, or invoicing remains separately approval-gated.
-5. Phase 5 daily ops queue / initiative discovery, future: once trust is proven on email/quote/invoice drafting, extend the same readback/gate/generator pattern to a daily ops queue and broader initiative discovery.
+4. Phase 4A live readback preflight collector: produce a readback/approval pack and fail closed when live evidence is unavailable. No live drafts.
+5. Phase 4 exact live readbacks + human approval + Gmail/Xero draft creation, future: only after live Gmail/Xero/Tues/Supabase readback and exact approval may a system create a Gmail draft or Xero DRAFT. Still unsent. Sending, approving, publishing, updating records, or invoicing remains separately approval-gated.
+6. Phase 5 daily ops queue / initiative discovery, future: once trust is proven on email/quote/invoice drafting, extend the same readback/gate/generator pattern to a daily ops queue and broader initiative discovery.
 
 ## Current limits
 
@@ -166,4 +215,5 @@ Phase 3 behavior:
 - Monday is fixture/label-only in this first harness. It does not call Monday APIs.
 - Reports are local guardrail outputs, not a live action queue and not customer/team-visible.
 - Phase 2 allows only local/internal draft briefs. It does not create live Gmail or Xero drafts.
-- Phase 3 emits local review packages only. It cannot prove live Gmail/Xero freshness unless Phase 4 live readbacks are added and approved.
+- Phase 3 emits local review packages only. It cannot prove live Gmail/Xero freshness unless Phase 4A preflight and future Phase 4 live readbacks are added and approved.
+- Phase 4A optional live-readonly flags currently fail closed with missing-source blockers unless explicit GET-only adapters/config are added later.
