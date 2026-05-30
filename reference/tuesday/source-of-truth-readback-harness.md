@@ -112,13 +112,51 @@ Phase 2 encodes these additional draft-safety rules:
 - Innate Xero quote/invoice output must use concise stacked spec blocks, clear GST/ex-GST handling, account code discipline, and explicit draft vs sent status.
 - Customer-facing draft text must not use em dashes.
 
+## Phase 3 supervised local draft generator
+
+Phase 3 adds `scripts/tuesday_supervised_draft_generator.py` on top of the Phase 1 readback harness and Phase 2 gate. It is still local/read-only. It does not create Gmail drafts, send emails, create or update Xero quotes/invoices, update Tuesday/Supabase, update Monday, or touch Shopify/website state.
+
+Run:
+
+```bash
+python3 scripts/tuesday_supervised_draft_generator.py
+```
+
+Or consume an existing Phase 2 JSON report:
+
+```bash
+python3 scripts/tuesday_supervised_draft_generator.py --gate-report output/tuesday-draft-quality-gate-report-<timestamp>.json
+```
+
+It writes:
+
+- `output/tuesday-supervised-draft-generator-report-<timestamp>.json`
+- `output/tuesday-supervised-draft-generator-report-<timestamp>.md`
+
+Unit check:
+
+```bash
+python3 scripts/test_tuesday_supervised_draft_generator.py
+```
+
+Every generated package is labelled `LOCAL REVIEW DRAFT ONLY - NOT SENT - NOT CREATED IN GMAIL/XERO`.
+
+Phase 3 behavior:
+
+- If Phase 2 says `draft_allowed: false`, the generator emits a blocker package only: `blocked`, `reason`, `missing_sources`, `unsafe_claims_to_avoid`, and `next_safe_step`.
+- Allowed email replies become short local review packages with subject/context, latest ask summary, facts allowed, unknowns/do-not-invent list, conservative draft skeleton, and approval required before Gmail draft/send/system update.
+- Allowed quote replies remain quote-control-bound skeletons. Price is not inserted unless the current quote spine fixture provides it.
+- Allowed Xero quote/invoice cases become local payload previews only: contact/source summary, title/reference/summary rules, stacked line item spec blocks, GST/ex-GST mode if provided, terms skeleton, and approval required before Xero DRAFT creation.
+- Deterministic lint fails on customer-facing em dashes, missing local-review labels, and unguarded live-action claims such as sent/created/updated language.
+- Quote/invoice line descriptions use stacked spec-block style and keep account code/tax/internal review material out of customer-facing line text.
+
 ## Staged trust path
 
 1. Phase 1 source readback harness: gather local/fixture plus optional GET-only source evidence and classify source conflicts. No drafting.
 2. Phase 2 draft quality gate: decide whether a future draft is allowed, what type it may be, what sources are missing, and what claims/actions are unsafe. No live drafts.
-3. Phase 3 supervised draft generator, future: generate local-only draft text from `draft_brief` after the Phase 2 gate allows it. Drafts must be labelled local and must preserve explicit unknowns.
-4. Phase 4 readback + human approval + live draft creation, future: only after live source readback and exact approval may a system create a Gmail draft or Xero draft. Sending, approving, publishing, updating records, or invoicing remains separately approval-gated.
-5. Phase 5 broader initiative discovery, future: once the gate has earned trust on email/quote/invoice drafting, extend the same readback/gate pattern to other operations initiatives.
+3. Phase 3 supervised draft generator: generate local-only review material from `draft_brief` after the Phase 2 gate allows it. Drafts are labelled local and preserve explicit unknowns.
+4. Phase 4 exact live readbacks + human approval + Gmail/Xero draft creation, future: only after live Gmail/Xero/Tues/Supabase readback and exact approval may a system create a Gmail draft or Xero DRAFT. Still unsent. Sending, approving, publishing, updating records, or invoicing remains separately approval-gated.
+5. Phase 5 daily ops queue / initiative discovery, future: once trust is proven on email/quote/invoice drafting, extend the same readback/gate/generator pattern to a daily ops queue and broader initiative discovery.
 
 ## Current limits
 
@@ -128,3 +166,4 @@ Phase 2 encodes these additional draft-safety rules:
 - Monday is fixture/label-only in this first harness. It does not call Monday APIs.
 - Reports are local guardrail outputs, not a live action queue and not customer/team-visible.
 - Phase 2 allows only local/internal draft briefs. It does not create live Gmail or Xero drafts.
+- Phase 3 emits local review packages only. It cannot prove live Gmail/Xero freshness unless Phase 4 live readbacks are added and approved.

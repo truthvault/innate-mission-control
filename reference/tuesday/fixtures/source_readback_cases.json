@@ -225,7 +225,20 @@
         "margin_checked": true,
         "delivery_destination": "Christchurch",
         "gst_mode": "ex_gst_plus_gst",
-        "account_code_checked": true
+        "account_code_checked": true,
+        "terms": "Fixture terms only. Deposit/payment terms require Guido approval before live Xero draft creation.",
+        "line_items": [
+          {
+            "title": "Dining table",
+            "dimensions": "2400 x 1000",
+            "timber": "red beech",
+            "finish": "clear oil",
+            "base": "steel Crossroads base",
+            "quantity": 1,
+            "unit_amount_ex_gst": 5200,
+            "customer_visible_note": "Synthetic fixture price from quote spine only. Not live customer pricing."
+          }
+        ]
       },
       "sent_history": {
         "available": true,
