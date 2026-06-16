@@ -15,10 +15,17 @@ export type LeadWriteInput = {
   priority?: unknown;
   owner?: unknown;
   nextFollowUpAt?: unknown;
+  lastInteractionAt?: unknown;
   lastInteractionSummary?: unknown;
   nextAction?: unknown;
   notes?: unknown;
   sourceUrl?: unknown;
+  sampleSentAt?: unknown;
+  sampleDeliveredAt?: unknown;
+  sampleSpecies?: unknown;
+  sampleStatus?: unknown;
+  sampleTrackingUrl?: unknown;
+  sampleNextAction?: unknown;
 };
 
 function supabaseConfig() {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { isRecentSampleFollowUp, sortSampleFollowUps, sampleFollowUpLabel } from "../lib/leads/sample-followups.mjs";
+import { isRecentSampleFollowUp, sortSampleFollowUps, sampleFollowUpLabel, sampleDraftPrompt } from "../lib/leads/sample-followups.mjs";
 
 const base = {
   id: "lead-1",
@@ -55,5 +55,16 @@ assert.equal(
   "Delivered 13 May · Rimu, Totara",
   "sample cards should show a compact delivery/species label",
 );
+
+const brokenSampleDraft = sampleDraftPrompt({
+  ...base,
+  customerName: "Sherry Cai",
+  contactName: "Liling Cai / Sherry Cai",
+  lastInteractionSummary: "Sample order arrived but the West Coast Rimu - Country Bark sample was broken during shipping.",
+  nextAction: "Reply to Sherry and confirm we will send a replacement West Coast Rimu - Country Bark sample.",
+});
+assert.match(brokenSampleDraft, /Hi Sherry Cai,/);
+assert.match(brokenSampleDraft, /replacement West Coast Rimu Country Bark sample/);
+assert.doesNotMatch(brokenSampleDraft, /checking the timber samples arrived safely/);
 
 console.log("lead sample follow-up tests passed");
