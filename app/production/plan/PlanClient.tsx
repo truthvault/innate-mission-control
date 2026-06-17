@@ -3,6 +3,7 @@
 import { startTransition, type CSSProperties, type DragEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   closestCorners,
+  pointerWithin,
   DndContext,
   DragOverlay,
   KeyboardSensor,
@@ -15,6 +16,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
+  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -37,9 +39,25 @@ import {
   type SuggestedOrderPlanStep,
 } from "@/lib/production/new-order-planning";
 import {
+  buildDiningTableProcessPlan,
+  maxIsoDate as maxIsoDateFromRules,
+  WORKSHOP_PROCESS_RULES,
+  type WorkshopProcessTask,
+} from "@/lib/production/workshop-process-rules";
+import {
   type DraggablePlanTask,
 } from "@/lib/production/plan-drag";
 import { invoiceExpectationForOrder } from "@/lib/production/invoice-expectation.js";
+import {
+  TABLE_STEPS as ORDER_TABLE_STEPS,
+  PANEL_STEPS as ORDER_PANEL_STEPS,
+  type ProductionStep,
+} from "@/lib/production/order-display";
+import {
+  DEFAULT_PROCESS_TEMPLATE_PREVIEWS,
+  type ProcessTemplateIssueLevel,
+  type ProcessTemplatePreview,
+} from "@/lib/production/process-templates";
 import {
   DAYS,
   PEOPLE,
@@ -73,6 +91,33 @@ const DT = {
   radiusSm: 8,
   sans: "'DM Sans', -apple-system, sans-serif",
   serif: "'Fraunces', Georgia, serif",
+};
+
+
+const TUESDAY_THEME = {
+  page: "#f6f3ed",
+  surface: "#fffdf9",
+  surfaceClean: "#ffffff",
+  surfaceSoft: "#f7f5ef",
+  line: "#e8e2d7",
+  lineStrong: "#d7cdbd",
+  ink: "#28231f",
+  muted: "#746f66",
+  quiet: "#9b948a",
+  teal: "#0d7c78",
+  tealSoft: "#e7f3f2",
+  tealLine: "#bfdedb",
+  sage: "#5f7f5f",
+  sageSoft: "#edf4ed",
+  amber: "#9a6715",
+  amberSoft: "#fff5df",
+  amberLine: "#ead7a7",
+  clay: "#9a3b2f",
+  claySoft: "#f8e9e6",
+  clayLine: "#e7bbb4",
+  done: "#ededeb",
+  shadow: "0 18px 45px rgba(37, 30, 20, 0.10)",
+  shadowSoft: "0 10px 28px rgba(37, 30, 20, 0.08)",
 };
 
 const newOrderPalette = {
@@ -787,6 +832,10 @@ const JOB_TASK_PRESETS = [
   "Sand and coat",
   "Second coat",
   "3rd coat (clear final)",
+  "Sand and first stain coat",
+  "Second stain coat",
+  "First clear coat",
+  "Final clear coat",
   "4th coat (blackwash final)",
   "Curing",
   "Final QC photos",
@@ -810,6 +859,10 @@ const TABLE_TASK_STAGE_SUGGESTIONS = [
   "Stress cuts",
   "Cut / machine / prep",
   "Sand and coat",
+  "Sand and first stain coat",
+  "Second stain coat",
+  "First clear coat",
+  "Final clear coat",
   "3rd coat (clear final)",
   "4th coat (blackwash final)",
   "Curing",
@@ -820,39 +873,16 @@ const TABLE_TASK_STAGE_SUGGESTIONS = [
   "Customer update",
 ] as const;
 const STAGE_CUSTOM_VALUE = "__custom_task_stage__";
-type Step = { key: string; label: string; who: string | null; wait: boolean; waitLabel?: string };
+function numberedJobTaskOptionLabel(label: string, fallbackIndex?: number) {
+  const canonicalIndex = (JOB_TASK_PRESETS as readonly string[]).indexOf(label);
+  const index = canonicalIndex >= 0 ? canonicalIndex : fallbackIndex;
+  return typeof index === "number" && index >= 0 ? `${index + 1}. ${label}` : label;
+}
+type Step = ProductionStep;
 type JobTaskOption = { label: string; group: "production" | "support"; stepKey?: string };
-const TABLE_STEPS: Step[] = [
-  { key: "confirmed", label: "Order Confirmed", who: "Workshop", wait: false },
-  { key: "pos", label: "POs Sent", who: "Workshop", wait: false },
-  { key: "timber", label: "Timber Pulled", who: "Workshop", wait: false },
-  { key: "matWait", label: "Materials Wait", who: null, wait: true, waitLabel: "~2 weeks" },
-  { key: "received", label: "Materials Received", who: "Workshop", wait: false },
-  { key: "stress", label: "Stress Cuts", who: "Workshop", wait: false },
-  { key: "sand", label: "Sand", who: "Workshop", wait: false },
-  { key: "coat1", label: "1st Coat", who: "Workshop", wait: false },
-  { key: "coat2", label: "2nd Coat", who: "Workshop", wait: false },
-  { key: "cure", label: "Curing", who: null, wait: true, waitLabel: "~1 week" },
-  { key: "qc", label: "QC + Photos", who: "Workshop", wait: false },
-  { key: "assemble", label: "Assemble / Box", who: "Workshop", wait: false },
-  { key: "freight", label: "Book Freight", who: "Workshop", wait: false },
-];
-const PANEL_STEPS: Step[] = [
-  { key: "confirmed", label: "Order Confirmed", who: "Workshop", wait: false },
-  { key: "pos", label: "POs Sent", who: "Workshop", wait: false },
-  { key: "matWait", label: "Materials Wait", who: null, wait: true, waitLabel: "~2 weeks" },
-  { key: "received", label: "Materials Received", who: "Workshop", wait: false },
-  { key: "cut", label: "CNC / Cut", who: "Workshop", wait: false },
-  { key: "sand", label: "Sand", who: "Workshop", wait: false },
-  { key: "coat1", label: "1st Coat", who: "Workshop", wait: false },
-  { key: "coat2", label: "2nd Coat", who: "Workshop", wait: false },
-  { key: "cure", label: "Curing", who: null, wait: true, waitLabel: "~1 week" },
-  { key: "qc", label: "QC", who: "Workshop", wait: false },
-  { key: "wrap", label: "Wrap + Dispatch", who: "Workshop", wait: false },
-];
 const STEPS_BY_KEY: Record<NonNullable<UiOrder["stepsKey"]>, Step[]> = {
-  TABLE_STEPS,
-  PANEL_STEPS,
+  TABLE_STEPS: ORDER_TABLE_STEPS,
+  PANEL_STEPS: ORDER_PANEL_STEPS,
 };
 type CapacityByLane = Partial<Record<string, LaneCapacitySummary>>;
 const laneCapacityKey = (day: DayKey, person: Person): `${DayKey}:${Person}` => `${day}:${person}`;
@@ -885,6 +915,52 @@ type WorkshopTask = {
   assignedViaTuesday?: boolean;
 };
 type OrderPhoto = { url: string; pathname: string; uploadedAt?: string; size?: number };
+type OrderDocument = {
+  id: string;
+  kind: "xero_invoice_pdf" | "customer_attachment" | "drawing" | "screenshot" | "other";
+  label: string;
+  filename: string;
+  contentType: string | null;
+  byteSize: number | null;
+  sha256: string | null;
+  sourceSystem: string;
+  sourceMessageId: string | null;
+  sourceThreadId: string | null;
+  customerVisible: boolean;
+  sentToCustomerAt: string | null;
+  openUrl: string;
+};
+type OrderCustomerMirrorTimelineEntry = {
+  date: string | null;
+  title: string;
+  detail: string;
+  source: string;
+  confidence?: "low" | "medium" | "high";
+};
+type OrderCustomerMirror = {
+  orderId: string;
+  customerKnownSummary: string;
+  approvedPaidForSummary: string | null;
+  leadTimePromise: string | null;
+  currentCustomerKnownSpec: string | null;
+  sourceMessageId: string | null;
+  sourceThreadId: string | null;
+  firstContactAt: string | null;
+  timeline: OrderCustomerMirrorTimelineEntry[];
+  quirksIssues: string[];
+  communicationStyleTags: string[];
+  communicationStyleSummary: string | null;
+  confidence: "low" | "medium" | "high";
+  sourceMetadata: Record<string, unknown>;
+  updatedAt: string | null;
+};
+type OrderCustomerMirrorApiResponse = {
+  ok?: boolean;
+  mirror?: OrderCustomerMirror | null;
+  documents?: OrderDocument[];
+  disabledReason?: string;
+  error?: string;
+};
 type Carrier = "" | "Pinpoint" | "Mainfreight" | "Customer";
 type WorkshopPerson = "" | "Nick" | "Dylan" | "Guido" | "Other";
 type WorkflowTask = {
@@ -899,13 +975,100 @@ type WorkflowTask = {
 };
 type AppPlanTask = {
   id: string;
-  orderId: number;
+  orderId: number | null;
+  orderUuid?: string;
   title: string;
+  detail?: string | null;
+  customer?: string | null;
+  owner?: WorkshopPerson | OrderIntakeOwner;
   scheduledDate: string;
   day: DayKey;
   person: Person;
   done: boolean;
+  estimatedHours?: number;
+  source?: "workflow" | "intake";
 };
+type AppTaskPatch = { done?: boolean; scheduledDate?: string; day?: DayKey; person?: Person; estimatedHours?: number };
+type OrderIntakeReviewState = "awaiting_payment" | "paid_needs_review" | "needs_review" | "approved";
+type OrderIntakeOwner = "Nick" | "Dylan" | "Guido" | "Other";
+type OrderIntakeTaskDraft = {
+  id: string;
+  title: string;
+  detail: string;
+  owner: OrderIntakeOwner;
+  person: Person;
+  scheduledDate: string;
+  day: DayKey;
+  estimatedHours: number;
+  sortOrder: number;
+};
+type OrderIntakeLineItem = { description: string; quantity: number | null; unitAmount: number | null; lineAmount: number | null };
+type OrderIntakePaymentEvidence = { id: string; sourceSystem: string; paymentDate: string | null; amount: number; payerName: string | null; reference: string | null; matchStatus: string; matchConfidence: number | null; matchReasons: string[] };
+type OrderIntakeFinancialDocument = { id: string; role: string; invoiceNumber: string | null; invoiceUrl: string | null; status: string | null; issuedAt: string | null; dueAt: string | null; total: number | null; amountPaid: number | null; amountDue: number | null };
+type OrderPaymentLifecycle = {
+  orderId: string;
+  primaryInvoiceNumber: string | null;
+  depositInvoiceNumber: string | null;
+  depositTotal: number | null;
+  depositPaidAt: string | null;
+  depositAmountDue: number | null;
+  balanceInvoiceNumber: string | null;
+  balanceTotal: number | null;
+  balanceDueAt: string | null;
+  balanceSentAt: string | null;
+  balancePaidAt: string | null;
+  balanceAmountDue: number | null;
+  balanceCustomerTouchEventId: string | null;
+  paymentStage: string;
+  paymentStageLabel: string;
+  paymentNextAction: string | null;
+};
+type OrderIntakeApprovedTask = {
+  id: string;
+  orderId: string;
+  title: string;
+  detail: string | null;
+  owner: OrderIntakeOwner;
+  person: Person;
+  scheduledDate: string;
+  day: DayKey;
+  estimatedHours: number;
+  status: "planned" | "done" | "deleted";
+  completedAt: string | null;
+  completedBy: string | null;
+};
+type OrderIntakeItem = {
+  orderId: string;
+  reviewId: string;
+  customerName: string;
+  orderStatus: string;
+  paidOnDate: string | null;
+  productSummary: string | null;
+  itemCategory: string | null;
+  invoiceNumber: string | null;
+  invoiceStatus: string | null;
+  invoiceDate: string | null;
+  invoiceDueDate: string | null;
+  xeroUrl: string | null;
+  total: number | null;
+  amountPaid: number | null;
+  amountDue: number | null;
+  paymentLifecycle: OrderPaymentLifecycle | null;
+  reviewState: OrderIntakeReviewState;
+  stateLabel: string;
+  stateDetail: string;
+  sourceSummary: Record<string, unknown>;
+  financialDocuments: OrderIntakeFinancialDocument[];
+  lineItems: OrderIntakeLineItem[];
+  payments: OrderIntakePaymentEvidence[];
+  suggestedTasks: OrderIntakeTaskDraft[];
+  draftTasks: OrderIntakeTaskDraft[];
+  approvedTasks: OrderIntakeApprovedTask[];
+  approvedAt: string | null;
+  lastReconciledAt: string | null;
+};
+type OrderIntakeApiResponse = { ok?: boolean; items?: OrderIntakeItem[]; error?: string };
+type OrderWorkflowApiResponse = { state?: OrderWorkflowState; states?: Record<string, OrderWorkflowState>; disabledReason?: string; error?: string };
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
 type PlanTaskEditValue = { text?: string; rowName?: string; weekId?: string; day?: DayKey; person?: Person; estimatedHours?: number; sortOrder?: number; internal?: boolean; done?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
@@ -913,10 +1076,11 @@ type PlanRowOrders = Record<string, string[]>;
 type OrderOverrideValue = { status: "completed"; reason?: string; note?: string; updatedAt?: string; updatedBy?: string };
 type OrderOverrides = Record<string, OrderOverrideValue>;
 type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; orderRowOrders?: PlanRowOrders; orderOverrides?: OrderOverrides; updatedAt?: string };
-type CompletedTuesdayItem = { id: string; kind: "order" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
+type CompletedTuesdayItem = { id: string; kind: "order" | "intake" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type ProductionPlanMode = "schedule" | "orderRows";
 type PersonFilter = "all" | Person;
+type OrderDayFilter = "allWeek" | "today" | DayKey;
 type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate";
 type RailSort = "soonest" | "latest" | "customer";
 type OrderWorkflowState = {
@@ -955,32 +1119,44 @@ function currentDayKey(date = new Date()): DayKey | null {
   return DAYS[day - 1] ?? null;
 }
 
+function dateOnlyAtNoon(date: string | null | undefined) {
+  if (!date) return null;
+  const datePart = date.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? new Date(`${datePart}T12:00:00`) : new Date(date);
+}
+
 function orderDueThisWeek(order: UiOrder) {
-  if (!order.shipDate) return false;
+  const due = dateOnlyAtNoon(order.shipDate);
+  if (!due) return false;
   const { thisMon, nextMon } = weekBoundaries();
-  const due = new Date(order.shipDate);
   return due >= thisMon && due < nextMon;
 }
 
 function orderDueNextWeek(order: UiOrder) {
-  if (!order.shipDate) return false;
+  const due = dateOnlyAtNoon(order.shipDate);
+  if (!due) return false;
   const { nextMon, twoMon } = weekBoundaries();
-  const due = new Date(order.shipDate);
   return due >= nextMon && due < twoMon;
 }
 
 function orderDaysUntil(date: string | null) {
-  if (!date) return null;
-  const due = new Date(date);
+  const due = dateOnlyAtNoon(date);
+  if (!due) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.ceil((due.getTime() - today.getTime()) / 864e5);
 }
 
-function orderProgressPct(order: UiOrder) {
-  const stepCount = order.stepsKey === "PANEL_STEPS" ? 11 : order.stepsKey === "TABLE_STEPS" ? 13 : 0;
+function orderProgressPct(order: UiOrder, stepIndex = order.currentStep, qcFraction = 0) {
+  const stepCount = stepsForOrder(order).length;
   if (!stepCount) return 0;
-  return Math.min(100, Math.round((order.currentStep / Math.max(1, stepCount - 1)) * 100));
+  const steps = stepsForOrder(order);
+  const qcIndex = steps.findIndex((step) => step.key === "qc");
+  const clampedQcFraction = Math.max(0, Math.min(qcFraction, 1));
+  const adjustedStepIndex = qcIndex > 0 && stepIndex >= qcIndex - 1
+    ? Math.max(stepIndex, qcIndex - 1 + clampedQcFraction)
+    : stepIndex;
+  return Math.min(100, Math.round((adjustedStepIndex / Math.max(1, stepCount - 1)) * 100));
 }
 
 function stepsForOrder(order: UiOrder) {
@@ -1005,7 +1181,7 @@ function productionTaskLabelForStep(step: Step, order: UiOrder): string | null {
     case "stress":
       return "Stress cuts";
     case "cut":
-      return order.stepsKey === "PANEL_STEPS" ? "CNC / cut" : "Cut / machine / prep";
+      return order.stepsKey === "PANEL_STEPS" ? "Cut / prep" : "Cut / machine / prep";
     case "sand":
     case "coat1":
       return "Sand and coat";
@@ -1057,15 +1233,50 @@ function jobTaskOptionsForOrder(order: UiOrder): JobTaskOption[] {
   return options;
 }
 
-function currentProductionStepForOrder(order: UiOrder) {
+function productionStepForOrder(order: UiOrder, stepIndex = order.currentStep) {
   const steps = stepsForOrder(order);
   if (steps.length === 0) return null;
-  return steps[Math.max(0, Math.min(order.currentStep, steps.length - 1))] ?? null;
+  return steps[Math.max(0, Math.min(stepIndex, steps.length - 1))] ?? null;
 }
 
-function defaultJobTaskActionForOrder(order: UiOrder, options: JobTaskOption[]) {
+function normalizedProductionTaskTitle(value: string | null | undefined) {
+  return (value || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function taskTitleMatchesProductionLabel(title: string, label: string | null) {
+  if (!label) return false;
+  const task = normalizedProductionTaskTitle(title);
+  const target = normalizedProductionTaskTitle(label);
+  return Boolean(task && target && (task === target || task.includes(target) || target.includes(task)));
+}
+
+function productionStepTaskTitles(step: Step, order: UiOrder) {
+  return [productionTaskLabelForStep(step, order), suggestedJobTaskLabelForStep(step, order)].filter(Boolean) as string[];
+}
+
+function taskMatchesProductionStep(title: string, step: Step, order: UiOrder) {
+  return productionStepTaskTitles(step, order).some((label) => taskTitleMatchesProductionLabel(title, label));
+}
+
+function derivedProductionStepIndex(order: UiOrder, workflowTasks: WorkflowTask[] = [], planTasks: OrderJourneyTask[] = []) {
+  const steps = stepsForOrder(order);
+  if (steps.length === 0) return order.currentStep;
+  const completedTitles = [
+    ...workflowTasks.filter((task) => task.done).map((task) => task.title),
+    ...planTasks.filter((task) => task.done).map((task) => task.text),
+  ];
+  let highestCompletedStep = -1;
+  steps.forEach((step, index) => {
+    if (completedTitles.some((title) => taskMatchesProductionStep(title, step, order))) {
+      highestCompletedStep = Math.max(highestCompletedStep, index);
+    }
+  });
+  return Math.max(order.currentStep, Math.min(steps.length - 1, highestCompletedStep + 1));
+}
+
+function defaultJobTaskActionForOrder(order: UiOrder, options: JobTaskOption[], stepIndex = order.currentStep) {
   if (order.rawMondayTopPanel === "Repair" && options.some((option) => option.label === "Repair")) return "Repair";
-  const activeStep = currentProductionStepForOrder(order);
+  const activeStep = productionStepForOrder(order, stepIndex);
   const preferred = activeStep ? suggestedJobTaskLabelForStep(activeStep, order) : null;
   if (preferred && options.some((option) => option.label === preferred)) return preferred;
   return options[0]?.label ?? JOB_TASK_PRESETS[0];
@@ -1103,6 +1314,69 @@ function orderHealthReason(order: UiOrder) {
   return "No schedule flags";
 }
 
+function orderTrustSignal(order: UiOrder, tasks: Array<{ done?: boolean; scheduledDate?: string | null; appTask?: AppPlanTask }> = []) {
+  const today = new Date().toISOString().slice(0, 10);
+  const staleTask = tasks.find((task) => {
+    const scheduledDate = task.scheduledDate || task.appTask?.scheduledDate || null;
+    const done = Boolean(task.done || task.appTask?.done);
+    return !done && scheduledDate && scheduledDate < today;
+  });
+  if (staleTask) {
+    return {
+      label: WORKSHOP_PROCESS_RULES.trust.staleTaskLabel,
+      detail: "Past dated task needs Nick/Guido confirmation, not an automatic overdue assumption.",
+      tone: "warn" as SignalTone,
+      source: "Last checked: Tuesday schedule + Monday task dates",
+    };
+  }
+  if (!order.rawMondayStatus) {
+    return {
+      label: WORKSHOP_PROCESS_RULES.trust.unknownStageLabel,
+      detail: "No reliable physical stage found from current sources.",
+      tone: "danger" as SignalTone,
+      source: "Last checked: Monday source missing stage",
+    };
+  }
+  if (order.rawMondayStatus === "Materials Ordered") {
+    return {
+      label: WORKSHOP_PROCESS_RULES.trust.supplierProofMissingLabel,
+      detail: "Supplier/material proof is not clear enough to trust the affected material step.",
+      tone: "danger" as SignalTone,
+      source: "Last checked: Monday orders/production plan",
+    };
+  }
+  if (order.rawMondayStatus === "In production" && !order.rawMondayTopPanel && !order.stepNote) {
+    return {
+      label: WORKSHOP_PROCESS_RULES.trust.unknownStageLabel,
+      detail: "Production is active but the physical stage is not specific enough.",
+      tone: "danger" as SignalTone,
+      source: "Last checked: Monday orders/production plan",
+    };
+  }
+  if (order.paymentStage === "ready_for_balance" || order.paymentStage === "awaiting_balance_payment") {
+    return {
+      label: WORKSHOP_PROCESS_RULES.trust.readyForDispatchAdminLabel,
+      detail: order.paymentNextAction || "Guido admin needed before release.",
+      tone: "warn" as SignalTone,
+      source: "Last checked: Supabase payment lifecycle",
+    };
+  }
+  if (order.rawMondayStatus === "To Process") {
+    return {
+      label: "Order Loaded needed",
+      detail: "Guido should confirm invoice/spec/payment/due promise/suppliers/delivery before workshop trust.",
+      tone: "warn" as SignalTone,
+      source: "Last checked: Monday orders/production plan",
+    };
+  }
+  return {
+    label: WORKSHOP_PROCESS_RULES.trust.readyForWorkshopLabel,
+    detail: "No trust blocker found in current sources.",
+    tone: "good" as SignalTone,
+    source: "Last checked: Monday + Tuesday current feed",
+  };
+}
+
 function OrderHealthStrip({
   orders,
   activeFilter,
@@ -1112,26 +1386,36 @@ function OrderHealthStrip({
   activeFilter: RailFilter;
   onFilterChange: (filter: RailFilter) => void;
 }) {
+  const isNarrow = useIsNarrow(760);
   const active = orders.filter((order) => !isCompleteOrder(order));
   const { thisMon, nextMon, twoMon } = weekBoundaries();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const dueThis = active.filter((order) => order.shipDate && new Date(order.shipDate) >= thisMon && new Date(order.shipDate) < nextMon).length;
-  const dueNext = active.filter((order) => order.shipDate && new Date(order.shipDate) >= nextMon && new Date(order.shipDate) < twoMon).length;
-  const overdue = active.filter((order) => order.shipDate && new Date(order.shipDate) < today).length;
+  const dueThis = active.filter((order) => {
+    const due = dateOnlyAtNoon(order.shipDate);
+    return Boolean(due && due >= thisMon && due < nextMon);
+  }).length;
+  const dueNext = active.filter((order) => {
+    const due = dateOnlyAtNoon(order.shipDate);
+    return Boolean(due && due >= nextMon && due < twoMon);
+  }).length;
+  const overdue = active.filter((order) => {
+    const due = dateOnlyAtNoon(order.shipDate);
+    return Boolean(due && due < today);
+  }).length;
   const blocked = active.filter((order) => orderHealth(order) === "blocked").length;
   const watch = active.filter((order) => orderHealth(order) === "watch").length;
   const onTrack = active.filter((order) => orderHealth(order) === "onTrack").length;
-  const cards: Array<{ label: string; value: number; color: string; filter: RailFilter }> = [
-    { label: "Active Orders", value: active.length, color: DT.textPrimary, filter: "all" },
-    { label: "On Track", value: onTrack, color: "#15803d", filter: "onTrack" },
-    { label: "Watch", value: watch, color: "#b45309", filter: "watch" },
-    { label: "Blocked", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
-    { label: "Due This Week", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
-    { label: "Due Next Week", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
+  const cards: Array<{ label: string; mobileLabel: string; value: number; color: string; filter: RailFilter }> = [
+    { label: "Active Orders", mobileLabel: "Active", value: active.length, color: DT.textPrimary, filter: "all" },
+    { label: "On Track", mobileLabel: "Track", value: onTrack, color: "#15803d", filter: "onTrack" },
+    { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
+    { label: "Blocked", mobileLabel: "Block", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
+    { label: "Due This Week", mobileLabel: "This wk", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
+    { label: "Due Next Week", mobileLabel: "Next wk", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
   return (
-    <div style={{ display: "flex", alignItems: "stretch", justifyContent: "flex-end", gap: 6, flexWrap: "wrap" }}>
+    <div data-mobile-health-strip="one-row-health" style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? `repeat(${cards.length}, minmax(0, 1fr))` : undefined, alignItems: "stretch", justifyContent: "flex-end", gap: isNarrow ? 3 : 6, flexWrap: "wrap", overflowX: "visible", paddingBottom: isNarrow ? 0 : 0, width: "100%" }}>
       {cards.map((card) => {
         const selected = activeFilter === card.filter;
         return (
@@ -1140,10 +1424,10 @@ function OrderHealthStrip({
           key={card.label}
           aria-pressed={selected}
           onClick={() => onFilterChange(selected ? "all" : card.filter)}
-          style={{ flex: "1 1 88px", minWidth: 88, padding: "7px 9px", background: selected ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: 9, border: `1px solid ${selected ? "rgba(12,124,122,0.28)" : DT.border}`, boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.06)" : "0 1px 4px rgba(0,0,0,0.025)", cursor: "pointer", textAlign: "left" }}
+          style={{ flex: "1 1 88px", minWidth: 0, minHeight: isNarrow ? 44 : undefined, padding: isNarrow ? "7px 3px 6px" : "7px 9px", background: selected ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: isNarrow ? 10 : 9, border: `1px solid ${selected ? "rgba(12,124,122,0.28)" : DT.border}`, boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.06)" : "0 1px 4px rgba(0,0,0,0.025)", cursor: "pointer", textAlign: "center", overflow: "hidden", touchAction: "manipulation" }}
         >
-          <div style={{ fontSize: 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{card.label}</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: card.color, fontFamily: DT.serif, marginTop: 1, lineHeight: 1 }}>{card.value}</div>
+          <div style={{ fontSize: isNarrow ? 7.5 : 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: isNarrow ? 0 : "0.06em", color: DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{isNarrow ? card.mobileLabel : card.label}</div>
+          <div style={{ fontSize: isNarrow ? 17 : 18, fontWeight: 800, color: card.color, fontFamily: DT.serif, marginTop: 1, lineHeight: 1 }}>{card.value}</div>
         </button>
       );})}
     </div>
@@ -1159,6 +1443,11 @@ const HEALTH_META: Record<OrderHealthLevel, { label: string; color: string; bg: 
 function formatShortDate(date: string | null) {
   if (!date) return "No due date";
   return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
+}
+
+function formatTaskDateLabel(date: string | null | undefined) {
+  if (!date) return "No date";
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short" });
 }
 
 function formatRailDueDate(order: UiOrder) {
@@ -1187,7 +1476,243 @@ function orderStatusLabel(order: UiOrder) {
   return order.rawMondayStatus || order.status;
 }
 
+function paymentStageTone(stage: string | null | undefined): "neutral" | "good" | "warn" | "danger" | "teal" {
+  if (stage === "balance_paid") return "good";
+  if (stage === "awaiting_balance_payment" || stage === "balance_authorised" || stage === "deposit_due" || stage === "ready_for_balance") return "warn";
+  if (stage === "manual_review") return "danger";
+  if (stage === "in_production") return "teal";
+  return "neutral";
+}
+
+type SignalTone = "neutral" | "good" | "warn" | "danger" | "teal";
+
+const SIGNAL_STYLES: Record<SignalTone, { color: string; bg: string; border: string }> = {
+  neutral: { color: DT.textMuted, bg: "rgba(255,255,255,0.70)", border: DT.border },
+  good: { color: "#15803d", bg: "rgba(21,128,61,0.08)", border: "rgba(21,128,61,0.22)" },
+  warn: { color: "#9a5b12", bg: "rgba(250,204,21,0.13)", border: "rgba(154,91,18,0.22)" },
+  danger: { color: "#991b1b", bg: "rgba(153,27,27,0.07)", border: "rgba(153,27,27,0.20)" },
+  teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.22)" },
+};
+
+function signalStyle(tone: SignalTone) {
+  return SIGNAL_STYLES[tone] ?? SIGNAL_STYLES.neutral;
+}
+
+function InfoDot({ title }: { title: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span style={{ position: "relative", display: "inline-flex" }}>
+      <button
+        type="button"
+        title={title}
+        aria-label={title}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: 999, border: `1px solid ${open ? "rgba(12,124,122,0.28)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", padding: 0 }}
+      >
+        i
+      </button>
+      {open && (
+        <span role="tooltip" style={{ position: "absolute", top: 22, right: 0, zIndex: 200, width: 240, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.98)", borderRadius: 10, boxShadow: "0 12px 30px rgba(37,30,20,0.16)", padding: 9, fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.35, fontWeight: 800, color: DT.textMuted, textAlign: "left" }}>
+          {title}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function paymentStageBadge(order: UiOrder) {
+  if (!order.paymentStageLabel) return null;
+  if (order.paymentStage === "awaiting_balance_payment" && order.balanceAmountDue != null) {
+    return `${order.paymentStageLabel} · ${formatXeroMoney(order.balanceAmountDue)}`;
+  }
+  if (order.paymentStage === "balance_paid" && order.balanceInvoiceNumber) return `Balance paid · ${order.balanceInvoiceNumber}`;
+  if (order.paymentStage === "ready_for_balance") return "Ready for balance invoice";
+  return order.paymentStageLabel;
+}
+
+function intakePaymentStageBadge(lifecycle: OrderPaymentLifecycle | null) {
+  if (!lifecycle) return null;
+  if (lifecycle.paymentStage === "awaiting_balance_payment" && lifecycle.balanceAmountDue != null) {
+    return `${lifecycle.paymentStageLabel} · ${formatXeroMoney(lifecycle.balanceAmountDue)}`;
+  }
+  if (lifecycle.paymentStage === "balance_paid" && lifecycle.balanceInvoiceNumber) return `Balance paid · ${lifecycle.balanceInvoiceNumber}`;
+  return lifecycle.paymentStageLabel;
+}
+
+function recordString(source: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function recordNumber(source: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string" && value.trim()) {
+      const match = value.match(/\d+(?:\.\d+)?/);
+      if (match) return Number(match[0]);
+    }
+  }
+  return null;
+}
+
+function isoDateOnly(value: string | null | undefined) {
+  if (!value) return null;
+  const datePart = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : null;
+}
+
+function addCalendarWeeks(dateIso: string, weeks: number) {
+  const date = new Date(`${dateIso}T12:00:00`);
+  date.setDate(date.getDate() + Math.round(weeks * 7));
+  return date.toISOString().slice(0, 10);
+}
+
+function dayDiff(startIso: string | null, endIso: string | null) {
+  if (!startIso || !endIso) return null;
+  const start = new Date(`${startIso}T12:00:00`).getTime();
+  const end = new Date(`${endIso}T12:00:00`).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+  return Math.round((end - start) / 864e5);
+}
+
+function matchedPaymentDateForIntake(item: OrderIntakeItem, invoiceNumber: string | null | undefined, amount: number | null | undefined) {
+  const invoiceText = normalizeOrderText(invoiceNumber);
+  return item.payments
+    .filter((payment) => payment.matchStatus === "matched" && Number(payment.matchConfidence ?? 0) >= 0.98)
+    .find((payment) => {
+      if (invoiceText && normalizeOrderText(payment.reference).includes(invoiceText)) return true;
+      return typeof amount === "number" && Math.abs(Number(payment.amount) - amount) < 0.02;
+    })?.paymentDate || null;
+}
+
+function expectedReadyInfoForIntake(item: OrderIntakeItem) {
+  const explicitDate = recordString(item.sourceSummary, ["customer_ready_date", "expected_ready_date", "promised_ready_date", "ready_date", "due_date"]);
+  if (explicitDate) {
+    return {
+      date: explicitDate,
+      label: "Due date",
+      source: recordString(item.sourceSummary, ["customer_ready_source", "expected_ready_source", "promised_ready_source", "due_date_source"]) || "Explicit customer-ready date",
+    };
+  }
+
+  const docs = item.financialDocuments || [];
+  const depositDoc = docs.find((doc) => normalizeOrderText(doc.role) === "deposit") || docs.find((doc) => normalizeOrderText(doc.invoiceNumber) === normalizeOrderText(item.invoiceNumber)) || docs[0] || null;
+  const balanceDoc = docs.find((doc) => normalizeOrderText(doc.role) === "balance") || null;
+  const depositInvoiceDate = isoDateOnly(depositDoc?.issuedAt || item.invoiceDate);
+  const balanceDueDate = isoDateOnly(balanceDoc?.dueAt || item.paymentLifecycle?.balanceDueAt);
+  const explicitWeeks = recordNumber(item.sourceSummary, ["promised_weeks", "lead_time_weeks", "estimated_weeks", "production_weeks", "weeks_promised"]);
+  const inferredWeeks = explicitWeeks || (() => {
+    const days = dayDiff(depositInvoiceDate, balanceDueDate);
+    return days ? Math.max(1, Math.round(days / 7)) : null;
+  })();
+  const standardWeeks = !inferredWeeks && normalizeOrderText(item.itemCategory).includes("table") ? 6 : null;
+  const weeks = inferredWeeks || standardWeeks;
+  if (!weeks || !depositInvoiceDate) {
+    return {
+      date: balanceDueDate || item.invoiceDueDate,
+      label: balanceDueDate || item.invoiceDueDate ? "Estimated due date" : "Due date needed",
+      source: balanceDueDate ? "Using balance invoice due date until promised weeks are captured." : "Needs promised lead time from invoice/email.",
+    };
+  }
+
+  const depositPaidAt = isoDateOnly(item.paymentLifecycle?.depositPaidAt)
+    || isoDateOnly(item.paidOnDate)
+    || isoDateOnly(matchedPaymentDateForIntake(item, depositDoc?.invoiceNumber, depositDoc?.total));
+  const anchorDate = depositPaidAt || depositInvoiceDate;
+  return {
+    date: addCalendarWeeks(anchorDate, weeks),
+    label: depositPaidAt ? "Due date" : "Estimated due date",
+    source: depositPaidAt
+      ? `${weeks} weeks from deposit paid date (${formatShortDate(depositPaidAt)}).`
+      : `${weeks} weeks from deposit invoice date; will recalculate from deposit payment date once paid.`,
+  };
+}
+
+function intakeReviewTone(item: OrderIntakeItem, canApprove: boolean): SignalTone {
+  if (item.reviewState === "approved") return "good";
+  if (canApprove) return "teal";
+  if (item.reviewState === "needs_review") return "danger";
+  if (item.paymentLifecycle?.paymentStage === "manual_review") return "danger";
+  return "warn";
+}
+
+type PaymentTimelineRow = { label: string; invoice: string; invoiceUrl: string | null; invoiceDate: string; dueDate: string; paidDate: string; amount: string; status: string; tone: SignalTone };
+
+function paymentTimelineRows(item: OrderIntakeItem, paymentTruthLabel: string): PaymentTimelineRow[] {
+  const lifecycle = item.paymentLifecycle;
+  const docs = item.financialDocuments || [];
+  const byInvoice = (invoice: string | null | undefined) => docs.find((doc) => normalizeOrderText(doc.invoiceNumber) === normalizeOrderText(invoice)) || null;
+  const byRole = (role: string) => docs.find((doc) => normalizeOrderText(doc.role) === normalizeOrderText(role)) || null;
+  const paidFromEvidence = (invoice: string | null | undefined) => {
+    const match = item.payments
+      .filter((payment) => payment.matchStatus === "matched" && Number(payment.matchConfidence ?? 0) >= 0.98)
+      .find((payment) => !invoice || normalizeOrderText(payment.reference).includes(normalizeOrderText(invoice)));
+    return match?.paymentDate || null;
+  };
+  const bankVisibleFromEvidence = (invoice: string | null | undefined) => {
+    const invoiceText = normalizeOrderText(invoice);
+    const match = item.payments
+      .filter(isPendingAkahuPayment)
+      .find((payment) => !invoiceText || normalizeOrderText(payment.reference).includes(invoiceText));
+    return match?.paymentDate || null;
+  };
+  const isBankVisiblePaid = (invoice: string | null | undefined) => Boolean(bankVisibleFromEvidence(invoice));
+  const rowFromDocument = (label: string, document: OrderIntakeFinancialDocument | null, paidAt: string | null | undefined, fallbackDue: string | null | undefined, fallbackAmountDue: number | null | undefined): PaymentTimelineRow => {
+    const bankVisibleDate = bankVisibleFromEvidence(document?.invoiceNumber);
+    const paidDate = paidAt || paidFromEvidence(document?.invoiceNumber) || bankVisibleDate || null;
+    const amountDue = document?.amountDue ?? fallbackAmountDue ?? null;
+    const bankVisiblePaid = Boolean(bankVisibleDate);
+    const paid = Boolean(paidDate || bankVisiblePaid || (amountDue != null && amountDue <= 0.01));
+    return {
+      label,
+      invoice: document?.invoiceNumber || `No ${label.toLowerCase()} invoice`,
+      invoiceUrl: document?.invoiceUrl || null,
+      invoiceDate: formatShortDate(document?.issuedAt || null),
+      dueDate: formatShortDate(document?.dueAt || fallbackDue || null),
+      paidDate: paidDate ? formatShortDate(paidDate) : paid ? "Paid" : "Awaiting payment",
+      amount: document?.total != null ? formatXeroMoney(document.total) : amountDue != null ? formatXeroMoney(amountDue) : "",
+      status: bankVisiblePaid ? WORKSHOP_PROCESS_RULES.trust.bankVisiblePaidLabel : paid ? "Paid" : amountDue != null && amountDue > 0.01 ? `Awaiting ${formatXeroMoney(amountDue)}` : "Awaiting payment",
+      tone: paid ? "good" : document ? "warn" : "neutral",
+    };
+  };
+  if (lifecycle) {
+    const depositDoc = byInvoice(lifecycle.depositInvoiceNumber) || byRole("deposit") || byRole("primary");
+    const balanceDoc = byInvoice(lifecycle.balanceInvoiceNumber) || byRole("balance");
+    return [
+      rowFromDocument("Deposit", depositDoc, lifecycle.depositPaidAt, null, lifecycle.depositAmountDue),
+      rowFromDocument("Balance", balanceDoc, lifecycle.balancePaidAt, lifecycle.balanceDueAt, lifecycle.balanceAmountDue),
+    ];
+  }
+  const depositDoc = byRole("deposit");
+  const balanceDoc = byRole("balance");
+  if (depositDoc || balanceDoc) {
+    return [
+      rowFromDocument("Deposit", depositDoc || byInvoice(item.invoiceNumber) || docs[0] || null, item.paidOnDate, null, depositDoc?.amountDue),
+      rowFromDocument("Balance", balanceDoc, null, balanceDoc?.dueAt, balanceDoc?.amountDue),
+    ];
+  }
+  const document = byInvoice(item.invoiceNumber) || docs[0] || null;
+  return [{
+    label: "Invoice",
+    invoice: document?.invoiceNumber || item.invoiceNumber || "No invoice",
+    invoiceUrl: document?.invoiceUrl || item.xeroUrl,
+    invoiceDate: formatShortDate(document?.issuedAt || item.invoiceDate),
+    dueDate: formatShortDate(document?.dueAt || item.invoiceDueDate),
+    paidDate: item.paidOnDate ? formatShortDate(item.paidOnDate) : paymentTruthLabel,
+    amount: formatXeroMoney(document?.total ?? item.total),
+    status: paymentTruthLabel,
+    tone: item.paidOnDate || item.payments.some(isPendingAkahuPayment) || isBankVisiblePaid(item.invoiceNumber) ? "good" : "neutral",
+  }];
+}
+
 function nextOrderPrompt(order: UiOrder) {
+  if (order.paymentNextAction && (order.paymentStage === "awaiting_balance_payment" || order.paymentStage === "balance_authorised" || order.paymentStage === "ready_for_balance" || order.paymentStage === "balance_paid")) return order.paymentNextAction;
   const health = orderHealth(order);
   if (health === "blocked" || health === "watch") return orderHealthReason(order);
   return "No urgent attention flagged.";
@@ -1224,6 +1749,33 @@ function deliveryMode(order: UiOrder) {
 
 function normalizeOrderText(value: string | null | undefined) {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function intakeItemMatchesNewOrder(item: OrderIntakeItem, order: NewOrderPlanCandidate | null) {
+  if (!order) return false;
+  const invoice = normalizeOrderText(order.xeroInvoiceNumber);
+  const intakeInvoice = normalizeOrderText(item.invoiceNumber);
+  if (invoice || intakeInvoice) return Boolean(invoice && intakeInvoice && invoice === intakeInvoice);
+
+  const customer = normalizeOrderText(order.customer);
+  const intakeCustomer = normalizeOrderText(item.customerName);
+  if (!customer || !intakeCustomer) return false;
+  const customerMatches = customer.includes(intakeCustomer) || intakeCustomer.includes(customer);
+  if (!customerMatches) return false;
+
+  const orderProduct = normalizeOrderText([order.product, order.rawMondayItem, order.notes].filter(Boolean).join(" "));
+  const intakeProduct = normalizeOrderText([item.productSummary, item.itemCategory].filter(Boolean).join(" "));
+  return !orderProduct || !intakeProduct || orderProduct.includes(intakeProduct) || intakeProduct.includes(orderProduct);
+}
+
+function findOrderForIntakeItem(item: OrderIntakeItem, orders: UiOrder[]) {
+  const intakeInvoice = normalizeOrderText(item.invoiceNumber);
+  if (intakeInvoice) {
+    const byInvoice = orders.find((order) => normalizeOrderText(order.xeroInvoiceNumber) === intakeInvoice);
+    if (byInvoice) return byInvoice;
+  }
+
+  return orders.find((order) => intakeItemMatchesNewOrder(item, order)) ?? null;
 }
 
 function planRowMatchesOrder(row: PlanRow, order: UiOrder | null) {
@@ -1325,6 +1877,17 @@ function orderNameMatchScore(order: UiOrder, ...candidates: Array<string | null 
     if (matches > 0) best = Math.max(best, matches);
   }
   return best;
+}
+
+function orderHasExactCustomerLabel(order: UiOrder, ...candidates: Array<string | null | undefined>) {
+  const customer = normalizeOrderText(order.customer);
+  if (!customer) return false;
+  return candidates.some((candidate) => normalizeOrderText(candidate) === customer);
+}
+
+function exactOrderForPlanTask(task: Pick<DraggablePlanTask, "rowName" | "linkedOrders">, orders: UiOrder[]) {
+  const matches = orders.filter((order) => orderHasExactCustomerLabel(order, task.rowName, ...task.linkedOrders.map((linked) => linked.name)));
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function friendlyWorkshopTaskText(value: string) {
@@ -1553,7 +2116,12 @@ function formatCompletedAt(value: string | null) {
 function workflowOwnerToPerson(owner: WorkshopPerson): Person | null {
   if (owner === "Nick") return "nick";
   if (owner === "Dylan") return "dylan";
+  if (owner === "Guido") return "nick";
   return null;
+}
+
+function appTaskCountsTowardWorkshopCapacity(task: AppPlanTask) {
+  return task.owner !== "Guido" && task.owner !== "Other";
 }
 
 function dateToDayKey(value: string): DayKey | null {
@@ -1567,20 +2135,34 @@ function dateToDayKey(value: string): DayKey | null {
   return null;
 }
 
-function workflowTasksForPlan(workflow: OrderWorkflowState | null): AppPlanTask[] {
+function shiftIsoByWorkingDays(value: string, direction: -1 | 1) {
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  do {
+    date.setDate(date.getDate() + direction);
+  } while (![1, 2, 3, 4, 5].includes(date.getDay()));
+  return date.toISOString().slice(0, 10);
+}
+
+function workflowTasksForPlan(workflow: OrderWorkflowState | null, order: UiOrder | null = null): AppPlanTask[] {
   if (!workflow) return [];
   return workflow.tasks.flatMap((task) => {
     const person = workflowOwnerToPerson(task.owner);
     const day = dateToDayKey(task.scheduledDate);
     if (!person || !day || !task.title.trim()) return [];
     return [{
-      id: task.id,
+      id: `workflow-${workflow.orderId}-${task.id}`,
       orderId: workflow.orderId,
       title: task.title,
+      detail: task.notes || null,
+      customer: order?.customer ?? null,
+      owner: task.owner,
       scheduledDate: task.scheduledDate,
       day,
       person,
       done: task.done,
+      estimatedHours: 1,
+      source: "workflow" as const,
     }];
   });
 }
@@ -1590,68 +2172,6 @@ function appTaskFallsInWeek(task: AppPlanTask, week: PlanWeek) {
   if (!range) return false;
   const date = new Date(`${task.scheduledDate}T12:00:00`);
   return range.start.getTime() <= date.getTime() && date.getTime() <= range.end.getTime();
-}
-
-const COMPLETION_REASONS = [
-  "Customer collected",
-  "Supplier direct collection",
-  "Cancelled",
-  "Duplicate",
-  "No workshop action",
-  "Other",
-] as const;
-
-function requestCompletionReason(label: string) {
-  const answer = window.prompt(
-    `Why mark ${label} complete in Tuesday?\n\nUse one of: ${COMPLETION_REASONS.join(", ")}`,
-    COMPLETION_REASONS[0]
-  );
-  if (answer === null) return null;
-  const normalized = answer.trim().toLowerCase();
-  const reason = COMPLETION_REASONS.find((candidate) => candidate.toLowerCase() === normalized) || (answer.trim() ? "Other" : null);
-  if (!reason) return null;
-  const note = reason === "Other" ? answer.trim().slice(0, 180) : undefined;
-  return { reason, note };
-}
-
-function CompletedTuesdayOrdersCard({
-  items,
-  onRestore,
-}: {
-  items: CompletedTuesdayItem[];
-  onRestore: (item: CompletedTuesdayItem) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  if (items.length === 0) return null;
-  return (
-    <div style={{ position: "relative", flex: "0 0 auto" }}>
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        style={{ border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap" }}
-        aria-expanded={open}
-      >
-        Completed {items.length}
-      </button>
-      {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(37,30,20,0.18)", padding: 8 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Completed in Tuesday</div>
-          <div style={{ marginTop: 2, marginBottom: 7, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted }}>Restore if this was marked complete by mistake.</div>
-          <div style={{ display: "grid", gap: 6, maxHeight: 230, overflowY: "auto", paddingRight: 2 }}>
-            {items.map((item) => (
-              <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(251,250,247,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.15, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
-                  <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, lineHeight: 1.2, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.reason ? `${item.reason} · ${item.detail}` : item.detail}</div>
-                </div>
-                <button type="button" onClick={() => onRestore(item)} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer" }}>Restore</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 function OrderRail({
@@ -1664,6 +2184,7 @@ function OrderRail({
   onRemoveTaskLink,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
+  onWorkflowTaskDoneToggle,
   onWorkflowChange,
   onSelect,
   onOpenOrder,
@@ -1687,6 +2208,7 @@ function OrderRail({
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onWorkflowTaskDoneToggle?: (done: boolean, origin?: DelightOrigin) => void;
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onSelect: (id: number) => void;
   onOpenOrder: (id: number) => void;
@@ -1773,7 +2295,7 @@ function OrderRail({
           }
         }
       `}</style>
-      <div style={{ padding: "12px 12px 10px", borderBottom: `1px solid ${DT.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <div style={{ position: "relative", padding: "12px 12px 10px", borderBottom: `1px solid ${DT.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans }}>Orders</div>
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1 }}>{assignmentTask ? "Assign task" : selectedOrder ? "Job command" : `${filteredOrders.length} active`}</div>
@@ -1781,13 +2303,14 @@ function OrderRail({
         <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flexWrap: "wrap" }}>
           <CompletedTuesdayOrdersCard items={completedItems} onRestore={onRestoreCompletedOrder} />
           {(selectedOrder || assignmentTask) && (
-            <button
-              type="button"
-              onClick={onClear}
-              style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
-            >
-              Back to list
-            </button>
+	            <button
+	              type="button"
+	              onClick={onClear}
+	              aria-label="Back to orders list"
+	              style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "9px 14px", fontSize: 12, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", boxShadow: "0 4px 12px rgba(12,124,122,0.08)" }}
+	            >
+	              ← Back
+	            </button>
           )}
         </div>
       </div>
@@ -1803,6 +2326,7 @@ function OrderRail({
           onMarkComplete={onMarkOrderComplete}
           onPlanTaskEdit={onPlanTaskEdit}
           onPlanTaskDoneToggle={onPlanTaskDoneToggle}
+          onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle}
           onRemoveTaskLink={onRemoveTaskLink}
         />
       ) : (
@@ -1812,13 +2336,13 @@ function OrderRail({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search orders"
-              style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
+              style={{ width: "100%", minHeight: isNarrow ? 40 : undefined, boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
             />
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as RailSort)}
               aria-label="Sort orders"
-              style={{ width: isNarrow ? "100%" : 112, border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: DT.cardBg, outline: "none" }}
+              style={{ width: isNarrow ? "100%" : 112, minHeight: isNarrow ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: DT.cardBg, outline: "none" }}
             >
               <option value="soonest">Due soonest</option>
               <option value="latest">Due latest</option>
@@ -1834,14 +2358,14 @@ function OrderRail({
                   type="button"
                   key={option.id}
                   onClick={() => onFilterChange(option.id)}
-                  style={{ flex: "1 1 0", minWidth: 0, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 5px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center" }}
+                  style={{ flex: "1 1 0", minWidth: 0, minHeight: isNarrow ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 5px" : "5px 5px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center", touchAction: "manipulation" }}
                 >
                   {option.label}
                 </button>
               );
             })}
           </div>
-          <div style={{ marginTop: 8, display: "flex", flexDirection: isNarrow ? "row" : "column", gap: 8, overflowX: isNarrow ? "auto" : "visible", WebkitOverflowScrolling: "touch" }}>
+          <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflowX: "visible", WebkitOverflowScrolling: "touch" }}>
             {filteredOrders.map((order) => (
               <OrderRailItem key={order.id} order={order} onSelect={onSelect} isNarrow={isNarrow} />
             ))}
@@ -1858,6 +2382,8 @@ function OrderRail({
 function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect: (id: number) => void; isNarrow: boolean }) {
   const healthLevel = orderHealth(order);
   const health = HEALTH_META[healthLevel];
+  const trust = orderTrustSignal(order);
+  const trustStyle = signalStyle(trust.tone);
   const reason = orderHealthReason(order);
   const showReason = healthLevel !== "onTrack" && !(reason === "No due date" && !order.shipDate);
   return (
@@ -1865,9 +2391,10 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
       type="button"
       onClick={() => onSelect(order.id)}
       style={{
-        flex: isNarrow ? "0 0 260px" : undefined,
+        flex: undefined,
         width: "100%",
         minWidth: 0,
+        minHeight: isNarrow ? 82 : undefined,
         textAlign: "left",
         borderWidth: "1px 1px 1px 4px",
         borderStyle: "solid",
@@ -1890,8 +2417,9 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{order.customer}</div>
-          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "normal" : "nowrap" }}>{order.customer}</div>
+          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "normal" : "nowrap" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
+          <div style={{ marginTop: 4, display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</div>
           {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 850, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reason}</div>}
         </div>
         <div style={{ flex: "0 0 auto", textAlign: "right" }}>
@@ -1930,11 +2458,13 @@ function NewOrderRailCard({
     background: reviewActive ? "rgba(255,255,255,0.84)" : "rgba(255,255,255,0.68)",
     color: activeAccent,
     borderRadius: 999,
-    padding: "7px 8px",
+    minHeight: 40,
+    padding: "8px 8px",
     fontFamily: DT.sans,
     fontSize: 10,
     fontWeight: 950,
     cursor: "pointer",
+    touchAction: "manipulation",
   };
   return (
     <div
@@ -1947,7 +2477,7 @@ function NewOrderRailCard({
           onOpenOrder();
         }
       }}
-      style={{ marginBottom: 8, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${newOrderPalette.clayStripe}`, background: newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? "0 8px 18px rgba(85,113,95,0.10)" : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
+      style={{ marginBottom: 8, minHeight: 96, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${newOrderPalette.clayStripe}`, background: newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? "0 8px 18px rgba(85,113,95,0.10)" : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
@@ -1968,10 +2498,566 @@ function NewOrderRailCard({
       <button
         type="button"
         onClick={(event) => { event.stopPropagation(); onApprove(); }}
-        style={{ marginTop: 6, width: "100%", border: `1px solid ${newOrderPalette.clayBorderStrong}`, background: approved ? "rgba(255,255,255,0.68)" : newOrderPalette.clayAccent, color: approved ? activeAccent : "#fff", borderRadius: 999, padding: "7px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", boxShadow: reviewActive && !approved ? "0 8px 18px rgba(85,113,95,0.12)" : undefined }}
+        style={{ marginTop: 6, width: "100%", minHeight: 40, border: `1px solid ${newOrderPalette.clayBorderStrong}`, background: approved ? "rgba(255,255,255,0.68)" : newOrderPalette.clayAccent, color: approved ? activeAccent : "#fff", borderRadius: 999, padding: "8px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", boxShadow: reviewActive && !approved ? "0 8px 18px rgba(85,113,95,0.12)" : undefined, touchAction: "manipulation" }}
       >
         {approved ? "Draft approved" : "Approve draft plan"}
       </button>
+    </div>
+  );
+}
+
+
+const INTAKE_STATE_META: Record<OrderIntakeReviewState, { color: string; bg: string; border: string }> = {
+  awaiting_payment: { color: DT.textMuted, bg: "rgba(232,230,224,0.42)", border: "rgba(0,0,0,0.08)" },
+  paid_needs_review: { color: DT.teal, bg: "rgba(12,124,122,0.08)", border: "rgba(12,124,122,0.22)" },
+  needs_review: { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.24)" },
+  approved: { color: "#15803d", bg: "rgba(21,128,61,0.08)", border: "rgba(21,128,61,0.22)" },
+};
+
+function intakeOwnerToPerson(owner: OrderIntakeOwner): Person {
+  return owner === "Dylan" ? "dylan" : "nick";
+}
+
+function normalizedTaskTitle(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function maxIsoDate(...values: Array<string | null | undefined>) {
+  return maxIsoDateFromRules(...values);
+}
+
+function intakePlanningText(item: OrderIntakeItem) {
+  return [item.itemCategory, item.productSummary, ...item.lineItems.map((line) => line.description)].join("\n").toLowerCase();
+}
+
+function intakeOwnerFromProcess(owner: WorkshopProcessTask["owner"]): OrderIntakeOwner {
+  return owner === "Nick" || owner === "Dylan" || owner === "Guido" ? owner : "Other";
+}
+
+function processTaskToIntakeDraft(item: OrderIntakeItem, task: WorkshopProcessTask, existing: OrderIntakeTaskDraft | undefined, index: number): OrderIntakeTaskDraft {
+  const owner = intakeOwnerFromProcess(task.owner);
+  const scheduledDate = maxIsoDate(existing?.scheduledDate, task.scheduledDate) || task.scheduledDate;
+  return {
+    id: existing?.id || task.key || `${item.orderId}:process:${index + 1}`,
+    title: task.title,
+    detail: task.detail,
+    owner,
+    person: intakeOwnerToPerson(owner),
+    scheduledDate,
+    day: dateToDayKey(scheduledDate) ?? existing?.day ?? "monday",
+    estimatedHours: task.estimatedHours,
+    sortOrder: (index + 1) * 10,
+  };
+}
+
+function isStandardTableIntakeItem(item: OrderIntakeItem) {
+  const text = intakePlanningText(item);
+  return /\bdining\s+table\b|\btable\b|base|steel|leg/.test(text);
+}
+
+function normalizeStandardTableIntakeTasks(item: OrderIntakeItem, rawTasks: OrderIntakeTaskDraft[]) {
+  if (!isStandardTableIntakeItem(item) || rawTasks.length === 0) return rawTasks;
+  const existingByTitle = new Map(rawTasks.map((task) => [normalizedTaskTitle(task.title), task]));
+  const startIso = rawTasks[0]?.scheduledDate ?? new Date().toISOString().slice(0, 10);
+  const processTasks = buildDiningTableProcessPlan({ orderId: item.orderId, text: intakePlanningText(item), startIso });
+  return processTasks.map((task, index) => processTaskToIntakeDraft(item, task, existingByTitle.get(normalizedTaskTitle(task.title)), index));
+}
+
+function numberedTaskRowOptionLabel(title: string, optionIndex: number, selectedTitle: string, taskIndex: number) {
+  return title === selectedTitle ? `${taskIndex + 1}. ${title}` : numberedJobTaskOptionLabel(title, optionIndex);
+}
+
+function intakeStateSort(state: OrderIntakeReviewState) {
+  if (state === "paid_needs_review") return 0;
+  if (state === "needs_review") return 1;
+  if (state === "awaiting_payment") return 2;
+  return 3;
+}
+
+const COMPLETION_REASONS = [
+  "Customer collected",
+  "Supplier direct collection",
+  "Cancelled",
+  "Duplicate",
+  "No workshop action",
+  "Other",
+] as const;
+
+function requestCompletionReason(label: string) {
+  const answer = window.prompt(
+    `Why mark ${label} complete in Tuesday?\n\nUse one of: ${COMPLETION_REASONS.join(", ")}`,
+    COMPLETION_REASONS[0]
+  );
+  if (answer === null) return null;
+  const normalized = answer.trim().toLowerCase();
+  const reason = COMPLETION_REASONS.find((candidate) => candidate.toLowerCase() === normalized) || (answer.trim() ? "Other" : null);
+  if (!reason) return null;
+  const note = reason === "Other" ? answer.trim().slice(0, 180) : undefined;
+  return { reason, note };
+}
+
+function OrderIntakeRailCard({
+  items,
+  status,
+  busy,
+  onRefresh,
+  onOpen,
+}: {
+  items: OrderIntakeItem[];
+  status: string;
+  busy: boolean;
+  onRefresh: () => void;
+  onOpen: (orderId: string) => void;
+}) {
+  const sorted = [...items].sort((a, b) => intakeStateSort(a.reviewState) - intakeStateSort(b.reviewState) || a.customerName.localeCompare(b.customerName));
+  const pendingItems = sorted.filter((item) => item.reviewState !== "approved");
+  const approvedCount = sorted.length - pendingItems.length;
+  const actionableCount = pendingItems.length;
+  return (
+    <section style={{ marginBottom: 10, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.88)", boxShadow: DT.shadow, padding: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.teal, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
+          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{actionableCount}</div>
+        </div>
+        <button type="button" onClick={onRefresh} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>
+          {busy ? "Checking" : "Refresh"}
+        </button>
+      </div>
+      {status && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>{status}</div>}
+      <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 7 }}>
+        {pendingItems.length === 0 ? (
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>No pending intake orders loaded.</div>
+        ) : pendingItems.slice(0, 7).map((item) => {
+          const meta = INTAKE_STATE_META[item.reviewState];
+          const lifecycleLabel = intakePaymentStageBadge(item.paymentLifecycle);
+          return (
+            <button key={item.orderId} type="button" onClick={() => onOpen(item.orderId)} style={{ textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${meta.border} ${meta.border} ${meta.border} ${meta.color}`, background: "rgba(255,255,255,0.82)", borderRadius: 10, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.025)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.customerName}</div>
+                  <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.invoiceNumber || "No invoice"} · {formatXeroMoney(item.total)}</div>
+                  {lifecycleLabel && <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, color: paymentStageTone(item.paymentLifecycle?.paymentStage) === "warn" ? "#9a5b12" : DT.teal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lifecycleLabel}</div>}
+                </div>
+                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: meta.bg, color: meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
+              </div>
+            </button>
+          );
+        })}
+        {approvedCount > 0 && <div style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 850, textAlign: "center" }}>{approvedCount} approved intake order{approvedCount === 1 ? "" : "s"} already on the schedule</div>}
+      </div>
+    </section>
+  );
+}
+
+function CompletedTuesdayOrdersCard({
+  items,
+  onRestore,
+}: {
+  items: CompletedTuesdayItem[];
+  onRestore: (item: CompletedTuesdayItem) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+  return (
+    <div style={{ position: "relative", flex: "0 0 auto" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        style={{ border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap" }}
+        aria-expanded={open}
+      >
+        Completed {items.length}
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(37,30,20,0.18)", padding: 8 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Completed in Tuesday</div>
+          <div style={{ marginTop: 2, marginBottom: 7, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted }}>Restore if this was marked complete by mistake.</div>
+          <div style={{ display: "grid", gap: 6, maxHeight: 230, overflowY: "auto", paddingRight: 2 }}>
+          {items.map((item) => (
+            <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(251,250,247,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.15, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
+                <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, lineHeight: 1.2, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.reason ? `${item.reason} · ${item.detail}` : item.detail}</div>
+              </div>
+              <button type="button" onClick={() => onRestore(item)} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer" }}>Restore</button>
+            </div>
+          ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IntakeTaskDraftRow({
+  task,
+  index,
+  isNarrow,
+  dateOptions,
+  onPatch,
+  onChooseOwner,
+  onChooseDate,
+  onDelete,
+}: {
+  task: OrderIntakeTaskDraft;
+  index: number;
+  isNarrow: boolean;
+  dateOptions: SuggestedDateOption[];
+  onPatch: (id: string, patch: Partial<OrderIntakeTaskDraft>) => void;
+  onChooseOwner: (id: string, owner: OrderIntakeOwner) => void;
+  onChooseDate: (id: string, dateIso: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { type: "intake-task" },
+  });
+  const dateKnown = dateOptions.some((option) => option.dateIso === task.scheduledDate);
+  const taskTitleOptions = Array.from(new Set([...JOB_TASK_PRESETS, task.title].filter(Boolean))) as string[];
+  return (
+    <div
+      ref={setNodeRef}
+      title={task.detail || task.title}
+      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 9, background: isDragging ? "rgba(237,248,247,0.94)" : "rgba(251,250,247,0.82)", padding: 5, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : undefined, opacity: isDragging ? 0.82 : 1 }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "28px 34px minmax(0, 1fr) 74px" : "28px 42px minmax(220px, 1fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          aria-label={`Drag task ${index + 1}`}
+          style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.textMuted, borderRadius: 8, padding: "6px 0", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "grab", touchAction: "none" }}
+        >
+          =
+        </button>
+        <span style={{ border: `1px solid rgba(12,124,122,0.16)`, background: "rgba(237,248,247,0.78)", color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
+        <select value={task.title} onChange={(event) => onPatch(task.id, { title: event.target.value })} aria-label={`Task ${index + 1} title`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
+          {taskTitleOptions.map((title, optionIndex) => <option key={`${task.id}:${title}`} value={title}>{numberedTaskRowOptionLabel(title, optionIndex, task.title, index)}</option>)}
+        </select>
+        <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
+          {(["Nick", "Dylan", "Guido"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+        </select>
+        <select value={task.scheduledDate} onChange={(event) => onChooseDate(task.id, event.target.value)} aria-label={`Task ${index + 1} date`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
+          {!dateKnown && <option value={task.scheduledDate}>{task.scheduledDate}</option>}
+          {dateOptions.map((option) => <option key={`${task.id}:${option.dateIso}`} value={option.dateIso}>{option.dateLabel}</option>)}
+        </select>
+        <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => onPatch(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }} />
+        <button type="button" onClick={() => onDelete(task.id)} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "5px 7px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer" }}>Delete</button>
+      </div>
+    </div>
+  );
+}
+
+function OrderIntakeReviewModal({
+  item,
+  dateOptions,
+  busy,
+  onClose,
+  onMarkComplete,
+  onSave,
+  onApprove,
+}: {
+  item: OrderIntakeItem;
+  dateOptions: SuggestedDateOption[];
+  busy: boolean;
+  onClose: () => void;
+  onMarkComplete: () => void;
+  onSave: (tasks: OrderIntakeTaskDraft[]) => Promise<void>;
+  onApprove: (tasks: OrderIntakeTaskDraft[]) => Promise<void>;
+}) {
+  const [tasks, setTasks] = useState<OrderIntakeTaskDraft[]>(() => normalizeStandardTableIntakeTasks(item, item.draftTasks.length ? item.draftTasks : item.suggestedTasks));
+  const [modalStatus, setModalStatus] = useState("");
+  const [approvalConfirmed, setApprovalConfirmed] = useState(false);
+  const isNarrow = useIsNarrow(860);
+  const taskSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+  const canApprove = item.reviewState === "paid_needs_review" || item.reviewState === "approved";
+  const pendingPayments = item.payments.filter(isPendingAkahuPayment);
+  const exactAkahuPayments = item.payments.filter((payment) => payment.matchStatus === "matched" && Number(payment.matchConfidence ?? 0) >= 0.98);
+  const xeroAmountDue = typeof item.amountDue === "number" ? item.amountDue : 0;
+  const paymentTruthLabel = exactAkahuPayments.length > 0
+    ? xeroAmountDue > 0.01
+      ? `Akahu matched; Xero still shows ${formatXeroMoney(xeroAmountDue)} due`
+      : "Akahu matched"
+    : pendingPayments.length > 0
+      ? WORKSHOP_PROCESS_RULES.trust.bankVisiblePaidLabel
+      : item.paidOnDate ? formatShortDate(item.paidOnDate) : "Not confirmed by Akahu";
+  const primaryLineItem = item.lineItems[0] ?? null;
+  const primaryOrderDetails = primaryLineItem ? parseIntakeInvoiceLine(primaryLineItem.description) : null;
+  const expectedReady = expectedReadyInfoForIntake(item);
+  const expectedReadyDate = expectedReady.date;
+  const dueDisplay = formatShortDate(expectedReadyDate);
+  const paymentLifecycleLabel = intakePaymentStageBadge(item.paymentLifecycle);
+  const paymentRows = paymentTimelineRows(item, paymentTruthLabel);
+  const reviewTone = intakeReviewTone(item, canApprove);
+  const reviewSignal = signalStyle(reviewTone);
+  const headerStatusLabel = paymentLifecycleLabel || item.stateLabel;
+  const totalDraftHours = tasks.reduce((sum, task) => sum + Number(task.estimatedHours || 0), 0);
+  const approvalChecks = [
+    { label: "Ready", value: dueDisplay, tone: expectedReadyDate ? "good" : "warn" },
+    { label: "Tasks", value: `${tasks.length} steps`, tone: tasks.length > 0 ? "good" : "warn" },
+    { label: "Hours", value: `${totalDraftHours}h`, tone: totalDraftHours > 0 ? "good" : "warn" },
+  ];
+
+  function patchTask(id: string, patch: Partial<OrderIntakeTaskDraft>) {
+    setTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch } : task));
+  }
+
+  function chooseTaskDate(id: string, dateIso: string) {
+    const option = dateOptions.find((candidate) => candidate.dateIso === dateIso);
+    const day = option?.day ?? dateToDayKey(dateIso) ?? "monday";
+    patchTask(id, { scheduledDate: dateIso, day });
+  }
+
+  function chooseOwner(id: string, owner: OrderIntakeOwner) {
+    patchTask(id, { owner, person: intakeOwnerToPerson(owner) });
+  }
+
+  function addTask() {
+    const firstOption = dateOptions[0];
+    const dateIso = firstOption?.dateIso ?? new Date().toISOString().slice(0, 10);
+    setTasks((current) => [...current, {
+      id: `manual-${Date.now()}`,
+      title: "Material + spec check",
+      detail: "",
+      owner: "Nick",
+      person: "nick",
+      scheduledDate: dateIso,
+      day: firstOption?.day ?? dateToDayKey(dateIso) ?? "monday",
+      estimatedHours: 1,
+      sortOrder: (current.length + 1) * 10,
+    }]);
+  }
+
+  function moveAllTasksByWorkingDay(direction: -1 | 1) {
+    setTasks((current) => current.map((task) => {
+      const currentIndex = dateOptions.findIndex((option) => option.dateIso === task.scheduledDate);
+      const nextOption = currentIndex >= 0 ? dateOptions[currentIndex + direction] : null;
+      const scheduledDate = nextOption?.dateIso ?? shiftIsoByWorkingDays(task.scheduledDate, direction);
+      return { ...task, scheduledDate, day: nextOption?.day ?? dateToDayKey(scheduledDate) ?? task.day };
+    }));
+  }
+
+  function deleteTask(id: string) {
+    setTasks((current) => current.filter((candidate) => candidate.id !== id).map((task, index) => ({ ...task, sortOrder: (index + 1) * 10 })));
+  }
+
+  function handleIntakeTaskDragEnd(event: DragEndEvent) {
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : "";
+    if (!overId || activeId === overId) return;
+    setTasks((current) => {
+      const from = current.findIndex((task) => task.id === activeId);
+      const to = current.findIndex((task) => task.id === overId);
+      if (from < 0 || to < 0) return current;
+      return arrayMove(current, from, to).map((task, index) => ({ ...task, sortOrder: (index + 1) * 10 }));
+    });
+  }
+
+  async function saveDraft() {
+    setModalStatus("Saving draft...");
+    try {
+      await onSave(tasks);
+      setModalStatus("Draft saved");
+    } catch (error) {
+      setModalStatus(error instanceof Error ? error.message : "Draft save failed");
+    }
+  }
+
+  async function approveDraft() {
+    if (!canApprove || !approvalConfirmed) {
+      setModalStatus("Check the plan before adding these tasks to the schedule.");
+      return;
+    }
+    setModalStatus("Adding tasks to schedule...");
+    try {
+      await onApprove(tasks);
+      setModalStatus("Added to schedule");
+    } catch (error) {
+      setModalStatus(error instanceof Error ? error.message : "Approval failed");
+    }
+  }
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: isNarrow ? 0 : 64, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "center", padding: isNarrow ? 8 : "10px 18px 14px", overflow: "hidden" }}>
+      <section style={{ width: isNarrow ? "calc(100vw - 16px)" : "min(1480px, calc(100vw - 36px))", height: isNarrow ? "calc(100vh - 16px)" : "calc(100vh - 88px)", maxHeight: isNarrow ? "calc(100vh - 16px)" : "calc(100vh - 88px)", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${DT.border}`, borderRadius: isNarrow ? 12 : 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
+        <header style={{ flex: "0 0 auto", background: "rgba(251,250,247,0.98)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "9px 12px" : "10px 18px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 14 }}>
+          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 23 : 28, lineHeight: 1.0, color: DT.textPrimary, overflowWrap: "anywhere" }}>{item.customerName}</h2>
+              <span title={item.stateDetail} style={{ border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, color: reviewSignal.color, borderRadius: 999, padding: "5px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{headerStatusLabel}</span>
+            </div>
+            <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontFamily: DT.sans }}>
+              {[["Order", primaryOrderDetails?.title || item.itemCategory || "Order"], ["Ready", dueDisplay], ["Value", formatXeroMoney(item.total)]].map(([label, value]) => (
+                <div key={label} style={{ display: "inline-flex", gap: 5, alignItems: "baseline", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 999, padding: "4px 8px", maxWidth: "100%" }}>
+                  <span style={{ fontSize: 8.5, fontWeight: 950, letterSpacing: "0.06em", textTransform: "uppercase", color: DT.textFaint, whiteSpace: "nowrap" }}>{label}</span>
+                  <span style={{ fontSize: 11.5, lineHeight: 1.1, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isNarrow ? 160 : 260 }}>{value}</span>
+                </div>
+              ))}
+              <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850, whiteSpace: "nowrap" }}>{item.invoiceNumber || "No invoice number"} · {item.itemCategory || "Order"}</span>
+            </div>
+          </div>
+          <div style={{ flex: "0 0 auto", display: "flex", gap: 7, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <button type="button" onClick={onMarkComplete} disabled={busy} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 11px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Mark complete</button>
+            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
+          </div>
+        </header>
+        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(220px, 0.72fr) minmax(220px, 0.72fr) minmax(0, 1.65fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden" }}>
+          <aside style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
+            <section style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 10, background: "rgba(237,248,247,0.72)", padding: 8 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Order details</div>
+              <div style={{ marginTop: 6, display: "grid", gap: 5 }}>
+                {item.lineItems.length === 0 ? <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div> : item.lineItems.map((line, index) => {
+                  const parsed = parseIntakeInvoiceLine(line.description);
+                  const isPrimary = index === 0;
+                  return (
+                    <div key={`${line.description}:${index}`} style={{ border: `1px solid ${isPrimary ? "rgba(12,124,122,0.28)" : DT.border}`, borderRadius: 10, padding: isPrimary ? 10 : 7, background: isPrimary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.72)", boxShadow: isPrimary ? "0 7px 16px rgba(37,30,20,0.06)" : "none" }}>
+                      <div style={{ display: "grid", gap: isPrimary ? 5 : 2, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
+                        <div style={{ fontFamily: DT.serif, fontSize: isPrimary ? 22 : 13, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.02 }}>{parsed.title}</div>
+                        {formatParsedIntakeSpec(parsed).map((fact) => (
+                          <div key={`${fact.label}:${fact.value}`} style={{ display: isPrimary ? "grid" : "block", gridTemplateColumns: isPrimary ? "84px minmax(0, 1fr)" : undefined, gap: 8, fontSize: isPrimary ? 12 : 9.5, fontWeight: 900, overflowWrap: "anywhere" }}>
+                            <span style={{ color: DT.textMuted, fontWeight: 950 }}>{fact.label}{isPrimary ? "" : ":"}</span>
+                            <span>{fact.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {parsed.notes.map((note) => <div key={note} style={{ marginTop: 6, fontFamily: DT.sans, fontSize: isPrimary ? 11 : 9.5, color: DT.textMuted, fontWeight: 850, lineHeight: 1.2 }}>{note}</div>)}
+                      <div style={{ marginTop: 7, display: "flex", gap: 8, flexWrap: "wrap", fontFamily: DT.sans, fontSize: isPrimary ? 11 : 9, color: DT.textMuted, fontWeight: 950 }}>
+                        <span>Qty {formatXeroQuantity(line.quantity)}</span>
+                        <span>{formatXeroMoney(line.lineAmount)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </aside>
+
+          <aside style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
+            <section style={{ border: `1px solid ${expectedReadyDate ? "rgba(12,124,122,0.20)" : "rgba(154,91,18,0.22)"}`, borderRadius: 10, background: expectedReadyDate ? "rgba(237,248,247,0.70)" : "rgba(250,204,21,0.10)", padding: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: expectedReadyDate ? DT.teal : "#9a5b12", fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{expectedReady.label}</div>
+                <InfoDot title="Customer-ready date. Before deposit payment, Tuesday estimates this from the deposit invoice date plus the promised lead time. Once deposit payment is confirmed, it recalculates from the deposit paid date." />
+              </div>
+              <div style={{ marginTop: 5, fontFamily: DT.serif, fontSize: 22, lineHeight: 1, color: DT.textPrimary, fontWeight: 650 }}>{dueDisplay}</div>
+              <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{expectedReady.source}</div>
+            </section>
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payments</div>
+                <InfoDot title="Deposit and balance invoice status from Xero/Supabase payment evidence. Yellow means money is still waiting or settling; green means paid." />
+              </div>
+              <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
+                {paymentRows.map((payment) => {
+                  const tone = signalStyle(payment.tone);
+                  return (
+                    <div key={payment.label} style={{ border: `1px solid ${tone.border}`, borderRadius: 9, background: tone.bg, padding: 8, display: "grid", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em" }}>{payment.label}</span>
+                        <span style={{ fontFamily: DT.sans, fontSize: 10, color: tone.color, fontWeight: 950, textAlign: "right" }}>{payment.status}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                        {payment.invoiceUrl ? (
+                          <a href={payment.invoiceUrl} target="_blank" rel="noreferrer" style={{ minWidth: 0, fontFamily: DT.sans, fontSize: 11, color: DT.teal, fontWeight: 950, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{payment.invoice}</a>
+                        ) : (
+                          <span style={{ minWidth: 0, fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, fontWeight: 950, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{payment.invoice}</span>
+                        )}
+                        {payment.amount && <span style={{ flex: "0 0 auto", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>{payment.amount}</span>}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, fontFamily: DT.sans, fontSize: 9.5, lineHeight: 1.15 }}>
+                        <span><strong style={{ color: DT.textFaint }}>Invoice</strong><br />{payment.invoiceDate}</span>
+                        <span><strong style={{ color: DT.textFaint }}>Due</strong><br />{payment.dueDate}</span>
+                        <span><strong style={{ color: DT.textFaint }}>Paid</strong><br />{payment.paidDate}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice facts</div>
+              <div style={{ marginTop: 5, display: "grid", gap: 4 }}>
+                {[['Status', item.invoiceStatus || 'Unknown'], ['Invoice date', formatShortDate(item.invoiceDate)], ['Xero due', formatShortDate(item.invoiceDueDate)]].map(([label, value]) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontFamily: DT.sans, fontSize: 10 }}>
+                    <span style={{ color: DT.textMuted, fontWeight: 850 }}>{label}</span>
+                    <span style={{ color: DT.textPrimary, fontWeight: 950, textAlign: "right" }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+              {item.xeroUrl && <a href={item.xeroUrl} target="_blank" rel="noreferrer" style={{ marginTop: 7, display: "inline-flex", border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textDecoration: "none" }}>Open Xero</a>}
+            </section>
+          </aside>
+
+          <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 10, minWidth: 0, minHeight: 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production plan</div>
+                <div style={{ marginTop: 2, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <h3 style={{ margin: 0, fontFamily: DT.sans, fontSize: 20, lineHeight: 1.1, color: DT.textPrimary, fontWeight: 950 }}>Suggested production plan</h3>
+                  <span style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{tasks.length} steps · {totalDraftHours}h</span>
+                  <InfoDot title="Review stages, owners, dates, and hours before approving them into the live schedule." />
+                </div>
+              </div>
+              <div style={{ flex: "0 0 auto", display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>-1 workday</button>
+                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>+1 workday</button>
+                <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Add task</button>
+              </div>
+            </div>
+            <div style={{ marginTop: 8, border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, borderRadius: 10, padding: "7px 9px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 12, color: reviewSignal.color, fontWeight: 950 }}>{canApprove ? "Ready to approve" : headerStatusLabel}</div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {approvalChecks.map((check) => {
+                    const tone = signalStyle(check.tone === "good" ? "teal" : "warn");
+                    return <span key={check.label} style={{ border: `1px solid ${tone.border}`, background: "rgba(255,255,255,0.72)", color: tone.color, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950 }}>{check.label}: {check.value}</span>;
+                  })}
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 8, minHeight: 0, overflowY: "auto", paddingRight: 3 }}>
+              <DndContext id="order-intake-task-draft" sensors={taskSensors} collisionDetection={closestCorners} onDragEnd={handleIntakeTaskDragEnd}>
+                <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+                  <div style={{ display: "grid", gap: 5 }}>
+                    {tasks.map((task, index) => (
+                      <IntakeTaskDraftRow
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        isNarrow={isNarrow}
+                        dateOptions={dateOptions}
+                        onPatch={patchTask}
+                        onChooseOwner={chooseOwner}
+                        onChooseDate={chooseTaskDate}
+                        onDelete={deleteTask}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
+            <footer style={{ flex: "0 0 auto", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                {modalStatus && <div style={{ fontFamily: DT.sans, fontSize: 11, color: canApprove ? DT.textMuted : "#9a5b12", fontWeight: 850 }}>{modalStatus}</div>}
+                {canApprove && (
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 900 }}>
+                    <input type="checkbox" checked={approvalConfirmed} onChange={(event) => setApprovalConfirmed(event.target.checked)} />
+                    Plan checked and ready
+                  </label>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" onClick={saveDraft} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
+                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.28)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,230,224,0.55)", color: canApprove && approvalConfirmed ? "#fff" : DT.textMuted, borderRadius: 999, padding: "8px 13px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed" }}>Add to schedule</button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      </section>
     </div>
   );
 }
@@ -2183,6 +3269,7 @@ function OrderRailDetail({
   onMarkComplete,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
+  onWorkflowTaskDoneToggle,
   onRemoveTaskLink,
 }: {
   order: UiOrder;
@@ -2192,38 +3279,163 @@ function OrderRailDetail({
   onMarkComplete: (order: UiOrder) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onWorkflowTaskDoneToggle?: (done: boolean, origin?: DelightOrigin) => void;
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
 }) {
   const health = HEALTH_META[orderHealth(order)];
-  const { workflow, workflowStatus } = useOrderWorkflow(order, onWorkflowChange);
-  const openJobTasks = workflow.tasks
-    .filter((task) => !task.done)
-    .sort((a, b) => (a.scheduledDate || "").localeCompare(b.scheduledDate || ""));
+  const paymentLabel = paymentStageBadge(order);
+  const { workflow, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
+  const today = new Date().toISOString().slice(0, 10);
+  const taskOptions = jobTaskOptionsForOrder(order);
+  const productionStepIndex = derivedProductionStepIndex(order, workflow.tasks, planTasks);
+  const defaultDraftAction = defaultJobTaskActionForOrder(order, taskOptions, productionStepIndex);
+  const productionTaskOptions = taskOptions.filter((option) => option.group === "production");
+  const supportTaskOptions = taskOptions.filter((option) => option.group === "support");
+  const activeProductionStep = productionStepForOrder(order, productionStepIndex);
+  const [draftAction, setDraftAction] = useState<string>(defaultDraftAction);
+  const lastAutoDraftAction = useRef(defaultDraftAction);
+  const [draftCustom, setDraftCustom] = useState("");
+  const [draftOwner, setDraftOwner] = useState<WorkshopPerson>("Nick");
+  const [draftDate, setDraftDate] = useState(today);
+  const selectedDraftAction = taskOptions.some((option) => option.label === draftAction) ? draftAction : defaultDraftAction;
+  const draftTitle = selectedDraftAction === "Custom" ? draftCustom.trim() : selectedDraftAction;
+  const orderedWorkflowTasks = [...workflow.tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
+  });
+  const openJobTasks = orderedWorkflowTasks.filter((task) => !task.done);
+  const doneJobTasks = orderedWorkflowTasks.filter((task) => task.done);
+  const donePlanTasks = planTasks.filter((task) => task.done);
+  const trust = orderTrustSignal(order, planTasks);
+  const trustStyle = signalStyle(trust.tone);
+  const visibleWorkflowTasks = orderedWorkflowTasks.slice(0, 6);
+  const openPlanTasks = planTasks.filter((task) => !task.done).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   const nextJobTask = openJobTasks[0] ?? null;
-  const nextPlanTask = planTasks[0] ?? null;
-  const visibleTasks = planTasks.slice(0, 5);
+  const nextPlanTask = openPlanTasks[0] ?? planTasks[0] ?? null;
+  const visibleScheduleTasks = [...planTasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return a.sortKey.localeCompare(b.sortKey);
+  }).slice(0, 4);
+  const qcItems = dispatchQcItems(order);
+  const qcDone = qcItems.filter((label) => workflow.qc[label]?.done).length;
+  const dispatch = collectionSummary(workflow);
+
+  useEffect(() => {
+    setDraftAction((current) => {
+      if (current === lastAutoDraftAction.current) return defaultDraftAction;
+      return current;
+    });
+    lastAutoDraftAction.current = defaultDraftAction;
+  }, [defaultDraftAction]);
+
+  function updateWorkflowTask(id: string, patch: Partial<WorkflowTask>) {
+    updateWorkflow((state) => ({
+      ...state,
+      tasks: state.tasks.map((task) => task.id === id ? { ...task, ...patch } : task),
+    }));
+  }
+
+  function deleteWorkflowTask(id: string) {
+    updateWorkflow((state) => ({
+      ...state,
+      tasks: state.tasks.filter((task) => task.id !== id),
+    }));
+  }
+
+  function addWorkflowTask() {
+    if (!draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate) return;
+    updateWorkflow((state) => ({
+      ...state,
+      tasks: [
+        ...state.tasks,
+        {
+          id: `task-${Date.now()}`,
+          title: draftTitle,
+          owner: draftOwner,
+          scheduledDate: draftDate,
+          done: false,
+          completedAt: null,
+          completedBy: "",
+          notes: "",
+        },
+      ],
+    }));
+    if (selectedDraftAction === "Custom") setDraftCustom("");
+  }
+
+  function compactInputStyle(done = false): CSSProperties {
+    return {
+      minWidth: 0,
+      width: "100%",
+      boxSizing: "border-box",
+      border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`,
+      background: done ? "rgba(255,255,255,0.52)" : DT.cardBg,
+      borderRadius: 8,
+      padding: "6px 7px",
+      fontFamily: DT.sans,
+      fontSize: 11,
+      color: done ? DONE_TASK_VISUAL.title : DT.textPrimary,
+      outline: "none",
+    };
+  }
+
+  function compactSelectStyle(): CSSProperties {
+    return {
+      minWidth: 0,
+      width: "100%",
+      boxSizing: "border-box",
+      border: `1px solid ${DT.border}`,
+      background: DT.cardBg,
+      borderRadius: 8,
+      padding: "6px 7px",
+      fontFamily: DT.sans,
+      fontSize: 11,
+      color: DT.textPrimary,
+      outline: "none",
+    };
+  }
+
+  function compactTaskCardStyle(done: boolean): CSSProperties {
+    return {
+      border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`,
+      background: done ? DONE_TASK_VISUAL.bg : DT.cardBg,
+      borderRadius: 10,
+      padding: 8,
+      boxShadow: done ? DONE_TASK_VISUAL.shadow : "none",
+    };
+  }
+
+  const addDisabled = !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate;
 
   return (
-    <div style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.84)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
+    <div data-order-rail-compact-detail="true" style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
+      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.86)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
           <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.04, color: DT.textPrimary }}>{order.customer}</h3>
-          <span style={{ flex: "0 0 auto", border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</span>
+          <div style={{ flex: "0 0 auto", display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            {paymentLabel && <span style={{ border: `1px solid ${paymentStageTone(order.paymentStage) === "warn" ? "rgba(154,91,18,0.24)" : "rgba(12,124,122,0.20)"}`, background: paymentStageTone(order.paymentStage) === "warn" ? "rgba(154,91,18,0.08)" : DT.tealSoft, color: paymentStageTone(order.paymentStage) === "warn" ? "#9a5b12" : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{paymentLabel}</span>}
+            <span title={`${trust.detail} ${trust.source}`} style={{ border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{trust.label}</span>
+            <span style={{ border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</span>
+          </div>
         </div>
         <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800, lineHeight: 1.3 }}>{nextOrderPrompt(order)}</div>
+        <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 9.5, color: trustStyle.color, fontWeight: 850, lineHeight: 1.25 }}>{trust.detail} · {trust.source}</div>
         <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <MiniFact label="Due" value={`${formatShortDate(order.shipDate)} · ${dueLabel(order)}`} />
           <MiniFact label="Item" value={orderItemLabel(order)} />
+          <MiniFact label="Current" value={activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} />
+          <MiniFact label="Payment" value={paymentLabel || "No Supabase payment stage"} />
           <MiniFact label="Next" value={nextJobTask?.title ?? nextPlanTask?.text ?? "No task set"} />
-          <MiniFact label="Progress" value={`${orderProgressPct(order)}% · ${order.stepNote || "No step"}`} />
+          <MiniFact label="Tasks" value={`${openJobTasks.length + openPlanTasks.length} open · ${doneJobTasks.length + donePlanTasks.length} done`} />
+          <MiniFact label="QC / dispatch" value={`${qcDone}/${qcItems.length} · ${dispatch.label}`} />
         </div>
-        <button
-          type="button"
-          onClick={onOpen}
-          style={{ marginTop: 9, width: "100%", border: "1px solid rgba(12,124,122,0.24)", background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 20px rgba(12,124,122,0.12)" }}
-        >
-          Open order
-        </button>
+	        <button
+	          type="button"
+	          onClick={onOpen}
+	          style={{ marginTop: 12, width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 950, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
+	        >
+	          Open full order details
+	        </button>
         <button
           type="button"
           onClick={() => onMarkComplete(order)}
@@ -2234,18 +3446,120 @@ function OrderRailDetail({
         </button>
         {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
       </div>
+
+      <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.80)", borderRadius: 10, padding: "9px 10px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+          <div>
+            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
+            <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Job tasks</div>
+          </div>
+          <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{workflow.tasks.length}</span>
+        </div>
+        <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(247,249,248,0.82)", borderRadius: 10, padding: 8 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, marginBottom: 6 }}>Quick add order task</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 76px", gap: 6 }}>
+            <select value={selectedDraftAction} onChange={(event) => setDraftAction(event.target.value)} style={compactSelectStyle()}>
+              {productionTaskOptions.length > 0 && (
+                <optgroup label="Production flow">
+                  {productionTaskOptions.map((option, optionIndex) => <option key={option.label} value={option.label}>{numberedJobTaskOptionLabel(option.label, optionIndex)}</option>)}
+                </optgroup>
+              )}
+              <optgroup label="Support">
+                {supportTaskOptions.map((option, optionIndex) => <option key={option.label} value={option.label}>{numberedJobTaskOptionLabel(option.label, productionTaskOptions.length + optionIndex)}</option>)}
+              </optgroup>
+            </select>
+            <select value={draftOwner} onChange={(event) => setDraftOwner(event.target.value as WorkshopPerson)} style={compactSelectStyle()}>
+              <option value="Nick">Nick</option>
+              <option value="Dylan">Dylan</option>
+              <option value="Guido">Guido</option>
+            </select>
+          </div>
+          <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: selectedDraftAction === "Custom" ? "minmax(0,1fr) 108px" : "1fr", gap: 6 }}>
+            {selectedDraftAction === "Custom" && <input value={draftCustom} onChange={(event) => setDraftCustom(event.target.value)} placeholder="Write task" style={compactInputStyle()} />}
+            <input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} style={compactInputStyle()} />
+          </div>
+          <button
+            type="button"
+            onClick={addWorkflowTask}
+            disabled={addDisabled}
+            title="Add task to job"
+            style={{ marginTop: 7, width: "100%", border: `1px solid ${addDisabled ? DT.border : "rgba(12,124,122,0.18)"}`, background: addDisabled ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: addDisabled ? DT.textFaint : DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: addDisabled ? "not-allowed" : "pointer" }}
+          >
+            Add task to job
+          </button>
+        </div>
+        <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
+          {visibleWorkflowTasks.length === 0 ? (
+            <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>No job tasks saved for this order yet.</div>
+          ) : visibleWorkflowTasks.map((task) => {
+            const done = Boolean(task.done);
+            return (
+              <div key={task.id} data-order-workflow-task-card="order-workflow-task-card" style={compactTaskCardStyle(done)}>
+                <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0,1fr)", gap: 7, alignItems: "start" }}>
+                  <input
+                    type="checkbox"
+                    checked={done}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      if (checked) {
+                        const checkboxRect = event.currentTarget.getBoundingClientRect();
+                        const cardElement = event.currentTarget.closest("[data-order-workflow-task-card]") as HTMLElement | null;
+                        onWorkflowTaskDoneToggle?.(checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
+                      }
+                      updateWorkflowTask(task.id, {
+                        done: checked,
+                        completedAt: checked ? new Date().toISOString() : null,
+                        completedBy: checked ? (task.completedBy || task.owner) : "",
+                      });
+                    }}
+                    style={{ marginTop: 7 }}
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <input
+                      aria-label="Edit job task"
+                      value={task.title}
+                      onChange={(event) => updateWorkflowTask(task.id, { title: event.target.value })}
+                      style={{ ...compactInputStyle(done), fontWeight: 900, textDecoration: done ? "line-through" : "none" }}
+                    />
+                    <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
+                      <PersonSelect value={task.owner} onChange={(value) => updateWorkflowTask(task.id, { owner: value })} workshopOnly />
+                      <input type="date" value={task.scheduledDate || ""} onChange={(event) => updateWorkflowTask(task.id, { scheduledDate: event.target.value })} style={compactInputStyle(done)} />
+                    </div>
+                    <input value={task.notes} onChange={(event) => updateWorkflowTask(task.id, { notes: event.target.value })} placeholder="Task notes" style={{ ...compactInputStyle(done), marginTop: 5, color: done ? DONE_TASK_VISUAL.text : DT.textMuted }} />
+                    <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontWeight: 850 }}>{done && task.completedAt ? `Done ${formatCompletedAt(task.completedAt)}` : task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Delete this task from this order?")) deleteWorkflowTask(task.id);
+                        }}
+                        aria-label="Delete job task"
+                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {workflow.tasks.length > visibleWorkflowTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Full order details for all job tasks</button>}
+        </div>
+      </div>
+
       <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 10px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Schedule</div>
-            <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Tasks on this order</div>
+            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Week schedule</div>
+            <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Tasks on board</div>
           </div>
           <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{planTasks.length}</span>
         </div>
         <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
-          {visibleTasks.length === 0 ? (
+          {visibleScheduleTasks.length === 0 ? (
             <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>No scheduled tasks found yet.</div>
-          ) : visibleTasks.map((task) => {
+          ) : visibleScheduleTasks.map((task) => {
             const done = Boolean(task.done);
             return (
               <div key={task.id} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? DONE_TASK_VISUAL.bg : DT.cardBg, borderRadius: 9, padding: "7px 8px" }}>
@@ -2253,13 +3567,13 @@ function OrderRailDetail({
                 <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, lineHeight: 1.25 }}>{task.dateLabel} · {PERSON_LABELS[task.person]}</div>
                 <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>
                   <button type="button" onClick={(event) => onPlanTaskDoneToggle(task, !done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.18)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
-                  <button type="button" onClick={() => onPlanTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit task</button>
+                  <button type="button" onClick={() => onPlanTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
                   {task.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(task)} style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Unlink</button>}
                 </div>
               </div>
             );
           })}
-          {planTasks.length > visibleTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Open full order for all tasks</button>}
+          {planTasks.length > visibleScheduleTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Full order details for all board tasks</button>}
         </div>
       </div>
     </div>
@@ -2274,11 +3588,11 @@ function OrderCommandPill({
   tone?: "neutral" | "good" | "warn" | "danger" | "teal";
 }) {
   const tones = {
-    neutral: { color: DT.textMuted, bg: "rgba(255,255,255,0.72)", border: DT.border },
-    good: { color: "#408048", bg: "rgba(64,128,72,0.10)", border: "rgba(64,128,72,0.22)" },
-    warn: { color: "#9a6a14", bg: "rgba(200,169,110,0.12)", border: "rgba(200,169,110,0.24)" },
-    danger: { color: "#922a23", bg: "rgba(146,42,35,0.08)", border: "rgba(146,42,35,0.18)" },
-    teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.18)" },
+    neutral: { color: TUESDAY_THEME.muted, bg: TUESDAY_THEME.surfaceClean, border: TUESDAY_THEME.line },
+    good: { color: TUESDAY_THEME.sage, bg: TUESDAY_THEME.sageSoft, border: "#ccddcc" },
+    warn: { color: TUESDAY_THEME.amber, bg: TUESDAY_THEME.amberSoft, border: TUESDAY_THEME.amberLine },
+    danger: { color: TUESDAY_THEME.clay, bg: TUESDAY_THEME.claySoft, border: TUESDAY_THEME.clayLine },
+    teal: { color: TUESDAY_THEME.teal, bg: TUESDAY_THEME.tealSoft, border: TUESDAY_THEME.tealLine },
   }[tone];
   return (
     <span style={{ border: `1px solid ${tones.border}`, background: tones.bg, color: tones.color, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, whiteSpace: "nowrap" }}>
@@ -2292,18 +3606,20 @@ function OrderCommandMetric({
   value,
   detail,
   tone = "neutral",
+  compact = false,
 }: {
   label: string;
   value: string;
   detail?: string;
   tone?: "neutral" | "good" | "warn" | "danger" | "teal";
+  compact?: boolean;
 }) {
-  const color = tone === "good" ? "#408048" : tone === "warn" ? "#9a6a14" : tone === "danger" ? "#922a23" : tone === "teal" ? DT.teal : DT.textPrimary;
+  const color = tone === "good" ? TUESDAY_THEME.sage : tone === "warn" ? TUESDAY_THEME.amber : tone === "danger" ? TUESDAY_THEME.clay : tone === "teal" ? TUESDAY_THEME.teal : TUESDAY_THEME.ink;
   return (
-    <div style={{ minWidth: 0, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "10px 11px" }}>
-      <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>{label}</div>
-      <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 16, lineHeight: 1.15, fontWeight: 950, color, overflowWrap: "anywhere" }}>{value}</div>
-      {detail && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 11, lineHeight: 1.3, color: DT.textMuted }}>{detail}</div>}
+    <div style={{ minWidth: 0, border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 10, padding: "14px 15px", boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+      <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>{label}</div>
+      <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: compact ? 16 : 20, lineHeight: 1.12, fontWeight: 950, color, overflowWrap: "anywhere" }}>{value}</div>
+      {detail && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 12, lineHeight: 1.3, color: TUESDAY_THEME.muted }}>{detail}</div>}
     </div>
   );
 }
@@ -2320,11 +3636,11 @@ function OrderCommandSection({
   children: ReactNode;
 }) {
   return (
-    <section data-order-command-section={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 12, padding: 13 }}>
+    <section data-order-command-section={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
         <div style={{ minWidth: 0 }}>
-          {eyebrow && <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>{eyebrow}</div>}
-          <div style={{ marginTop: eyebrow ? 2 : 0, fontFamily: DT.sans, fontSize: 15, lineHeight: 1.2, color: DT.textPrimary, fontWeight: 950 }}>{title}</div>
+          {eyebrow && <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>{eyebrow}</div>}
+          <div style={{ marginTop: eyebrow ? 2 : 0, fontFamily: DT.sans, fontSize: 17, lineHeight: 1.18, color: TUESDAY_THEME.ink, fontWeight: 950 }}>{title}</div>
         </div>
         {action}
       </div>
@@ -2369,6 +3685,131 @@ function RepairNotesPanel({
   );
 }
 
+function useOrderCustomerMirror(order: UiOrder) {
+  const [mirror, setMirror] = useState<OrderCustomerMirror | null>(null);
+  const [documents, setDocuments] = useState<OrderDocument[]>([]);
+  const [status, setStatus] = useState("Loading customer mirror...");
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({ mondayOrderId: String(order.id) });
+    if (order.xeroInvoiceNumber) params.set("invoiceNumber", order.xeroInvoiceNumber);
+    fetch(`/api/production/order-customer-mirror?${params.toString()}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({})) as OrderCustomerMirrorApiResponse;
+        if (!response.ok || data.ok === false) throw new Error(data.error || "Customer mirror unavailable");
+        if (!cancelled) {
+          setMirror(data.mirror ?? null);
+          setDocuments(data.documents ?? []);
+          setStatus(data.disabledReason || "");
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setStatus(error instanceof Error ? error.message : "Customer mirror unavailable");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.id, order.xeroInvoiceNumber]);
+
+  return { mirror, documents, status };
+}
+
+function documentKindLabel(kind: OrderDocument["kind"]) {
+  if (kind === "xero_invoice_pdf") return "Invoice";
+  if (kind === "drawing") return "Drawing";
+  if (kind === "screenshot") return "Image";
+  if (kind === "customer_attachment") return "Attachment";
+  return "Document";
+}
+
+function formatBytes(value: number | null) {
+  if (!value || value < 0) return "";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function CustomerMirrorPanel({ order }: { order: UiOrder }) {
+  const { mirror, documents, status } = useOrderCustomerMirror(order);
+  const hasMirror = Boolean(mirror);
+  const visibleTimeline = mirror?.timeline.slice(0, 4) ?? [];
+  const sourceLabel = order.xeroInvoiceNumber ? `Xero email · ${order.xeroInvoiceNumber}` : "Customer source";
+  const confidenceTone = mirror?.confidence === "high" ? "good" : mirror?.confidence === "low" ? "warn" : "teal";
+  return (
+    <OrderCommandSection
+      eyebrow="Customer"
+      title="Customer mirror"
+      action={<OrderCommandPill label={hasMirror ? `${documents.length} docs` : "No mirror"} tone={hasMirror ? confidenceTone : "warn"} />}
+    >
+      {!hasMirror && (
+        <div style={{ border: "1px solid rgba(154,91,18,0.18)", background: "rgba(250,204,21,0.10)", color: "#9a5b12", borderRadius: 10, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, fontWeight: 850 }}>
+          {status || "No customer mirror has been backfilled for this order yet."}
+        </div>
+      )}
+      {hasMirror && mirror && (
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ border: "1px solid rgba(12,124,122,0.18)", background: "rgba(237,248,247,0.48)", borderRadius: 10, padding: "9px 10px" }}>
+            <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.35, color: DT.textPrimary, fontWeight: 900 }}>{mirror.customerKnownSummary}</div>
+            <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {mirror.leadTimePromise && <OrderCommandPill label={mirror.leadTimePromise} tone="warn" />}
+              <OrderCommandPill label={`Source: ${sourceLabel}`} tone="neutral" />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+            {mirror.approvedPaidForSummary && <MiniFact label="Approved / paid for" value={mirror.approvedPaidForSummary} />}
+            {mirror.currentCustomerKnownSpec && <MiniFact label="Customer-known spec" value={mirror.currentCustomerKnownSpec} />}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {documents.map((document) => (
+              <a
+                key={document.id}
+                href={document.openUrl}
+                target="_blank"
+                rel="noreferrer"
+                title={`${document.filename}${document.sha256 ? ` · sha256 ${document.sha256}` : ""}`}
+                style={{ maxWidth: "100%", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.82)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+              >
+                {documentKindLabel(document.kind)} · {document.label}{document.byteSize ? ` · ${formatBytes(document.byteSize)}` : ""}
+              </a>
+            ))}
+            {documents.length === 0 && <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>No documents uploaded yet.</span>}
+          </div>
+          <details>
+            <summary style={{ listStyle: "none", cursor: "pointer", fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950 }}>Timeline, profile, sources</summary>
+            <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
+              {visibleTimeline.length > 0 && (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {visibleTimeline.map((entry, index) => (
+                    <div key={`${entry.title}:${index}`} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "7px 8px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
+                        <span style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, fontWeight: 950 }}>{entry.title}</span>
+                        <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textFaint, fontWeight: 850 }}>{formatShortDate(entry.date)}</span>
+                      </div>
+                      <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, lineHeight: 1.3, fontWeight: 800 }}>{entry.detail}</div>
+                      <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9, color: DT.textFaint, fontWeight: 850 }}>{entry.source}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(mirror.communicationStyleSummary || mirror.communicationStyleTags.length > 0 || mirror.quirksIssues.length > 0) && (
+                <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "7px 8px" }}>
+                  {mirror.communicationStyleSummary && <div style={{ fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, lineHeight: 1.35, fontWeight: 850 }}>{mirror.communicationStyleSummary}</div>}
+                  {mirror.communicationStyleTags.length > 0 && <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>{mirror.communicationStyleTags.map((tag) => <OrderCommandPill key={tag} label={tag} tone="neutral" />)}</div>}
+                  {mirror.quirksIssues.length > 0 && <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, color: "#9a5b12", lineHeight: 1.3, fontWeight: 850 }}>{mirror.quirksIssues.join(" · ")}</div>}
+                </div>
+              )}
+              <div style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textFaint, lineHeight: 1.3, fontWeight: 800 }}>
+                Confidence: {mirror.confidence}. Updated {formatCompletedAt(mirror.updatedAt)}. Claims should trace to Gmail, Xero, order events, or manual source metadata.
+              </div>
+            </div>
+          </details>
+        </div>
+      )}
+    </OrderCommandSection>
+  );
+}
+
 function OrderOverviewOverlay({
   order,
   planTasks,
@@ -2395,7 +3836,12 @@ function OrderOverviewOverlay({
   const mode = deliveryMode(order);
   const freightBookBy = addWorkingDays(order.shipDate, -mode.workingDays);
   const { workflow, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
-  const progress = orderProgressPct(order);
+  const productionStepIndex = derivedProductionStepIndex(order, workflow.tasks, planTasks);
+  const activeProductionStep = productionStepForOrder(order, productionStepIndex);
+  const qcItems = dispatchQcItems(order);
+  const qcDone = qcItems.filter((label) => workflow.qc[label]?.done).length;
+  const qcTotal = qcItems.length;
+  const progress = orderProgressPct(order, productionStepIndex, qcTotal > 0 ? qcDone / qcTotal : 0);
   const openJobTasks = workflow.tasks.filter((task) => !task.done);
   const doneJobTasks = workflow.tasks.length - openJobTasks.length;
   const openPlanTasks = planTasks.filter((task) => !task.done).length;
@@ -2403,8 +3849,14 @@ function OrderOverviewOverlay({
   const openTaskCount = openJobTasks.length + openPlanTasks;
   const doneTaskCount = doneJobTasks + donePlanTasks;
   const totalTaskCount = workflow.tasks.length + planTasks.length;
-  const qcDone = dispatchQcItems(order).filter((label) => workflow.qc[label]?.done).length;
-  const qcTotal = dispatchQcItems(order).length;
+  const nextJobTask = openJobTasks[0] ?? null;
+  const orderedPlanTasks = [...planTasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return a.sortKey.localeCompare(b.sortKey);
+  });
+  const nextPlanTask = orderedPlanTasks.find((task) => !task.done) ?? null;
+  const nextAction = nextJobTask?.title ?? nextPlanTask?.text ?? nextOrderPrompt(order);
+  const nextOwner = nextJobTask?.owner || (nextPlanTask ? PERSON_LABELS[nextPlanTask.person] : "");
   const collection = collectionSummary(workflow);
   const invoiceExpectation = invoiceExpectationForOrder(order);
   const invoiceNumber = workflow.xeroInvoiceNumber || order.xeroInvoiceNumber || null;
@@ -2412,7 +3864,10 @@ function OrderOverviewOverlay({
   const invoiceHasNumber = Boolean(invoiceNumber);
   const invoiceTone = !invoiceExpectation.requiresInvoice ? "neutral" : invoiceHasXeroLink ? "teal" : invoiceHasNumber ? "warn" : "danger";
   const invoiceLabel = !invoiceExpectation.requiresInvoice ? invoiceExpectation.label : invoiceHasXeroLink ? "Linked" : invoiceHasNumber ? "Number saved" : "Needed";
+  const paymentLabel = paymentStageBadge(order);
+  const paymentDetail = order.paymentNextAction || (paymentLabel ? "Payment info is synced for reference." : "No workshop payment action.");
   const productionStatus = order.rawMondayStatus || order.status || "Not set";
+  const completeInTuesday = workflow.collection.status === "collected" || (qcTotal > 0 && qcDone === qcTotal && isCompleteOrder(order));
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -2431,7 +3886,7 @@ function OrderOverviewOverlay({
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 180,
+        zIndex: 1300,
         background: "rgba(25,23,20,0.58)",
         backdropFilter: "blur(6px)",
         display: "flex",
@@ -2450,9 +3905,9 @@ function OrderOverviewOverlay({
           maxHeight: isNarrow ? undefined : "calc(100vh - 48px)",
           overflowY: "auto",
           borderRadius: isNarrow ? 0 : 16,
-          border: isNarrow ? "none" : `1px solid rgba(0,0,0,0.10)`,
-          background: "rgba(247,246,242,0.98)",
-          boxShadow: "0 28px 70px rgba(20,20,18,0.30)",
+          border: isNarrow ? "none" : `1px solid ${TUESDAY_THEME.lineStrong}`,
+          background: TUESDAY_THEME.surfaceSoft,
+          boxShadow: TUESDAY_THEME.shadow,
         }}
         data-order-command-center="desktop-order-command-center"
       >
@@ -2465,31 +3920,37 @@ function OrderOverviewOverlay({
             outline-offset: 2px;
           }
         `}</style>
-        <div style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(255,255,255,0.94)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "14px 14px 12px" : "18px 22px 14px" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(255,253,249,0.96)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${TUESDAY_THEME.line}`, padding: isNarrow ? "12px 14px 11px" : "16px 24px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start" }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 27 : 34, lineHeight: 1.02, color: DT.textPrimary }}>{order.customer}</h2>
+                <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 28 : 34, lineHeight: 1, color: TUESDAY_THEME.ink, fontWeight: 500 }}>{order.customer}</h2>
                 <OrderCommandPill label={orderItemLabel(order)} />
                 <OrderCommandPill label={health.label} tone={orderHealth(order) === "blocked" ? "danger" : orderHealth(order) === "watch" ? "warn" : "good"} />
-                <OrderCommandPill label={`Xero: ${invoiceLabel}`} tone={invoiceTone} />
+                {completeInTuesday && <OrderCommandPill label="Complete in Tuesday" tone="good" />}
+                <OrderCommandPill label={`Source: ${invoiceLabel}`} tone={invoiceTone} />
+                {paymentLabel && <OrderCommandPill label={paymentLabel} tone={paymentStageTone(order.paymentStage)} />}
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textMuted }}>
                 <span>Due {formatShortDate(order.shipDate)}</span>
                 <span>{dueLabel(order)}</span>
                 <span>{formatCurrencyShort(order.value)}</span>
-                <span>Order record + Tuesday workflow</span>
+                <span>Next: {nextAction}</span>
+                {nextOwner && <span>Owner: {nextOwner}</span>}
                 {workflowStatus && <span>{workflowStatus}</span>}
               </div>
             </div>
             <div style={{ flex: "0 0 auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
               <button
                 type="button"
-                onClick={() => onMarkComplete(order)}
+                onClick={() => {
+                  if (!completeInTuesday) onMarkComplete(order);
+                }}
+                disabled={completeInTuesday}
                 title="Hide this order from active Tuesday views without changing Monday"
-                style={{ border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+                style={{ border: `1px solid ${DT.border}`, background: completeInTuesday ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.74)", color: completeInTuesday ? DT.sage : DT.textMuted, borderRadius: 999, padding: "8px 11px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: completeInTuesday ? "default" : "pointer" }}
               >
-                Mark complete in Tuesday
+                {completeInTuesday ? "Complete in Tuesday" : "Hide from active"}
               </button>
               <button
                 type="button"
@@ -2500,35 +3961,39 @@ function OrderOverviewOverlay({
               </button>
             </div>
           </div>
-          <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ flex: 1, height: 5, background: "rgba(0,0,0,0.045)", borderRadius: 999, overflow: "hidden" }}>
-              <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: DT.teal, transition: "width 450ms ease" }} />
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ flex: 1, height: 5, background: "rgba(40,35,31,0.07)", borderRadius: 999, overflow: "hidden" }}>
+              <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: TUESDAY_THEME.teal, transition: "width 450ms ease" }} />
             </div>
             <span style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textMuted, minWidth: 34, textAlign: "right" }}>{progress}%</span>
           </div>
         </div>
-        <div style={{ padding: isNarrow ? 14 : 18, display: "grid", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr 1fr" : "repeat(4, minmax(0, 1fr))", gap: 9 }}>
-            <OrderCommandMetric label="Production status" value={productionStatus} detail={orderHealthReason(order)} tone={orderHealth(order) === "blocked" ? "danger" : orderHealth(order) === "watch" ? "warn" : "teal"} />
+        <div style={{ padding: isNarrow ? 14 : 22, display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr 1fr" : "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+              <OrderCommandMetric label="Stage" value={activeProductionStep?.label ?? productionStatus} detail={orderHealthReason(order)} tone={orderHealth(order) === "blocked" ? "danger" : orderHealth(order) === "watch" ? "warn" : "teal"} />
+            <OrderCommandMetric label="Next task" value={nextAction} detail={nextOwner ? `Owner: ${nextOwner}` : "No owner set"} tone={openTaskCount ? "teal" : "neutral"} compact />
             <OrderCommandMetric label="Tasks" value={`${openTaskCount} open`} detail={`${doneTaskCount} done · ${totalTaskCount} total`} tone={openTaskCount ? "teal" : "neutral"} />
-            <OrderCommandMetric label="QC" value={`${qcDone}/${qcTotal}`} detail="Dispatch checklist" tone={qcDone === qcTotal ? "good" : "warn"} />
             <OrderCommandMetric label="Dispatch" value={collection.label} detail={workflow.collection.by || mode.label} tone={collection.tone} />
+            <OrderCommandMetric label="QC" value={`${qcDone}/${qcTotal}`} detail="Final check before leaving" tone={qcDone === qcTotal ? "good" : "warn"} />
+            <OrderCommandMetric label="Payment" value={paymentLabel || "No action"} detail={paymentDetail} tone={paymentStageTone(order.paymentStage)} compact />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(0, 1.03fr) minmax(420px, 0.97fr)", gap: isNarrow ? 12 : 16, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(280px, 0.95fr) minmax(320px, 1.05fr) minmax(380px, 1.25fr)", gap: isNarrow ? 12 : 14, alignItems: "start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-              <WorkshopSpec order={order} packLabel={mode.label} packDetail={mode.detail} freightBookBy={freightBookBy} freightWorkingDays={mode.workingDays} xeroUrl={order.xero} xeroInvoiceNumber={invoiceNumber} onInvoiceNumberChange={(nextInvoiceNumber) => updateWorkflow((state) => ({ ...state, xeroInvoiceNumber: nextInvoiceNumber }))} prominent />
-              <RepairNotesPanel order={order} workflow={workflow} onChange={updateWorkflow} />
-              <OrderCommandSection eyebrow="Order record" title="Production flow">
-                <OrderStepTimeline order={order} />
-              </OrderCommandSection>
+              <WorkshopSpec key={`${order.id}:${invoiceNumber ?? ""}`} order={order} packLabel={mode.label} packDetail={mode.detail} freightBookBy={freightBookBy} freightWorkingDays={mode.workingDays} xeroUrl={order.xero} xeroInvoiceNumber={invoiceNumber} onInvoiceNumberChange={(nextInvoiceNumber) => updateWorkflow((state) => ({ ...state, xeroInvoiceNumber: nextInvoiceNumber }))} prominent afterSpec={<QcChecklist order={order} workflow={workflow} onChange={updateWorkflow} compact includePhotos />} />
+              <CustomerMirrorPanel order={order} />
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <OrderTasksPanel key={order.id} order={order} workflow={workflow} planTasks={planTasks} onWorkflowChange={updateWorkflow} onPlanTaskEdit={onPlanTaskEdit} onPlanTaskDoneToggle={onPlanTaskDoneToggle} onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle} onRemoveTaskLink={onRemoveTaskLink} />
+              <OrderCommandSection eyebrow="Order record" title="Production flow">
+                <OrderStepTimeline order={order} currentStepIndex={productionStepIndex} />
+              </OrderCommandSection>
               <CollectionControl workflow={workflow} status={workflowStatus} onChange={updateWorkflow} />
-              <QcChecklist order={order} workflow={workflow} onChange={updateWorkflow} />
-              <OrderPhotoTray orderId={order.id} />
+              <RepairNotesPanel order={order} workflow={workflow} onChange={updateWorkflow} />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+              <OrderTasksPanel key={order.id} order={order} workflow={workflow} planTasks={planTasks} productionStepIndex={productionStepIndex} onWorkflowChange={updateWorkflow} onPlanTaskEdit={onPlanTaskEdit} onPlanTaskDoneToggle={onPlanTaskDoneToggle} onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle} onRemoveTaskLink={onRemoveTaskLink} />
             </div>
           </div>
         </div>
@@ -2537,17 +4002,18 @@ function OrderOverviewOverlay({
   );
 }
 
-function OrderStepTimeline({ order }: { order: UiOrder }) {
+function OrderStepTimeline({ order, currentStepIndex = order.currentStep }: { order: UiOrder; currentStepIndex?: number }) {
   const steps = stepsForOrder(order);
   const repair = order.rawMondayTopPanel === "Repair";
   if (steps.length === 0) {
     return <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>No production steps available for this item yet.</div>;
   }
+  const clampedStepIndex = Math.max(0, Math.min(currentStepIndex, steps.length - 1));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {steps.map((step, index) => {
-        const done = index < order.currentStep;
-        const active = index === order.currentStep;
+        const done = index < clampedStepIndex;
+        const active = index === clampedStepIndex;
         const isRepair = repair && active;
         const fill = isRepair ? "#d97706" : DT.teal;
         const taskLabel = suggestedJobTaskLabelForStep(step, order);
@@ -2571,7 +4037,7 @@ function OrderStepTimeline({ order }: { order: UiOrder }) {
             </div>
             <div style={{ padding: "4px 0", flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 13, fontFamily: DT.sans, fontWeight: active ? 800 : done ? 650 : 500, color: active ? fill : done ? DT.textSecondary : DT.textFaint, textDecoration: done && !active ? "line-through" : "none", textDecorationColor: done ? "rgba(0,0,0,0.12)" : "transparent" }}>
+                <span style={{ fontSize: 13, fontFamily: DT.sans, fontWeight: active ? 800 : done ? 650 : 500, color: active ? fill : done ? DT.textSecondary : DT.textFaint, textDecorationLine: done && !active ? "line-through" : "none", textDecorationColor: done ? "rgba(0,0,0,0.12)" : "transparent" }}>
                   {step.label}
                 </span>
                 {showTaskLabel && <span style={{ border: "1px solid rgba(12,124,122,0.16)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850 }}>Task: {taskLabel}</span>}
@@ -2612,10 +4078,10 @@ function CollectionControl({
     collection.by || null,
   ].filter(Boolean).join(" · ");
   return (
-    <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 12, padding: 13 }}>
+    <div style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Tuesday</div>
           <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 15, color: DT.textPrimary, fontWeight: 950 }}>Collection / dispatch</div>
         </div>
         {status && <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{status}</span>}
@@ -2703,6 +4169,7 @@ function OrderTasksPanel({
   order,
   workflow,
   planTasks,
+  productionStepIndex = order.currentStep,
   onWorkflowChange,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
@@ -2712,6 +4179,7 @@ function OrderTasksPanel({
   order: UiOrder;
   workflow: OrderWorkflowState;
   planTasks: OrderJourneyTask[];
+  productionStepIndex?: number;
   onWorkflowChange: (patch: (state: OrderWorkflowState) => OrderWorkflowState) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
@@ -2720,14 +4188,16 @@ function OrderTasksPanel({
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const taskOptions = jobTaskOptionsForOrder(order);
-  const defaultDraftAction = defaultJobTaskActionForOrder(order, taskOptions);
+  const defaultDraftAction = defaultJobTaskActionForOrder(order, taskOptions, productionStepIndex);
   const productionTaskOptions = taskOptions.filter((option) => option.group === "production");
   const supportTaskOptions = taskOptions.filter((option) => option.group === "support");
-  const activeProductionStep = currentProductionStepForOrder(order);
+  const activeProductionStep = productionStepForOrder(order, productionStepIndex);
   const [draftAction, setDraftAction] = useState<string>(defaultDraftAction);
+  const lastAutoDraftAction = useRef(defaultDraftAction);
   const [draftCustom, setDraftCustom] = useState("");
   const [draftOwner, setDraftOwner] = useState<WorkshopPerson>("Nick");
   const [draftDate, setDraftDate] = useState(today);
+  const [editingWorkflowTaskId, setEditingWorkflowTaskId] = useState<string | null>(null);
   const selectedDraftAction = taskOptions.some((option) => option.label === draftAction) ? draftAction : defaultDraftAction;
   const draftTitle = selectedDraftAction === "Custom" ? draftCustom.trim() : selectedDraftAction;
   const orderedWorkflowTasks = [...workflow.tasks].sort((a, b) => {
@@ -2741,6 +4211,14 @@ function OrderTasksPanel({
   const openCount = workflow.tasks.filter((task) => !task.done).length + planTasks.filter((task) => !task.done).length;
   const doneCount = workflow.tasks.length + planTasks.length - openCount;
   const totalCount = workflow.tasks.length + planTasks.length;
+
+  useEffect(() => {
+    setDraftAction((current) => {
+      if (current === lastAutoDraftAction.current) return defaultDraftAction;
+      return current;
+    });
+    lastAutoDraftAction.current = defaultDraftAction;
+  }, [defaultDraftAction]);
 
   function updateWorkflowTask(id: string, patch: Partial<WorkflowTask>) {
     onWorkflowChange((state) => ({
@@ -2801,10 +4279,10 @@ function OrderTasksPanel({
   }
 
   return (
-    <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 12, padding: 13 }}>
+    <div style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Tuesday</div>
           <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 16, color: DT.textPrimary, fontWeight: 950 }}>Tasks</div>
           <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, lineHeight: 1.35 }}>
             Current step: {activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} · suggested next: {defaultDraftAction}
@@ -2813,7 +4291,8 @@ function OrderTasksPanel({
         <OrderCommandPill label={`${openCount} open · ${doneCount} done`} tone={openCount ? "teal" : "neutral"} />
       </div>
 
-      <div style={{ marginTop: 10, border: `1px solid ${DT.border}`, background: "rgba(247,249,248,0.82)", borderRadius: 10, padding: 9 }}>
+      <div style={{ marginTop: 10, border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceSoft, borderRadius: 10, padding: 10 }}>
+        <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, marginBottom: 7 }}>Add next task</div>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 88px", gap: 7 }}>
           <select
             value={selectedDraftAction}
@@ -2822,11 +4301,11 @@ function OrderTasksPanel({
           >
             {productionTaskOptions.length > 0 && (
               <optgroup label="Production flow">
-                {productionTaskOptions.map((option) => <option key={option.label} value={option.label}>{option.label}</option>)}
+                {productionTaskOptions.map((option, optionIndex) => <option key={option.label} value={option.label}>{numberedJobTaskOptionLabel(option.label, optionIndex)}</option>)}
               </optgroup>
             )}
             <optgroup label="Support">
-              {supportTaskOptions.map((option) => <option key={option.label} value={option.label}>{option.label}</option>)}
+              {supportTaskOptions.map((option, optionIndex) => <option key={option.label} value={option.label}>{numberedJobTaskOptionLabel(option.label, productionTaskOptions.length + optionIndex)}</option>)}
             </optgroup>
           </select>
           <select
@@ -2836,6 +4315,7 @@ function OrderTasksPanel({
           >
             <option value="Nick">Nick</option>
             <option value="Dylan">Dylan</option>
+            <option value="Guido">Guido</option>
           </select>
         </div>
         <div style={{ marginTop: 7, display: "grid", gridTemplateColumns: selectedDraftAction === "Custom" ? "minmax(0, 1fr) 130px auto" : "minmax(0, 1fr) auto", gap: 7, alignItems: "center" }}>
@@ -2869,6 +4349,7 @@ function OrderTasksPanel({
         {totalCount === 0 && <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, lineHeight: 1.35 }}>No tasks saved for this order yet.</div>}
         {orderedWorkflowTasks.map((task) => {
           const done = Boolean(task.done);
+          const editing = editingWorkflowTaskId === task.id;
           return (
             <div key={`workflow-${task.id}`} data-order-workflow-task-card="order-workflow-task-card" style={taskCardStyle(done)}>
               <input
@@ -2890,42 +4371,59 @@ function OrderTasksPanel({
                 style={{ marginTop: 7 }}
               />
               <div style={{ minWidth: 0 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "center" }}>
-                  <input
-                    aria-label="Edit job task"
-                    value={task.title}
-                    onChange={(event) => updateWorkflowTask(task.id, { title: event.target.value })}
-                    style={{ width: "100%", border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? "rgba(255,255,255,0.50)" : DT.cardBg, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textDecoration: done ? "line-through" : "none", outline: "none" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm("Delete this task from this order?")) deleteWorkflowTask(task.id);
-                    }}
-                    aria-label="Delete job task"
-                    style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
-                  >
-                    Delete
-                  </button>
-                </div>
-                <div style={{ marginTop: 5, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : "rgba(12,124,122,0.16)"}`, background: done ? "rgba(255,255,255,0.45)" : DT.tealSoft, color: done ? DONE_TASK_VISUAL.text : DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>Added</span>
-                  <PersonSelect value={task.owner} onChange={(value) => updateWorkflowTask(task.id, { owner: value })} />
-                  <input
-                    type="date"
-                    value={task.scheduledDate || ""}
-                    onChange={(event) => updateWorkflowTask(task.id, { scheduledDate: event.target.value })}
-                    style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
-                  />
-                  {task.done && <PersonSelect value={task.completedBy} onChange={(value) => updateWorkflowTask(task.id, { completedBy: value })} />}
-                  {task.completedAt && <span style={taskMetaStyle(done)}>Done {formatCompletedAt(task.completedAt)}</span>}
-                </div>
-                <input
-                  value={task.notes}
-                  onChange={(event) => updateWorkflowTask(task.id, { notes: event.target.value })}
-                  placeholder="Task notes"
-                  style={{ marginTop: 5, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
-                />
+                {editing ? (
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "center" }}>
+                      <input
+                        aria-label="Edit job task"
+                        value={task.title}
+                        onChange={(event) => updateWorkflowTask(task.id, { title: event.target.value })}
+                        style={{ width: "100%", border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? "rgba(255,255,255,0.50)" : DT.cardBg, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textDecoration: done ? "line-through" : "none", outline: "none" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm("Delete this task from this order?")) deleteWorkflowTask(task.id);
+                        }}
+                        aria-label="Delete job task"
+                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <div style={{ marginTop: 5, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : "rgba(12,124,122,0.16)"}`, background: done ? "rgba(255,255,255,0.45)" : DT.tealSoft, color: done ? DONE_TASK_VISUAL.text : DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>Added</span>
+                      <PersonSelect value={task.owner} onChange={(value) => updateWorkflowTask(task.id, { owner: value })} workshopOnly />
+                      <input
+                        type="date"
+                        value={task.scheduledDate || ""}
+                        onChange={(event) => updateWorkflowTask(task.id, { scheduledDate: event.target.value })}
+                        style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+                      />
+                      {task.done && <PersonSelect value={task.completedBy} onChange={(value) => updateWorkflowTask(task.id, { completedBy: value })} />}
+                      {task.completedAt && <span style={taskMetaStyle(done)}>Done {formatCompletedAt(task.completedAt)}</span>}
+                    </div>
+                    <input
+                      value={task.notes}
+                      onChange={(event) => updateWorkflowTask(task.id, { notes: event.target.value })}
+                      placeholder="Task notes"
+                      style={{ marginTop: 5, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+                    />
+                    <button type="button" onClick={() => setEditingWorkflowTaskId(null)} style={{ marginTop: 6, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Done editing</button>
+                  </>
+                ) : (
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.22, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{task.title}</div>
+                      <div style={{ marginTop: 4, ...taskMetaStyle(done) }}>
+                        {task.owner || "No owner"} · {task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}
+                        {task.completedAt ? ` · Done ${formatCompletedAt(task.completedAt)}` : ""}
+                      </div>
+                      {task.notes && <div style={{ marginTop: 4, ...taskMetaStyle(done) }}>{task.notes}</div>}
+                    </div>
+                    <button type="button" onClick={() => setEditingWorkflowTaskId(task.id)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -2981,7 +4479,7 @@ function OrderTasksPanel({
                     )}
                   </div>
                 </div>
-                <div style={{ marginTop: 5, ...taskMetaStyle(done) }}>{task.dateLabel} · {DAY_LABELS[task.day]} · {PERSON_LABELS[task.person]} · {task.rowName}</div>
+                <div style={{ marginTop: 5, ...taskMetaStyle(done) }}>{task.dateLabel} · {PERSON_LABELS[task.person]} · {task.rowName}</div>
                 {task.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.notes}</div>}
               </div>
             </div>
@@ -2992,18 +4490,19 @@ function OrderTasksPanel({
   );
 }
 
-function PersonSelect({ value, onChange }: { value: WorkshopPerson; onChange: (value: WorkshopPerson) => void }) {
+function PersonSelect({ value, onChange, workshopOnly = false }: { value: WorkshopPerson; onChange: (value: WorkshopPerson) => void; workshopOnly?: boolean }) {
+  const selectValue = workshopOnly && value !== "Dylan" && value !== "Guido" ? "Nick" : value;
   return (
     <select
-      value={value}
+      value={selectValue}
       onChange={(event) => onChange(event.target.value as WorkshopPerson)}
       style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
     >
-      <option value="">By</option>
+      {!workshopOnly && <option value="">By</option>}
       <option value="Nick">Nick</option>
       <option value="Dylan">Dylan</option>
       <option value="Guido">Guido</option>
-      <option value="Other">Other</option>
+      {!workshopOnly && <option value="Other">Other</option>}
     </select>
   );
 }
@@ -3012,12 +4511,18 @@ function QcChecklist({
   order,
   workflow,
   onChange,
+  compact = false,
+  includePhotos = false,
 }: {
   order: UiOrder;
   workflow: OrderWorkflowState;
   onChange: (patch: (state: OrderWorkflowState) => OrderWorkflowState) => void;
+  compact?: boolean;
+  includePhotos?: boolean;
 }) {
   const items = dispatchQcItems(order);
+  const doneCount = items.filter((label) => workflow.qc[label]?.done).length;
+  const complete = items.length > 0 && doneCount === items.length;
   function toggle(label: string, checked: boolean) {
     onChange((state) => ({
       ...state,
@@ -3031,36 +4536,48 @@ function QcChecklist({
       },
     }));
   }
+  function markFinalPhotosUploaded() {
+    if (!items.includes("Final photos uploaded")) return;
+    toggle("Final photos uploaded", true);
+  }
   return (
-    <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 12, padding: 13 }}>
+    <div style={{ border: compact ? `1px solid ${complete ? "rgba(64,128,72,0.18)" : "rgba(154,91,18,0.18)"}` : `1px solid ${DT.border}`, background: compact ? (complete ? "rgba(64,128,72,0.06)" : "rgba(250,204,21,0.10)") : TUESDAY_THEME.surfaceClean, borderRadius: compact ? 10 : 12, padding: compact ? 8 : 12, boxShadow: compact ? "none" : "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
-          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 15, color: DT.textPrimary, fontWeight: 950 }}>QC</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>QC</div>
+          {!compact && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textMuted, fontWeight: 800 }}>Final checks before release</div>}
         </div>
-        <OrderCommandPill label={`${items.filter((label) => workflow.qc[label]?.done).length}/${items.length}`} tone={items.every((label) => workflow.qc[label]?.done) ? "good" : "warn"} />
+        <OrderCommandPill label={`${doneCount}/${items.length}`} tone={complete ? "good" : "warn"} />
       </div>
-      <div style={{ marginTop: 6, display: "grid", gap: 4 }}>
+      <div style={{ marginTop: compact ? 6 : 9, display: "grid", gap: compact ? 4 : 6 }}>
         {items.map((label) => {
           const item = workflow.qc[label] ?? { done: false, completedAt: null, completedBy: "" as WorkshopPerson };
+          const done = Boolean(item.done);
           return (
-            <div key={label} style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: 6, alignItems: "start", borderTop: "1px solid rgba(0,0,0,0.045)", paddingTop: 5 }}>
-              <input type="checkbox" checked={item.done} onChange={(event) => toggle(label, event.target.checked)} style={{ marginTop: 2 }} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 11, color: item.done ? DT.textMuted : DT.textPrimary, fontWeight: 800, lineHeight: 1.25 }}>{label}</div>
-                {item.done && (
-                  <div style={{ marginTop: 3, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                    <PersonSelect
-                      value={item.completedBy}
-                      onChange={(value) => onChange((state) => ({ ...state, qc: { ...state.qc, [label]: { ...item, completedBy: value } } }))}
-                    />
-                    <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textMuted }}>{formatCompletedAt(item.completedAt)}</span>
-                  </div>
-                )}
-              </div>
+            <div key={label} style={{ border: `1px solid ${done ? "rgba(64,128,72,0.18)" : DT.border}`, background: done ? "rgba(64,128,72,0.07)" : "rgba(255,255,255,0.70)", borderRadius: compact ? 8 : 10, padding: compact ? "5px 6px" : "7px 8px", display: "grid", gap: compact ? 3 : 5 }}>
+              <button
+                type="button"
+                onClick={() => toggle(label, !done)}
+                aria-pressed={done}
+                style={{ width: "100%", border: "none", background: "transparent", padding: 0, display: "grid", gridTemplateColumns: compact ? "18px minmax(0, 1fr) auto" : "22px minmax(0, 1fr) auto", gap: compact ? 5 : 7, alignItems: "center", textAlign: "left", cursor: "pointer" }}
+              >
+                <span style={{ width: compact ? 17 : 20, height: compact ? 17 : 20, borderRadius: 999, border: `1px solid ${done ? "rgba(64,128,72,0.30)" : DT.border}`, background: done ? "rgba(64,128,72,0.14)" : "rgba(255,255,255,0.88)", color: done ? "#408048" : DT.textFaint, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: compact ? 10 : 12, fontWeight: 950 }}>{done ? "✓" : ""}</span>
+                <span style={{ minWidth: 0, fontFamily: DT.sans, fontSize: compact ? 10.5 : 11.5, color: done ? DT.textSecondary : DT.textPrimary, fontWeight: 900, lineHeight: 1.15, overflowWrap: "anywhere" }}>{label}</span>
+                <span style={{ border: `1px solid ${done ? "rgba(64,128,72,0.18)" : DT.border}`, background: done ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.025)", color: done ? "#408048" : DT.textMuted, borderRadius: 999, padding: compact ? "1px 5px" : "2px 6px", fontFamily: DT.sans, fontSize: compact ? 8.5 : 9, fontWeight: 950 }}>{done ? "Done" : "Open"}</span>
+              </button>
+              {done && !compact && (
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", paddingLeft: 29 }}>
+                  <PersonSelect
+                    value={item.completedBy}
+                    onChange={(value) => onChange((state) => ({ ...state, qc: { ...state.qc, [label]: { ...item, completedBy: value } } }))}
+                  />
+                  <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 800 }}>{formatCompletedAt(item.completedAt)}</span>
+                </div>
+              )}
             </div>
           );
         })}
+        {includePhotos && <OrderPhotoTray orderId={order.id} embedded onPhotoUploaded={markFinalPhotosUploaded} />}
       </div>
     </div>
   );
@@ -3079,33 +4596,35 @@ type XeroProofInvoice = {
   lineItems?: Array<{ description: string; quantity?: number | null; unitAmount?: number | null; lineAmount?: number | null }>;
 };
 
+type XeroProofReadiness = { configured?: boolean; reason?: string; envNames?: string[] };
 type XeroProofState = {
   loading: boolean;
   invoice: XeroProofInvoice | null;
   error: string;
   notFound: boolean;
+  readiness: XeroProofReadiness | null;
 };
 
 function xeroPaymentLabel(invoice: XeroProofInvoice | null, loading: boolean, error: string, notFound: boolean, invoiceNumber: string | null | undefined, hasXeroUrl: boolean, invoiceExpected: boolean) {
   if (!invoiceExpected && !invoiceNumber && !hasXeroUrl) return "No invoice expected";
   if (!invoiceNumber && !hasXeroUrl) return "Invoice needed";
   if (loading) return "Checking Xero";
-  if (error) return "Xero error";
+  if (error) return "Xero unavailable";
   if ((invoice?.status || "").toUpperCase() === "PAID" || invoice?.amountDue === 0) return "Paid";
   if ((invoice?.status || "").toUpperCase() === "DRAFT") return "Draft";
   if (invoice) return "Awaiting payment";
   if (notFound && hasXeroUrl) return "Xero link saved";
   if (notFound && invoiceNumber) return "Invoice saved - Xero link missing";
   if (hasXeroUrl) return "Xero link saved";
-  if (invoiceNumber) return "Invoice number saved";
+  if (invoiceNumber) return "Invoice saved - not verified";
   return "Awaiting payment";
 }
 
 function xeroPaymentTone(label: string) {
   if (label === "Paid") return { bg: "rgba(64,128,72,0.10)", border: "rgba(64,128,72,0.22)", color: "#408048" };
   if (label === "Xero link saved") return { bg: "rgba(12,124,122,0.09)", border: "rgba(12,124,122,0.18)", color: DT.teal };
-  if (label === "Awaiting payment" || label === "Draft" || label === "Invoice number saved" || label === "Invoice saved - Xero link missing") return { bg: "rgba(178,97,36,0.09)", border: "rgba(178,97,36,0.20)", color: "#b26124" };
-  if (label === "Xero error" || label === "Invoice needed") return { bg: "rgba(146,42,35,0.08)", border: "rgba(146,42,35,0.18)", color: "#922a23" };
+  if (label === "Awaiting payment" || label === "Draft" || label === "Invoice saved - not verified" || label === "Invoice saved - Xero link missing") return { bg: "rgba(178,97,36,0.09)", border: "rgba(178,97,36,0.20)", color: "#b26124" };
+  if (label === "Xero unavailable" || label === "Invoice needed") return { bg: "rgba(146,42,35,0.08)", border: "rgba(146,42,35,0.18)", color: "#922a23" };
   return { bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.20)", color: DT.sage };
 }
 
@@ -3133,20 +4652,157 @@ function formatXeroQuantity(value: number | null | undefined) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
+type ParsedIntakeInvoiceLine = { title: string; facts: Array<{ label: string; value: string }>; notes: string[] };
+
+function cleanInvoiceText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeInvoiceLineTitle(value: string) {
+  const clean = cleanInvoiceText(value).replace(/^custom\s+/i, "");
+  if (/dining\s+table/i.test(clean)) return "Dining Table";
+  if (/local\s+delivery/i.test(clean)) return "Local Delivery";
+  if (/ecobeans|bean\s*bag/i.test(clean)) return "EcoBeans bean bag fill";
+  return clean || "Invoice item";
+}
+
+function normalizeInvoiceFactLabel(label: string) {
+  const clean = cleanInvoiceText(label).replace(/\/$/, "");
+  if (/^shape$/i.test(clean)) return "Shape";
+  if (/^dimensions?$/i.test(clean)) return "Dimensions";
+  if (/^timber$/i.test(clean)) return "Timber";
+  if (/^colo(u)?r\s*\/?\s*finish$/i.test(clean) || /^colo(u)?r$/i.test(clean) || /^finish$/i.test(clean)) return "Colour";
+  if (/^base$/i.test(clean) || /^base\s*style$/i.test(clean)) return "Base";
+  if (/^top\s*\/\s*panel$/i.test(clean)) return "Top / panel";
+  if (/^legs\s*\/\s*base$/i.test(clean)) return "Legs / base";
+  if (/^extras?$/i.test(clean) || /^notes?$/i.test(clean)) return "Notes";
+  if (/^delivered\s+to$/i.test(clean) || /^delivery\s+to$/i.test(clean) || /^deliver\s+to$/i.test(clean)) return "Delivered to";
+  if (/^location$/i.test(clean)) return "Location";
+  if (/^address$/i.test(clean)) return "Address";
+  if (/^(phone|mobile|contact)$/i.test(clean)) return "Phone";
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : "Detail";
+}
+
+function normalizeShapeValue(value: string) {
+  const clean = cleanInvoiceText(value);
+  const normalized = clean.toLowerCase();
+  const knownShapes = [
+    ["danish oval", "Danish oval"],
+    ["classic oval", "Classic oval"],
+    ["rectangle", "Rectangle"],
+    ["square", "Square"],
+    ["round", "Round"],
+    ["pebble", "Pebble"],
+    ["pill", "Pill"],
+  ] as const;
+  return knownShapes.find(([match]) => normalized.includes(match))?.[1] ?? clean;
+}
+
+function normalizeDimensionValue(value: string) {
+  const clean = cleanInvoiceText(value).replace(/×/g, "x");
+  const threeDimensional = clean.match(/\b(\d{2,5})\s*x\s*(\d{2,5})\s*x\s*(\d{2,5})\s*mm\b/i);
+  if (threeDimensional) return `${threeDimensional[1]}x${threeDimensional[2]}x${threeDimensional[3]}mm`;
+  const twoDimensional = clean.match(/\b(\d{2,5})\s*x\s*(\d{2,5})\s*mm\b/i);
+  if (twoDimensional && /\b(standard\s+)?dining\s+height\b|\bstandard\s+height\b/i.test(clean)) {
+    return `${twoDimensional[1]}x${twoDimensional[2]}x760mm`;
+  }
+  return clean;
+}
+
+function normalizeBaseValue(value: string) {
+  return cleanInvoiceText(value).replace(/\s+base$/i, "");
+}
+
+function normalizeInvoiceFactValue(label: string, value: string) {
+  if (label === "Shape") return normalizeShapeValue(value);
+  if (label === "Dimensions") return normalizeDimensionValue(value);
+  if (label === "Base") return normalizeBaseValue(value);
+  return cleanInvoiceText(value);
+}
+
+const INTAKE_SPEC_LABEL_ORDER = ["Shape", "Dimensions", "Timber", "Colour", "Base", "Top / panel", "Legs / base", "Notes", "Location", "Address"];
+const DELIVERY_FACT_LABELS = new Set(["Delivered to", "Delivery", "Location", "Address", "Phone"]);
+const TIMBER_VALUE_PATTERN = /\b(t[oō]tara|rimu|beech|oak|ash|walnut|elm|macrocarpa|cedar|pine|northland|west\s+coast|american)\b/i;
+const FINISH_VALUE_PATTERN = /\b(finish|clear|blackwash|whitewash|stain|oil|oiled|natural|raw|uncoated|paint|colour|color)\b/i;
+
+function formatParsedIntakeSpec(parsed: ParsedIntakeInvoiceLine) {
+  return [...parsed.facts].sort((left, right) => {
+    const leftIndex = INTAKE_SPEC_LABEL_ORDER.indexOf(left.label);
+    const rightIndex = INTAKE_SPEC_LABEL_ORDER.indexOf(right.label);
+    return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
+  });
+}
+
+function parseUnlabelledInvoiceSpec(description: string): ParsedIntakeInvoiceLine | null {
+  const lines = description.split(/\r?\n/).map((line) => cleanInvoiceText(line)).filter(Boolean);
+  const compact = cleanInvoiceText(description);
+  const dimensionMatch = compact.match(/\b\d{2,5}\s*[x×]\s*\d{2,5}(?:\s*[x×]\s*\d{2,5})?\s*mm\b/i);
+  if (!dimensionMatch || dimensionMatch.index === undefined) return null;
+
+  const dimensionText = dimensionMatch[0];
+  const titleBeforeDimension = cleanInvoiceText(compact.slice(0, dimensionMatch.index));
+  const title = normalizeInvoiceLineTitle(titleBeforeDimension || lines[0] || compact);
+  const remainderFromCompact = cleanInvoiceText(compact.slice(dimensionMatch.index + dimensionText.length).replace(/^[-–,:;]+/, ""));
+  const remainderFromLines = lines.filter((line) => !line.includes(dimensionText)).slice(titleBeforeDimension ? 0 : 1).join(", ");
+  const remainder = remainderFromCompact || remainderFromLines;
+  const remainderParts = remainder.split(/\s*,\s*/).map((part) => cleanInvoiceText(part)).filter(Boolean);
+  const timberPart = remainderParts.find((part) => TIMBER_VALUE_PATTERN.test(part));
+  const colourPart = remainderParts.find((part) => part !== timberPart && FINISH_VALUE_PATTERN.test(part));
+  const facts = [
+    { label: "Dimensions", value: normalizeDimensionValue(dimensionText) },
+    ...(timberPart ? [{ label: "Timber", value: normalizeInvoiceFactValue("Timber", timberPart) }] : []),
+    ...(colourPart ? [{ label: "Colour", value: normalizeInvoiceFactValue("Colour", colourPart) }] : []),
+  ];
+  const notes = remainderParts.filter((part) => part !== timberPart && part !== colourPart);
+  return { title, facts, notes };
+}
+
+function parseIntakeInvoiceLine(description: string): ParsedIntakeInvoiceLine {
+  const compact = cleanInvoiceText(description);
+  if (!compact) return { title: "Invoice item", facts: [], notes: [] };
+  const keyPattern = /\b(Shape|Dimensions?|Timber|Colou?r\s*\/\s*finish|Colou?r|Finish|Base\s*style|Base|Top\s*\/\s*panel|Legs\s*\/\s*base|Extras?|Notes?|Delivered\s+to|Delivery\s+to|Deliver\s+to|Location|Address|Phone|Mobile|Contact):\s*/gi;
+  const matches = Array.from(compact.matchAll(keyPattern));
+  if (matches.length === 0) {
+    const unlabelledSpec = parseUnlabelledInvoiceSpec(description);
+    if (unlabelledSpec) return unlabelledSpec;
+    const [first, ...rest] = description.split(/\r?\n/).map((line) => cleanInvoiceText(line)).filter(Boolean);
+    const dimensionLine = rest.find((line) => /\d{2,5}\s*[x×]\s*\d{2,5}/i.test(line));
+    const colourLine = rest.find((line) => line !== dimensionLine && /colo[u]?r|finish|stain|wash|clear|black|natural|oil/i.test(line));
+    const facts = [
+      ...(dimensionLine ? [{ label: "Dimensions", value: normalizeDimensionValue(dimensionLine) }] : []),
+      ...(colourLine ? [{ label: "Colour", value: normalizeInvoiceFactValue("Colour", colourLine.replace(/^colo[u]?r\s*:\s*/i, "")) }] : []),
+    ];
+    const notes = rest.filter((line) => line !== dimensionLine && line !== colourLine);
+    return { title: normalizeInvoiceLineTitle(first || compact), facts, notes };
+  }
+  const title = normalizeInvoiceLineTitle(compact.slice(0, matches[0].index ?? 0));
+  const facts = matches.flatMap((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = index + 1 < matches.length ? (matches[index + 1].index ?? compact.length) : compact.length;
+    const label = normalizeInvoiceFactLabel(match[1]);
+    const value = normalizeInvoiceFactValue(label, compact.slice(start, end));
+    if (!value) return [];
+    return [{ label, value }];
+  });
+  return { title, facts, notes: [] };
+}
+
+function isPendingAkahuPayment(payment: OrderIntakePaymentEvidence) {
+  return payment.matchStatus === "ignored" && Array.isArray(payment.matchReasons) && payment.matchReasons.includes("pending_akahu_transaction");
+}
+
 function formatOrderQuantity(value: number | null | undefined) {
   if (value === null || value === undefined || Number.isNaN(value) || value <= 0) return "Quantity missing";
   const quantity = formatXeroQuantity(value);
   return `${quantity} ${value === 1 ? "item" : "items"}`;
 }
 
-function parseXeroLineItem(description: string) {
-  const lines = description.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const dimensionLines = lines.filter((line) => /\d{2,5}\s*[x×]\s*\d{2,5}/i.test(line));
-  const colourLine = lines.find((line) => /colo[u]?r|finish|stain|wash|clear|black|natural|oil/i.test(line));
-  const itemLine = lines.find((line) => !dimensionLines.includes(line) && line !== colourLine && !/^delivered to:?$/i.test(line) && !/^additions?:/i.test(line)) || lines[0] || "Invoice item";
-  const colour = colourLine ? colourLine.replace(/^colo[u]?r\s*:\s*/i, "") : "-";
-  const notes = lines.filter((line) => line !== itemLine && !dimensionLines.includes(line) && line !== colourLine);
-  return { item: itemLine, dimensions: dimensionLines.join(", ") || "-", colour, notes };
+function activeOrderFallbackDescription(order: UiOrder) {
+  const lines = [order.rawMondayItem || order.product || "Order"];
+  if (order.rawMondayTopPanel) lines.push(`Top / panel: ${order.rawMondayTopPanel}`);
+  if (order.rawMondayLegs) lines.push(`Legs / base: ${order.rawMondayLegs}`);
+  if (order.notes) lines.push(`Notes: ${order.notes}`);
+  return lines.join("\n");
 }
 
 function WorkshopSpec({
@@ -3159,6 +4815,7 @@ function WorkshopSpec({
   xeroInvoiceNumber,
   onInvoiceNumberChange,
   prominent = false,
+  afterSpec,
 }: {
   order: UiOrder;
   packLabel: string;
@@ -3169,41 +4826,42 @@ function WorkshopSpec({
   xeroInvoiceNumber?: string | null;
   onInvoiceNumberChange?: (invoiceNumber: string | null) => void;
   prominent?: boolean;
+  afterSpec?: ReactNode;
 }) {
-  const [showInvoiceDetails, setShowInvoiceDetails] = useState(false);
+  const showInvoiceDetails = false;
   const [invoiceDraft, setInvoiceDraft] = useState(xeroInvoiceNumber ?? "");
-  const [xeroProof, setXeroProof] = useState<XeroProofState>({ loading: false, invoice: null, error: "", notFound: false });
+  const [xeroProof, setXeroProof] = useState<XeroProofState>({ loading: false, invoice: null, error: "", notFound: false, readiness: null });
   const invoiceExpectation = invoiceExpectationForOrder(order);
   const hasInvoiceReference = Boolean(xeroInvoiceNumber || xeroUrl);
-  const invoiceDetailsAvailable = invoiceExpectation.requiresInvoice || hasInvoiceReference;
-
-  useEffect(() => {
-    setInvoiceDraft(xeroInvoiceNumber ?? "");
-  }, [xeroInvoiceNumber]);
+  const invoiceDetailsAvailable = invoiceExpectation.requiresInvoice || hasInvoiceReference || Boolean(onInvoiceNumberChange);
 
   useEffect(() => {
     let cancelled = false;
-    async function loadXeroInvoice() {
-      if (!xeroInvoiceNumber || !showInvoiceDetails) {
-        setXeroProof({ loading: false, invoice: null, error: "", notFound: false });
-        return;
-      }
-      setXeroProof({ loading: true, invoice: null, error: "", notFound: false });
+	    async function loadXeroInvoice() {
+	      if (!xeroInvoiceNumber) {
+	        setXeroProof({ loading: false, invoice: null, error: "", notFound: false, readiness: null });
+	        return;
+	      }
+      setXeroProof({ loading: true, invoice: null, error: "", notFound: false, readiness: null });
       try {
         const response = await fetch(`/api/xero/proof?invoiceNumber=${encodeURIComponent(xeroInvoiceNumber)}&includeLineItems=1`, { cache: "no-store" });
-        const data = await response.json().catch(() => null) as { ok?: boolean; invoiceCount?: number; invoices?: XeroProofInvoice[]; error?: string } | null;
-        if (!response.ok || !data?.ok) throw new Error(data?.error || "Xero lookup failed");
+        const data = await response.json().catch(() => null) as { ok?: boolean; invoiceCount?: number; invoices?: XeroProofInvoice[]; error?: string; readiness?: XeroProofReadiness } | null;
+        if (!response.ok || !data?.ok) {
+          const message = data?.readiness?.reason || data?.error || "Xero lookup failed";
+          if (!cancelled) setXeroProof({ loading: false, invoice: null, error: message, notFound: false, readiness: data?.readiness ?? null });
+          return;
+        }
         const invoice = data.invoices?.[0] ?? null;
-        if (!cancelled) setXeroProof({ loading: false, invoice, error: "", notFound: !invoice });
+        if (!cancelled) setXeroProof({ loading: false, invoice, error: "", notFound: !invoice, readiness: data.readiness ?? null });
       } catch (error) {
-        if (!cancelled) setXeroProof({ loading: false, invoice: null, error: error instanceof Error ? error.message : "Xero lookup failed", notFound: false });
+        if (!cancelled) setXeroProof({ loading: false, invoice: null, error: error instanceof Error ? error.message : "Xero lookup failed", notFound: false, readiness: null });
       }
     }
     void loadXeroInvoice();
     return () => {
       cancelled = true;
     };
-  }, [showInvoiceDetails, xeroInvoiceNumber]);
+	  }, [xeroInvoiceNumber]);
 
   function saveInvoiceDraft() {
     onInvoiceNumberChange?.(invoiceDraft.trim() ? invoiceDraft.trim().toUpperCase() : null);
@@ -3214,53 +4872,101 @@ function WorkshopSpec({
   const paymentLabel = invoiceDetailsAvailable ? xeroPaymentLabel(xeroProof.invoice, xeroProof.loading, xeroProof.error, xeroProof.notFound, xeroInvoiceNumber, Boolean(xeroSourceUrl), invoiceExpectation.requiresInvoice) : invoiceExpectation.label;
   const paymentTone = xeroPaymentTone(paymentLabel);
   const lineItems = xeroProof.invoice?.lineItems?.filter((line) => line.description?.trim()) ?? [];
-  const orderFacts = [
-    { label: "Item", value: order.rawMondayItem || order.product },
-    { label: "Top / panel", value: order.rawMondayTopPanel || "Not set" },
-    { label: "Legs / base", value: order.rawMondayLegs || "Not set" },
-  ];
-  const logistics = [
-    { label: "Pack", value: `${packLabel} - ${packDetail}` },
-    { label: "Book freight", value: `${formatLongDate(freightBookBy)} - ${freightWorkingDays} workday${freightWorkingDays === 1 ? "" : "s"} before due` },
-    { label: "Delivery", value: parsedXeroSpec.delivery || order.deliveryLocation || order.freightRef || "No delivery detail captured yet" },
-  ];
+  const visibleSpecLines = lineItems.length > 0
+    ? lineItems
+    : [{ description: activeOrderFallbackDescription(order), quantity: order.quantity, unitAmount: null, lineAmount: order.value }];
+  const specSourceLabel = lineItems.length > 0 ? "Xero invoice" : "Monday order";
+  const deliveryDetail = parsedXeroSpec.delivery || order.deliveryLocation || order.freightRef;
+  const packDetailLabel = `${packLabel} - ${packDetail}`;
+  const freightBookByLabel = `${formatLongDate(freightBookBy)} - ${freightWorkingDays} workday${freightWorkingDays === 1 ? "" : "s"} before due`;
+  const xeroUnavailable = Boolean(xeroProof.error);
+  const xeroReadinessLabel = xeroProof.readiness?.configured === false ? "Xero read-only credentials are not configured." : xeroProof.error;
+  const invoiceContactValue = xeroProof.loading ? "Checking Xero" : xeroUnavailable ? "Unavailable" : xeroProof.invoice?.contact || "Not returned";
+  const invoiceStatusValue = xeroProof.loading ? "Checking Xero" : xeroUnavailable ? "Unavailable" : xeroProof.invoice?.status || paymentLabel;
+  const invoiceProofDetail = !invoiceExpectation.requiresInvoice && !xeroInvoiceNumber
+    ? invoiceExpectation.detail
+    : xeroProof.invoice
+      ? "Tuesday is reading these details directly from Xero. Use Open Xero only when you need the original invoice screen."
+      : xeroUnavailable
+        ? "Tuesday has the invoice number, but exact Xero proof is unavailable here. Use Open Xero or verify outside Tuesday before relying on payment or invoice item details."
+        : xeroInvoiceNumber
+          ? "Invoice number is saved, but not verified yet. Use View invoice details to check whether Tuesday can pull the full Xero invoice."
+          : "Add the Xero invoice number to unlock exact invoice items here.";
 
   return (
-    <div style={{ marginTop: prominent ? 0 : 8, border: `1px solid ${DT.border}`, background: prominent ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.66)", borderRadius: prominent ? 12 : 9, padding: prominent ? 13 : "8px 9px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Order details</div>
-          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>{invoiceExpectation.requiresInvoice ? "Customer orders use exact Xero invoice items when available." : invoiceExpectation.detail}</div>
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-          {xeroInvoiceNumber && (
-            <button
-              type="button"
-              onClick={() => setShowInvoiceDetails((current) => !current)}
-              style={{ border: "1px solid rgba(110,138,106,0.22)", background: showInvoiceDetails ? "rgba(110,138,106,0.14)" : "rgba(255,255,255,0.68)", color: DT.sage, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
-            >
-              {showInvoiceDetails ? "Hide invoice details" : "View invoice details"}
-            </button>
-          )}
+	    <div style={{ marginTop: prominent ? 0 : 8, border: `1px solid ${DT.border}`, background: prominent ? TUESDAY_THEME.surfaceClean : "rgba(255,255,255,0.72)", borderRadius: prominent ? 12 : 9, padding: prominent ? 12 : "8px 9px", boxShadow: prominent ? "0 6px 18px rgba(37,30,20,0.035)" : "none" }}>
+	      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
+	        <div>
+	          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>Order details</div>
+	        </div>
+	        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           {xeroSourceUrl && (
             <a href={xeroSourceUrl} target="_blank" rel="noreferrer" style={{ border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>
               Open Xero
             </a>
-          )}
-        </div>
-      </div>
-      <div style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ border: `1px solid ${paymentTone.border}`, background: paymentTone.bg, color: paymentTone.color, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>
-          Xero: {paymentLabel}
-        </span>
-        {xeroInvoiceNumber && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>From {xeroInvoiceNumber}</span>}
-        {xeroProof.invoice?.dueDate && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Invoice due {formatShortDate(xeroProof.invoice.dueDate)}</span>}
-      </div>
-      <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: prominent ? "repeat(auto-fit, minmax(130px, 1fr))" : "1fr 1fr", gap: 7 }}>
-        {orderFacts.map((detail) => <MiniFact key={detail.label} label={detail.label} value={detail.value} />)}
-      </div>
-      {order.notes && <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.58)", borderRadius: 8, padding: "7px 8px", fontFamily: DT.sans, fontSize: 10, lineHeight: 1.35, color: DT.textMuted }}>{order.notes}</div>}
-      {onInvoiceNumberChange && invoiceExpectation.requiresInvoice && (
+	          )}
+	        </div>
+	      </div>
+	      <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 11, background: "rgba(237,248,247,0.45)", padding: 8, display: "grid", gap: 7 }}>
+	        {visibleSpecLines.map((line, index) => {
+	          const parsed = parseIntakeInvoiceLine(line.description);
+	          const isPrimary = index === 0;
+	          const facts = formatParsedIntakeSpec(parsed);
+            const specFacts = facts.filter((fact) => !DELIVERY_FACT_LABELS.has(fact.label));
+            const deliveryFacts = facts.filter((fact) => DELIVERY_FACT_LABELS.has(fact.label));
+	          return (
+	            <div key={`${line.description}:${index}`} style={{ border: `1px solid ${isPrimary ? "rgba(12,124,122,0.24)" : DT.border}`, borderRadius: 10, padding: isPrimary ? 10 : 7, background: isPrimary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.72)", boxShadow: isPrimary ? "0 7px 16px rgba(37,30,20,0.045)" : "none" }}>
+	              <div style={{ display: "grid", gap: isPrimary ? 6 : 3, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
+	                <div style={{ fontFamily: DT.serif, fontSize: isPrimary ? 20 : 13, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.04 }}>{parsed.title}</div>
+	                {specFacts.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 850 }}>No structured spec captured yet.</div>}
+	                {specFacts.map((fact) => (
+	                  <div key={`${fact.label}:${fact.value}`} style={{ display: "grid", gridTemplateColumns: isPrimary ? "92px minmax(0, 1fr)" : "74px minmax(0, 1fr)", gap: isPrimary ? 10 : 7, fontSize: isPrimary ? 11.5 : 9.5, fontWeight: 900, overflowWrap: "anywhere", alignItems: "baseline" }}>
+	                    <span style={{ color: DT.textMuted, fontWeight: 950 }}>{fact.label}</span>
+	                    <span>{fact.value}</span>
+	                  </div>
+	                ))}
+	              </div>
+	              {parsed.notes.map((note) => <div key={note} style={{ marginTop: 6, fontFamily: DT.sans, fontSize: isPrimary ? 11 : 9.5, color: DT.textMuted, fontWeight: 850, lineHeight: 1.2 }}>{note}</div>)}
+                {deliveryFacts.length > 0 && (
+                  <div style={{ marginTop: 8, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(247,245,239,0.72)", borderRadius: 8, padding: "7px 8px" }}>
+                    <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Delivery</div>
+                    <div style={{ marginTop: 4, display: "grid", gap: 3 }}>
+                      {deliveryFacts.map((fact) => (
+                        <div key={`${fact.label}:${fact.value}`} style={{ fontFamily: DT.sans, fontSize: isPrimary ? 10.5 : 9.5, fontWeight: 850, color: DT.textSecondary, lineHeight: 1.28, overflowWrap: "anywhere" }}>
+                          {fact.value}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+	              <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontFamily: DT.sans, fontSize: isPrimary ? 10 : 9, color: DT.textMuted, fontWeight: 950 }}>
+	                <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>Qty {formatXeroQuantity(line.quantity)}</span>
+	                <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>{formatXeroMoney(line.lineAmount)}</span>
+	                <span style={{ border: `1px solid rgba(12,124,122,0.14)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 6px" }}>{specSourceLabel}</span>
+	              </div>
+	            </div>
+	          );
+		        })}
+		      </div>
+		      {afterSpec && <div style={{ marginTop: 8 }}>{afterSpec}</div>}
+		      {deliveryDetail && !visibleSpecLines.some((line) => parseIntakeInvoiceLine(line.description).facts.some((fact) => DELIVERY_FACT_LABELS.has(fact.label))) && (
+		        <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "8px 9px" }}>
+	          <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Delivered to</div>
+	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, lineHeight: 1.28 }}>{deliveryDetail}</div>
+	        </div>
+	      )}
+	      {showInvoiceDetails && (
+	        <div style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+	          <span style={{ border: `1px solid ${paymentTone.border}`, background: paymentTone.bg, color: paymentTone.color, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>
+	            Source: {paymentLabel}
+	          </span>
+	          {xeroInvoiceNumber && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>From {xeroInvoiceNumber}</span>}
+	          {xeroProof.invoice?.dueDate && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Invoice due {formatShortDate(xeroProof.invoice.dueDate)}</span>}
+	          <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Pack: {packDetailLabel}</span>
+	          <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Freight: {freightBookByLabel}</span>
+	        </div>
+	      )}
+      {showInvoiceDetails && onInvoiceNumberChange && invoiceExpectation.requiresInvoice && (
         <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: prominent ? "minmax(0, 1fr) auto" : "1fr", gap: 6, alignItems: "center" }}>
           <input
             value={invoiceDraft}
@@ -3288,8 +4994,8 @@ function WorkshopSpec({
         <div style={{ marginTop: 10, border: `1px solid rgba(110,138,106,0.20)`, borderRadius: 10, background: "rgba(255,255,255,0.72)", overflow: "hidden" }}>
           <div style={{ padding: "8px 9px", display: "grid", gridTemplateColumns: prominent ? "repeat(auto-fit, minmax(118px, 1fr))" : "1fr 1fr", gap: 6, borderBottom: `1px solid ${DT.border}` }}>
             <MiniFact label="Invoice" value={xeroProof.invoice?.invoiceNumber || xeroInvoiceNumber} />
-            <MiniFact label="Contact" value={xeroProof.invoice?.contact || "Checking Xero"} />
-            <MiniFact label="Status" value={xeroProof.invoice?.status || paymentLabel} />
+            <MiniFact label="Contact" value={invoiceContactValue} />
+            <MiniFact label="Status" value={invoiceStatusValue} />
             <MiniFact label="Total" value={formatXeroMoney(xeroProof.invoice?.total)} />
             <MiniFact label="Paid" value={formatXeroMoney(xeroProof.invoice?.amountPaid)} />
             <MiniFact label="Owing" value={formatXeroMoney(xeroProof.invoice?.amountDue)} />
@@ -3301,15 +5007,19 @@ function WorkshopSpec({
             </div>
             <div style={{ marginTop: 6, display: "grid", gap: 6, maxHeight: prominent ? 310 : 200, overflowY: "auto", paddingRight: 3 }}>
               {xeroProof.loading && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted }}>Loading invoice details...</div>}
-              {!xeroProof.loading && lineItems.map((line, index) => { const parsed = parseXeroLineItem(line.description); return (
-                <div key={`${index}-${line.description.slice(0, 24)}`} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "7px 8px", display: "grid", gridTemplateColumns: prominent ? "minmax(0, 1fr) 58px 72px 82px" : "1fr", gap: prominent ? 8 : 5, alignItems: "start" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.22, color: DT.textPrimary, fontWeight: 950, overflowWrap: "anywhere" }}>{parsed.item}</div>
-                    <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: prominent ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: 5 }}>
-                      <MiniFact label="Dimensions" value={parsed.dimensions} />
-                      <MiniFact label="Colour" value={parsed.colour} />
-                    </div>
-                    {parsed.notes.length > 0 && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, lineHeight: 1.35, color: DT.textMuted }}>{parsed.notes.join(" · ")}</div>}
+              {!xeroProof.loading && xeroUnavailable && (
+                <div style={{ border: "1px solid rgba(146,42,35,0.18)", background: "rgba(146,42,35,0.06)", borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: "#922a23", fontWeight: 850 }}>
+                  Xero proof unavailable. {xeroReadinessLabel || "Use Open Xero or verify outside Tuesday before relying on payment or invoice item details."}
+                </div>
+              )}
+	              {!xeroProof.loading && lineItems.map((line, index) => { const parsed = parseIntakeInvoiceLine(line.description); const facts = formatParsedIntakeSpec(parsed); return (
+	                <div key={`${index}-${line.description.slice(0, 24)}`} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "7px 8px", display: "grid", gridTemplateColumns: prominent ? "minmax(0, 1fr) 58px 72px 82px" : "1fr", gap: prominent ? 8 : 5, alignItems: "start" }}>
+	                  <div style={{ minWidth: 0 }}>
+	                    <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.22, color: DT.textPrimary, fontWeight: 950, overflowWrap: "anywhere" }}>{parsed.title}</div>
+	                    <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: prominent ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: 5 }}>
+	                      {facts.length === 0 ? <MiniFact label="Spec" value="No structured spec" /> : facts.map((fact) => <MiniFact key={`${fact.label}:${fact.value}`} label={fact.label} value={fact.value} />)}
+	                    </div>
+	                    {parsed.notes.length > 0 && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, lineHeight: 1.35, color: DT.textMuted }}>{parsed.notes.join(" · ")}</div>}
                     <details style={{ marginTop: 5 }}>
                       <summary style={{ listStyle: "none", cursor: "pointer", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Exact invoice text</summary>
                       <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, lineHeight: 1.35, color: DT.textMuted, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{line.description}</div>
@@ -3320,31 +5030,25 @@ function WorkshopSpec({
                   <MiniFact label="Line" value={formatXeroMoney(line.lineAmount)} />
                 </div>
               ); })}
-              {!xeroProof.loading && lineItems.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted }}>No line item text returned from Xero yet.</div>}
+              {!xeroProof.loading && !xeroUnavailable && lineItems.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted }}>No line item text returned from Xero yet.</div>}
             </div>
           </div>
         </div>
       )}
-      <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: prominent ? "repeat(auto-fit, minmax(170px, 1fr))" : "1fr", gap: prominent ? 8 : 0 }}>
-        {logistics.map((detail) => (
-          <div key={detail.label} style={{ borderTop: prominent ? "none" : `1px solid ${DT.border}`, border: prominent ? `1px solid ${DT.border}` : undefined, background: prominent ? "rgba(255,255,255,0.62)" : undefined, borderRadius: prominent ? 9 : undefined, padding: prominent ? "8px 9px" : "5px 0" }}>
-            <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>{detail.label}</div>
-            <div style={{ marginTop: prominent ? 3 : 0, fontFamily: DT.sans, fontSize: prominent ? 12 : 11, fontWeight: 850, color: DT.textPrimary, lineHeight: 1.28 }}>{detail.value}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>
-        {!invoiceExpectation.requiresInvoice && !xeroInvoiceNumber ? invoiceExpectation.detail : xeroProof.invoice ? "Tuesday is reading these details directly from Xero. Use Open Xero only when you need the original invoice screen." : xeroInvoiceNumber ? "Invoice number is saved. Use View invoice details to check whether Tuesday can pull the full Xero invoice." : "Add the Xero invoice number to unlock exact invoice items here."}
-      </div>
-      {xeroProof.error && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, color: "#922a23", lineHeight: 1.3 }}>{xeroProof.error}</div>}
+	      {showInvoiceDetails && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>
+	        {invoiceProofDetail}
+	      </div>}
+      {xeroProof.error && !showInvoiceDetails && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, color: "#922a23", lineHeight: 1.3 }}>{xeroReadinessLabel}</div>}
     </div>
   );
 }
-function OrderPhotoTray({ orderId }: { orderId: number }) {
+function OrderPhotoTray({ orderId, embedded = false, onPhotoUploaded }: { orderId: number; embedded?: boolean; onPhotoUploaded?: () => void }) {
   const [requested, setRequested] = useState(true);
   const [photos, setPhotos] = useState<OrderPhoto[]>([]);
   const [status, setStatus] = useState<string>("Loading photos...");
   const [disabledReason, setDisabledReason] = useState<string>("");
+  const [deletingPathname, setDeletingPathname] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!requested) return;
@@ -3368,33 +5072,46 @@ function OrderPhotoTray({ orderId }: { orderId: number }) {
 
 
   async function deletePhoto(photo: OrderPhoto) {
+    if (!window.confirm("Delete this order photo?")) return;
+    setDeletingPathname(photo.pathname);
     setStatus("Deleting photo...");
-    const params = new URLSearchParams({ orderId: String(orderId), pathname: photo.pathname });
-    const response = await fetch(`/api/production/order-photos?${params.toString()}`, { method: "DELETE" });
-    const data = await response.json().catch(() => null) as { error?: string } | null;
-    if (!response.ok) throw new Error(data?.error || "Delete failed");
-    setPhotos((current) => current.filter((item) => item.pathname !== photo.pathname));
-    setStatus("Photo deleted");
+    try {
+      const params = new URLSearchParams({ orderId: String(orderId), pathname: photo.pathname });
+      const response = await fetch(`/api/production/order-photos?${params.toString()}`, { method: "DELETE" });
+      const data = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(data?.error || "Delete failed");
+      setPhotos((current) => current.filter((item) => item.pathname !== photo.pathname));
+      setStatus("Photo deleted");
+    } finally {
+      setDeletingPathname("");
+    }
   }
 
   async function uploadPhoto(file: File) {
     const form = new FormData();
     form.append("orderId", String(orderId));
     form.append("file", file);
+    setUploading(true);
     setStatus("Uploading photo...");
-    const response = await fetch("/api/production/order-photos", { method: "POST", body: form });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Upload failed");
-    setPhotos((current) => [data.photo as OrderPhoto, ...current]);
-    setStatus("Photo uploaded");
+    try {
+      const response = await fetch("/api/production/order-photos", { method: "POST", body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Upload failed");
+      setPhotos((current) => [data.photo as OrderPhoto, ...current]);
+      setDisabledReason("");
+      setStatus("Photo uploaded");
+      onPhotoUploaded?.();
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
-    <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 12, padding: 13 }}>
+    <div style={{ border: `1px solid ${embedded ? "rgba(12,124,122,0.16)" : DT.border}`, background: embedded ? "rgba(255,255,255,0.62)" : TUESDAY_THEME.surfaceClean, borderRadius: embedded ? 9 : 12, padding: embedded ? 8 : 12, boxShadow: embedded ? "none" : "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Evidence</div>
-          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 15, color: DT.textPrimary, fontWeight: 950 }}>Order photos</div>
+          {!embedded && <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>Photos</div>}
+          <div style={{ marginTop: embedded ? 0 : 2, fontFamily: DT.sans, fontSize: embedded ? 11 : 13, color: embedded ? DT.textPrimary : DT.textMuted, fontWeight: 900 }}>{embedded ? "QC photos" : "QC and dispatch evidence"}</div>
         </div>
         {!requested ? (
           <button
@@ -3408,13 +5125,13 @@ function OrderPhotoTray({ orderId }: { orderId: number }) {
             Load photos
           </button>
         ) : (
-          <label style={{ border: `1px solid rgba(12,124,122,0.18)`, background: disabledReason ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: disabledReason ? DT.textFaint : DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: disabledReason ? "not-allowed" : "pointer" }}>
-            Upload
+          <label title={disabledReason || "Upload order photos"} style={{ border: `1px solid rgba(12,124,122,0.18)`, background: disabledReason || uploading ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: disabledReason || uploading ? DT.textFaint : DT.teal, borderRadius: 999, padding: embedded ? "5px 8px" : "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: disabledReason || uploading ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>
+            {uploading ? "Uploading..." : "+ Photos"}
             <input
               type="file"
               accept="image/*"
               multiple
-              disabled={Boolean(disabledReason)}
+              disabled={Boolean(disabledReason) || uploading}
               onChange={(event) => {
                 const files = Array.from(event.target.files ?? []);
                 event.currentTarget.value = "";
@@ -3425,9 +5142,9 @@ function OrderPhotoTray({ orderId }: { orderId: number }) {
           </label>
         )}
       </div>
-      {(status || disabledReason || !requested) && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted }}>{status || disabledReason || "Photos load only when needed."}</div>}
+      {(status || disabledReason || !requested) && <div style={{ marginTop: 6, border: disabledReason ? "1px solid rgba(154,91,18,0.20)" : "none", background: disabledReason ? "rgba(250,204,21,0.10)" : "transparent", borderRadius: 8, padding: disabledReason ? "6px 8px" : 0, fontFamily: DT.sans, fontSize: 10, color: disabledReason ? "#9a5b12" : DT.textMuted, fontWeight: 850, lineHeight: 1.3 }}>{status || disabledReason || "Photos load only when needed."}</div>}
       {requested && (
-        <div style={{ marginTop: 6, display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 5 }}>
+        <div style={{ marginTop: embedded ? 6 : 8, display: "grid", gridTemplateColumns: embedded ? "repeat(3, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", gap: 5 }}>
           {photos.map((photo) => (
             <div key={photo.pathname} style={{ position: "relative", aspectRatio: "1 / 1", borderRadius: 8, overflow: "hidden", border: `1px solid ${DT.border}`, background: DT.cardBg }}>
               <a href={photo.url} target="_blank" rel="noreferrer" style={{ display: "block", width: "100%", height: "100%" }}>
@@ -3436,8 +5153,9 @@ function OrderPhotoTray({ orderId }: { orderId: number }) {
               </a>
               <button
                 type="button"
+                disabled={deletingPathname === photo.pathname}
                 onClick={() => deletePhoto(photo).catch((err) => setStatus(err instanceof Error ? err.message : "Delete failed"))}
-                style={{ position: "absolute", right: 4, top: 4, border: "1px solid rgba(0,0,0,0.10)", background: "rgba(255,253,249,0.92)", color: DT.textMuted, borderRadius: 999, width: 20, height: 20, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer", lineHeight: "18px" }}
+                style={{ position: "absolute", right: 4, top: 4, border: "1px solid rgba(0,0,0,0.10)", background: "rgba(255,253,249,0.92)", color: deletingPathname === photo.pathname ? DT.textFaint : DT.textMuted, borderRadius: 999, width: 24, height: 24, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: deletingPathname === photo.pathname ? "wait" : "pointer", lineHeight: "20px" }}
                 aria-label="Delete photo"
                 title="Delete photo"
               >
@@ -3445,7 +5163,7 @@ function OrderPhotoTray({ orderId }: { orderId: number }) {
               </button>
             </div>
           ))}
-          {photos.length === 0 && <div style={{ gridColumn: "1 / -1", fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.3 }}>No photos yet.</div>}
+          {photos.length === 0 && <div style={{ gridColumn: "1 / -1", border: `1px dashed ${DT.border}`, background: "rgba(255,255,255,0.60)", borderRadius: 9, padding: embedded ? "6px 7px" : "8px 9px", fontFamily: DT.sans, fontSize: embedded ? 10 : 11, color: DT.textMuted, lineHeight: 1.3 }}>No photos yet.</div>}
         </div>
       )}
     </div>
@@ -3610,6 +5328,8 @@ type OrderJourneyTask = BoardPlanTask & {
   notes: string | null;
   assignedViaTuesday?: boolean;
   placement?: PlanTaskPlacement;
+  sourceKind?: "plan" | "workflow" | "intake";
+  appTask?: AppPlanTask;
 };
 type OrderJourneyRow = {
   id: string;
@@ -3618,11 +5338,51 @@ type OrderJourneyRow = {
   dueLabel: string | null;
   statusLabel: string | null;
   health: OrderHealthLevel | "internal" | "unlinked";
+  hasTasksThisWeek: boolean;
   tasks: OrderJourneyTask[];
 };
-type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string };
-type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean };
+type BoardDropTarget = { weekId: string; day: DayKey; person: Person; overTaskId?: string; rowId?: string };
+type BoardDropPreview = { weekId: string; day: DayKey; person: Person; overId?: string; insertAfter?: boolean; rowId?: string };
+
+function boardCollisionDetection(args: Parameters<typeof closestCorners>[0]) {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args);
+}
+
+function boardDropIdFromPoint(x: number, y: number) {
+  if (typeof document === "undefined") return null;
+  const elements = document.elementsFromPoint(x, y);
+  for (const element of elements) {
+    const node = element instanceof HTMLElement
+      ? element.closest("[data-order-row-drop-id], [data-qa-plan-lane], [data-order-row-task-id], [data-suggested-step-id]")
+      : null;
+    if (!(node instanceof HTMLElement)) continue;
+    return node.dataset.orderRowDropId ?? node.dataset.qaPlanLane ?? node.dataset.orderRowTaskId ?? node.dataset.suggestedStepId ?? null;
+  }
+  return null;
+}
+
+function boardFallbackOverIdFromDrag(event: Pick<DragOverEvent, "active">) {
+  const rect = event.active.rect.current.translated ?? event.active.rect.current.initial;
+  if (!rect) return null;
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const points = [
+    [centerX, centerY],
+    [centerX, rect.top + 8],
+    [centerX, rect.bottom - 8],
+    [rect.left + 8, centerY],
+    [rect.right - 8, centerY],
+  ] as const;
+  for (const [x, y] of points) {
+    const id = boardDropIdFromPoint(x, y);
+    if (id) return id;
+  }
+  return null;
+}
 type OrderConnectionState = "connected" | "possible" | "needs-order" | "internal";
+type PlanTaskOrderMatchConfidence = "confirmed" | "exact" | "possible" | "none";
+type PlanTaskOrderConnection = { orderId: number | null; confidence: PlanTaskOrderMatchConfidence };
 function isoDateFromDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -3663,6 +5423,14 @@ function suggestedDateOptionForWeekDay(week: PlanWeek, day: DayKey): SuggestedDa
     weekId: week.id,
     weekTitle: displayWeekTitle(week.title),
   };
+}
+
+function dateLabelForWeekTitleDay(weekTitle: string, day: DayKey) {
+  const range = weekRangeFromTitle(weekTitle);
+  if (!range) return `${displayWeekTitle(weekTitle)} · ${DAY_LABELS[day]}`;
+  const date = new Date(range.start);
+  date.setDate(range.start.getDate() + DAYS.indexOf(day));
+  return formatTaskDateLabel(isoDateFromDate(date));
 }
 
 function suggestedStepFallsInWeek(step: SuggestedOrderPlanStep, week: PlanWeek) {
@@ -3710,12 +5478,20 @@ function planTaskLinkKey(task: Pick<DraggablePlanTask, "rowId" | "text">) {
   return `plan-task:${task.rowId}:${planTaskFingerprint(task.text)}`;
 }
 
-function orderConnectionLabel(task: DraggablePlanTask, planTaskLinks: PlanTaskLinks, resolvedOrderId: number | null = null) {
+function orderConnectionLabel(
+  task: DraggablePlanTask,
+  planTaskLinks: PlanTaskLinks,
+  resolvedOrderId: number | null = null,
+  confidence: PlanTaskOrderMatchConfidence = "possible"
+) {
   const assignedOrderId = assignedOrderIdForTask(task, planTaskLinks);
   const hasConfirmedOrder = Boolean(assignedOrderId || task.linkedOrderIds.length > 0);
   const looksInternal = /sample rack|shop|internal|maintenance|clean|tidy|tool|bench/i.test(`${task.text} ${task.rowName}`);
   if (hasConfirmedOrder) {
     return { state: "connected" as OrderConnectionState, label: "Order linked", detail: "Customer order attached" };
+  }
+  if (resolvedOrderId && confidence === "exact") {
+    return { state: "connected" as OrderConnectionState, label: "Auto-linked", detail: "Exact customer match" };
   }
   if (resolvedOrderId) {
     return { state: "possible" as OrderConnectionState, label: "Possible match", detail: "Confirm customer/order" };
@@ -3798,73 +5574,16 @@ function orderJourneyTaskSortKey(task: BoardPlanTask, weekTitle: string) {
   return [rangeStart, DAYS.indexOf(task.day), PEOPLE.indexOf(task.person), task.rowName, task.id].join(":");
 }
 
-function buildOrderJourneyRows({
-  tasks,
-  orders,
-  planTaskLinks,
-  resolveOrderId,
-  weekTitleForTask,
-}: {
-  tasks: BoardPlanTask[];
-  orders: UiOrder[];
-  planTaskLinks: PlanTaskLinks;
-  resolveOrderId: (task: BoardPlanTask) => number | null;
-  weekTitleForTask: (task: BoardPlanTask) => string;
-}): OrderJourneyRow[] {
-  const ordersById = new Map(orders.map((order) => [order.id, order]));
-  const rows = new Map<string, OrderJourneyRow>();
-
-  for (const task of tasks) {
-    const orderId = resolveOrderId(task);
-    const order = orderId ? ordersById.get(orderId) ?? null : null;
-    const connection = orderConnectionLabel(task, planTaskLinks, orderId);
-    const internal = connection.state === "internal";
-    const id = order ? `order:${order.id}` : `${internal ? "internal" : "unlinked"}:${normalizeOrderText(task.rowName) || task.rowId}`;
-    const weekTitle = weekTitleForTask(task);
-    const row = rows.get(id) ?? {
-      id,
-      order,
-      name: order?.customer ?? taskCustomerDisplayName(task),
-      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
-      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : connection.label,
-      health: order ? orderHealth(order) : internal ? "internal" : "unlinked",
-      tasks: [],
-    };
-    row.tasks.push({
-      ...task,
-      orderId,
-      orderName: row.name,
-      weekTitle: displayWeekTitle(weekTitle),
-      dateLabel: `${displayWeekTitle(weekTitle)} · ${DAY_LABELS[task.day]}`,
-      sortKey: orderJourneyTaskSortKey(task, weekTitle),
-      connectionState: connection.state,
-      notes: task.rowNotes,
-      assignedViaTuesday: Boolean(orderId && assignedOrderIdForTask(task, planTaskLinks) === orderId && !task.linkedOrderIds.includes(orderId)),
-      placement: placementForTask(task, planTaskLinks),
-    });
-    rows.set(id, row);
-  }
-
-  const healthOrder: Record<OrderJourneyRow["health"], number> = { blocked: 0, watch: 1, onTrack: 2, unlinked: 3, internal: 4 };
-  return Array.from(rows.values())
-    .map((row) => ({ ...row, tasks: [...row.tasks].sort((a, b) => a.sortKey.localeCompare(b.sortKey)) }))
-    .sort((a, b) => {
-      const dueA = a.order?.shipDate ? new Date(a.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
-      const dueB = b.order?.shipDate ? new Date(b.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
-      return (healthOrder[a.health] - healthOrder[b.health]) || (dueA - dueB) || a.name.localeCompare(b.name);
-    });
-}
-
 function applyOrderJourneyRowOrder(rows: OrderJourneyRow[], savedOrder: string[] | undefined) {
   if (!savedOrder?.length) return rows;
   const savedIndex = new Map(savedOrder.map((id, index) => [id, index]));
-  return [...rows].sort((a, b) => {
-    const aIndex = savedIndex.get(a.id);
-    const bIndex = savedIndex.get(b.id);
-    if (aIndex != null && bIndex != null) return aIndex - bIndex;
-    if (aIndex != null) return -1;
-    if (bIndex != null) return 1;
-    return rows.indexOf(a) - rows.indexOf(b);
+  return [...rows].sort((left, right) => {
+    const leftIndex = savedIndex.get(left.id);
+    const rightIndex = savedIndex.get(right.id);
+    if (leftIndex !== undefined && rightIndex !== undefined) return leftIndex - rightIndex;
+    if (leftIndex !== undefined) return -1;
+    if (rightIndex !== undefined) return 1;
+    return 0;
   });
 }
 
@@ -3883,8 +5602,145 @@ function reorderStringList(items: string[], sourceId: string, targetId: string) 
   return next;
 }
 
+function buildOrderJourneyRows({
+  tasks,
+  appTasks = [],
+  weeks = [],
+  orders,
+  planTaskLinks,
+  resolveOrderId,
+  resolveOrderConnection,
+  weekTitleForTask,
+}: {
+  tasks: BoardPlanTask[];
+  appTasks?: AppPlanTask[];
+  weeks?: PlanWeek[];
+  orders: UiOrder[];
+  planTaskLinks: PlanTaskLinks;
+  resolveOrderId: (task: BoardPlanTask) => number | null;
+  resolveOrderConnection?: (task: BoardPlanTask) => PlanTaskOrderConnection;
+  weekTitleForTask: (task: BoardPlanTask) => string;
+}): OrderJourneyRow[] {
+  const ordersById = new Map(orders.map((order) => [order.id, order]));
+  const rows = new Map<string, OrderJourneyRow>();
+
+  for (const task of tasks) {
+    const orderConnectionResult = resolveOrderConnection?.(task) ?? {
+      orderId: resolveOrderId(task),
+      confidence: "possible" as PlanTaskOrderMatchConfidence,
+    };
+    const orderId = orderConnectionResult.orderId;
+    const order = orderId ? ordersById.get(orderId) ?? null : null;
+    const connection = orderConnectionLabel(task, planTaskLinks, orderId, orderConnectionResult.confidence);
+    const internal = connection.state === "internal";
+    const id = order ? `order:${order.id}` : `${internal ? "internal" : "unlinked"}:${normalizeOrderText(task.rowName) || task.rowId}`;
+    const weekTitle = weekTitleForTask(task);
+    const row = rows.get(id) ?? {
+      id,
+      order,
+      name: order?.customer ?? taskCustomerDisplayName(task),
+      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : connection.label,
+      health: order ? orderHealth(order) : internal ? "internal" : "unlinked",
+      hasTasksThisWeek: true,
+      tasks: [],
+    };
+    row.hasTasksThisWeek = true;
+    row.tasks.push({
+      ...task,
+      orderId,
+      orderName: row.name,
+      weekTitle: displayWeekTitle(weekTitle),
+      dateLabel: dateLabelForWeekTitleDay(weekTitle, task.day),
+      sortKey: orderJourneyTaskSortKey(task, weekTitle),
+      connectionState: connection.state,
+      notes: task.rowNotes,
+      assignedViaTuesday: Boolean(orderId && assignedOrderIdForTask(task, planTaskLinks) === orderId && !task.linkedOrderIds.includes(orderId)),
+      placement: placementForTask(task, planTaskLinks),
+      sourceKind: "plan",
+    });
+    rows.set(id, row);
+  }
+
+  for (const task of appTasks) {
+    const week = weeks.find((candidate) => appTaskFallsInWeek(task, candidate));
+    if (!week) continue;
+    const order = task.orderId ? ordersById.get(task.orderId) ?? null : null;
+    const id = order ? `order:${order.id}` : `${task.source === "intake" ? "intake" : "workflow"}:${task.orderUuid ?? task.orderId ?? normalizeOrderText(task.customer) ?? task.id}`;
+    const row = rows.get(id) ?? {
+      id,
+      order,
+      name: order?.customer ?? task.customer ?? "Tuesday order",
+      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : task.source === "intake" ? "Approved intake tasks" : "Tuesday tasks",
+      health: order ? orderHealth(order) : "onTrack",
+      hasTasksThisWeek: true,
+      tasks: [],
+    };
+    row.hasTasksThisWeek = true;
+    row.tasks.push({
+      id: task.id,
+      taskKey: task.id,
+      rowId: `${task.source ?? "app"}:${task.orderUuid ?? task.orderId ?? task.id}`,
+      rowName: task.customer ?? order?.customer ?? "Tuesday task",
+      rowNotes: task.detail ?? null,
+      weekId: week.id,
+      sortOrder: 0,
+      day: task.day,
+      person: task.person,
+      text: task.title,
+      estimatedHours: task.estimatedHours ?? 1,
+      done: task.done,
+      linkedOrderIds: task.orderId ? [task.orderId] : [],
+      linkedOrders: [],
+      orderId: task.orderId,
+      orderName: row.name,
+      weekTitle: displayWeekTitle(week.title),
+      dateLabel: task.scheduledDate ? formatTaskDateLabel(task.scheduledDate) : dateLabelForWeekTitleDay(week.title, task.day),
+      sortKey: [task.scheduledDate || "9999-99-99", DAYS.indexOf(task.day), PEOPLE.indexOf(task.person), row.name, task.id].join(":"),
+      connectionState: order ? "connected" : "internal",
+      notes: task.detail ?? null,
+      sourceKind: task.source ?? "workflow",
+      appTask: task,
+    });
+    rows.set(id, row);
+  }
+
+  for (const order of orders.filter((order) => !isCompleteOrder(order))) {
+    const id = `order:${order.id}`;
+    if (rows.has(id)) continue;
+    rows.set(id, {
+      id,
+      order,
+      name: order.customer,
+      dueLabel: `${formatShortDate(order.shipDate)} · ${dueLabel(order)}`,
+      statusLabel: `${orderItemLabel(order)} · ${orderStatusLabel(order)}`,
+      health: orderHealth(order),
+      hasTasksThisWeek: false,
+      tasks: [],
+    });
+  }
+
+  const healthOrder: Record<OrderJourneyRow["health"], number> = { blocked: 0, watch: 1, onTrack: 2, unlinked: 3, internal: 4 };
+  return Array.from(rows.values())
+    .map((row) => ({ ...row, tasks: [...row.tasks].sort((a, b) => a.sortKey.localeCompare(b.sortKey)) }))
+    .sort((a, b) => {
+      const dueA = dateOnlyAtNoon(a.order?.shipDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const dueB = dateOnlyAtNoon(b.order?.shipDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return healthOrder[a.health] - healthOrder[b.health] || dueA - dueB || a.name.localeCompare(b.name);
+    });
+}
+
 function boardPlanLaneId(weekId: string, day: DayKey, person: Person) {
   return `${weekId}::${day}:${person}`;
+}
+
+function orderJourneyLaneId(rowId: string, weekId: string, day: DayKey, person: Person) {
+  return `order-row-lane::${rowId}::${weekId}::${day}:${person}`;
+}
+
+function orderJourneyDayId(rowId: string, weekId: string, day: DayKey) {
+  return `order-row-day::${rowId}::${weekId}::${day}`;
 }
 
 function parseBoardPlanLane(value: string): { weekId: string; day: DayKey; person: Person } | null {
@@ -3894,7 +5750,24 @@ function parseBoardPlanLane(value: string): { weekId: string; day: DayKey; perso
   return parsedLane ? { weekId, ...parsedLane } : null;
 }
 
+function parseOrderJourneyLane(value: string): { rowId: string; weekId: string; day: DayKey; person: Person } | null {
+  if (!value.startsWith("order-row-lane::")) return null;
+  const [, rowId, weekId, lane] = value.split("::");
+  if (!rowId || !weekId || !lane) return null;
+  const parsedLane = parsePlanLane(lane);
+  return parsedLane ? { rowId, weekId, ...parsedLane } : null;
+}
+
+function parseOrderJourneyDay(value: string): { rowId: string; weekId: string; day: DayKey } | null {
+  if (!value.startsWith("order-row-day::")) return null;
+  const [, rowId, weekId, day] = value.split("::");
+  if (!rowId || !weekId || !(DAYS as readonly string[]).includes(day)) return null;
+  return { rowId, weekId, day: day as DayKey };
+}
+
 function boardDropTargetFromOverId(current: BoardPlanTask[], overId: string): BoardDropTarget | null {
+  const orderLane = parseOrderJourneyLane(overId);
+  if (orderLane) return orderLane;
   const lane = parseBoardPlanLane(overId);
   if (lane) return lane;
   const overTask = current.find((task) => task.id === overId);
@@ -3965,6 +5838,8 @@ function withMovedTaskSortOrder(tasks: BoardPlanTask[], taskId: string) {
 }
 
 function saveDraftTasks(_weekId: string, _tasks: DraggablePlanTask[]) {
+  void _weekId;
+  void _tasks;
   // Drag/drop is live-backed through Supabase task edits; browser-local board drafts would make two screens disagree.
 }
 
@@ -4522,12 +6397,28 @@ function PlanTaskDragCard({ task }: { task: DraggablePlanTask }) {
   );
 }
 
+function AppTaskDragCard({ task }: { task: AppPlanTask }) {
+  const personVisual = PERSON_VISUALS[task.person];
+  return (
+    <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", borderWidth: "1px 1px 1px 6px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
+      <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.title}</div>
+          <div style={{ marginTop: 3, fontSize: 10, fontWeight: 750, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer ?? "Tuesday task"}</div>
+        </div>
+        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontWeight: 950 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+      </div>
+    </div>
+  );
+}
+
 function SortablePlanTaskCard({
   task,
   selectedOrder,
   planTaskLinks,
   planTaskLinksLoaded = true,
   resolveTaskOrderId,
+  resolveTaskOrderConnection,
   onTaskSelect,
   onTaskOpen,
   onTaskEdit,
@@ -4539,6 +6430,7 @@ function SortablePlanTaskCard({
   planTaskLinks: PlanTaskLinks;
   planTaskLinksLoaded?: boolean;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
+  resolveTaskOrderConnection?: (task: DraggablePlanTask) => PlanTaskOrderConnection;
   onTaskSelect?: (task: DraggablePlanTask) => void;
   onTaskOpen?: (task: DraggablePlanTask) => void;
   onTaskEdit?: (task: DraggablePlanTask) => void;
@@ -4549,13 +6441,17 @@ function SortablePlanTaskCard({
     id: task.id,
     data: { type: "plan-task" },
   });
-  const resolvedOrderId = resolveTaskOrderId?.(task) ?? null;
+  const resolvedConnection = resolveTaskOrderConnection?.(task) ?? {
+    orderId: resolveTaskOrderId?.(task) ?? null,
+    confidence: "possible" as PlanTaskOrderMatchConfidence,
+  };
+  const resolvedOrderId = resolvedConnection.orderId;
   const effectiveOrderIds = resolvedOrderId ? [resolvedOrderId] : effectiveTaskOrderIds(task, planTaskLinks);
   const isSelectedOrderTask = selectedOrder ? effectiveOrderIds.includes(selectedOrder.id) || planTaskMatchesOrder(task, selectedOrder) : false;
   const isUnlinkedTask = effectiveOrderIds.length === 0;
   const personVisual = PERSON_VISUALS[task.person];
   const orderConnection = planTaskLinksLoaded
-    ? orderConnectionLabel(task, planTaskLinks, resolvedOrderId)
+    ? orderConnectionLabel(task, planTaskLinks, resolvedOrderId, resolvedConnection.confidence)
     : { state: "connected" as OrderConnectionState, label: "Checking", detail: "Checking order link" };
   const orderConnectionVisual = orderConnectionStyle(orderConnection.state, isSelectedOrderTask);
   const taskBackground = task.done
@@ -4662,7 +6558,7 @@ function SortablePlanTaskCard({
           </div>
           <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
         </div>
-        <div data-task-card-title="task-card-title" style={{ alignSelf: "center", fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 820 : 930, lineHeight: 1.18, overflowWrap: "break-word", wordBreak: "normal", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecoration: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined, opacity: task.done ? 0.72 : 1 }}>{displayTaskText}</div>
+        <div data-task-card-title="task-card-title" style={{ alignSelf: "center", fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 820 : 930, lineHeight: 1.18, overflowWrap: "break-word", wordBreak: "normal", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecorationLine: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined, opacity: task.done ? 0.72 : 1 }}>{displayTaskText}</div>
         <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 5, minWidth: 0, flexWrap: "nowrap" }}>
           <button
             type="button"
@@ -4723,10 +6619,16 @@ function WorkshopTaskEditor({
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState<BoardPlanTask>({ ...task, estimatedHours: cleanTaskEstimatedHours(task.estimatedHours) });
-  const connectedOrderId = assignedOrderIdForTask(task, planTaskLinks) ?? task.linkedOrderIds[0] ?? "";
+  const exactMatchedOrder = exactOrderForPlanTask(task, orders);
+  const connectedOrderId = assignedOrderIdForTask(task, planTaskLinks) ?? task.linkedOrderIds[0] ?? exactMatchedOrder?.id ?? "";
   const [orderId, setOrderId] = useState<string>(connectedOrderId ? String(connectedOrderId) : "");
-  const connection = orderConnectionLabel(task, planTaskLinks, connectedOrderId ? Number(connectedOrderId) : null);
-  const activeConnection = orderId ? { state: "connected" as OrderConnectionState, label: "Order linked", detail: "Customer order attached" } : connection;
+  const connectionConfidence: PlanTaskOrderMatchConfidence = exactMatchedOrder && connectedOrderId === exactMatchedOrder.id ? "exact" : "possible";
+  const connection = orderConnectionLabel(task, planTaskLinks, connectedOrderId ? Number(connectedOrderId) : null, connectionConfidence);
+  const activeConnection = orderId ? (
+    orderId === String(connectedOrderId)
+      ? connection
+      : { state: "connected" as OrderConnectionState, label: "Order selected", detail: "Customer order attached" }
+  ) : connection;
   const connectionVisual = orderConnectionStyle(activeConnection.state);
   const selectedOrder = orderId ? orders.find((order) => order.id === Number(orderId)) ?? null : null;
   const selectedDateOption = dateOptions.find((option) => option.weekId === draft.weekId && option.day === draft.day) ?? null;
@@ -4810,7 +6712,7 @@ function WorkshopTaskEditor({
                     style={{ border: `1px solid ${DT.border}`, borderRadius: 10, padding: "10px 11px", fontSize: 14, color: DT.textPrimary, background: DT.cardBg, fontWeight: 850 }}
                   >
                     <option value="" disabled>Choose standard table stage...</option>
-                    {TABLE_TASK_STAGE_SUGGESTIONS.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+                    {TABLE_TASK_STAGE_SUGGESTIONS.map((stage, optionIndex) => <option key={stage} value={stage}>{numberedJobTaskOptionLabel(stage, optionIndex)}</option>)}
                     <option value={STAGE_CUSTOM_VALUE}>Custom task...</option>
                   </select>
                   {isCustomTask && (
@@ -5098,6 +7000,7 @@ function MonthWeekSection({
   planTaskLinks = {},
   planTaskLinksLoaded = true,
   resolveTaskOrderId,
+  resolveTaskOrderConnection,
   activeTaskId = null,
   activeSuggestedStepId = null,
   dropPreview = null,
@@ -5127,6 +7030,7 @@ function MonthWeekSection({
   planTaskLinks?: PlanTaskLinks;
   planTaskLinksLoaded?: boolean;
   resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
+  resolveTaskOrderConnection?: (task: DraggablePlanTask) => PlanTaskOrderConnection;
   activeTaskId?: string | null;
   activeSuggestedStepId?: string | null;
   dropPreview?: BoardDropPreview | null;
@@ -5188,7 +7092,7 @@ function MonthWeekSection({
             return (
               <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: showPlanningLanes ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.08), rgba(255,255,255,0))" : undefined }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, marginBottom: showPlanningLanes ? 7 : 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 900, color: isTodayColumn ? DT.teal : DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: DT.sans }}>{DAY_LABELS[day]}</span>
+                  <span style={{ fontSize: 10, fontWeight: 900, color: isTodayColumn ? DT.teal : DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: DT.sans }}>{dateOption?.dateLabel ?? DAY_LABELS[day]}</span>
                   {isTodayColumn && <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Today</span>}
                 </div>
                 {showPlanningLanes && (
@@ -5199,7 +7103,8 @@ function MonthWeekSection({
                       const laneOpenAppTasks = laneAppTasks.filter((task) => !task.done);
                       const laneSuggestions = suggestedSteps.filter((step) => step.day === day && step.person === person);
                       const laneDraftHours = laneSuggestions.reduce((sum, step) => sum + Number(step.estimatedHours || 0), 0);
-                      const capacity = summarizeLaneCapacity({ existingTaskCount: laneTasks.length, draftHours: laneDraftHours + laneOpenAppTasks.length });
+                      const laneAppHours = laneOpenAppTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
+                      const capacity = summarizeLaneCapacity({ existingTaskCount: laneTasks.length, draftHours: laneDraftHours + laneAppHours });
                       const laneId = boardPlanLaneId(week.id, day, person);
                       const isDropTarget = Boolean((activeTaskId || activeSuggestedStepId) && dropPreview?.weekId === week.id && dropPreview.day === day && dropPreview.person === person);
                       const showDropSlot = (itemId?: string, insertAfter = false) => Boolean(isDropTarget && dropPreview?.overId === itemId && Boolean(dropPreview?.insertAfter) === insertAfter);
@@ -5226,6 +7131,7 @@ function MonthWeekSection({
                                 planTaskLinks={planTaskLinks}
                                 planTaskLinksLoaded={planTaskLinksLoaded}
                                 resolveTaskOrderId={resolveTaskOrderId}
+                                resolveTaskOrderConnection={resolveTaskOrderConnection}
                                 onTaskSelect={onTaskSelect}
                                 onTaskOpen={onTaskOpen}
                                 onTaskEdit={(item) => onTaskEdit?.(item as BoardPlanTask)}
@@ -5275,12 +7181,12 @@ function MonthWeekSection({
                             >
                               <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
                                 <div style={{ minWidth: 0 }}>
-                                  <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 980, lineHeight: 1.2, overflowWrap: "anywhere", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecoration: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined }}>{task.title}</div>
-                                  {selectedOrder && <div style={{ marginTop: 3, fontSize: 9, color: task.done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedOrder.customer}</div>}
+                                  <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 980, lineHeight: 1.2, overflowWrap: "anywhere", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecorationLine: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined }}>{task.title}</div>
+                                  {(task.customer || selectedOrder?.customer) && <div style={{ marginTop: 3, fontSize: 9, color: task.done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer}</div>}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(1)}</span>
-                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : "Job"}</span>
+                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : task.source === "intake" ? "Order" : "Job"}</span>
                                 </div>
                               </div>
                             </div>
@@ -5370,57 +7276,706 @@ function WorkshopFocusBar({
   todayCounts: Record<Person, number>;
   historyControl?: ReactNode;
 }) {
+  const isNarrow = useIsNarrow(760);
   const options: Array<{ id: PersonFilter; label: string; sublabel: string }> = [
     { id: "all", label: "All", sublabel: `${todayCounts.nick + todayCounts.dylan} tasks today` },
     { id: "nick", label: "Nick", sublabel: `${todayCounts.nick} tasks today` },
     { id: "dylan", label: "Dylan", sublabel: `${todayCounts.dylan} tasks today` },
   ];
   return (
-    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+    <div data-mobile-crew-pill="crew-filter" style={{ display: "flex", gap: isNarrow ? 0 : 5, flexWrap: isNarrow ? "nowrap" : "wrap", alignItems: "center", justifyContent: "flex-start", border: isNarrow ? `1px solid ${DT.border}` : 0, borderRadius: isNarrow ? 999 : 0, background: isNarrow ? "rgba(255,255,255,0.78)" : "transparent", padding: isNarrow ? 2 : 0, overflow: "hidden" }}>
       {options.map((option) => {
         const active = personFilter === option.id;
         return (
           <button
             type="button"
             key={option.id}
+            aria-pressed={active}
+            aria-label={`${option.label} crew filter, ${option.sublabel}`}
             onClick={() => onPersonFilterChange(option.id)}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, border: `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 10px", fontFamily: DT.sans, cursor: "pointer", minWidth: 112, textAlign: "center", whiteSpace: "nowrap" }}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 3 : 5, border: isNarrow ? 0 : `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : isNarrow ? "transparent" : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 8px" : "6px 10px", fontFamily: DT.sans, cursor: "pointer", minHeight: isNarrow ? 40 : undefined, minWidth: isNarrow ? 0 : 112, flex: isNarrow ? "1 1 0" : undefined, textAlign: "center", whiteSpace: "nowrap", touchAction: "manipulation" }}
           >
-            <span style={{ fontSize: 11, fontWeight: 950, lineHeight: 1 }}>{option.label}</span>
-            <span style={{ fontSize: 9, fontWeight: 850, lineHeight: 1, color: active ? DT.teal : DT.textFaint }}>{option.sublabel}</span>
+            <span style={{ fontSize: isNarrow ? 12 : 11, fontWeight: 950, lineHeight: 1 }}>{option.label}</span>
+            {!isNarrow && <span style={{ fontSize: 9, fontWeight: 850, lineHeight: 1, color: active ? DT.teal : DT.textFaint }}>{option.sublabel}</span>}
           </button>
         );
       })}
-      {historyControl}
+      {!isNarrow && historyControl}
     </div>
   );
 }
 
 function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlanMode; onModeChange: (mode: ProductionPlanMode) => void }) {
+  const isNarrow = useIsNarrow(760);
   const options: Array<{ id: ProductionPlanMode; label: string; hint: string }> = [
-    { id: "schedule", label: "Schedule", hint: "Day / person capacity" },
     { id: "orderRows", label: "Orders", hint: "Order task view" },
+    { id: "schedule", label: "Schedule board", hint: "Day / person capacity" },
   ];
   return (
-    <div aria-label="Production plan view" style={{ display: "flex", gap: 4, padding: 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}>
+    <div data-mobile-production-actions="workshop-primary-actions" aria-label="Production plan view" style={{ display: "flex", gap: 4, padding: isNarrow ? 2 : 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", width: isNarrow ? "100%" : undefined }}>
       {options.map((option) => {
         const active = mode === option.id;
         return (
-          <button key={option.id} type="button" onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, padding: "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>
-            {option.label}
+          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 40 : undefined, padding: isNarrow ? "9px 10px" : "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 12 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
+            {option.id === "schedule" ? <><span className="plan-schedule-mobile-label">Schedule</span><span className="plan-schedule-desktop-label">{option.label}</span></> : option.label}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function processTemplateIssueStyle(level: ProcessTemplateIssueLevel): CSSProperties {
+  if (level === "aligned") return { borderColor: "rgba(12,124,122,0.22)", background: "rgba(12,124,122,0.08)", color: DT.teal };
+  if (level === "gap") return { borderColor: "rgba(161,31,31,0.22)", background: "rgba(161,31,31,0.07)", color: "#a11f1f" };
+  return { borderColor: "rgba(190,137,24,0.24)", background: "rgba(255,246,199,0.72)", color: "#9a6a14" };
+}
+
+const PROCESS_TEMPLATE_ISSUE_OPTIONS: ProcessTemplateIssueLevel[] = ["aligned", "watch", "gap"];
+const PROCESS_TEMPLATE_ISSUE_LABELS: Record<ProcessTemplateIssueLevel, string> = {
+  aligned: "Ready",
+  watch: "Review",
+  gap: "Gap",
+};
+const PROCESS_TEMPLATE_ISSUE_HINTS: Record<ProcessTemplateIssueLevel, string> = {
+  aligned: "Ready: the suggested tasks and order-detail flow are aligned enough to trust.",
+  watch: "Review: usable, but Guido should check details before trusting it fully.",
+  gap: "Gap: missing route logic or workflow detail before this should be trusted.",
+};
+const PROCESS_TEMPLATE_OWNER_OPTIONS = ["Nick", "Dylan", "Guido", "Other"] as const;
+const PROCESS_TEMPLATE_WHO_OPTIONS = ["Workshop", "Guido", "Nick", "Dylan", "Customer follow-up", ""] as const;
+
+function processTemplateInputStyle(extra: CSSProperties = {}): CSSProperties {
+  return {
+    width: "100%",
+    minWidth: 0,
+    border: `1px solid ${DT.border}`,
+    borderRadius: 10,
+    background: "rgba(255,255,255,0.88)",
+    color: DT.textPrimary,
+    fontFamily: DT.sans,
+    fontSize: 11,
+    fontWeight: 850,
+    padding: "5px 7px",
+    outline: "none",
+    lineHeight: 1.15,
+    ...extra,
+  };
+}
+
+function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" = "neutral"): CSSProperties {
+  const danger = tone === "danger";
+  const primary = tone === "primary";
+  return {
+    border: `1px solid ${danger ? "rgba(161,31,31,0.22)" : primary ? "rgba(12,124,122,0.28)" : DT.border}`,
+    background: danger ? "rgba(161,31,31,0.06)" : primary ? DT.tealSoft : "rgba(255,255,255,0.74)",
+    color: danger ? "#a11f1f" : primary ? DT.teal : DT.textMuted,
+    borderRadius: 999,
+    padding: "4px 7px",
+    fontFamily: DT.sans,
+    fontSize: 9,
+    fontWeight: 950,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    lineHeight: 1.05,
+  };
+}
+
+function processTemplateActionGroupStyle(): CSSProperties {
+  return {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: 4,
+    justifyContent: "stretch",
+    minWidth: 0,
+  };
+}
+
+function processTemplateColumnStyle(tone: "logic" | "tasks" | "flow"): CSSProperties {
+  const tones = {
+    logic: {
+      background: "rgba(255,255,255,0.62)",
+      border: DT.border,
+      stripe: "rgba(126,117,103,0.32)",
+    },
+    tasks: {
+      background: "rgba(231,243,242,0.42)",
+      border: "rgba(12,124,122,0.18)",
+      stripe: "rgba(12,124,122,0.48)",
+    },
+    flow: {
+      background: "rgba(255,246,199,0.32)",
+      border: "rgba(190,137,24,0.20)",
+      stripe: "rgba(190,137,24,0.45)",
+    },
+  }[tone];
+  return {
+    minWidth: 0,
+    border: `1px solid ${tones.border}`,
+    borderLeft: `4px solid ${tones.stripe}`,
+    background: tones.background,
+    borderRadius: 12,
+    padding: 10,
+    boxSizing: "border-box",
+  };
+}
+
+function reorderProcessTemplateItem<T>(items: T[], index: number, direction: -1 | 1) {
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= items.length) return items;
+  return arrayMove(items, index, nextIndex);
+}
+
+function processTemplateStepKey(label: string, index: number) {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `step-${index + 1}`;
+}
+
+function ProcessTemplateTaskEditor({
+  tasks,
+  onChange,
+}: {
+  tasks: ProcessTemplatePreview["suggestedTasks"];
+  onChange: (tasks: ProcessTemplatePreview["suggestedTasks"]) => void;
+}) {
+  const updateTask = (index: number, patch: Partial<ProcessTemplatePreview["suggestedTasks"][number]>) => {
+    onChange(tasks.map((task, taskIndex) => taskIndex === index ? { ...task, ...patch } : task));
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {tasks.map((task, index) => (
+        <div key={`task-row-${index}`} data-process-template-row="task" style={{ display: "grid", gridTemplateColumns: "24px minmax(112px, 1fr) minmax(70px, 0.58fr) 60px 42px 96px", gap: 4, alignItems: "center", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "4px 5px", background: "rgba(255,255,255,0.86)", boxSizing: "border-box" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 24, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: DT.tealSoft, color: DT.teal, fontSize: 9, fontWeight: 950 }}>{index + 1}</span>
+          <input aria-label={`Suggested task ${index + 1} title`} value={task.title} onChange={(event) => updateTask(index, { title: event.target.value })} style={processTemplateInputStyle()} />
+          <input aria-label={`Suggested task ${index + 1} note`} value={task.note || ""} placeholder="Note" onChange={(event) => updateTask(index, { note: event.target.value })} style={processTemplateInputStyle({ color: DT.textMuted })} />
+          <select aria-label={`Suggested task ${index + 1} owner`} value={task.owner} onChange={(event) => updateTask(index, { owner: event.target.value as ProcessTemplatePreview["suggestedTasks"][number]["owner"] })} style={processTemplateInputStyle()}>
+            {PROCESS_TEMPLATE_OWNER_OPTIONS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+          </select>
+          <input aria-label={`Suggested task ${index + 1} hours`} type="number" min={0} step={0.25} value={task.estimatedHours} onChange={(event) => updateTask(index, { estimatedHours: Number(event.target.value) })} style={processTemplateInputStyle()} />
+          <div style={processTemplateActionGroupStyle()}>
+            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(tasks, index, -1))} style={processTemplateTinyButtonStyle()} aria-label={`Move task ${index + 1} up`} title="Move up">Up</button>
+            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(tasks, index, 1))} style={processTemplateTinyButtonStyle()} aria-label={`Move task ${index + 1} down`} title="Move down">Dn</button>
+            <button type="button" onClick={() => onChange(tasks.filter((_, taskIndex) => taskIndex !== index))} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete task ${index + 1}`} title="Delete">Del</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...tasks, { title: "New task", owner: "Guido", estimatedHours: 0.5 }])} style={processTemplateTinyButtonStyle("primary")}>Add task</button>
+    </div>
+  );
+}
+
+function ProcessTemplateFlowEditor({
+  steps,
+  onChange,
+}: {
+  steps: ProductionStep[];
+  onChange: (steps: ProductionStep[]) => void;
+}) {
+  const updateStep = (index: number, patch: Partial<ProductionStep>) => {
+    onChange(steps.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step));
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {steps.length === 0 && (
+        <div style={{ border: "1px dashed rgba(161,31,31,0.26)", background: "rgba(161,31,31,0.04)", color: "#a11f1f", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontWeight: 900 }}>
+          No dedicated order-detail flow yet
+        </div>
+      )}
+      {steps.map((step, index) => (
+        <div key={`flow-row-${index}`} data-process-template-row="flow" style={{ display: "grid", gridTemplateColumns: "24px minmax(112px, 1fr) 76px 50px minmax(70px, 0.54fr) 96px", gap: 4, alignItems: "center", border: `1px solid ${step.wait ? "rgba(190,137,24,0.20)" : DT.border}`, borderRadius: 8, padding: "4px 5px", background: step.wait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.86)", boxSizing: "border-box" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 24, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: step.wait ? "rgba(255,246,199,0.72)" : DT.tealSoft, color: step.wait ? "#9a6a14" : DT.teal, fontSize: 9, fontWeight: 950 }}>{index + 1}</span>
+          <input aria-label={`Order flow step ${index + 1} label`} value={step.label} onChange={(event) => updateStep(index, { label: event.target.value, key: processTemplateStepKey(event.target.value, index) })} style={processTemplateInputStyle()} />
+          <select aria-label={`Order flow step ${index + 1} owner`} value={step.who || ""} onChange={(event) => updateStep(index, { who: event.target.value || null })} style={processTemplateInputStyle()}>
+            {PROCESS_TEMPLATE_WHO_OPTIONS.map((who) => <option key={who || "none"} value={who}>{who || "No owner"}</option>)}
+          </select>
+          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, color: DT.textMuted, fontSize: 9, fontWeight: 950 }}>
+            <input type="checkbox" checked={step.wait} onChange={(event) => updateStep(index, { wait: event.target.checked })} />
+            Wait
+          </label>
+          <input aria-label={`Order flow step ${index + 1} wait label`} value={step.waitLabel || ""} placeholder="Wait label" onChange={(event) => updateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
+          <div style={processTemplateActionGroupStyle()}>
+            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(steps, index, -1))} style={processTemplateTinyButtonStyle()} aria-label={`Move flow step ${index + 1} up`} title="Move up">Up</button>
+            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(steps, index, 1))} style={processTemplateTinyButtonStyle()} aria-label={`Move flow step ${index + 1} down`} title="Move down">Dn</button>
+            <button type="button" onClick={() => onChange(steps.filter((_, stepIndex) => stepIndex !== index))} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete flow step ${index + 1}`} title="Delete">Del</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...steps, { key: `step-${steps.length + 1}`, label: "New flow step", who: "Workshop", wait: false }])} style={processTemplateTinyButtonStyle("primary")}>Add step</button>
+    </div>
+  );
+}
+
+function ProcessTemplatesView() {
+  const [templates, setTemplates] = useState<ProcessTemplatePreview[]>(DEFAULT_PROCESS_TEMPLATE_PREVIEWS);
+  const [dirty, setDirty] = useState(false);
+  const [source, setSource] = useState<"loading" | "file" | "defaults" | "error">("loading");
+  const [saveStatus, setSaveStatus] = useState<string>("Loading saved templates...");
+  const changeVersionRef = useRef(0);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/production/process-templates", { cache: "no-store" })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Process template load failed");
+        if (!active) return;
+        setTemplates(Array.isArray(body.templates) ? body.templates : DEFAULT_PROCESS_TEMPLATE_PREVIEWS);
+        setSource(body.source === "file" ? "file" : "defaults");
+        setSaveStatus(body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Using built-in defaults");
+      })
+      .catch((err) => {
+        if (!active) return;
+        setSource("error");
+        setSaveStatus(err instanceof Error ? err.message : "Process template load failed");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const persistTemplates = useCallback(async (
+    nextTemplates: ProcessTemplatePreview[],
+    options: { mode: "manual" | "auto"; resetToDefaults?: boolean; version?: number }
+  ) => {
+    setSaveStatus(options.resetToDefaults ? "Resetting..." : options.mode === "auto" ? "Autosaving..." : "Saving...");
+    const response = await fetch("/api/production/process-templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(options.resetToDefaults ? { resetToDefaults: true } : { templates: nextTemplates }),
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      setSaveStatus(body.error || (options.mode === "auto" ? "Autosave failed" : "Save failed"));
+      return;
+    }
+    const savedAt = body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Saved";
+    if (options.resetToDefaults) {
+      setTemplates(Array.isArray(body.templates) ? body.templates : DEFAULT_PROCESS_TEMPLATE_PREVIEWS);
+      changeVersionRef.current += 1;
+      setDirty(false);
+      setSource("file");
+      setSaveStatus(savedAt);
+      return;
+    }
+    if (options.mode === "manual" || options.version === changeVersionRef.current) {
+      setDirty(false);
+      setSource("file");
+      setSaveStatus(options.mode === "auto" ? `${savedAt} automatically` : savedAt);
+    }
+  }, []);
+  const updateTemplate = (index: number, updater: (template: ProcessTemplatePreview) => ProcessTemplatePreview) => {
+    changeVersionRef.current += 1;
+    setTemplates((current) => current.map((template, templateIndex) => templateIndex === index ? updater(template) : template));
+    setDirty(true);
+    setSaveStatus("Unsaved changes - autosave pending");
+  };
+  const saveTemplates = async (resetToDefaults = false) => {
+    await persistTemplates(templates, { mode: "manual", resetToDefaults });
+  };
+  useEffect(() => {
+    if (!dirty || source === "loading") return undefined;
+    const version = changeVersionRef.current;
+    const id = window.setTimeout(() => {
+      void persistTemplates(templates, { mode: "auto", version });
+    }, 900);
+    return () => window.clearTimeout(id);
+  }, [dirty, persistTemplates, source, templates]);
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <style>{`
+        [data-process-template-row] input,
+        [data-process-template-row] select {
+          min-width: 0;
+        }
+        @media (max-width: 980px) {
+          [data-process-template-card] {
+            grid-template-columns: 1fr !important;
+          }
+          [data-process-template-row] {
+            grid-template-columns: 26px minmax(0, 1fr) !important;
+          }
+          [data-process-template-row] > * {
+            grid-column: 2 / -1 !important;
+          }
+          [data-process-template-row] > span:first-child {
+            grid-column: 1 !important;
+            grid-row: 1 !important;
+          }
+          [data-process-template-row] > div:last-child {
+            justify-content: flex-start !important;
+          }
+        }
+        @media (min-width: 981px) and (max-width: 1320px) {
+          [data-process-template-card] {
+            grid-template-columns: minmax(320px, 0.82fr) minmax(470px, 1fr) !important;
+          }
+          [data-process-template-flow-column] {
+            grid-column: 1 / -1 !important;
+          }
+        }
+      `}</style>
+      <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.teal }}>Guido</div>
+          <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, fontSize: 28, lineHeight: 1.02, letterSpacing: "-0.04em", color: DT.textPrimary }}>Process templates</h2>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
+          <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 950 }}>{dirty ? "Autosave pending" : source === "loading" ? "Loading" : "Autosaves on edit"}</span>
+          <span title={saveStatus} style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 900 }}>{saveStatus}</span>
+          <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save</button>
+          <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset</button>
+        </div>
+      </div>
+      {templates.map((template, templateIndex) => (
+        <article key={template.id} data-process-template-card="true" style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: 12, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, alignItems: "start" }}>
+          <div style={processTemplateColumnStyle("logic")}>
+            <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
+              <input aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 20, lineHeight: 1.02, letterSpacing: "-0.03em", fontWeight: 850, padding: "5px 7px", flex: "1 1 164px" })} />
+              <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: 110, flex: "0 0 110px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
+                {PROCESS_TEMPLATE_ISSUE_OPTIONS.map((level) => <option key={level} value={level}>{PROCESS_TEMPLATE_ISSUE_LABELS[level]}</option>)}
+              </select>
+            </div>
+            <input aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} style={processTemplateInputStyle({ marginTop: 5, fontSize: 10 })} />
+            <textarea aria-label={`${template.title} description`} value={template.subtitle} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, subtitle: event.target.value }))} rows={2} style={processTemplateInputStyle({ margin: "5px 0 8px", minHeight: 44, resize: "vertical", color: DT.textMuted, lineHeight: 1.25, overflow: "hidden" })} />
+            <div title="Rules Tuesday uses to decide when this process template applies." style={{ marginBottom: 5, fontSize: 9, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {template.detection.map((rule, ruleIndex) => (
+                <div key={`detection-row-${ruleIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 48px", gap: 6, alignItems: "start" }}>
+                  <textarea aria-label={`${template.title} matching rule ${ruleIndex + 1}`} value={rule} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.map((current, index) => index === ruleIndex ? event.target.value : current) }))} rows={2} style={processTemplateInputStyle({ background: "rgba(245,243,238,0.65)", color: DT.textSecondary, fontSize: 10, minHeight: 36, lineHeight: 1.22, resize: "vertical", overflow: "hidden" })} />
+                  <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.filter((_, index) => index !== ruleIndex) }))} style={processTemplateTinyButtonStyle("danger")}>Del</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: [...item.detection, "New rule"] }))} style={processTemplateTinyButtonStyle("primary")}>Add rule</button>
+            </div>
+          </div>
+          <div style={processTemplateColumnStyle("tasks")}>
+            <div style={{ marginBottom: 7, fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Suggested tasks</div>
+            <ProcessTemplateTaskEditor tasks={template.suggestedTasks} onChange={(tasks) => updateTemplate(templateIndex, (item) => ({ ...item, suggestedTasks: tasks }))} />
+          </div>
+          <div data-process-template-flow-column="true" style={processTemplateColumnStyle("flow")}>
+            <div style={{ marginBottom: 7, fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Order-detail flow</div>
+            <ProcessTemplateFlowEditor steps={template.orderFlow} onChange={(orderFlow) => updateTemplate(templateIndex, (item) => ({ ...item, orderFlow }))} />
+          </div>
+        </article>
+      ))}
+      <button
+        type="button"
+        onClick={() => {
+          changeVersionRef.current += 1;
+          setTemplates((current) => [...current, { id: `template-${current.length + 1}`, title: "New template", subtitle: "Describe when this process applies.", detection: ["New detection rule"], suggestedTasks: [{ title: "Order Loaded", owner: "Guido", estimatedHours: 1 }], orderFlow: [], issueLevel: "watch", issueLabel: "Needs review" }]);
+          setDirty(true);
+          setSaveStatus("Unsaved changes - autosave pending");
+        }}
+        style={{ ...processTemplateTinyButtonStyle("primary"), alignSelf: "flex-start", padding: "9px 12px" }}
+      >
+        Add template
+      </button>
+    </section>
+  );
+}
+
+const ORDER_JOURNEY_MOBILE_CSS = `
+  @media (max-width: 879px) {
+    [data-process-template-card] {
+      grid-template-columns: 1fr !important;
+    }
+    [data-mobile-workshop-header-controls="true"] {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      justify-content: stretch !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+    [data-mobile-production-actions="workshop-primary-actions"] {
+      width: 100% !important;
+    }
+    [data-order-capacity-strip-mobile="true"] {
+      display: grid !important;
+    }
+    [data-order-capacity-strip-desktop="true"] {
+      display: none !important;
+    }
+    [data-order-row-week-grid] {
+      grid-template-columns: 1fr !important;
+    }
+    [data-order-row-day-mobile-visible="false"],
+    [data-order-row-drop-mobile-visible="false"] {
+      display: none !important;
+    }
+    [data-order-row-mobile-day-header="true"] {
+      display: flex !important;
+    }
+    [data-order-journey-empty-mobile="true"] {
+      display: block !important;
+    }
+    [data-order-journey-section-label="true"] {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 2px !important;
+    }
+    [data-order-row-task-compact="true"] button {
+      touch-action: manipulation !important;
+    }
+  }
+  @media (min-width: 880px) {
+    [data-order-capacity-strip-mobile="true"],
+    [data-order-row-mobile-day-header="true"],
+    [data-order-journey-empty-mobile="true"] {
+      display: none !important;
+    }
+  }
+`;
+
+function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow }: { rows: OrderJourneyRow[]; week: PlanWeek; dayFilter: OrderDayFilter; onDayFilterChange: (filter: OrderDayFilter) => void; isNarrow: boolean }) {
+  const todayKey = currentDayKey();
+  const tasksForDay = (day: DayKey) => rows.flatMap((row) => row.tasks).filter((task) => task.day === day);
+  const hoursFor = (tasks: OrderJourneyTask[], person?: Person) => tasks.filter((task) => !person || task.person === person).reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
+  const compactControl = (label: string, active: boolean, onClick: () => void, disabled = false, disabledReason = "") => (
+    <button type="button" aria-pressed={active} aria-label={`${label} order schedule filter${disabledReason ? ` - ${disabledReason}` : ""}`} disabled={disabled} onClick={onClick} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.28)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "5px 9px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 10, fontWeight: 950, cursor: disabled ? "not-allowed" : "pointer", lineHeight: 1.05, whiteSpace: "nowrap", touchAction: "manipulation" }}>{label}</button>
+  );
+  const dayGauge = (day: DayKey) => {
+    const tasks = tasksForDay(day);
+    const totalHours = hoursFor(tasks);
+    const nickHours = hoursFor(tasks, "nick");
+    const dylanHours = hoursFor(tasks, "dylan");
+    const capacityHours = PEOPLE.length * 7;
+    const ratio = Math.min(1, totalHours / capacityHours);
+    const fillWidth = totalHours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
+    const color = totalHours > capacityHours ? "#9b2f22" : ratio >= 0.82 ? "#9a6a14" : ratio >= 0.45 ? "#6f7d38" : ratio > 0 ? DT.sage : "rgba(124,116,107,0.26)";
+    const bg = totalHours > capacityHours ? "rgba(155,47,34,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
+    return { totalHours, nickHours, dylanHours, capacityHours, fillWidth, color, bg };
+  };
+  return (
+    <>
+      <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-mobile-capacity-strip="temperature-pill-row" data-order-capacity-strip-mobile="true" aria-hidden={!isNarrow} style={{ display: "none", gap: 3, border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.78)", boxShadow: DT.shadow, overflow: "hidden", padding: 3 }}>
+        <div style={{ padding: "2px 4px 0", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Allocated capacity</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+        {compactControl("Week", dayFilter === "allWeek", () => onDayFilterChange("allWeek"))}
+        {compactControl("Today", dayFilter === "today", () => onDayFilterChange("today"), !todayKey, "today is not a workshop weekday")}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 4 }}>
+        {DAYS.map((day) => {
+          const option = suggestedDateOptionForWeekDay(week, day);
+          const active = dayFilter === day;
+          const gauge = dayGauge(day);
+          const shortDate = option ? new Date(`${option.dateIso}T12:00:00`).toLocaleDateString("en-NZ", { day: "numeric", month: "short" }) : DAY_LABELS[day].slice(0, 3);
+          return (
+            <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, minHeight: 48, border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 10, background: active ? DT.tealSoft : gauge.bg, padding: "7px 4px 6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3, cursor: "pointer", overflow: "hidden", boxShadow: active ? "0 0 0 2px rgba(12,124,122,0.08)" : "none", touchAction: "manipulation" }}>
+              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.02em", color: active ? DT.teal : DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{DAY_LABELS[day]}</span>
+              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: active ? DT.teal : DT.textFaint, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{shortDate}</span>
+              <span aria-hidden="true" style={{ height: 5, width: "100%", borderRadius: 999, background: "rgba(255,255,255,0.70)", overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
+                <span style={{ display: "block", width: `${gauge.fillWidth}%`, height: "100%", borderRadius: 999, background: gauge.color, transition: "width 160ms ease" }} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      </div>
+      <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-order-capacity-strip-desktop="true" aria-hidden={isNarrow} style={{ display: "grid", gridTemplateColumns: "220px repeat(5, minmax(104px, 1fr))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,255,255,0.84)", boxShadow: DT.shadow, overflow: "hidden" }}>
+      <div style={{ padding: 7, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", borderRight: `1px solid ${DT.border}` }}>
+        <span style={{ width: "100%", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Allocated capacity</span>
+        {compactControl("Whole week", dayFilter === "allWeek", () => onDayFilterChange("allWeek"))}
+        {compactControl("Today only", dayFilter === "today", () => onDayFilterChange("today"), !todayKey, "today is not a workshop weekday")}
+      </div>
+      {DAYS.map((day) => {
+        const option = suggestedDateOptionForWeekDay(week, day);
+        const active = dayFilter === day;
+        const gauge = dayGauge(day);
+        return (
+          <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, border: 0, borderLeft: day === "monday" ? "none" : `1px solid ${DT.border}`, background: active ? DT.tealSoft : "rgba(247,249,248,0.62)", padding: "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 6, cursor: "pointer", overflow: "hidden" }}>
+            <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: active ? DT.teal : DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{option ? option.dateLabel.replace(/^\w+,\s*/, "") : DAY_LABELS[day]}</span>
+            <span aria-hidden="true" style={{ height: 7, width: "100%", borderRadius: 999, background: gauge.bg, overflow: "hidden", boxShadow: active ? "0 0 0 1px rgba(12,124,122,0.18)" : "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
+              <span style={{ display: "block", width: `${gauge.fillWidth}%`, height: "100%", borderRadius: 999, background: gauge.color, transition: "width 160ms ease" }} />
+            </span>
+          </button>
+        );
+      })}
+      </div>
+    </>
+  );
+}
+
+function OrderJourneyDayDropCell({
+  id,
+  rowId,
+  weekId,
+  day,
+  children,
+  style,
+  hasTasks,
+  mobileVisible,
+}: {
+  id: string;
+  rowId: string;
+  weekId: string;
+  day: DayKey;
+  children: ReactNode;
+  style: CSSProperties;
+  hasTasks?: boolean;
+  mobileVisible?: boolean;
+}) {
+  const { setNodeRef } = useDroppable({ id, data: { type: "order-journey-day", rowId, weekId, day } });
+  return (
+    <div ref={setNodeRef} data-order-row-day-drop-cell="order-row-day-drop-cell" data-order-row-drop-id={id} data-order-row-day={day} data-order-row-day-has-tasks={hasTasks ? "true" : "false"} data-order-row-day-mobile-visible={mobileVisible ? "true" : "false"} style={style}>
+      {children}
+    </div>
+  );
+}
+
+function OrderJourneyDropLane({
+  id,
+  day,
+  person,
+  dateIso,
+  dateLabel,
+  items,
+  isDropTarget,
+  dragActive,
+  children,
+  mobileVisible = true,
+  compactMobile = false,
+}: {
+  id: string;
+  day: DayKey;
+  person: Person;
+  dateIso?: string;
+  dateLabel?: string;
+  items: string[];
+  isDropTarget: boolean;
+  dragActive: boolean;
+  children: ReactNode;
+  mobileVisible?: boolean;
+  compactMobile?: boolean;
+}) {
+  const { setNodeRef } = useDroppable({ id, data: { type: "order-journey-lane", day, person, dateIso, dateLabel } });
+  const personVisual = PERSON_VISUALS[person];
+  const hasItems = items.length > 0;
+  const readyBorder = dragActive ? "rgba(12,124,122,0.26)" : personVisual.laneBorder;
+  const readyBackground = dragActive
+    ? "linear-gradient(135deg, rgba(12,124,122,0.055), rgba(255,255,255,0.82))"
+    : `linear-gradient(135deg, ${personVisual.laneBg}, rgba(255,255,255,0.82))`;
+  return (
+    <div
+      ref={setNodeRef}
+      data-order-row-drop-lane="order-row-drop-lane"
+      data-order-row-drop-id={id}
+      data-order-row-drop-person={person}
+      data-order-row-drop-active={isDropTarget ? "true" : "false"}
+      data-order-row-drop-has-items={hasItems ? "true" : "false"}
+      data-order-row-drop-mobile-visible={mobileVisible ? "true" : "false"}
+      style={{ minHeight: compactMobile ? 0 : hasItems || isDropTarget ? 58 : 31, boxSizing: "border-box", display: "flex", flexDirection: "column", borderWidth: compactMobile ? "0 0 0 3px" : "1px 1px 1px 3px", borderStyle: compactMobile ? "solid" : isDropTarget ? "solid solid solid solid" : "dashed dashed dashed solid", borderColor: compactMobile ? (isDropTarget ? DT.teal : personVisual.stripe) : `${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? DT.teal : personVisual.stripe}`, borderRadius: compactMobile ? 7 : 10, background: compactMobile ? "transparent" : isDropTarget ? "rgba(12,124,122,0.12)" : hasItems ? readyBackground : "rgba(255,255,255,0.42)", padding: compactMobile ? "0 0 0 5px" : hasItems || isDropTarget ? 6 : "5px 6px", transition: "background 150ms ease, border-color 150ms ease, box-shadow 150ms ease", boxShadow: compactMobile ? undefined : isDropTarget ? "inset 0 0 0 1px rgba(12,124,122,0.12), 0 8px 18px rgba(12,124,122,0.10)" : hasItems ? "inset 0 0 0 1px rgba(255,255,255,0.42)" : undefined }}
+    >
+      <div data-order-row-lane-header="true" style={{ marginBottom: hasItems || isDropTarget ? 5 : 0, display: compactMobile ? "none" : "flex", alignItems: "center", justifyContent: "space-between", gap: 6, minWidth: 0 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: `0 0 0 2px ${personVisual.taskSoft}`, flex: "0 0 auto" }} />
+          {PERSON_LABELS[person]}
+        </span>
+        {items.length > 0 && <span style={{ color: DT.textFaint, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{items.length}</span>}
+      </div>
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
+        <div style={{ display: "flex", flexDirection: "column", gap: compactMobile ? 3 : 5, minWidth: 0, minHeight: 0 }}>{children}</div>
+      </SortableContext>
+    </div>
+  );
+}
+
+function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSelect, onTaskOpen, onTaskEdit, onTaskDoneToggle }: { task: OrderJourneyTask; selected: boolean; compactMobile?: boolean; onTaskSelect: (task: OrderJourneyTask) => void; onTaskOpen: (task: OrderJourneyTask) => void; onTaskEdit: (task: OrderJourneyTask) => void; onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id, data: { type: task.appTask ? "app-task" : "plan-task" } });
+  const personVisual = PERSON_VISUALS[task.person];
+  const connection = orderConnectionStyle(task.connectionState, selected);
+  const taskDone = Boolean(task.done);
+  const orderRowTaskBorder = taskDone ? DONE_TASK_VISUAL.border : personVisual.taskBorder;
+  const orderRowTaskStripe = taskDone ? DONE_TASK_VISUAL.stripe : personVisual.stripe;
+  const orderRowTaskBg = taskDone ? DONE_TASK_VISUAL.bg : personVisual.taskBg;
+  const connectionMessage = task.connectionState === "possible" ? "Possible order match. Use edit to confirm the customer/order." : task.connectionState === "needs-order" ? "No confirmed order link yet. Use edit to connect this task." : "";
+  const editLabel = task.appTask ? "Open task details" : "Edit task";
+  const dragCursor = isDragging ? "grabbing" : "grab";
+  const doneSize = compactMobile ? 40 : 19;
+  const editSize = compactMobile ? 40 : 20;
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      key={task.id}
+      data-order-row-task-id={task.id}
+      data-order-row-sortable-task="order-row-sortable-task"
+      data-order-row-drag-surface="order-row-drag-surface"
+      data-order-row-task-compact={compactMobile ? "true" : "false"}
+      title="Drag this task to another day or person"
+      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: compactMobile ? 10 : 9, background: orderRowTaskBg, boxShadow: taskDone && !compactMobile ? DONE_TASK_VISUAL.shadow : undefined, padding: compactMobile ? 6 : 6, minHeight: compactMobile ? 56 : 52, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) auto", gap: compactMobile ? 6 : 7, alignItems: compactMobile ? "center" : "start" }}>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={taskDone}
+          aria-label={task.done ? "Mark task not done" : "Mark task done"}
+          title={task.done ? "Mark task not done" : "Mark task done"}
+          data-order-row-done-button="order-row-done-button"
+          data-order-row-done-checkbox="order-row-done-checkbox"
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
+            onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+          }}
+          style={{ width: doneSize, height: doneSize, minWidth: doneSize, marginTop: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `2px solid ${taskDone ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: taskDone ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: taskDone ? DONE_TASK_VISUAL.title : "transparent", borderRadius: compactMobile ? 9 : 5, padding: 0, fontFamily: DT.sans, fontSize: compactMobile ? 12 : 12, fontWeight: 950, lineHeight: 1, cursor: "pointer", boxShadow: taskDone && !compactMobile ? "0 1px 4px rgba(111,107,99,0.18)" : "inset 0 0 0 1px rgba(255,255,255,0.72)" }}
+        >
+          {task.done ? "✓" : ""}
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: taskDone ? DONE_TASK_VISUAL.text : personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>
+              {PERSON_LABELS[task.person]}
+              {connectionMessage && <span aria-label={connectionMessage} title={connectionMessage} style={{ width: 7, height: 7, borderRadius: 999, background: connection.color, boxShadow: `0 0 0 2px ${connection.bg}`, flex: "0 0 auto" }} />}
+            </span>
+            <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
+          </div>
+          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: compactMobile ? 2 : 3, minHeight: compactMobile ? 36 : undefined, display: compactMobile ? "flex" : undefined, alignItems: compactMobile ? "center" : undefined, padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: compactMobile ? 11.5 : 11.5, lineHeight: compactMobile ? 1.18 : 1.16, fontWeight: 950, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
+        </div>
+        <button
+          type="button"
+          aria-label={editLabel}
+          title={editLabel}
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (task.appTask) {
+              onTaskOpen(task);
+            } else {
+              onTaskEdit(task);
+            }
+          }}
+          style={{ width: editSize, height: editSize, minWidth: editSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: 0, fontFamily: DT.sans, fontSize: compactMobile ? 13 : 11, fontWeight: 950, cursor: "pointer", lineHeight: 1 }}
+        >
+          ✎
+        </button>
+      </div>
     </div>
   );
 }
 
 function OrderJourneyView({
   rows,
+  week,
+  weekIndex,
+  weekCount,
   selectedOrder,
+  personFilter,
+  dayFilter,
   manualRowOrderActive,
+  activeTaskId,
+  dropPreview,
+  onDayFilterChange,
   onMoveRow,
   onResetRowOrder,
+  onPreviousWeek,
+  onThisWeek,
+  onNextWeek,
   onTaskEdit,
   onTaskSelect,
   onTaskOpen,
@@ -5428,10 +7983,21 @@ function OrderJourneyView({
   onTaskDoneToggle,
 }: {
   rows: OrderJourneyRow[];
+  week: PlanWeek;
+  weekIndex: number;
+  weekCount: number;
   selectedOrder: UiOrder | null;
+  personFilter: PersonFilter;
+  dayFilter: OrderDayFilter;
   manualRowOrderActive: boolean;
+  activeTaskId: string | null;
+  dropPreview: BoardDropPreview | null;
+  onDayFilterChange: (filter: OrderDayFilter) => void;
   onMoveRow: (sourceRowId: string, targetRowId: string) => void;
   onResetRowOrder: () => void;
+  onPreviousWeek: () => void;
+  onThisWeek: () => void;
+  onNextWeek: () => void;
   onTaskEdit: (task: OrderJourneyTask) => void;
   onTaskSelect: (task: OrderJourneyTask) => void;
   onTaskOpen: (task: OrderJourneyTask) => void;
@@ -5439,8 +8005,28 @@ function OrderJourneyView({
   onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) => void;
 }) {
   const isNarrow = useIsNarrow(880);
-  const activeRows = rows.filter((row) => row.order && row.health !== "internal" && row.health !== "unlinked" && !isCompleteOrder(row.order));
-  const needsRows = rows.filter((row) => row.health === "internal" || row.health === "unlinked");
+  const todayKey = currentDayKey();
+  const weekRange = weekRangeFromTitle(week.title);
+  const isCurrentWeek = Boolean(weekRange && weekRange.start.getTime() === planningVisibleStart(new Date()).getTime());
+  const matchesTaskFilter = (task: OrderJourneyTask) => {
+    const personMatches = personFilter === "all" || task.person === personFilter;
+    const dayMatches = dayFilter === "allWeek" ? true : dayFilter === "today" ? Boolean(isCurrentWeek && todayKey && task.day === todayKey) : task.day === dayFilter;
+    return personMatches && dayMatches;
+  };
+  const filteredRows = rows
+    .map((row) => ({ ...row, tasks: row.tasks.filter(matchesTaskFilter) }))
+    .filter((row) => personFilter === "all" && dayFilter === "allWeek" ? true : row.tasks.length > 0);
+  const activeRows = filteredRows.filter((row) => row.order && row.health !== "internal" && row.health !== "unlinked" && !isCompleteOrder(row.order));
+  const activeRowsWithTasks = activeRows.filter((row) => row.hasTasksThisWeek);
+  const activeRowsWithoutTasks = activeRows.filter((row) => !row.hasTasksThisWeek);
+  const needsRows = filteredRows.filter((row) => !row.order || row.health === "internal" || row.health === "unlinked");
+  const weekLabel = displayWeekTitle(week.title);
+  const renderSectionLabel = (label: string, count: number, detail: string) => (
+    <div data-order-journey-section-label="true" style={{ padding: "5px 2px 2px", display: "flex", flexDirection: isNarrow ? "column" : "row", alignItems: isNarrow ? "flex-start" : "baseline", justifyContent: "space-between", gap: isNarrow ? 2 : 10, fontFamily: DT.sans }}>
+      <div style={{ fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
+      <div style={{ fontSize: 10, fontWeight: 850, color: DT.textMuted }}>{count} {count === 1 ? "order" : "orders"} · {detail}</div>
+    </div>
+  );
   const renderRow = (row: OrderJourneyRow) => {
     const selected = Boolean(row.order && selectedOrder?.id === row.order.id);
     const healthMeta = row.health === "internal"
@@ -5452,6 +8038,12 @@ function OrderJourneyView({
     const rowPriorityIndex = activeRows.findIndex((candidate) => candidate.id === row.id);
     const canMoveUp = canMoveRow && rowPriorityIndex > 0;
     const canMoveDown = canMoveRow && rowPriorityIndex >= 0 && rowPriorityIndex < activeRows.length - 1;
+    const shouldShowDayOnMobile = (day: DayKey) => {
+      if (activeTaskId) return true;
+      if (dayFilter !== "allWeek" && dayFilter !== "today") return day === dayFilter;
+      return row.tasks.some((task) => task.day === day);
+    };
+    const mobileVisibleDayCount = DAYS.filter(shouldShowDayOnMobile).length;
     const rowStyle = {
       borderWidth: "1px 1px 1px 4px",
       borderStyle: "solid",
@@ -5461,85 +8053,176 @@ function OrderJourneyView({
       borderRadius: DT.radius,
       overflow: "hidden",
     };
-    return (
-      <article key={row.id} style={rowStyle}>
-        <div data-order-row-week-grid="order-row-week-grid" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "220px repeat(5, minmax(104px, 1fr))", gap: 0 }}>
-          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
-            <div style={{ fontFamily: DT.serif, fontSize: 17, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
-            <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
-              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 950 }}>{healthMeta.label}</span>
-              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850 }}>{row.dueLabel}</span>}
-            </div>
-            {row.statusLabel && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>{row.statusLabel}</div>}
-            <div style={{ marginTop: 9, display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {row.order && (
-                <button type="button" onClick={() => onOrderOpen(row.order!.id)} style={{ border: `1px solid ${DT.border}`, background: DT.headerBg, color: "#fff", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>
-                  Open order
-                </button>
+    if (isNarrow && !activeTaskId) {
+      const visibleDays = DAYS.filter(shouldShowDayOnMobile);
+      const compactTaskLimit = dayFilter === "allWeek" && personFilter === "all" ? 2 : 3;
+      const compactTaskIds = new Set(row.tasks.slice(0, compactTaskLimit).map((task) => task.id));
+      const compactVisibleDays = visibleDays.filter((day) => row.tasks.some((task) => task.day === day && compactTaskIds.has(task.id)));
+      const hiddenTaskCount = Math.max(0, row.tasks.length - compactTaskIds.size);
+      return (
+        <article key={row.id} data-order-journey-row-card="true" data-order-journey-row-compact="true" style={{ ...rowStyle, borderRadius: 11 }}>
+          <div data-order-row-summary="true" style={{ padding: "7px 9px 6px", background: "rgba(255,253,249,0.72)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start" }}>
+              {row.order ? (
+                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: 38, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 760, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, overflowWrap: "anywhere", touchAction: "manipulation" }}>{row.name}</button>
+              ) : (
+                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 760, overflowWrap: "anywhere" }}>{row.name}</div>
               )}
               {canMoveRow && (
-                <>
-                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ border: `1px solid ${DT.border}`, background: canMoveUp ? DT.cardBg : "rgba(232,230,224,0.42)", color: canMoveUp ? DT.textMuted : DT.textFaint, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed" }}>↑</button>
-                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ border: `1px solid ${DT.border}`, background: canMoveDown ? DT.cardBg : "rgba(232,230,224,0.42)", color: canMoveDown ? DT.textMuted : DT.textFaint, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed" }}>↓</button>
-                </>
+                <div data-order-row-priority-controls="order-row-priority-controls" title="Priority: move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
+                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ width: 36, height: 36, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 14, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1 }}>↑</button>
+                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ width: 36, height: 36, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 14, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1 }}>↓</button>
+                </div>
               )}
             </div>
+            <div style={{ marginTop: 5, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "2px 6px", fontSize: 8.5, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1 }}>{healthMeta.label}</span>
+              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontSize: 8.5, fontFamily: DT.sans, fontWeight: 850, lineHeight: 1 }}>{row.dueLabel}</span>}
+              {row.statusLabel && <span style={{ minWidth: 0, color: DT.textMuted, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 850, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.statusLabel}</span>}
+            </div>
           </div>
+          {visibleDays.length === 0 ? (
+            <div data-order-journey-empty-mobile="true" style={{ display: "block", padding: "6px 9px 7px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.52)", fontFamily: DT.sans, fontSize: 10, lineHeight: 1.25, color: DT.textMuted, fontWeight: 850 }}>
+              No tasks scheduled this week.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 0 }}>
+              {compactVisibleDays.map((day) => {
+                const allDayTasks = row.tasks.filter((task) => task.day === day);
+                const dayTasks = allDayTasks.filter((task) => compactTaskIds.has(task.id));
+                const dateOption = suggestedDateOptionForWeekDay(week, day);
+                const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
+                const dayHours = allDayTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
+                return (
+                  <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible style={{ minHeight: 0, padding: "5px 8px 6px", borderTop: `1px solid ${DT.border}`, background: dayTasks.length ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.24)", display: "flex", flexDirection: "column" }}>
+                    <div data-order-row-mobile-day-header="true" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 4 : 0 }}>
+                      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
+                      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>{allDayTasks.length > 0 ? `${allDayTasks.length} · ${formatTaskHours(dayHours)}` : "No tasks"}</span>
+                    </div>
+                    <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+                      {visiblePeople.map((person) => {
+                        const laneId = orderJourneyLaneId(row.id, week.id, day, person);
+                        const laneTasks = dayTasks.filter((task) => task.person === person);
+                        if (laneTasks.length === 0) return null;
+                        return (
+                          <OrderJourneyDropLane key={laneId} id={laneId} day={day} person={person} dateIso={dateOption?.dateIso} dateLabel={dateOption?.dateLabel} items={laneTasks.map((task) => task.id)} isDropTarget={false} dragActive={false} mobileVisible compactMobile>
+                            {laneTasks.map((task) => (
+                              <OrderJourneyTaskCard key={task.id} task={task} selected={selected} compactMobile onTaskSelect={onTaskSelect} onTaskOpen={onTaskOpen} onTaskEdit={onTaskEdit} onTaskDoneToggle={onTaskDoneToggle} />
+                            ))}
+                          </OrderJourneyDropLane>
+                        );
+                      })}
+                    </div>
+                  </OrderJourneyDayDropCell>
+                );
+              })}
+              {hiddenTaskCount > 0 && (
+                <button type="button" onClick={() => row.order && onOrderOpen(row.order.id)} style={{ border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.textMuted, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textAlign: "left", cursor: row.order ? "pointer" : "default" }}>
+                  + {hiddenTaskCount} more task{hiddenTaskCount === 1 ? "" : "s"}
+                </button>
+              )}
+            </div>
+          )}
+        </article>
+      );
+    }
+    return (
+      <article key={row.id} data-order-journey-row-card="true" data-order-journey-row-compact="false" style={rowStyle}>
+        <div data-order-row-week-grid="order-row-week-grid" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "220px repeat(5, minmax(104px, 1fr))", gap: 0 }}>
+          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+              {row.order ? (
+	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 38 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 750, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
+	              ) : (
+	                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 16, lineHeight: 1.04, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
+	              )}
+              {canMoveRow && (
+                <div data-order-row-drag-handle="order-row-drag-handle" data-order-row-priority-controls="order-row-priority-controls" title="Priority: move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
+                  <span aria-hidden="true" style={{ padding: "0 6px", height: 23, display: "inline-flex", alignItems: "center", borderRight: `1px solid ${DT.border}`, color: DT.textFaint, fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1 }}>
+                    Priority
+                  </span>
+                  <button
+                    type="button"
+                    title="Move this order earlier"
+                    aria-label={`Move ${row.name} earlier in the list`}
+                    disabled={!canMoveUp}
+                    onClick={() => {
+                      const previousRow = activeRows[rowPriorityIndex - 1];
+                      if (previousRow) onMoveRow(row.id, previousRow.id);
+                    }}
+		                    style={{ width: 23, height: 23, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1 }}
+		                  >
+		                    ↑
+		                  </button>
+                  <button
+                    type="button"
+                    title="Move this order later"
+                    aria-label={`Move ${row.name} later in the list`}
+                    disabled={!canMoveDown}
+                    onClick={() => {
+                      const nextRow = activeRows[rowPriorityIndex + 1];
+                      if (nextRow) onMoveRow(nextRow.id, row.id);
+                    }}
+		                    style={{ width: 23, height: 23, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1 }}
+		                  >
+		                    ↓
+		                  </button>
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1 }}>{healthMeta.label}</span>
+              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850, lineHeight: 1 }}>{row.dueLabel}</span>}
+            </div>
+            {row.statusLabel && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800, lineHeight: 1.2 }}>{row.statusLabel}</div>}
+          </div>
+          {mobileVisibleDayCount === 0 && (
+            <div data-order-journey-empty-mobile="true" style={{ display: "none", padding: "10px 12px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.52)", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: DT.textMuted, fontWeight: 850 }}>
+              No tasks scheduled this week.
+            </div>
+          )}
           {DAYS.map((day) => {
             const dayTasks = row.tasks.filter((task) => task.day === day);
+            const dateOption = suggestedDateOptionForWeekDay(week, day);
+            const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
+            const mobileDayVisible = shouldShowDayOnMobile(day);
+            const dayHours = dayTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
             return (
-              <div key={`${row.id}:${day}`} style={{ minHeight: isNarrow ? 0 : 104, padding: 8, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "rgba(255,255,255,0.50)" : "rgba(232,230,224,0.18)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
-                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{DAY_LABELS[day]}</span>
-                  {dayTasks.length > 1 && <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted }}>{dayTasks.length}</span>}
+              <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible={mobileDayVisible} style={{ minHeight: 0, padding: isNarrow ? 8 : 6, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.24)", display: "flex", flexDirection: "column" }}>
+                <div data-order-row-mobile-day-header="true" style={{ display: isNarrow ? "flex" : "none", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
+                  <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
+                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>
+                    {dayTasks.length > 0 ? `${dayTasks.length} ${dayTasks.length === 1 ? "task" : "tasks"} · ${formatTaskHours(dayHours)}` : "No tasks"}
+                  </span>
+                  </div>
+	                <div style={{ display: "grid", gridTemplateRows: `repeat(${visiblePeople.length}, minmax(0, auto))`, gap: 6, minHeight: 0, alignContent: "start" }}>
+                  {visiblePeople.map((person) => {
+                    const laneId = orderJourneyLaneId(row.id, week.id, day, person);
+                    const laneTasks = dayTasks.filter((task) => task.person === person);
+                    const isDropTarget = Boolean(activeTaskId && dropPreview?.weekId === week.id && dropPreview.day === day && dropPreview.person === person && (!dropPreview.rowId || dropPreview.rowId === row.id));
+                    const mobileLaneVisible = Boolean(activeTaskId || laneTasks.length > 0);
+                    const showDropSlot = (itemId?: string, insertAfter = false) => Boolean(isDropTarget && dropPreview?.overId === itemId && Boolean(dropPreview?.insertAfter) === insertAfter);
+                    const dropSlot = <div aria-hidden="true" style={{ height: 7, borderRadius: 999, background: "rgba(12,124,122,0.36)", boxShadow: "0 0 0 3px rgba(12,124,122,0.08)", margin: "1px 2px" }} />;
+                    return (
+                      <OrderJourneyDropLane key={laneId} id={laneId} day={day} person={person} dateIso={dateOption?.dateIso} dateLabel={dateOption?.dateLabel} items={laneTasks.map((task) => task.id)} isDropTarget={isDropTarget} dragActive={Boolean(activeTaskId)} mobileVisible={mobileLaneVisible}>
+                        {laneTasks.map((task) => (
+                          <div key={task.id} style={{ display: "contents" }}>
+                            {showDropSlot(task.id, false) && dropSlot}
+                            <OrderJourneyTaskCard task={task} selected={selected} onTaskSelect={onTaskSelect} onTaskOpen={onTaskOpen} onTaskEdit={onTaskEdit} onTaskDoneToggle={onTaskDoneToggle} />
+                            {showDropSlot(task.id, true) && dropSlot}
+                          </div>
+                        ))}
+                        {isDropTarget && !dropPreview?.overId && dropSlot}
+                        {laneTasks.length === 0 && (
+	                          <div data-empty-order-day-cell="empty-order-day-cell" data-order-row-empty-drop-target="order-row-empty-drop-target" style={{ minHeight: activeTaskId ? 24 : 0, border: activeTaskId ? `1px dashed rgba(12,124,122,0.28)` : 0, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", color: activeTaskId ? DT.teal : "transparent", fontFamily: DT.sans, fontSize: 9, fontWeight: 850, fontStyle: "italic", background: activeTaskId ? "rgba(12,124,122,0.045)" : "transparent" }}>
+	                            {activeTaskId ? "Drop task" : ""}
+	                          </div>
+                        )}
+                      </OrderJourneyDropLane>
+                    );
+                  })}
                 </div>
-                {dayTasks.length === 0 ? (
-                  <div data-empty-order-day-cell="empty-order-day-cell" style={{ minHeight: isNarrow ? 12 : 52, border: `1px dashed rgba(0,0,0,0.045)`, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(124,116,107,0.48)", fontFamily: DT.sans, fontSize: 9, fontWeight: 850 }}>
-                    No task
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {dayTasks.map((task) => {
-                      const personVisual = PERSON_VISUALS[task.person];
-                      const connection = orderConnectionStyle(task.connectionState, selected);
-                      const taskDone = Boolean(task.done);
-                      const orderRowTaskBorder = taskDone ? DONE_TASK_VISUAL.border : personVisual.taskBorder;
-                      const orderRowTaskStripe = taskDone ? DONE_TASK_VISUAL.stripe : personVisual.stripe;
-                      const orderRowTaskBg = taskDone ? DONE_TASK_VISUAL.bg : personVisual.taskBg;
-                      return (
-                        <div key={task.id} data-order-row-task-id={task.id} style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 10, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : undefined, padding: 8, minHeight: 76 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center" }}>
-                            <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{PERSON_LABELS[task.person]}</span>
-                            <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
-                          </div>
-                          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 5, padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.18, fontWeight: 950, cursor: "pointer", textDecoration: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
-                          <div style={{ marginTop: 6, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-                            {task.connectionState !== "connected" && task.connectionState !== "internal" && <span style={{ border: `1px solid ${connection.border}`, background: connection.bg, color: connection.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>{task.connectionState === "needs-order" ? "Needs link" : "Confirm"}</span>}
-                            <button
-                              type="button"
-                              data-order-row-done-button="order-row-done-button"
-                              onPointerDown={(event) => event.stopPropagation()}
-                              onMouseDown={(event) => event.stopPropagation()}
-                              onTouchStart={(event) => event.stopPropagation()}
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
-                                onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
-                              }}
-                              style={{ border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : DT.border}`, background: task.done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.72)", color: task.done ? DONE_TASK_VISUAL.title : DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}
-                            >
-                              {task.done ? "↩ Undo" : "✓ Done"}
-                            </button>
-                            <button type="button" onClick={() => onTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Edit task</button>
-                            <button type="button" onClick={() => onTaskOpen(task)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", lineHeight: 1.2 }}>Details</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              </OrderJourneyDayDropCell>
             );
           })}
         </div>
@@ -5547,14 +8230,44 @@ function OrderJourneyView({
     );
   };
 
+  const header = (
+    <div style={{ border: `1px solid ${DT.border}`, borderRadius: isNarrow ? 11 : DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? "6px 8px" : "8px 10px", display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? "1fr" : undefined, alignItems: "center", justifyContent: "space-between", gap: isNarrow ? 5 : 8, flexWrap: "wrap" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: isNarrow ? 8 : 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: isNarrow ? "0.04em" : "0.08em", flex: "0 0 auto" }}>Orders</div>
+          <div style={{ fontFamily: DT.serif, color: DT.textPrimary, fontSize: isNarrow ? 18 : 20, lineHeight: 1, minWidth: 0 }}>{weekLabel}</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: isNarrow ? 4 : 6, alignItems: "center", flexWrap: "wrap" }}>
+        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset order" : "Reset to due-date order"}</button>}
+        <button type="button" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Prev" : "Previous week"}</button>
+        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "This" : "This week"}</button>
+        <button type="button" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Next" : "Next week"}</button>
+      </div>
+    </div>
+  );
+
   if (rows.length === 0) {
-    return <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this window.</section>;
+    return <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>{header}<OrderCapacityStrip rows={rows} week={week} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} isNarrow={isNarrow} /><div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this week.</div></section>;
   }
 
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ alignSelf: "flex-start", border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Reset manual order priority</button>}
-      {activeRows.map(renderRow)}
+    <section style={{ display: "flex", flexDirection: "column", gap: isNarrow ? 6 : 8 }}>
+      {header}
+      <OrderCapacityStrip rows={rows} week={week} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} isNarrow={isNarrow} />
+      {activeRows.length === 0 && needsRows.length === 0 && <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No order tasks match this filter.</div>}
+      {activeRowsWithTasks.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {renderSectionLabel("Tasks this week", activeRowsWithTasks.length, "scheduled work visible below")}
+          {activeRowsWithTasks.map(renderRow)}
+        </div>
+      )}
+      {activeRowsWithoutTasks.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {renderSectionLabel("No tasks this week", activeRowsWithoutTasks.length, "active orders needing plan or later work")}
+          {activeRowsWithoutTasks.map(renderRow)}
+        </div>
+      )}
       {needsRows.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ padding: "4px 2px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>Needs order / internal</div>
@@ -5626,7 +8339,6 @@ function TuesdayPlanStateLoading({ isNarrow }: { isNarrow: boolean }) {
   );
 }
 
-
 function MonthViewState({
   weeks,
   newOrder,
@@ -5655,10 +8367,14 @@ function MonthViewState({
   const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>(() => initialPlanTaskLinkState?.taskEdits ?? {});
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
-  const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
+  const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("orderRows");
+  const [orderRowsWeekIndex, setOrderRowsWeekIndex] = useState(0);
+  const [orderDayFilter, setOrderDayFilter] = useState<OrderDayFilter>("allWeek");
+  const [orderRowOrders, setOrderRowOrders] = useState<PlanRowOrders>(() => initialPlanTaskLinkState?.orderRowOrders ?? {});
   const [delightBurst, setDelightBurst] = useState<{ id: number; origin: DelightOrigin } | null>(null);
   const [boardTasks, setBoardTasks] = useState<BoardPlanTask[]>(sourceBoardTasks);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeAppTaskId, setActiveAppTaskId] = useState<string | null>(null);
   const [dropPreview, setDropPreview] = useState<BoardDropPreview | null>(null);
   const [showNewOrder, setShowNewOrder] = useState(false);
   const baseSuggestedSteps = useMemo(() => buildSuggestedPlanForOrder(newOrder), [newOrder]);
@@ -5673,15 +8389,20 @@ function MonthViewState({
   const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>(() => initialPlanTaskLinkState?.links ?? {});
   const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(Boolean(initialPlanTaskLinkState) || qaFixtureMode);
   const [planTaskLinksStorage, setPlanTaskLinksStorage] = useState<PlanTaskLinksStorage>(initialPlanTaskLinksStorage);
-  const [orderRowOrders, setOrderRowOrders] = useState<PlanRowOrders>(() => initialPlanTaskLinkState?.orderRowOrders ?? {});
   const [orderOverrides, setOrderOverrides] = useState<OrderOverrides>(() => initialPlanTaskLinkState?.orderOverrides ?? {});
   const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
   const planTaskLinksUpdatedAtRef = useRef<string | null>(initialPlanTaskLinkState?.updatedAt ?? null);
   const [assignmentStatus, setAssignmentStatus] = useState(initialPlanTaskLinksDisabledReason ?? "");
   const [showHistory, setShowHistory] = useState(false);
+  const [orderIntakeItems, setOrderIntakeItems] = useState<OrderIntakeItem[]>([]);
+  const [orderIntakeStatus, setOrderIntakeStatus] = useState("");
+  const [orderIntakeBusy, setOrderIntakeBusy] = useState(false);
+  const [openIntakeOrderId, setOpenIntakeOrderId] = useState<string | null>(null);
+  const [orderWorkflowsById, setOrderWorkflowsById] = useState<Record<string, OrderWorkflowState>>({});
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
   const dragStartBoardTasksRef = useRef<BoardPlanTask[] | null>(null);
   const lastBoardPreviewRef = useRef<string | null>(null);
+  const lastBoardPointerRef = useRef<{ x: number; y: number } | null>(null);
   const isRailNarrow = useIsNarrow(1040);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -5690,6 +8411,10 @@ function MonthViewState({
   const activeTuesdayOrders = useMemo(
     () => ordersForHealth.filter((order) => orderOverrides[String(order.id)]?.status !== "completed"),
     [ordersForHealth, orderOverrides]
+  );
+  const activeOrderIntakeItems = useMemo(
+    () => orderIntakeItems.filter((item) => orderOverrides[item.orderId]?.status !== "completed"),
+    [orderIntakeItems, orderOverrides]
   );
   const completedTuesdayItems = useMemo<CompletedTuesdayItem[]>(() => {
     const items: CompletedTuesdayItem[] = [];
@@ -5709,6 +8434,20 @@ function MonthViewState({
         updatedAt: override.updatedAt,
       });
     }
+    for (const item of orderIntakeItems) {
+      const override = orderOverrides[item.orderId];
+      if (override?.status !== "completed") continue;
+      seen.add(item.orderId);
+      items.push({
+        id: item.orderId,
+        kind: "intake",
+        label: item.customerName,
+        detail: `${item.invoiceNumber || "No invoice"} · ${item.itemCategory || item.productSummary || "Intake order"}${override.updatedAt ? ` · ${formatShortDate(override.updatedAt)}` : ""}`,
+        reason: override.reason,
+        note: override.note,
+        updatedAt: override.updatedAt,
+      });
+    }
     for (const [id, override] of Object.entries(orderOverrides)) {
       if (override.status !== "completed" || seen.has(id)) continue;
       items.push({
@@ -5722,7 +8461,62 @@ function MonthViewState({
       });
     }
     return items.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "") || a.label.localeCompare(b.label));
-  }, [ordersForHealth, orderOverrides]);
+  }, [ordersForHealth, orderIntakeItems, orderOverrides]);
+  const orderIdsKey = useMemo(() => activeTuesdayOrders.map((order) => order.id).sort((a, b) => a - b).join(","), [activeTuesdayOrders]);
+  const loadOrderWorkflows = useCallback(async () => {
+    if (!orderIdsKey) {
+      setOrderWorkflowsById({});
+      return;
+    }
+    const response = await fetch(`/api/production/order-workflow?orderIds=${encodeURIComponent(orderIdsKey)}`, { cache: "no-store" });
+    const data = await response.json().catch(() => ({})) as OrderWorkflowApiResponse;
+    if (!response.ok) throw new Error(data.error || "Workflow tasks unavailable");
+    setOrderWorkflowsById(data.states ?? {});
+  }, [orderIdsKey]);
+  useEffect(() => {
+    void loadOrderWorkflows().catch(() => undefined);
+  }, [loadOrderWorkflows]);
+  const handleAllWorkflowRealtimeChange = useCallback((payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
+    const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
+    const orderId = Number(row?.order_id ?? 0);
+    if (orderId > 0) void loadOrderWorkflows().catch(() => undefined);
+  }, [loadOrderWorkflows]);
+  useRealtimeRefresh({
+    channelName: "production-order-workflows:all",
+    table: "production_order_workflows",
+    refreshOnChange: false,
+    onChange: handleAllWorkflowRealtimeChange,
+  });
+  const loadOrderIntake = useCallback(async (quiet = false) => {
+    if (!quiet) setOrderIntakeStatus("Checking pending new orders...");
+    try {
+      const response = await fetch("/api/production/order-intake", { cache: "no-store" });
+      const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Order intake unavailable");
+      setOrderIntakeItems(Array.isArray(data.items) ? data.items : []);
+      setOrderIntakeStatus("");
+    } catch (error) {
+      setOrderIntakeStatus(error instanceof Error ? error.message : "Order intake unavailable");
+    }
+  }, []);
+  useEffect(() => {
+    void loadOrderIntake(true);
+  }, [loadOrderIntake]);
+  const handleOrderIntakeRealtimeChange = useCallback(() => {
+    void loadOrderIntake(true);
+  }, [loadOrderIntake]);
+  useRealtimeRefresh({
+    channelName: "production-order-intake-reviews",
+    table: "order_intake_reviews",
+    refreshOnChange: false,
+    onChange: handleOrderIntakeRealtimeChange,
+  });
+  useRealtimeRefresh({
+    channelName: "production-order-tasks",
+    table: "production_order_tasks",
+    refreshOnChange: false,
+    onChange: handleOrderIntakeRealtimeChange,
+  });
   const selectedOrder = useMemo(
     () => activeTuesdayOrders.find((order) => order.id === selectedOrderId) ?? null,
     [activeTuesdayOrders, selectedOrderId]
@@ -5731,12 +8525,50 @@ function MonthViewState({
     () => activeTuesdayOrders.find((order) => order.id === openOrderId) ?? null,
     [activeTuesdayOrders, openOrderId]
   );
-  const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
+  const ordersByIdForWorkflow = useMemo(() => new Map(activeTuesdayOrders.map((order) => [order.id, order])), [activeTuesdayOrders]);
+  const effectiveOrderWorkflows = useMemo(() => {
+    const next = { ...orderWorkflowsById };
+    if (selectedWorkflow) next[String(selectedWorkflow.orderId)] = selectedWorkflow;
+    return next;
+  }, [orderWorkflowsById, selectedWorkflow]);
+  const workflowAppTasks = useMemo(() => Object.values(effectiveOrderWorkflows).flatMap((workflow) => workflowTasksForPlan(workflow, ordersByIdForWorkflow.get(workflow.orderId) ?? null)), [effectiveOrderWorkflows, ordersByIdForWorkflow]);
+  const approvedIntakeAppTasks = useMemo<AppPlanTask[]>(() => activeOrderIntakeItems.flatMap((item) => {
+    const matchedOrder = findOrderForIntakeItem(item, activeTuesdayOrders);
+    return item.approvedTasks.flatMap((task) => {
+      const day = task.day || dateToDayKey(task.scheduledDate);
+      if (!day || !task.title.trim()) return [];
+      return [{
+        id: `intake-${task.id}`,
+        orderId: matchedOrder?.id ?? null,
+        orderUuid: item.orderId,
+        title: task.title,
+        detail: task.detail,
+        customer: matchedOrder?.customer ?? item.customerName,
+        owner: task.owner,
+        scheduledDate: task.scheduledDate,
+        day,
+        person: task.person,
+        done: task.status === "done",
+        estimatedHours: task.estimatedHours,
+        source: "intake" as const,
+      }];
+    });
+  }), [activeOrderIntakeItems, activeTuesdayOrders]);
+  const visibleAppTasks = useMemo(() => [...workflowAppTasks, ...approvedIntakeAppTasks], [workflowAppTasks, approvedIntakeAppTasks]);
+  const openIntakeItem = useMemo(() => activeOrderIntakeItems.find((item) => item.orderId === openIntakeOrderId) ?? null, [openIntakeOrderId, activeOrderIntakeItems]);
+  const newOrderCoveredByIntake = useMemo(() => Boolean(newOrder && activeOrderIntakeItems.some((item) => intakeItemMatchesNewOrder(item, newOrder))), [newOrder, activeOrderIntakeItems]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
+  const activeAppTask = activeAppTaskId ? visibleAppTasks.find((task) => task.id === activeAppTaskId) ?? null : null;
   const weekTitleById = useMemo(() => new Map(visibleProductionWeeks.map((week) => [week.id, displayWeekTitle(week.title)])), [visibleProductionWeeks]);
   const isDraftChanged = !boardPlanLayoutsEqual(sourceBoardTasks, boardTasks);
+  const handleSelectedWorkflowChange = useCallback((workflow: OrderWorkflowState | null) => {
+    setSelectedWorkflow(workflow);
+    if (workflow) setOrderWorkflowsById((current) => ({ ...current, [String(workflow.orderId)]: workflow }));
+  }, []);
   const keepOverlayWorkflow = useCallback((workflow: OrderWorkflowState | null) => {
-    if (workflow) setSelectedWorkflow(workflow);
+    if (!workflow) return;
+    setSelectedWorkflow(workflow);
+    setOrderWorkflowsById((current) => ({ ...current, [String(workflow.orderId)]: workflow }));
   }, []);
   const closeOrderOverview = useCallback(() => {
     setOpenOrderId(null);
@@ -5763,6 +8595,7 @@ function MonthViewState({
     dragStartBoardTasksRef.current = null;
     lastBoardPreviewRef.current = null;
     setActiveTaskId(null);
+    setActiveAppTaskId(null);
     setDropPreview(null);
   }, [sourceBoardTasks]);
 
@@ -5806,6 +8639,8 @@ function MonthViewState({
   function updateBoardTaskFromEditor(nextTask: BoardPlanTask, keepEditorOpen = true) {
     const taskKey = stablePlanTaskKey(nextTask);
     const taskEdit = taskEditForBoardTask(nextTask);
+    const previousBoardTasks = boardTasks;
+    const previousPlanTaskEdits = planTaskEdits;
     setBoardTasks((current) => {
       const next = current.map((task) => task.id === nextTask.id ? nextTask : task);
       saveDraftTasks("six-week-board", next);
@@ -5817,6 +8652,11 @@ function MonthViewState({
         [taskKey]: taskEdit,
       }));
     });
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture only - not saved");
+      if (keepEditorOpen) setEditingTask(nextTask);
+      return;
+    }
     fetch("/api/production/plan-task-links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -5835,7 +8675,12 @@ function MonthViewState({
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Task saved in Tuesday");
       })
-      .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Task edit save failed"));
+      .catch((err) => {
+        setBoardTasks(previousBoardTasks);
+        saveDraftTasks("six-week-board", previousBoardTasks);
+        setPlanTaskEdits(previousPlanTaskEdits);
+        setAssignmentStatus(err instanceof Error ? `${err.message} - restored unsaved change` : "Task edit save failed - restored unsaved change");
+      });
     if (keepEditorOpen) setEditingTask(nextTask);
   }
 
@@ -5848,9 +8693,135 @@ function MonthViewState({
     if (done) triggerDelightBurst(origin);
   }
 
+  function workflowOwnerForPerson(person: Person): WorkshopPerson {
+    return person === "dylan" ? "Dylan" : "Nick";
+  }
+
+  function rawAppTaskId(task: AppPlanTask) {
+    if (task.source === "workflow" && task.orderId != null) {
+      const prefix = `workflow-${task.orderId}-`;
+      return task.id.startsWith(prefix) ? task.id.slice(prefix.length) : task.id;
+    }
+    return task.id.startsWith("intake-") ? task.id.slice("intake-".length) : task.id;
+  }
+
+  function patchWorkflowAppTask(task: AppPlanTask, patch: AppTaskPatch) {
+    if (task.orderId == null) return;
+    const workflow = effectiveOrderWorkflows[String(task.orderId)] ?? defaultWorkflowState(task.orderId);
+    const rawId = rawAppTaskId(task);
+    const now = new Date().toISOString();
+    let changed = false;
+    const nextWorkflow: OrderWorkflowState = {
+      ...workflow,
+      tasks: workflow.tasks.map((workflowTask) => {
+        if (workflowTask.id !== rawId) return workflowTask;
+        changed = true;
+        const owner = workflowTask.owner === "Guido" && patch.person ? "Guido" : patch.person ? workflowOwnerForPerson(patch.person) : workflowTask.owner;
+        const done = typeof patch.done === "boolean" ? patch.done : workflowTask.done;
+        return {
+          ...workflowTask,
+          owner,
+          scheduledDate: patch.scheduledDate ?? workflowTask.scheduledDate,
+          done,
+          completedAt: patch.done === true ? now : patch.done === false ? null : workflowTask.completedAt,
+          completedBy: patch.done === true ? owner : patch.done === false ? "" : workflowTask.completedBy,
+        };
+      }),
+      updatedAt: now,
+    };
+    if (!changed) {
+      setAssignmentStatus("Task could not be found in this order");
+      return;
+    }
+    setOrderWorkflowsById((current) => ({ ...current, [String(nextWorkflow.orderId)]: nextWorkflow }));
+    if (selectedWorkflow?.orderId === nextWorkflow.orderId) setSelectedWorkflow(nextWorkflow);
+    setAssignmentStatus("Saving task...");
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture only - not saved");
+      return;
+    }
+    fetch("/api/production/order-workflow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: nextWorkflow }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Task save failed"))))
+      .then((data: { state?: OrderWorkflowState }) => {
+        const saved = data.state ?? nextWorkflow;
+        setOrderWorkflowsById((current) => ({ ...current, [String(saved.orderId)]: saved }));
+        if (selectedWorkflow?.orderId === saved.orderId) setSelectedWorkflow(saved);
+        setAssignmentStatus("Task saved");
+      })
+      .catch((err) => {
+        setAssignmentStatus(err instanceof Error ? err.message : "Task save failed");
+        void loadOrderWorkflows().catch(() => undefined);
+      });
+  }
+
+  function patchApprovedIntakeTask(task: AppPlanTask, patch: AppTaskPatch) {
+    const rawId = rawAppTaskId(task);
+    const now = new Date().toISOString();
+    setOrderIntakeItems((current) => current.map((item) => ({
+      ...item,
+      approvedTasks: item.approvedTasks.map((approved) => {
+        if (approved.id !== rawId) return approved;
+        const owner = approved.owner === "Guido" && patch.person ? "Guido" : patch.person ? workflowOwnerForPerson(patch.person) : approved.owner;
+        return {
+          ...approved,
+          owner: owner as OrderIntakeOwner,
+          person: patch.person ?? approved.person,
+          scheduledDate: patch.scheduledDate ?? approved.scheduledDate,
+          day: patch.day ?? approved.day,
+          estimatedHours: patch.estimatedHours ?? approved.estimatedHours,
+          status: patch.done === true ? "done" : patch.done === false ? "planned" : approved.status,
+          completedAt: patch.done === true ? now : patch.done === false ? null : approved.completedAt,
+          completedBy: patch.done === true ? owner : patch.done === false ? null : approved.completedBy,
+        };
+      }),
+    })));
+    setAssignmentStatus("Saving task...");
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture only - not saved");
+      return;
+    }
+    fetch(`/api/production/order-intake/tasks/${encodeURIComponent(rawId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Task save failed"))))
+      .then(() => {
+        setAssignmentStatus("Task saved");
+        void loadOrderIntake(true);
+      })
+      .catch((err) => {
+        setAssignmentStatus(err instanceof Error ? err.message : "Task save failed");
+        void loadOrderIntake(true);
+      });
+  }
+
+  function updateAppTask(task: AppPlanTask, patch: AppTaskPatch, origin?: DelightOrigin) {
+    const effectivePatch = patch.done === true && !patch.person ? { ...patch, person: task.person } : patch;
+    if (effectivePatch.done === true) triggerDelightBurst(origin);
+    if (task.source === "intake") {
+      patchApprovedIntakeTask(task, effectivePatch);
+      return;
+    }
+    patchWorkflowAppTask(task, effectivePatch);
+  }
+
+  function toggleOrderJourneyTaskDone(task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) {
+    if (task.appTask) {
+      updateAppTask(task.appTask, { done }, origin);
+      return;
+    }
+    toggleBoardTaskDone(task, done, origin);
+  }
+
   function persistBoardTaskMove(nextTask: BoardPlanTask, originalLayout: BoardPlanTask[]) {
     const taskKey = stablePlanTaskKey(nextTask);
     const taskEdit = taskEditForBoardTask(nextTask);
+    const previousPlanTaskEdits = planTaskEdits;
     setAssignmentStatus("Saving move...");
     startTransition(() => {
       setPlanTaskEdits((current) => ({
@@ -5858,6 +8829,10 @@ function MonthViewState({
         [taskKey]: taskEdit,
       }));
     });
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture move only - not saved");
+      return;
+    }
     fetch("/api/production/plan-task-links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -5878,31 +8853,57 @@ function MonthViewState({
       })
       .catch((err) => {
         setBoardTasks(originalLayout);
+        setPlanTaskEdits(previousPlanTaskEdits);
         setAssignmentStatus(err instanceof Error ? err.message : "Move save failed");
       });
   }
 
-  const resolveOrderIdForPlanTask = useCallback((task: DraggablePlanTask) => {
+  const resolveOrderConnectionForPlanTask = useCallback((task: DraggablePlanTask): PlanTaskOrderConnection => {
     const assignedId = assignedOrderIdForTask(task, planTaskLinks);
-    if (assignedId && activeTuesdayOrders.some((order) => order.id === assignedId)) return assignedId;
+    if (assignedId && activeTuesdayOrders.some((order) => order.id === assignedId)) {
+      return { orderId: assignedId, confidence: "confirmed" };
+    }
     const linkedId = task.linkedOrderIds.find((id) => activeTuesdayOrders.some((order) => order.id === id));
-    if (linkedId) return linkedId;
+    if (linkedId) return { orderId: linkedId, confidence: "confirmed" };
+    const exactOrder = exactOrderForPlanTask(task, activeTuesdayOrders);
+    if (exactOrder) return { orderId: exactOrder.id, confidence: "exact" };
     const scored = activeTuesdayOrders
       .map((order) => ({ order, score: orderNameMatchScore(order, task.rowName, ...task.linkedOrders.map((linked) => linked.name)) }))
       .filter(({ score }) => score >= 2)
       .sort((a, b) => b.score - a.score || ((orderDaysUntil(a.order.shipDate) ?? 999) - (orderDaysUntil(b.order.shipDate) ?? 999)));
-    return scored[0]?.order.id ?? null;
+    return scored[0] ? { orderId: scored[0].order.id, confidence: "possible" } : { orderId: null, confidence: "none" };
   }, [activeTuesdayOrders, planTaskLinks]);
 
-  const orderRowsWeekKey = "six-week-board";
-  const orderJourneyRowsBase = useMemo(() => buildOrderJourneyRows({
+  const resolveOrderIdForPlanTask = useCallback((task: DraggablePlanTask) => {
+    return resolveOrderConnectionForPlanTask(task).orderId;
+  }, [resolveOrderConnectionForPlanTask]);
+
+  useEffect(() => {
+    setOrderRowsWeekIndex((current) => Math.min(current, Math.max(visibleProductionWeeks.length - 1, 0)));
+  }, [visibleProductionWeeks.length]);
+  const orderRowsWeek = visibleProductionWeeks[orderRowsWeekIndex] ?? visibleProductionWeeks[0] ?? null;
+  const orderRowsWeekKey = orderRowsWeek ? planningWeekStartKey(orderRowsWeek) ?? orderRowsWeek.id : "";
+  const boardOrderJourneyRows = useMemo(() => buildOrderJourneyRows({
     tasks: boardTasks,
+    weeks: visibleProductionWeeks,
     orders: activeTuesdayOrders,
     planTaskLinks,
     resolveOrderId: resolveOrderIdForPlanTask,
+    resolveOrderConnection: resolveOrderConnectionForPlanTask,
     weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
-  }), [boardTasks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
-  const orderJourneyRows = useMemo(() => applyOrderJourneyRowOrder(orderJourneyRowsBase, orderRowOrders[orderRowsWeekKey]), [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
+  }), [boardTasks, visibleProductionWeeks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, resolveOrderConnectionForPlanTask, weekTitleById]);
+  const orderJourneyRowsBase = useMemo(() => orderRowsWeek ? buildOrderJourneyRows({
+    tasks: boardTasks.filter((task) => task.weekId === orderRowsWeek.id),
+    appTasks: visibleAppTasks.filter((task) => appTaskFallsInWeek(task, orderRowsWeek)),
+    weeks: [orderRowsWeek],
+    orders: activeTuesdayOrders,
+    planTaskLinks,
+    resolveOrderId: resolveOrderIdForPlanTask,
+    resolveOrderConnection: resolveOrderConnectionForPlanTask,
+    weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
+  }) : [], [orderRowsWeek, boardTasks, visibleAppTasks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, resolveOrderConnectionForPlanTask, weekTitleById]);
+  const orderJourneyRows = useMemo(() => applyOrderJourneyRowOrder(orderJourneyRowsBase, orderRowsWeekKey ? orderRowOrders[orderRowsWeekKey] : undefined), [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
+
   function persistOrderJourneyRowOrder(weekKey: string, rowIds: string[] | null) {
     if (!weekKey) return;
     const previous = orderRowOrders;
@@ -5954,7 +8955,6 @@ function MonthViewState({
     if (!orderRowsWeekKey) return;
     persistOrderJourneyRowOrder(orderRowsWeekKey, null);
   }
-
   function markOrderCompleteInTuesday(order: UiOrder) {
     const completion = requestCompletionReason(order.customer);
     if (!completion) return;
@@ -5993,6 +8993,43 @@ function MonthViewState({
       });
   }
 
+  function markIntakeOrderCompleteInTuesday(item: OrderIntakeItem) {
+    const completion = requestCompletionReason(item.customerName);
+    if (!completion) return;
+    const note = completion.note || `Marked complete in Tuesday from intake review. Invoice: ${item.invoiceNumber || "not recorded"}.`;
+    if (!window.confirm(`Mark ${item.customerName} complete in Tuesday?\n\nThis hides it from the Tuesday intake queue and schedule views. It does not change Xero or the source invoice.`)) return;
+    const previousOrderOverrides = orderOverrides;
+    setOrderOverrides((current) => ({
+      ...current,
+      [item.orderId]: { status: "completed", reason: completion.reason, note, updatedAt: new Date().toISOString(), updatedBy: "Tuesday" },
+    }));
+    setOpenIntakeOrderId((current) => current === item.orderId ? null : current);
+    setOrderIntakeStatus("Marking order complete in Tuesday...");
+    if (qaFixtureMode) {
+      setOrderIntakeStatus("QA fixture intake override only - not saved");
+      return;
+    }
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderOverride: { orderId: item.orderId, status: "completed", reason: completion.reason, note } }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Intake order override save failed"))))
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        if (data.state?.links) setPlanTaskLinks(data.state.links);
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setOrderIntakeStatus("Order marked complete in Tuesday");
+      })
+      .catch((err) => {
+        setOrderOverrides(previousOrderOverrides);
+        setOrderIntakeStatus(err instanceof Error ? err.message : "Intake order override save failed");
+      });
+  }
+
   function restoreCompletedTuesdayOrder(item: CompletedTuesdayItem) {
     if (!window.confirm(`Restore ${item.label} to active Tuesday views?\n\nThis removes the Tuesday completion override only. It does not change Xero, Monday, or the source invoice.`)) return;
     const previousOrderOverrides = orderOverrides;
@@ -6002,8 +9039,10 @@ function MonthViewState({
       return next;
     });
     setAssignmentStatus("Restoring order to active views...");
+    setOrderIntakeStatus("Restoring order to active views...");
     if (qaFixtureMode) {
       setAssignmentStatus("QA fixture restore only - not saved");
+      setOrderIntakeStatus("QA fixture restore only - not saved");
       return;
     }
     fetch("/api/production/plan-task-links", {
@@ -6020,21 +9059,23 @@ function MonthViewState({
         setOrderOverrides(data.state?.orderOverrides ?? {});
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Order restored to active Tuesday views");
+        setOrderIntakeStatus("Order restored to active Tuesday views");
       })
       .catch((err) => {
         setOrderOverrides(previousOrderOverrides);
-        setAssignmentStatus(err instanceof Error ? err.message : "Order restore failed");
+        const message = err instanceof Error ? err.message : "Order restore failed";
+        setAssignmentStatus(message);
+        setOrderIntakeStatus(message);
       });
   }
-
   const openOrderTasks = useMemo(() => {
     if (!openOrder) return [];
-    return orderJourneyRows.find((row) => row.order?.id === openOrder.id)?.tasks ?? [];
-  }, [openOrder, orderJourneyRows]);
+    return boardOrderJourneyRows.find((row) => row.order?.id === openOrder.id)?.tasks ?? [];
+  }, [openOrder, boardOrderJourneyRows]);
   const selectedOrderTasks = useMemo(() => {
     if (!selectedOrder) return [];
-    return orderJourneyRows.find((row) => row.order?.id === selectedOrder.id)?.tasks ?? [];
-  }, [selectedOrder, orderJourneyRows]);
+    return boardOrderJourneyRows.find((row) => row.order?.id === selectedOrder.id)?.tasks ?? [];
+  }, [selectedOrder, boardOrderJourneyRows]);
 
   function selectOrder(id: number) {
     setSelectedAssignmentTask(null);
@@ -6148,14 +9189,35 @@ function MonthViewState({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       setOpenOrderId(null);
+      setOpenIntakeOrderId(null);
       setSelectedAssignmentTask(null);
       setShowNewOrder(false);
-      if (activeTaskId) handleBoardDragCancel();
+      if (activeTaskId || activeAppTaskId) handleBoardDragCancel();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTaskId]);
+  }, [activeTaskId, activeAppTaskId]);
+
+  useEffect(() => {
+    if (!activeTaskId && !activeAppTaskId) return;
+    function recordPointer(event: PointerEvent | MouseEvent | TouchEvent) {
+      if ("touches" in event) {
+        const touch = event.touches[0] ?? event.changedTouches[0];
+        if (touch) lastBoardPointerRef.current = { x: touch.clientX, y: touch.clientY };
+        return;
+      }
+      lastBoardPointerRef.current = { x: event.clientX, y: event.clientY };
+    }
+    window.addEventListener("pointermove", recordPointer, true);
+    window.addEventListener("mousemove", recordPointer, true);
+    window.addEventListener("touchmove", recordPointer, true);
+    return () => {
+      window.removeEventListener("pointermove", recordPointer, true);
+      window.removeEventListener("mousemove", recordPointer, true);
+      window.removeEventListener("touchmove", recordPointer, true);
+    };
+  }, [activeTaskId, activeAppTaskId]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -6218,24 +9280,52 @@ function MonthViewState({
   function clearBoardDragState() {
     dragStartBoardTasksRef.current = null;
     lastBoardPreviewRef.current = null;
+    lastBoardPointerRef.current = null;
     setActiveTaskId(null);
+    setActiveAppTaskId(null);
     setDropPreview(null);
   }
 
   function handleBoardDragStart(event: DragStartEvent) {
     const activeId = String(event.active.id);
     if (suggestedStepIdFromDragId(activeId)) return;
+    lastBoardPointerRef.current = null;
     const task = boardTasks.find((current) => current.id === activeId);
-    if (!task) return;
-    dragStartBoardTasksRef.current = boardTasks;
+    if (task) {
+      dragStartBoardTasksRef.current = boardTasks;
+      lastBoardPreviewRef.current = null;
+      setActiveTaskId(activeId);
+      setActiveAppTaskId(null);
+      setDropPreview({ weekId: task.weekId, day: task.day, person: task.person, insertAfter: true });
+      return;
+    }
+    const appTask = visibleAppTasks.find((current) => current.id === activeId);
+    const appWeek = appTask ? visibleProductionWeeks.find((candidate) => appTaskFallsInWeek(appTask, candidate)) : null;
+    if (!appTask || !appWeek) return;
+    dragStartBoardTasksRef.current = null;
     lastBoardPreviewRef.current = null;
-    setActiveTaskId(activeId);
-    setDropPreview({ weekId: task.weekId, day: task.day, person: task.person, insertAfter: true });
+    setActiveTaskId(null);
+    setActiveAppTaskId(activeId);
+    setDropPreview({ weekId: appWeek.id, day: appTask.day, person: appTask.person, insertAfter: true });
+  }
+
+  function fallbackBoardOverIdFromPointer(event: DragOverEvent | DragEndEvent) {
+    const pointId = lastBoardPointerRef.current ? boardDropIdFromPoint(lastBoardPointerRef.current.x, lastBoardPointerRef.current.y) : null;
+    return pointId ?? boardFallbackOverIdFromDrag(event);
   }
 
   function boardDropTargetFromOverIdWithSuggestions(overId: string) {
+    const orderDay = parseOrderJourneyDay(overId);
+    if (orderDay) {
+      const sourceTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) : null;
+      const sourceAppTask = activeAppTaskId ? visibleAppTasks.find((task) => task.id === activeAppTaskId) : null;
+      return { weekId: orderDay.weekId, day: orderDay.day, person: sourceTask?.person ?? sourceAppTask?.person ?? "nick", rowId: orderDay.rowId, overId: undefined as string | undefined, overTaskId: undefined as string | undefined, overSuggestedId: undefined as string | undefined };
+    }
     const target = boardDropTargetFromOverId(boardTasks, overId);
     if (target) return { ...target, overId: target.overTaskId, overSuggestedId: undefined as string | undefined };
+    const appTarget = visibleAppTasks.find((task) => task.id === overId);
+    const appWeek = appTarget ? visibleProductionWeeks.find((candidate) => appTaskFallsInWeek(appTarget, candidate)) : null;
+    if (appTarget && appWeek) return { weekId: appWeek.id, day: appTarget.day, person: appTarget.person, overId, overTaskId: undefined as string | undefined, overSuggestedId: undefined as string | undefined };
     const suggestedId = suggestedStepIdFromDragId(overId);
     const step = suggestedId ? editableSteps.find((item) => item.id === suggestedId) : null;
     const week = step ? visibleProductionWeeks.find((candidate) => suggestedStepFallsInWeek(step, candidate)) : null;
@@ -6244,21 +9334,32 @@ function MonthViewState({
 
   function previewBoardTaskMove(event: DragOverEvent) {
     const activeId = String(event.active.id);
-    const overId = event.over?.id ? String(event.over.id) : null;
-    if (!overId || !activeTaskId) return;
+    const overId = fallbackBoardOverIdFromPointer(event) ?? (event.over?.id ? String(event.over.id) : null);
+    if (!overId || (!activeTaskId && !activeAppTaskId)) return;
     const target = boardDropTargetFromOverIdWithSuggestions(overId);
     if (!target) return;
     const insertAfter = target.overId ? shouldInsertAfterOver(event) : true;
-    const previewKey = [activeId, target.weekId, target.day, target.person, target.overId ?? "lane", insertAfter ? "after" : "before"].join(":");
+    const previewKey = [activeId, target.rowId ?? "board", target.weekId, target.day, target.person, target.overId ?? "lane", insertAfter ? "after" : "before"].join(":");
     if (lastBoardPreviewRef.current === previewKey) return;
     lastBoardPreviewRef.current = previewKey;
-    setDropPreview({ weekId: target.weekId, day: target.day, person: target.person, overId: target.overId, insertAfter });
+    setDropPreview({ weekId: target.weekId, day: target.day, person: target.person, rowId: target.rowId, overId: target.overId, insertAfter });
   }
 
   function handleBoardDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id);
     const original = dragStartBoardTasksRef.current;
-    const overId = event.over?.id ? String(event.over.id) : null;
+    const overId = fallbackBoardOverIdFromPointer(event) ?? (event.over?.id ? String(event.over.id) : null);
+    const draggedAppTask = activeAppTaskId ? visibleAppTasks.find((task) => task.id === activeAppTaskId) : null;
+    if (draggedAppTask) {
+      const target = overId ? boardDropTargetFromOverIdWithSuggestions(overId) : null;
+      const targetWeek = target ? visibleProductionWeeks.find((week) => week.id === target.weekId) : null;
+      const dateOption = targetWeek && target ? suggestedDateOptionForWeekDay(targetWeek, target.day) : null;
+      if (target && dateOption) {
+        updateAppTask(draggedAppTask, { day: target.day, person: target.person, scheduledDate: dateOption.dateIso });
+      }
+      clearBoardDragState();
+      return;
+    }
     if (!overId || !original) {
       if (original) setBoardTasks(original);
       clearBoardDragState();
@@ -6291,19 +9392,40 @@ function MonthViewState({
     saveDraftTasks("six-week-board", sourceBoardTasks);
   }
 
+  function openIntakeReview(orderId: string) {
+    setSelectedAssignmentTask(null);
+    setSelectedWorkflow(null);
+    setSelectedOrderId(null);
+    setOpenOrderId(null);
+    setOpenIntakeOrderId(orderId);
+  }
+
   function selectOrderForAppTask(task: AppPlanTask) {
-    if (selectedOrderId === task.orderId) {
-      setSelectedAssignmentTask(null);
-      setSelectedWorkflow(null);
-      setSelectedOrderId(null);
+    if (task.orderId != null) {
+      if (selectedOrderId === task.orderId) {
+        setSelectedAssignmentTask(null);
+        setSelectedWorkflow(null);
+        setSelectedOrderId(null);
+        return;
+      }
+      selectOrder(task.orderId);
       return;
     }
-    selectOrder(task.orderId);
+    if (task.orderUuid) openIntakeReview(task.orderUuid);
+  }
+
+  function openAppTask(task: AppPlanTask) {
+    if (task.orderId != null) {
+      openOrderOverview(task.orderId);
+      return;
+    }
+    if (task.orderUuid) openIntakeReview(task.orderUuid);
   }
 
   function assignPlanTaskToOrder(task: AssignablePlanTask, orderId: number, placement?: PlanTaskPlacement) {
     const taskKey = stablePlanTaskKey(task);
     const linkValue = linkValueForPlanTaskSave(orderId, placement);
+    const previousPlanTaskLinks = planTaskLinks;
     setPlanTaskLinks((current) => ({ ...current, [taskKey]: linkValue }));
     setAssignmentStatus("Saving link...");
     fetch("/api/production/plan-task-links", {
@@ -6324,16 +9446,13 @@ function MonthViewState({
       })
       .catch((err) => {
         setAssignmentStatus(err instanceof Error ? err.message : "Save failed");
-        setPlanTaskLinks((current) => {
-          const next = { ...current };
-          delete next[taskKey];
-          return next;
-        });
+        setPlanTaskLinks(previousPlanTaskLinks);
       });
   }
 
   function removePlanTaskLink(task: AssignablePlanTask) {
     const taskKey = stablePlanTaskKey(task);
+    const previousPlanTaskLinks = planTaskLinks;
     setPlanTaskLinks((current) => {
       const next = { ...current };
       delete next[taskKey];
@@ -6352,11 +9471,13 @@ function MonthViewState({
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
         if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
-        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Order connection removed");
       })
-      .catch((err) => setAssignmentStatus(err instanceof Error ? err.message : "Save failed"));
+      .catch((err) => {
+        setPlanTaskLinks(previousPlanTaskLinks);
+        setAssignmentStatus(err instanceof Error ? err.message : "Save failed");
+      });
   }
 
   const suggestedDateOptions = useMemo(
@@ -6424,6 +9545,51 @@ function MonthViewState({
     setShowTasksInMonth(true);
   }
 
+  async function refreshOrderIntakeList() {
+    setOrderIntakeBusy(true);
+    try {
+      await loadOrderIntake(false);
+    } finally {
+      setOrderIntakeBusy(false);
+    }
+  }
+
+  async function saveIntakeDraft(orderId: string, tasks: OrderIntakeTaskDraft[]) {
+    setOrderIntakeBusy(true);
+    try {
+      const response = await fetch(`/api/production/order-intake/${orderId}/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks }),
+      });
+      const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Draft save failed");
+      await loadOrderIntake(true);
+      setOrderIntakeStatus("Draft saved");
+    } finally {
+      setOrderIntakeBusy(false);
+    }
+  }
+
+  async function approveIntakeOrder(orderId: string, tasks: OrderIntakeTaskDraft[]) {
+    setOrderIntakeBusy(true);
+    try {
+      const response = await fetch(`/api/production/order-intake/${orderId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tasks, approvedBy: "Tuesday review" }),
+      });
+      const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
+      if (!response.ok || data.ok === false) throw new Error(data.error || "Approval failed");
+      if (Array.isArray(data.items)) setOrderIntakeItems(data.items);
+      await loadOrderIntake(true);
+      setOrderIntakeStatus("Added to Tuesday schedule");
+      setOpenIntakeOrderId(null);
+    } finally {
+      setOrderIntakeBusy(false);
+    }
+  }
+
   const capacityByLane = useMemo<CapacityByLane>(() => {
     const summaries: CapacityByLane = {};
     for (const week of visibleProductionWeeks) {
@@ -6436,13 +9602,16 @@ function MonthViewState({
           const draftHours = editableSteps
             .filter((step) => step.dateIso === option.dateIso && step.person === person)
             .reduce((sum, step) => sum + Number(step.estimatedHours || 0), 0);
-          summaries[dateCapacityKey(option.dateIso, person)] = summarizeLaneCapacity({ existingTaskCount, draftHours });
+          const intakeHours = approvedIntakeAppTasks
+            .filter((task) => appTaskCountsTowardWorkshopCapacity(task) && task.scheduledDate === option.dateIso && task.person === person && !task.done)
+            .reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
+          summaries[dateCapacityKey(option.dateIso, person)] = summarizeLaneCapacity({ existingTaskCount, draftHours: draftHours + intakeHours });
           summaries[laneCapacityKey(day, person)] = summaries[dateCapacityKey(option.dateIso, person)];
         }
       }
     }
     return summaries;
-  }, [visibleProductionWeeks, editableSteps, boardTasks]);
+  }, [visibleProductionWeeks, editableSteps, boardTasks, approvedIntakeAppTasks]);
 
   const historyControl = previous.length > 0 ? (
     <button
@@ -6464,7 +9633,7 @@ function MonthViewState({
   ) : null;
 
   const workshopHeaderControl = (
-    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+    <div data-mobile-workshop-header-controls="true" style={{ display: isRailNarrow ? "grid" : "flex", gridTemplateColumns: isRailNarrow ? "1fr" : undefined, gap: isRailNarrow ? 6 : 8, flexWrap: "wrap", alignItems: "center", justifyContent: isRailNarrow ? "stretch" : "flex-start", width: isRailNarrow ? "100%" : undefined, minWidth: 0 }}>
       <ProductionPlanModeToggle mode={planViewMode} onModeChange={setPlanViewMode} />
       {liveSyncWarning}
       <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
@@ -6486,18 +9655,29 @@ function MonthViewState({
   ) : null;
 
   const railNewOrderCard = (
-    <NewOrderRailCard
-      order={newOrder}
-      showingInMonth={showTasksInMonth || approvedSteps}
-      approved={approvedSteps}
-      onOpen={toggleNewOrderPanel}
-      onOpenOrder={() => {
-        if (newOrder) openOrderOverview(newOrder.id);
-      }}
-      onToggleMonthTasks={toggleNewOrderTasksInSchedule}
-      onApprove={approveNewOrderTasks}
-      fullListOpen={showNewOrder}
-    />
+    <>
+      <OrderIntakeRailCard
+        items={activeOrderIntakeItems}
+        status={orderIntakeStatus}
+        busy={orderIntakeBusy}
+        onRefresh={refreshOrderIntakeList}
+        onOpen={openIntakeReview}
+      />
+      {!newOrderCoveredByIntake && (
+        <NewOrderRailCard
+          order={newOrder}
+          showingInMonth={showTasksInMonth || approvedSteps}
+          approved={approvedSteps}
+          onOpen={toggleNewOrderPanel}
+          onOpenOrder={() => {
+            if (newOrder) openOrderOverview(newOrder.id);
+          }}
+          onToggleMonthTasks={toggleNewOrderTasksInSchedule}
+          onApprove={approveNewOrderTasks}
+          fullListOpen={showNewOrder}
+        />
+      )}
+    </>
   );
 
   const weekSections = visibleProductionWeeks.map((week, index) => (
@@ -6508,22 +9688,23 @@ function MonthViewState({
       suggestedSteps={(showTasksInMonth || approvedSteps) ? editableSteps.filter((step) => suggestedStepFallsInWeek(step, week)) : []}
       approvedSuggestions={approvedSteps}
       selectedOrder={selectedOrder}
-      appTasks={selectedAppTasks}
+      appTasks={visibleAppTasks}
       planTaskLinks={planTaskLinks}
       planTaskLinksLoaded={planTaskLinksLoaded}
-      activeTaskId={activeTaskId}
+      activeTaskId={activeTaskId ?? activeAppTaskId}
       dropPreview={dropPreview}
       isDraftChanged={isDraftChanged}
       showDraftControls={index === 0}
       onResetDraftLayout={resetBoardDraftLayout}
       personFilter={personFilter}
       resolveTaskOrderId={resolveOrderIdForPlanTask}
+      resolveTaskOrderConnection={resolveOrderConnectionForPlanTask}
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
       onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
       onTaskEdit={setEditingTask}
       onTaskDoneToggle={toggleBoardTaskDone}
       onAppTaskSelect={selectOrderForAppTask}
-      onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
+      onAppTaskOpen={openAppTask}
       onSuggestedStepMove={moveSuggestedStep}
       onSuggestedStepSelect={selectNewOrderReview}
       onSuggestedStepOpen={openNewOrderOverview}
@@ -6542,33 +9723,50 @@ function MonthViewState({
           week={week}
           tasks={sourceTasksForBoardWeeks([week])}
           selectedOrder={selectedOrder}
-          appTasks={selectedAppTasks}
+          appTasks={visibleAppTasks}
           planTaskLinks={planTaskLinks}
           planTaskLinksLoaded={planTaskLinksLoaded}
           personFilter={personFilter}
           resolveTaskOrderId={resolveOrderIdForPlanTask}
+          resolveTaskOrderConnection={resolveOrderConnectionForPlanTask}
           onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
           onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
           onTaskEdit={setEditingTask}
           onTaskDoneToggle={toggleBoardTaskDone}
           onAppTaskSelect={selectOrderForAppTask}
-          onAppTaskOpen={(task) => openOrderOverview(task.orderId)}
+          onAppTaskOpen={openAppTask}
         />
       ))}
     </section>
   ) : null;
 
+  const intakeReviewModal = openIntakeItem ? (
+    <OrderIntakeReviewModal
+      key={openIntakeItem.orderId}
+      item={openIntakeItem}
+      dateOptions={suggestedDateOptions}
+      busy={orderIntakeBusy}
+      onClose={() => setOpenIntakeOrderId(null)}
+      onMarkComplete={() => markIntakeOrderCompleteInTuesday(openIntakeItem)}
+      onSave={(tasks) => saveIntakeDraft(openIntakeItem.orderId, tasks)}
+      onApprove={(tasks) => approveIntakeOrder(openIntakeItem.orderId, tasks)}
+    />
+  ) : null;
+
   const planningBoard = (
     <DndContext
+      id="production-plan-board"
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={boardCollisionDetection}
       onDragStart={handleBoardDragStart}
       onDragOver={previewBoardTaskMove}
       onDragEnd={handleBoardDragEnd}
       onDragCancel={handleBoardDragCancel}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: isRailNarrow ? 8 : 14, minWidth: 0 }}>
+        <style>{ORDER_JOURNEY_MOBILE_CSS}</style>
         {workshopHeaderControl}
+        {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
         {planViewMode === "schedule" ? (
           <>
             {newOrderPanel}
@@ -6576,18 +9774,33 @@ function MonthViewState({
             {historySections}
           </>
         ) : (
-          <OrderJourneyView
-            rows={orderJourneyRows}
-            selectedOrder={selectedOrder}
-            manualRowOrderActive={Boolean(orderRowOrders[orderRowsWeekKey]?.length)}
-            onMoveRow={moveOrderJourneyRow}
-            onResetRowOrder={resetOrderJourneyRowOrder}
-            onTaskEdit={setEditingTask}
-            onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
-            onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
-            onOrderOpen={openOrderOverview}
-            onTaskDoneToggle={toggleBoardTaskDone}
-          />
+          orderRowsWeek ? (
+            <OrderJourneyView
+              rows={orderJourneyRows}
+              week={orderRowsWeek}
+              weekIndex={orderRowsWeekIndex}
+              weekCount={visibleProductionWeeks.length}
+              selectedOrder={selectedOrder}
+              personFilter={personFilter}
+              dayFilter={orderDayFilter}
+              manualRowOrderActive={Boolean(orderRowsWeekKey && orderRowOrders[orderRowsWeekKey]?.length)}
+              activeTaskId={activeTaskId ?? activeAppTaskId}
+              dropPreview={dropPreview}
+              onDayFilterChange={setOrderDayFilter}
+              onMoveRow={moveOrderJourneyRow}
+              onResetRowOrder={resetOrderJourneyRowOrder}
+              onPreviousWeek={() => setOrderRowsWeekIndex((current) => Math.max(0, current - 1))}
+              onThisWeek={() => setOrderRowsWeekIndex(0)}
+              onNextWeek={() => setOrderRowsWeekIndex((current) => Math.min(visibleProductionWeeks.length - 1, current + 1))}
+              onTaskEdit={setEditingTask}
+              onTaskSelect={(task) => task.appTask ? selectOrderForAppTask(task.appTask) : selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+              onTaskOpen={(task) => task.appTask ? openAppTask(task.appTask) : openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
+              onOrderOpen={openOrderOverview}
+              onTaskDoneToggle={toggleOrderJourneyTaskDone}
+            />
+          ) : (
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No production weeks available.</section>
+          )
         )}
         {editingTask && (
           <WorkshopTaskEditor
@@ -6604,7 +9817,7 @@ function MonthViewState({
           />
         )}
       </div>
-      <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : null}</DragOverlay>
+      <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : activeAppTask ? <AppTaskDragCard task={activeAppTask} /> : null}</DragOverlay>
     </DndContext>
   );
 
@@ -6619,9 +9832,10 @@ function MonthViewState({
       onRemoveTaskLink={removePlanTaskLink}
       onPlanTaskEdit={setEditingTask}
       onPlanTaskDoneToggle={toggleBoardTaskDone}
+      onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle}
       canRemoveAssignmentLink={selectedAssignmentTask ? Boolean(assignedOrderIdForTask(selectedAssignmentTask, planTaskLinks)) : false}
       newOrderCard={railNewOrderCard}
-      onWorkflowChange={setSelectedWorkflow}
+      onWorkflowChange={handleSelectedWorkflowChange}
       onSelect={selectOrder}
       onOpenOrder={openOrderOverview}
       onMarkOrderComplete={markOrderCompleteInTuesday}
@@ -6643,30 +9857,40 @@ function MonthViewState({
     return <TuesdayPlanStateLoading isNarrow={isRailNarrow} />;
   }
 
+  const desktopHealthStrip = !isRailNarrow ? (
+    <OrderHealthStrip orders={activeTuesdayOrders} activeFilter={railFilter} onFilterChange={onRailFilterChange} />
+  ) : null;
+
   if (isRailNarrow) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
+        {intakeReviewModal}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) 318px",
-        gap: 14,
-        alignItems: "start",
-      }}
-    >
-      {planningBoard}
-      {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
-      {orderRail}
-      {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {desktopHealthStrip}
+      <div
+        className="production-plan-layout-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "318px minmax(0, 1fr)",
+          gap: 14,
+          alignItems: "start",
+        }}
+      >
+        {orderRail}
+        {planningBoard}
+        {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
+        {intakeReviewModal}
+        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+      </div>
     </div>
   );
 }
@@ -6679,6 +9903,7 @@ export type PlanClientProps = {
   mondayError?: string;
   delightEnabled?: boolean;
   qaFixtureMode?: boolean;
+  initialUtilityView?: "processTemplates" | null;
   initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
   initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
   initialPlanTaskLinksDisabledReason?: string;
@@ -6692,16 +9917,12 @@ export default function PlanClient({
   mondayError,
   delightEnabled = false,
   qaFixtureMode = false,
+  initialUtilityView = null,
   initialPlanTaskLinkState,
   initialPlanTaskLinksStorage = "blob",
   initialPlanTaskLinksDisabledReason,
 }: PlanClientProps) {
-  const [hasMounted, setHasMounted] = useState(false);
   const [railFilter, setRailFilter] = useState<RailFilter>("all");
-  useEffect(() => {
-    const id = window.setTimeout(() => setHasMounted(true), 0);
-    return () => window.clearTimeout(id);
-  }, []);
   const weeks = useMemo(() => groupPlanRowsByWeek(rows), [rows]);
   const activeWeeks = weeks.filter((w) => !isArchiveWeek(w.title));
   const plannedOrderIds = useMemo(
@@ -6713,12 +9934,12 @@ export default function PlanClient({
 
   return (
     <MissionControlShell
-      section="plan"
+      section={initialUtilityView === "processTemplates" ? "processTemplates" : "plan"}
       pageTitle="Production Plan"
       syncedAt={syncedAt}
       source={source}
       mondayError={mondayError}
-      pageTitleAccessory={hasMounted ? <OrderHealthStrip orders={orders} activeFilter={railFilter} onFilterChange={setRailFilter} /> : undefined}
+      pageTitleAccessory={undefined}
       maxWidth={1500}
     >
         {qaFixtureMode && (
@@ -6739,7 +9960,9 @@ export default function PlanClient({
             QA fixture mode: local browser-test data only. No Monday, Supabase, Xero, or customer records are used.
           </div>
         )}
-        {rows.length === 0 ? (
+        {initialUtilityView === "processTemplates" ? (
+          <ProcessTemplatesView />
+        ) : rows.length === 0 ? (
           <div
             style={{
               padding: "60px 20px",

@@ -36,6 +36,7 @@ export default async function PlanPage({
         source="snapshot"
         mondayError="QA fixture mode: local browser-test data only"
         delightEnabled={query.delight !== "off"}
+        initialUtilityView={query.view === "process-templates" ? "processTemplates" : null}
         qaFixtureMode
       />
     );
@@ -54,6 +55,7 @@ export default async function PlanPage({
       source={result.source}
       mondayError={result.mondayError}
       delightEnabled={query.delight !== "off"}
+      initialUtilityView={query.view === "process-templates" ? "processTemplates" : null}
       initialPlanTaskLinkState={planTaskLinks.state}
       initialPlanTaskLinksStorage={planTaskLinks.storage}
       initialPlanTaskLinksDisabledReason={planTaskLinks.disabledReason}
