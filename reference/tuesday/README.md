@@ -12,6 +12,7 @@ Purpose: fast capture and durable routing for Innate Mission Control, also calle
 - `dashboard.md`
 - `foundations.md`
 - `inbox.md`
+- `costings.md` or `supabase-costings-schema-2026-06-18.sql` for source-backed supplier/material/product costing data.
 
 ## Gym Mode protocol
 

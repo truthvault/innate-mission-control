@@ -87,6 +87,12 @@ export type UiOrder = {
   xeroInvoiceNumber: string | null;
   freightRef: string | null;
   deliveryLocation: string | null;
+  // Optional Supabase payment lifecycle fields joined by production-plan callers.
+  paymentStage?: string | null;
+  paymentStageLabel?: string | null;
+  paymentNextAction?: string | null;
+  balanceAmountDue?: number | null;
+  balanceInvoiceNumber?: string | null;
   notes: string;
 };
 

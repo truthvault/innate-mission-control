@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "dispatch" | "test" | "quoting" | "processTemplates";
+export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates";
 
 const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
   { section: "plan", label: "Production Plan", href: "/production/plan" },
@@ -15,6 +15,7 @@ const NAV: Array<{ section: MissionControlSection; label: string; href: string }
 const GUIDO_NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
   { section: "leads", label: "Leads", href: "/leads" },
   { section: "quoting", label: "Quoting", href: "/quoting" },
+  { section: "costings", label: "Costings", href: "/costings" },
   { section: "calls", label: "Calls", href: "/call-intelligence" },
 ];
 const ALL_NAV = [...NAV, ...GUIDO_NAV];
@@ -30,7 +31,7 @@ function relativeAge(iso: string): string {
 }
 
 function scopeFor(section: MissionControlSection): string {
-  if (section === "leads" || section === "calls" || section === "quoting") return "local";
+  if (section === "leads" || section === "calls" || section === "quoting" || section === "costings") return "local";
   if (section === "plan" || section === "processTemplates") return "plan";
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
