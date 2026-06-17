@@ -1,0 +1,615 @@
+{
+  "updatedAt": "2026-06-16T04:00:17.252Z",
+  "templates": [
+    {
+      "id": "standard-dining-table",
+      "title": "Dining table",
+      "subtitle": "Rectangle, square, round, or pill unless a special route is triggered.",
+      "detection": [
+        "Product: Table",
+        "Shape: rectangle / square / round / pill",
+        "Finish decides clear vs blackwash coating steps"
+      ],
+      "suggestedTasks": [
+        {
+          "title": "Load order",
+          "owner": "Guido",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Send PO",
+          "owner": "Nick",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Timber pulled",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Materials received",
+          "owner": "Dylan",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Stress cuts",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Sand and coat",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Second coat",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "3rd coat (clear final)",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Curing",
+          "owner": "Dylan",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "QC + photos",
+          "owner": "Nick",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Assemble / box",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Pack / wrap",
+          "owner": "Dylan",
+          "estimatedHours": 0.75
+        },
+        {
+          "title": "Balance invoice",
+          "owner": "Guido",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Book freight / delivery",
+          "owner": "Guido",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Confirm paid before release",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Customer update",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        }
+      ],
+      "orderFlow": [
+        {
+          "key": "confirmed",
+          "label": "Order Confirmed",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "pos",
+          "label": "POs Sent",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "timber",
+          "label": "Timber Pulled",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "matwait",
+          "label": "Materials Wait",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~2 weeks"
+        },
+        {
+          "key": "received",
+          "label": "Materials Received",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "stress",
+          "label": "Stress Cuts",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "sand",
+          "label": "Sand",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat1",
+          "label": "1st Coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat2",
+          "label": "2nd Coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "cure",
+          "label": "Curing",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~1 week"
+        },
+        {
+          "key": "qc",
+          "label": "QC + Photos",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "assemble",
+          "label": "Assemble / Box",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "freight",
+          "label": "Book Freight",
+          "who": "Workshop",
+          "wait": false
+        }
+      ],
+      "issueLevel": "watch",
+      "issueLabel": "Flow still shows broad table stages"
+    },
+    {
+      "id": "cnc-dining-table",
+      "title": "Dining table - non-standard shape",
+      "subtitle": "Danish oval, classic oval, pebble, organic, or custom shape.",
+      "detection": [
+        "Shape not rectangle / square / round / pill",
+        "Precision Woodworks CNC adds about 2 weeks",
+        "Pinpoint return booking is required"
+      ],
+      "suggestedTasks": [
+        {
+          "title": "Order Loaded",
+          "owner": "Guido",
+          "estimatedHours": 1
+        },
+        {
+          "title": "POs sent",
+          "owner": "Nick",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Timber pulled",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Precision Woodworks CNC",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Book Pinpoint return",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Materials received",
+          "owner": "Dylan",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Stress cuts",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Sand and coat",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Second coat",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "3rd coat (clear final)",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Curing",
+          "owner": "Dylan",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "QC + photos",
+          "owner": "Nick",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Assemble / box",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Pack / wrap",
+          "owner": "Dylan",
+          "estimatedHours": 0.75
+        },
+        {
+          "title": "Balance invoice",
+          "owner": "Guido",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Book freight / delivery",
+          "owner": "Guido",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Confirm paid before release",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Customer update",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        }
+      ],
+      "orderFlow": [
+        {
+          "key": "confirmed",
+          "label": "Order Confirmed",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "pos",
+          "label": "POs Sent",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "timber",
+          "label": "Timber Pulled",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "matwait",
+          "label": "Materials Wait",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~2 weeks"
+        },
+        {
+          "key": "received",
+          "label": "Materials Received",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "stress",
+          "label": "Stress Cuts",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "sand",
+          "label": "Sand",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat1",
+          "label": "1st Coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat2",
+          "label": "2nd Coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "cure",
+          "label": "Curing",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~1 week"
+        },
+        {
+          "key": "qc",
+          "label": "QC + Photos",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "assemble",
+          "label": "Assemble / Box",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "freight",
+          "label": "Book Freight",
+          "who": "Workshop",
+          "wait": false
+        }
+      ],
+      "issueLevel": "gap",
+      "issueLabel": "Order-detail flow needs conditional CNC stages"
+    },
+    {
+      "id": "panel-benchtop",
+      "title": "Panel / benchtop",
+      "subtitle": "Standard panel production without a custom table-shape route.",
+      "detection": [
+        "Product: Panel",
+        "Top / panel work",
+        "No table base dependency unless explicit"
+      ],
+      "suggestedTasks": [
+        {
+          "title": "Order Loaded",
+          "owner": "Guido",
+          "estimatedHours": 1,
+          "note": "Spec/payment/customer promise checked before workshop trust."
+        },
+        {
+          "title": "Cut / machine / prep",
+          "owner": "Nick",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Sand and coat",
+          "owner": "Dylan",
+          "estimatedHours": 1
+        },
+        {
+          "title": "QC + photos",
+          "owner": "Nick",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Pack / wrap",
+          "owner": "Dylan",
+          "estimatedHours": 0.5
+        }
+      ],
+      "orderFlow": [
+        {
+          "key": "confirmed",
+          "label": "Order Confirmed",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "pos",
+          "label": "POs Sent",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "matwait",
+          "label": "Materials Wait",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~2 weeks"
+        },
+        {
+          "key": "received",
+          "label": "Materials Received",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "cut",
+          "label": "Cut / prep",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "sand",
+          "label": "Sand",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat1",
+          "label": "1st Coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat2",
+          "label": "2nd Coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "cure",
+          "label": "Curing",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~1 week"
+        },
+        {
+          "key": "qc",
+          "label": "QC",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "wrap",
+          "label": "Wrap + Dispatch",
+          "who": "Workshop",
+          "wait": false
+        }
+      ],
+      "issueLevel": "watch",
+      "issueLabel": "Panel rules need the same source-of-truth builder as tables"
+    },
+    {
+      "id": "supply-only",
+      "title": "Supply-only / customer collection",
+      "subtitle": "Supplier pickup or customer collection where workshop production is not needed.",
+      "detection": [
+        "No workshop machining/coating",
+        "Supplier or customer collection path",
+        "Completion can happen from order popup"
+      ],
+      "suggestedTasks": [
+        {
+          "title": "Order Loaded",
+          "owner": "Guido",
+          "estimatedHours": 1
+        },
+        {
+          "title": "Confirm supplier / collection path",
+          "owner": "Guido",
+          "estimatedHours": 0.5
+        },
+        {
+          "title": "Customer update",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Confirm collected / gone",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        }
+      ],
+      "orderFlow": [],
+      "issueLevel": "gap",
+      "issueLabel": "Needs its own short order flow"
+    },
+    {
+      "id": "samples",
+      "title": "Samples",
+      "subtitle": "Sample requests and follow-up.",
+      "detection": [
+        "Monday item: Sample",
+        "Sample stage from sample-specific status/top-panel fields"
+      ],
+      "suggestedTasks": [
+        {
+          "title": "Request Received",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Species Selected",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Samples Cut",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Sanded",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Coated",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Packed",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Sent / Collected",
+          "owner": "Dylan",
+          "estimatedHours": 0.25
+        },
+        {
+          "title": "Follow-up Due",
+          "owner": "Guido",
+          "estimatedHours": 0.25
+        }
+      ],
+      "orderFlow": [
+        {
+          "key": "received",
+          "label": "Request Received",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "species",
+          "label": "Species Selected",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "cut",
+          "label": "Samples Cut",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "sand",
+          "label": "Sanded",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat",
+          "label": "Coated",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "pack",
+          "label": "Packed",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "sent",
+          "label": "Sent / Collected",
+          "who": null,
+          "wait": false
+        },
+        {
+          "key": "followup",
+          "label": "Follow-up Due",
+          "who": "Customer follow-up",
+          "wait": false
+        }
+      ],
+      "issueLevel": "aligned",
+      "issueLabel": "Sample flow is already separate"
+    }
+  ]
+}
