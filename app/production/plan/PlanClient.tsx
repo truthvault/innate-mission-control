@@ -913,6 +913,7 @@ type PlanRowOrders = Record<string, string[]>;
 type OrderOverrideValue = { status: "completed"; reason?: string; note?: string; updatedAt?: string; updatedBy?: string };
 type OrderOverrides = Record<string, OrderOverrideValue>;
 type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; orderRowOrders?: PlanRowOrders; orderOverrides?: OrderOverrides; updatedAt?: string };
+type CompletedTuesdayItem = { id: string; kind: "order" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type ProductionPlanMode = "schedule" | "orderRows";
 type PersonFilter = "all" | Person;
@@ -1591,6 +1592,68 @@ function appTaskFallsInWeek(task: AppPlanTask, week: PlanWeek) {
   return range.start.getTime() <= date.getTime() && date.getTime() <= range.end.getTime();
 }
 
+const COMPLETION_REASONS = [
+  "Customer collected",
+  "Supplier direct collection",
+  "Cancelled",
+  "Duplicate",
+  "No workshop action",
+  "Other",
+] as const;
+
+function requestCompletionReason(label: string) {
+  const answer = window.prompt(
+    `Why mark ${label} complete in Tuesday?\n\nUse one of: ${COMPLETION_REASONS.join(", ")}`,
+    COMPLETION_REASONS[0]
+  );
+  if (answer === null) return null;
+  const normalized = answer.trim().toLowerCase();
+  const reason = COMPLETION_REASONS.find((candidate) => candidate.toLowerCase() === normalized) || (answer.trim() ? "Other" : null);
+  if (!reason) return null;
+  const note = reason === "Other" ? answer.trim().slice(0, 180) : undefined;
+  return { reason, note };
+}
+
+function CompletedTuesdayOrdersCard({
+  items,
+  onRestore,
+}: {
+  items: CompletedTuesdayItem[];
+  onRestore: (item: CompletedTuesdayItem) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  if (items.length === 0) return null;
+  return (
+    <div style={{ position: "relative", flex: "0 0 auto" }}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        style={{ border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap" }}
+        aria-expanded={open}
+      >
+        Completed {items.length}
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(37,30,20,0.18)", padding: 8 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Completed in Tuesday</div>
+          <div style={{ marginTop: 2, marginBottom: 7, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted }}>Restore if this was marked complete by mistake.</div>
+          <div style={{ display: "grid", gap: 6, maxHeight: 230, overflowY: "auto", paddingRight: 2 }}>
+            {items.map((item) => (
+              <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(251,250,247,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.15, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
+                  <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, lineHeight: 1.2, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.reason ? `${item.reason} · ${item.detail}` : item.detail}</div>
+                </div>
+                <button type="button" onClick={() => onRestore(item)} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer" }}>Restore</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OrderRail({
   orders,
   selectedOrder,
@@ -1604,6 +1667,9 @@ function OrderRail({
   onWorkflowChange,
   onSelect,
   onOpenOrder,
+  onMarkOrderComplete,
+  completedItems,
+  onRestoreCompletedOrder,
   onClear,
   filter,
   onFilterChange,
@@ -1624,6 +1690,9 @@ function OrderRail({
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onSelect: (id: number) => void;
   onOpenOrder: (id: number) => void;
+  onMarkOrderComplete: (order: UiOrder) => void;
+  completedItems: CompletedTuesdayItem[];
+  onRestoreCompletedOrder: (item: CompletedTuesdayItem) => void;
   onClear: () => void;
   filter: RailFilter;
   onFilterChange: (filter: RailFilter) => void;
@@ -1709,15 +1778,18 @@ function OrderRail({
           <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans }}>Orders</div>
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1 }}>{assignmentTask ? "Assign task" : selectedOrder ? "Job command" : `${filteredOrders.length} active`}</div>
         </div>
-        {(selectedOrder || assignmentTask) && (
-          <button
-            type="button"
-            onClick={onClear}
-            style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
-          >
-            Back to list
-          </button>
-        )}
+        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flexWrap: "wrap" }}>
+          <CompletedTuesdayOrdersCard items={completedItems} onRestore={onRestoreCompletedOrder} />
+          {(selectedOrder || assignmentTask) && (
+            <button
+              type="button"
+              onClick={onClear}
+              style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
+            >
+              Back to list
+            </button>
+          )}
+        </div>
       </div>
       {assignmentTask ? (
         <TaskAssignmentPanel key={`assign-${assignmentTask.id}`} task={assignmentTask} orders={activeOrders} status={assignmentStatus} onAssign={onAssignTask} onRemove={onRemoveTaskLink} canRemoveLink={canRemoveAssignmentLink} tasksForOrder={tasksForOrder} />
@@ -1728,6 +1800,7 @@ function OrderRail({
           planTasks={selectedOrderTasks}
           onWorkflowChange={onWorkflowChange}
           onOpen={() => onOpenOrder(selectedOrder.id)}
+          onMarkComplete={onMarkOrderComplete}
           onPlanTaskEdit={onPlanTaskEdit}
           onPlanTaskDoneToggle={onPlanTaskDoneToggle}
           onRemoveTaskLink={onRemoveTaskLink}
@@ -2107,6 +2180,7 @@ function OrderRailDetail({
   planTasks,
   onWorkflowChange,
   onOpen,
+  onMarkComplete,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
   onRemoveTaskLink,
@@ -2115,6 +2189,7 @@ function OrderRailDetail({
   planTasks: OrderJourneyTask[];
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onOpen: () => void;
+  onMarkComplete: (order: UiOrder) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onRemoveTaskLink: (task: AssignablePlanTask) => void;
@@ -2148,6 +2223,14 @@ function OrderRailDetail({
           style={{ marginTop: 9, width: "100%", border: "1px solid rgba(12,124,122,0.24)", background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 20px rgba(12,124,122,0.12)" }}
         >
           Open order
+        </button>
+        <button
+          type="button"
+          onClick={() => onMarkComplete(order)}
+          title="Hide this order from active Tuesday views without changing Monday"
+          style={{ marginTop: 6, width: "100%", border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
+        >
+          Mark complete in Tuesday
         </button>
         {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
       </div>
@@ -2289,6 +2372,7 @@ function RepairNotesPanel({
 function OrderOverviewOverlay({
   order,
   planTasks,
+  onMarkComplete,
   onPlanTaskEdit,
   onPlanTaskDoneToggle,
   onWorkflowTaskDoneToggle,
@@ -2298,6 +2382,7 @@ function OrderOverviewOverlay({
 }: {
   order: UiOrder;
   planTasks: OrderJourneyTask[];
+  onMarkComplete: (order: UiOrder) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
   onPlanTaskDoneToggle: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onWorkflowTaskDoneToggle: (done: boolean, origin?: DelightOrigin) => void;
@@ -2397,13 +2482,23 @@ function OrderOverviewOverlay({
                 {workflowStatus && <span>{workflowStatus}</span>}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
-            >
-              Close
-            </button>
+            <div style={{ flex: "0 0 auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => onMarkComplete(order)}
+                title="Hide this order from active Tuesday views without changing Monday"
+                style={{ border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+              >
+                Mark complete in Tuesday
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+              >
+                Close
+              </button>
+            </div>
           </div>
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ flex: 1, height: 5, background: "rgba(0,0,0,0.045)", borderRadius: 999, overflow: "hidden" }}>
@@ -3758,6 +3853,34 @@ function buildOrderJourneyRows({
       const dueB = b.order?.shipDate ? new Date(b.order.shipDate).getTime() : Number.MAX_SAFE_INTEGER;
       return (healthOrder[a.health] - healthOrder[b.health]) || (dueA - dueB) || a.name.localeCompare(b.name);
     });
+}
+
+function applyOrderJourneyRowOrder(rows: OrderJourneyRow[], savedOrder: string[] | undefined) {
+  if (!savedOrder?.length) return rows;
+  const savedIndex = new Map(savedOrder.map((id, index) => [id, index]));
+  return [...rows].sort((a, b) => {
+    const aIndex = savedIndex.get(a.id);
+    const bIndex = savedIndex.get(b.id);
+    if (aIndex != null && bIndex != null) return aIndex - bIndex;
+    if (aIndex != null) return -1;
+    if (bIndex != null) return 1;
+    return rows.indexOf(a) - rows.indexOf(b);
+  });
+}
+
+function activeOrderJourneyRowIds(rows: OrderJourneyRow[]) {
+  return rows.filter((row) => row.order && row.health !== "internal" && row.health !== "unlinked" && !isCompleteOrder(row.order)).map((row) => row.id);
+}
+
+function reorderStringList(items: string[], sourceId: string, targetId: string) {
+  if (sourceId === targetId) return items;
+  const sourceIndex = items.indexOf(sourceId);
+  const targetIndex = items.indexOf(targetId);
+  if (sourceIndex < 0 || targetIndex < 0) return items;
+  const next = [...items];
+  const [moving] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moving);
+  return next;
 }
 
 function boardPlanLaneId(weekId: string, day: DayKey, person: Person) {
@@ -5295,6 +5418,9 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
 function OrderJourneyView({
   rows,
   selectedOrder,
+  manualRowOrderActive,
+  onMoveRow,
+  onResetRowOrder,
   onTaskEdit,
   onTaskSelect,
   onTaskOpen,
@@ -5303,6 +5429,9 @@ function OrderJourneyView({
 }: {
   rows: OrderJourneyRow[];
   selectedOrder: UiOrder | null;
+  manualRowOrderActive: boolean;
+  onMoveRow: (sourceRowId: string, targetRowId: string) => void;
+  onResetRowOrder: () => void;
   onTaskEdit: (task: OrderJourneyTask) => void;
   onTaskSelect: (task: OrderJourneyTask) => void;
   onTaskOpen: (task: OrderJourneyTask) => void;
@@ -5310,7 +5439,7 @@ function OrderJourneyView({
   onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) => void;
 }) {
   const isNarrow = useIsNarrow(880);
-  const activeRows = rows.filter((row) => row.health !== "internal" && row.health !== "unlinked");
+  const activeRows = rows.filter((row) => row.order && row.health !== "internal" && row.health !== "unlinked" && !isCompleteOrder(row.order));
   const needsRows = rows.filter((row) => row.health === "internal" || row.health === "unlinked");
   const renderRow = (row: OrderJourneyRow) => {
     const selected = Boolean(row.order && selectedOrder?.id === row.order.id);
@@ -5319,6 +5448,10 @@ function OrderJourneyView({
       : row.health === "unlinked"
         ? { label: "Needs order", color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.34)" }
         : HEALTH_META[row.health];
+    const canMoveRow = row.health !== "internal" && row.health !== "unlinked";
+    const rowPriorityIndex = activeRows.findIndex((candidate) => candidate.id === row.id);
+    const canMoveUp = canMoveRow && rowPriorityIndex > 0;
+    const canMoveDown = canMoveRow && rowPriorityIndex >= 0 && rowPriorityIndex < activeRows.length - 1;
     const rowStyle = {
       borderWidth: "1px 1px 1px 4px",
       borderStyle: "solid",
@@ -5338,11 +5471,19 @@ function OrderJourneyView({
               {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850 }}>{row.dueLabel}</span>}
             </div>
             {row.statusLabel && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>{row.statusLabel}</div>}
-            {row.order && (
-              <button type="button" onClick={() => onOrderOpen(row.order!.id)} style={{ marginTop: 9, border: `1px solid ${DT.border}`, background: DT.headerBg, color: "#fff", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>
-                Open order
-              </button>
-            )}
+            <div style={{ marginTop: 9, display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {row.order && (
+                <button type="button" onClick={() => onOrderOpen(row.order!.id)} style={{ border: `1px solid ${DT.border}`, background: DT.headerBg, color: "#fff", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>
+                  Open order
+                </button>
+              )}
+              {canMoveRow && (
+                <>
+                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ border: `1px solid ${DT.border}`, background: canMoveUp ? DT.cardBg : "rgba(232,230,224,0.42)", color: canMoveUp ? DT.textMuted : DT.textFaint, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed" }}>↑</button>
+                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ border: `1px solid ${DT.border}`, background: canMoveDown ? DT.cardBg : "rgba(232,230,224,0.42)", color: canMoveDown ? DT.textMuted : DT.textFaint, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed" }}>↓</button>
+                </>
+              )}
+            </div>
           </div>
           {DAYS.map((day) => {
             const dayTasks = row.tasks.filter((task) => task.day === day);
@@ -5412,6 +5553,7 @@ function OrderJourneyView({
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ alignSelf: "flex-start", border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Reset manual order priority</button>}
       {activeRows.map(renderRow)}
       {needsRows.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -5545,13 +5687,49 @@ function MonthViewState({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+  const activeTuesdayOrders = useMemo(
+    () => ordersForHealth.filter((order) => orderOverrides[String(order.id)]?.status !== "completed"),
+    [ordersForHealth, orderOverrides]
+  );
+  const completedTuesdayItems = useMemo<CompletedTuesdayItem[]>(() => {
+    const items: CompletedTuesdayItem[] = [];
+    const seen = new Set<string>();
+    for (const order of ordersForHealth) {
+      const id = String(order.id);
+      const override = orderOverrides[id];
+      if (override?.status !== "completed") continue;
+      seen.add(id);
+      items.push({
+        id,
+        kind: "order",
+        label: order.customer,
+        detail: `${orderItemLabel(order)} · ${orderStatusLabel(order)}${override.updatedAt ? ` · ${formatShortDate(override.updatedAt)}` : ""}`,
+        reason: override.reason,
+        note: override.note,
+        updatedAt: override.updatedAt,
+      });
+    }
+    for (const [id, override] of Object.entries(orderOverrides)) {
+      if (override.status !== "completed" || seen.has(id)) continue;
+      items.push({
+        id,
+        kind: "unknown",
+        label: "Completed order override",
+        detail: `${id}${override.updatedAt ? ` · ${formatShortDate(override.updatedAt)}` : ""}`,
+        reason: override.reason,
+        note: override.note,
+        updatedAt: override.updatedAt,
+      });
+    }
+    return items.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "") || a.label.localeCompare(b.label));
+  }, [ordersForHealth, orderOverrides]);
   const selectedOrder = useMemo(
-    () => ordersForHealth.find((order) => order.id === selectedOrderId) ?? null,
-    [ordersForHealth, selectedOrderId]
+    () => activeTuesdayOrders.find((order) => order.id === selectedOrderId) ?? null,
+    [activeTuesdayOrders, selectedOrderId]
   );
   const openOrder = useMemo(
-    () => ordersForHealth.find((order) => order.id === openOrderId) ?? null,
-    [ordersForHealth, openOrderId]
+    () => activeTuesdayOrders.find((order) => order.id === openOrderId) ?? null,
+    [activeTuesdayOrders, openOrderId]
   );
   const selectedAppTasks = useMemo(() => workflowTasksForPlan(selectedWorkflow), [selectedWorkflow]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
@@ -5706,23 +5884,149 @@ function MonthViewState({
 
   const resolveOrderIdForPlanTask = useCallback((task: DraggablePlanTask) => {
     const assignedId = assignedOrderIdForTask(task, planTaskLinks);
-    if (assignedId && ordersForHealth.some((order) => order.id === assignedId)) return assignedId;
-    const linkedId = task.linkedOrderIds.find((id) => ordersForHealth.some((order) => order.id === id));
+    if (assignedId && activeTuesdayOrders.some((order) => order.id === assignedId)) return assignedId;
+    const linkedId = task.linkedOrderIds.find((id) => activeTuesdayOrders.some((order) => order.id === id));
     if (linkedId) return linkedId;
-    const scored = ordersForHealth
+    const scored = activeTuesdayOrders
       .map((order) => ({ order, score: orderNameMatchScore(order, task.rowName, ...task.linkedOrders.map((linked) => linked.name)) }))
       .filter(({ score }) => score >= 2)
       .sort((a, b) => b.score - a.score || ((orderDaysUntil(a.order.shipDate) ?? 999) - (orderDaysUntil(b.order.shipDate) ?? 999)));
     return scored[0]?.order.id ?? null;
-  }, [ordersForHealth, planTaskLinks]);
+  }, [activeTuesdayOrders, planTaskLinks]);
 
-  const orderJourneyRows = useMemo(() => buildOrderJourneyRows({
+  const orderRowsWeekKey = "six-week-board";
+  const orderJourneyRowsBase = useMemo(() => buildOrderJourneyRows({
     tasks: boardTasks,
-    orders: ordersForHealth,
+    orders: activeTuesdayOrders,
     planTaskLinks,
     resolveOrderId: resolveOrderIdForPlanTask,
     weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
-  }), [boardTasks, ordersForHealth, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
+  }), [boardTasks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, weekTitleById]);
+  const orderJourneyRows = useMemo(() => applyOrderJourneyRowOrder(orderJourneyRowsBase, orderRowOrders[orderRowsWeekKey]), [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
+  function persistOrderJourneyRowOrder(weekKey: string, rowIds: string[] | null) {
+    if (!weekKey) return;
+    const previous = orderRowOrders;
+    setOrderRowOrders((current) => {
+      const next = { ...current };
+      if (rowIds?.length) next[weekKey] = rowIds;
+      else delete next[weekKey];
+      return next;
+    });
+    setAssignmentStatus(rowIds?.length ? "Saving order priority..." : "Resetting order priority...");
+    if (qaFixtureMode) {
+      setAssignmentStatus(rowIds?.length ? "QA fixture order priority only - not saved" : "QA fixture order priority reset");
+      return;
+    }
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderRowOrder: { weekKey, rowIds } }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Order priority save failed"))))
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.links) setPlanTaskLinks(data.state.links);
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus(rowIds?.length ? "Order priority saved" : "Order priority reset");
+      })
+      .catch((err) => {
+        setOrderRowOrders(previous);
+        setAssignmentStatus(err instanceof Error ? err.message : "Order priority save failed");
+      });
+  }
+
+  function moveOrderJourneyRow(sourceRowId: string, targetRowId: string) {
+    if (!orderRowsWeekKey || sourceRowId === targetRowId) return;
+    const activeIds = activeOrderJourneyRowIds(orderJourneyRowsBase);
+    const activeIdSet = new Set(activeIds);
+    if (!activeIdSet.has(sourceRowId) || !activeIdSet.has(targetRowId)) return;
+    const saved = orderRowOrders[orderRowsWeekKey] ?? [];
+    const current = [...saved.filter((id) => activeIdSet.has(id)), ...activeIds.filter((id) => !saved.includes(id))];
+    const next = reorderStringList(current, sourceRowId, targetRowId);
+    if (next.join("|") === current.join("|")) return;
+    persistOrderJourneyRowOrder(orderRowsWeekKey, next);
+  }
+
+  function resetOrderJourneyRowOrder() {
+    if (!orderRowsWeekKey) return;
+    persistOrderJourneyRowOrder(orderRowsWeekKey, null);
+  }
+
+  function markOrderCompleteInTuesday(order: UiOrder) {
+    const completion = requestCompletionReason(order.customer);
+    if (!completion) return;
+    const note = completion.note || `Marked complete in Tuesday. Source Monday status at time of edit: ${orderStatusLabel(order)}.`;
+    if (!window.confirm(`Mark ${order.customer} complete in Tuesday?\n\nThis hides it from active Tuesday order views. It does not change Monday.`)) return;
+    const previousOrderOverrides = orderOverrides;
+    setOrderOverrides((current) => ({
+      ...current,
+      [String(order.id)]: { status: "completed", reason: completion.reason, note, updatedAt: new Date().toISOString(), updatedBy: "Tuesday" },
+    }));
+    setSelectedOrderId((current) => current === order.id ? null : current);
+    setOpenOrderId((current) => current === order.id ? null : current);
+    setAssignmentStatus("Marking order complete in Tuesday...");
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture order override only - not saved");
+      return;
+    }
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderOverride: { orderId: order.id, status: "completed", reason: completion.reason, note } }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Order override save failed"))))
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        if (data.state?.links) setPlanTaskLinks(data.state.links);
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus("Order marked complete in Tuesday");
+      })
+      .catch((err) => {
+        setOrderOverrides(previousOrderOverrides);
+        setAssignmentStatus(err instanceof Error ? err.message : "Order override save failed");
+      });
+  }
+
+  function restoreCompletedTuesdayOrder(item: CompletedTuesdayItem) {
+    if (!window.confirm(`Restore ${item.label} to active Tuesday views?\n\nThis removes the Tuesday completion override only. It does not change Xero, Monday, or the source invoice.`)) return;
+    const previousOrderOverrides = orderOverrides;
+    setOrderOverrides((current) => {
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
+    setAssignmentStatus("Restoring order to active views...");
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture restore only - not saved");
+      return;
+    }
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderOverride: { orderId: item.id, status: "active" } }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Order restore failed"))))
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        if (data.state?.links) setPlanTaskLinks(data.state.links);
+        if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        setOrderOverrides(data.state?.orderOverrides ?? {});
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus("Order restored to active Tuesday views");
+      })
+      .catch((err) => {
+        setOrderOverrides(previousOrderOverrides);
+        setAssignmentStatus(err instanceof Error ? err.message : "Order restore failed");
+      });
+  }
+
   const openOrderTasks = useMemo(() => {
     if (!openOrder) return [];
     return orderJourneyRows.find((row) => row.order?.id === openOrder.id)?.tasks ?? [];
@@ -6275,6 +6579,9 @@ function MonthViewState({
           <OrderJourneyView
             rows={orderJourneyRows}
             selectedOrder={selectedOrder}
+            manualRowOrderActive={Boolean(orderRowOrders[orderRowsWeekKey]?.length)}
+            onMoveRow={moveOrderJourneyRow}
+            onResetRowOrder={resetOrderJourneyRowOrder}
             onTaskEdit={setEditingTask}
             onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
             onTaskOpen={(task) => openOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
@@ -6286,7 +6593,7 @@ function MonthViewState({
           <WorkshopTaskEditor
             key={editingTask.id}
             task={editingTask}
-            orders={ordersForHealth}
+            orders={activeTuesdayOrders}
             dateOptions={suggestedDateOptions}
             planTaskLinks={planTaskLinks}
             onSave={updateBoardTaskFromEditor}
@@ -6303,7 +6610,7 @@ function MonthViewState({
 
   const orderRail = (
     <OrderRail
-      orders={ordersForHealth}
+      orders={activeTuesdayOrders}
       selectedOrder={selectedOrder}
       selectedOrderTasks={selectedOrderTasks}
       assignmentTask={selectedAssignmentTask}
@@ -6317,6 +6624,9 @@ function MonthViewState({
       onWorkflowChange={setSelectedWorkflow}
       onSelect={selectOrder}
       onOpenOrder={openOrderOverview}
+      onMarkOrderComplete={markOrderCompleteInTuesday}
+      completedItems={completedTuesdayItems}
+      onRestoreCompletedOrder={restoreCompletedTuesdayOrder}
       onClear={() => {
         setSelectedAssignmentTask(null);
         setSelectedWorkflow(null);
@@ -6339,7 +6649,7 @@ function MonthViewState({
         {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
-        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     );
   }
@@ -6356,7 +6666,7 @@ function MonthViewState({
       {planningBoard}
       {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
       {orderRail}
-      {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+      {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
     </div>
   );
 }
