@@ -9,6 +9,8 @@ import {
   type PlanTaskLinkValue,
   type PlanTaskEditValue,
   type PlanTaskLinksState,
+  type OrderOverrides,
+  type PlanRowOrders,
   type PlanTaskPlacement,
 } from "@/lib/tuesday/plan-task-links-store";
 
@@ -54,6 +56,35 @@ function cleanPlacement(value: unknown): PlanTaskPlacement | undefined {
   return placement;
 }
 
+function cleanOrderRowOrder(value: unknown): { weekKey: string; rowIds: string[] | null } | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as { weekKey?: unknown; rowIds?: unknown };
+  const weekKey = typeof source.weekKey === "string" ? source.weekKey.trim().slice(0, 96) : "";
+  if (!weekKey) return null;
+  if (source.rowIds === null) return { weekKey, rowIds: null };
+  if (!Array.isArray(source.rowIds)) return null;
+  const rowIds = Array.from(new Set(source.rowIds.flatMap((rowId) => {
+    const cleanRowId = typeof rowId === "string" ? rowId.trim().slice(0, 160) : "";
+    return cleanRowId ? [cleanRowId] : [];
+  }))).slice(0, 120);
+  return { weekKey, rowIds };
+}
+
+function cleanOrderOverride(value: unknown): { orderId: string; status: "completed" | "active"; reason?: string; note?: string } | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as { orderId?: unknown; status?: unknown; reason?: unknown; note?: unknown };
+  const orderId = typeof source.orderId === "number" && Number.isFinite(source.orderId)
+    ? String(source.orderId)
+    : typeof source.orderId === "string"
+      ? source.orderId.trim().slice(0, 48)
+      : "";
+  if (!orderId) return null;
+  if (source.status !== "completed" && source.status !== "active") return null;
+  const reason = typeof source.reason === "string" && source.reason.trim() ? source.reason.trim().slice(0, 80) : undefined;
+  const note = typeof source.note === "string" && source.note.trim() ? source.note.trim().slice(0, 240) : undefined;
+  return { orderId, status: source.status, reason, note };
+}
+
 function linkValueForOrder(orderId: number, placement?: PlanTaskPlacement): PlanTaskLinkValue {
   return placement ? { orderId, placement } : orderId;
 }
@@ -75,13 +106,15 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown; taskEdit?: unknown; removeTaskEdit?: boolean } | null;
+  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown; taskEdit?: unknown; removeTaskEdit?: boolean; orderRowOrder?: unknown; orderOverride?: unknown } | null;
   const taskId = typeof body?.taskId === "string" ? body.taskId.trim() : "";
   const legacyTaskId = typeof body?.legacyTaskId === "string" ? body.legacyTaskId.trim() : "";
   const hasOrderIdField = Boolean(body && Object.prototype.hasOwnProperty.call(body, "orderId"));
   const orderId = typeof body?.orderId === "number" && Number.isFinite(body.orderId) ? body.orderId : null;
   const placement = cleanPlacement(body?.placement);
-  if (!taskId) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
+  const orderRowOrder = cleanOrderRowOrder(body?.orderRowOrder);
+  const orderOverride = cleanOrderOverride(body?.orderOverride);
+  if (!taskId && !orderRowOrder && !orderOverride) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
 
   try {
     if (orderId) {
@@ -95,17 +128,38 @@ export async function POST(request: NextRequest) {
     const current = currentResult.state;
     const links = { ...current.links };
     const taskEdits = { ...current.taskEdits };
-    if (hasOrderIdField && orderId) {
+    const orderRowOrders: PlanRowOrders = { ...current.orderRowOrders };
+    const orderOverrides: OrderOverrides = { ...current.orderOverrides };
+    if (taskId && hasOrderIdField && orderId) {
       links[taskId] = linkValueForOrder(orderId, placement);
       if (legacyTaskId && legacyTaskId !== taskId) delete links[legacyTaskId];
-    } else if (hasOrderIdField) {
+    } else if (taskId && hasOrderIdField) {
       delete links[taskId];
       if (legacyTaskId) delete links[legacyTaskId];
     }
-    const taskEdit = cleanTaskEdit(body?.taskEdit);
-    if (taskEdit) taskEdits[taskId] = { ...taskEdit, updatedAt: new Date().toISOString() };
-    if (body?.removeTaskEdit) delete taskEdits[taskId];
-    const state = { links, taskEdits, updatedAt: new Date().toISOString() };
+    if (taskId) {
+      const taskEdit = cleanTaskEdit(body?.taskEdit);
+      if (taskEdit) taskEdits[taskId] = { ...taskEdit, updatedAt: new Date().toISOString() };
+      if (body?.removeTaskEdit) delete taskEdits[taskId];
+    }
+    if (orderRowOrder) {
+      if (orderRowOrder.rowIds?.length) orderRowOrders[orderRowOrder.weekKey] = orderRowOrder.rowIds;
+      else delete orderRowOrders[orderRowOrder.weekKey];
+    }
+    if (orderOverride) {
+      if (orderOverride.status === "completed") {
+        orderOverrides[orderOverride.orderId] = {
+          status: "completed",
+          reason: orderOverride.reason,
+          note: orderOverride.note,
+          updatedAt: new Date().toISOString(),
+          updatedBy: "Tuesday",
+        };
+      } else {
+        delete orderOverrides[orderOverride.orderId];
+      }
+    }
+    const state = { links, taskEdits, orderRowOrders, orderOverrides, updatedAt: new Date().toISOString() };
     const written = await writePlanTaskLinksState(state);
     return NextResponse.json(written);
   } catch (err) {

@@ -21,9 +21,21 @@ export type PlanTaskEditValue = {
   updatedAt: string;
 };
 
+export type PlanRowOrders = Record<string, string[]>;
+export type OrderOverrideValue = {
+  status: "completed";
+  reason?: string;
+  note?: string;
+  updatedAt: string;
+  updatedBy?: string;
+};
+export type OrderOverrides = Record<string, OrderOverrideValue>;
+
 export type PlanTaskLinksState = {
   links: Record<string, PlanTaskLinkValue>;
   taskEdits: Record<string, PlanTaskEditValue>;
+  orderRowOrders: PlanRowOrders;
+  orderOverrides: OrderOverrides;
   updatedAt: string;
 };
 
@@ -34,11 +46,43 @@ const SUPABASE_TABLE = process.env.TUESDAY_PLAN_TASK_TABLE || "production_order_
 const SUPABASE_SENTINEL_ORDER_ID = 0;
 
 export function defaultPlanTaskLinksState(): PlanTaskLinksState {
-  return { links: {}, taskEdits: {}, updatedAt: new Date().toISOString() };
+  return { links: {}, taskEdits: {}, orderRowOrders: {}, orderOverrides: {}, updatedAt: new Date().toISOString() };
 }
 
 export function planTaskLinksStorage(): PlanTaskLinksStorage {
   return process.env.TUESDAY_PLAN_TASK_STORAGE === "supabase" ? "supabase" : "blob";
+}
+
+function normalizeOrderRowOrders(value: unknown): PlanRowOrders {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).flatMap(([weekKey, rowIds]) => {
+      const cleanWeekKey = weekKey.trim().slice(0, 96);
+      if (!cleanWeekKey || !Array.isArray(rowIds)) return [];
+      const cleanRowIds = Array.from(new Set(rowIds.flatMap((rowId) => {
+        const cleanRowId = typeof rowId === "string" ? rowId.trim().slice(0, 160) : "";
+        return cleanRowId ? [cleanRowId] : [];
+      }))).slice(0, 120);
+      return cleanRowIds.length ? [[cleanWeekKey, cleanRowIds] as const] : [];
+    })
+  );
+}
+
+function normalizeOrderOverrides(value: unknown): OrderOverrides {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).flatMap(([orderId, override]) => {
+      const cleanOrderId = orderId.trim().slice(0, 48);
+      if (!cleanOrderId || !override || typeof override !== "object" || Array.isArray(override)) return [];
+      const source = override as Partial<OrderOverrideValue>;
+      if (source.status !== "completed") return [];
+      const updatedAt = typeof source.updatedAt === "string" && source.updatedAt ? source.updatedAt : new Date().toISOString();
+      const reason = typeof source.reason === "string" && source.reason.trim() ? source.reason.trim().slice(0, 80) : undefined;
+      const note = typeof source.note === "string" && source.note.trim() ? source.note.trim().slice(0, 240) : undefined;
+      const updatedBy = typeof source.updatedBy === "string" && source.updatedBy.trim() ? source.updatedBy.trim().slice(0, 80) : undefined;
+      return [[cleanOrderId, { status: "completed", reason, note, updatedAt, updatedBy }] as const];
+    })
+  );
 }
 
 function normalizeState(state: Partial<PlanTaskLinksState> | null | undefined): PlanTaskLinksState {
@@ -47,6 +91,8 @@ function normalizeState(state: Partial<PlanTaskLinksState> | null | undefined): 
     ...(state ?? {}),
     links: state?.links ?? {},
     taskEdits: state?.taskEdits ?? {},
+    orderRowOrders: normalizeOrderRowOrders(state?.orderRowOrders),
+    orderOverrides: normalizeOrderOverrides(state?.orderOverrides),
   };
 }
 

@@ -909,6 +909,10 @@ type AppPlanTask = {
 type PlanTaskLinks = Record<string, PlanTaskLinkValue>;
 type PlanTaskEditValue = { text?: string; rowName?: string; weekId?: string; day?: DayKey; person?: Person; estimatedHours?: number; sortOrder?: number; internal?: boolean; done?: boolean; updatedAt?: string };
 type PlanTaskEdits = Record<string, PlanTaskEditValue>;
+type PlanRowOrders = Record<string, string[]>;
+type OrderOverrideValue = { status: "completed"; reason?: string; note?: string; updatedAt?: string; updatedBy?: string };
+type OrderOverrides = Record<string, OrderOverrideValue>;
+type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; orderRowOrders?: PlanRowOrders; orderOverrides?: OrderOverrides; updatedAt?: string };
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type ProductionPlanMode = "schedule" | "orderRows";
 type PersonFilter = "all" | Person;
@@ -5170,6 +5174,10 @@ function MonthView({
   delightEnabled,
   railFilter,
   onRailFilterChange,
+  qaFixtureMode = false,
+  initialPlanTaskLinkState,
+  initialPlanTaskLinksStorage = "blob",
+  initialPlanTaskLinksDisabledReason,
 }: {
   weeks: PlanWeek[];
   newOrder: NewOrderPlanCandidate | null;
@@ -5177,8 +5185,26 @@ function MonthView({
   delightEnabled?: boolean;
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
+  qaFixtureMode?: boolean;
+  initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
+  initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
+  initialPlanTaskLinksDisabledReason?: string;
 }) {
-  return <MonthViewState key={newOrder?.id ?? "none"} weeks={weeks} newOrder={newOrder} ordersForHealth={orders} delightEnabled={delightEnabled} railFilter={railFilter} onRailFilterChange={onRailFilterChange} />;
+  return (
+    <MonthViewState
+      key={newOrder?.id ?? "none"}
+      weeks={weeks}
+      newOrder={newOrder}
+      ordersForHealth={orders}
+      delightEnabled={delightEnabled}
+      railFilter={railFilter}
+      onRailFilterChange={onRailFilterChange}
+      qaFixtureMode={qaFixtureMode}
+      initialPlanTaskLinkState={initialPlanTaskLinkState}
+      initialPlanTaskLinksStorage={initialPlanTaskLinksStorage}
+      initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}
+    />
+  );
 }
 
 function WorkshopFocusBar({
@@ -5368,6 +5394,68 @@ function OrderJourneyView({
   );
 }
 
+function TuesdayPlanStateLoading({ isNarrow }: { isNarrow: boolean }) {
+  const rail = (
+    <aside
+      data-tuesday-state-loading="orders"
+      aria-label="Loading Tuesday order state"
+      style={{
+        alignSelf: "start",
+        width: isNarrow ? "100%" : 318,
+        minWidth: isNarrow ? undefined : 318,
+        border: `1px solid ${DT.border}`,
+        borderRadius: DT.radius,
+        background: "rgba(255,255,255,0.84)",
+        boxShadow: DT.shadow,
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ padding: "12px 12px 10px", borderBottom: `1px solid ${DT.border}` }}>
+        <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans }}>Orders</div>
+        <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1 }}>Loading Tuesday state</div>
+      </div>
+      <div style={{ padding: 10, display: "grid", gap: 8 }}>
+        {[0, 1, 2, 3].map((index) => (
+          <div key={index} style={{ height: 52, borderRadius: 10, border: `1px solid ${DT.border}`, background: "linear-gradient(90deg, rgba(245,243,238,0.72), rgba(255,255,255,0.92), rgba(245,243,238,0.72))" }} />
+        ))}
+      </div>
+    </aside>
+  );
+  const board = (
+    <section
+      data-tuesday-state-loading="board"
+      style={{
+        minHeight: 360,
+        border: `1px solid ${DT.border}`,
+        borderRadius: DT.radius,
+        background: "rgba(255,255,255,0.82)",
+        boxShadow: DT.shadow,
+        padding: 18,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        gap: 10,
+        color: DT.textMuted,
+        fontFamily: DT.sans,
+      }}
+    >
+      <div style={{ fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Production Plan</div>
+      <div style={{ fontFamily: DT.serif, fontSize: 24, lineHeight: 1.05, color: DT.textPrimary }}>Loading Tuesday schedule state</div>
+      <div style={{ maxWidth: 520, fontSize: 12, lineHeight: 1.45, fontWeight: 800 }}>Checking saved order status, completed-order overrides, task edits, and row order before showing the board.</div>
+    </section>
+  );
+  if (isNarrow) {
+    return <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>{board}{rail}</div>;
+  }
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "318px minmax(0, 1fr)", gap: 14, alignItems: "start" }}>
+      {rail}
+      {board}
+    </div>
+  );
+}
+
+
 function MonthViewState({
   weeks,
   newOrder,
@@ -5375,6 +5463,10 @@ function MonthViewState({
   delightEnabled = false,
   railFilter,
   onRailFilterChange,
+  qaFixtureMode = false,
+  initialPlanTaskLinkState,
+  initialPlanTaskLinksStorage = "blob",
+  initialPlanTaskLinksDisabledReason,
 }: {
   weeks: PlanWeek[];
   newOrder: NewOrderPlanCandidate | null;
@@ -5382,10 +5474,14 @@ function MonthViewState({
   delightEnabled?: boolean;
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
+  qaFixtureMode?: boolean;
+  initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
+  initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
+  initialPlanTaskLinksDisabledReason?: string;
 }) {
   const { currentAndUpcoming, previous } = useMemo(() => splitPlanWeeks(weeks), [weeks]);
   const visibleProductionWeeks = useMemo(() => currentAndUpcoming.slice(0, 6), [currentAndUpcoming]);
-  const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>({});
+  const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>(() => initialPlanTaskLinkState?.taskEdits ?? {});
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("schedule");
@@ -5403,12 +5499,14 @@ function MonthViewState({
   const [selectedWorkflow, setSelectedWorkflow] = useState<OrderWorkflowState | null>(null);
   const [selectedAssignmentTask, setSelectedAssignmentTask] = useState<AssignablePlanTask | null>(null);
   const [editingTask, setEditingTask] = useState<BoardPlanTask | null>(null);
-  const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>({});
-  const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(false);
-  const [planTaskLinksStorage, setPlanTaskLinksStorage] = useState<PlanTaskLinksStorage>("blob");
+  const [planTaskLinks, setPlanTaskLinks] = useState<PlanTaskLinks>(() => initialPlanTaskLinkState?.links ?? {});
+  const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(Boolean(initialPlanTaskLinkState) || qaFixtureMode);
+  const [planTaskLinksStorage, setPlanTaskLinksStorage] = useState<PlanTaskLinksStorage>(initialPlanTaskLinksStorage);
+  const [orderRowOrders, setOrderRowOrders] = useState<PlanRowOrders>(() => initialPlanTaskLinkState?.orderRowOrders ?? {});
+  const [orderOverrides, setOrderOverrides] = useState<OrderOverrides>(() => initialPlanTaskLinkState?.orderOverrides ?? {});
   const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
-  const planTaskLinksUpdatedAtRef = useRef<string | null>(null);
-  const [assignmentStatus, setAssignmentStatus] = useState("");
+  const planTaskLinksUpdatedAtRef = useRef<string | null>(initialPlanTaskLinkState?.updatedAt ?? null);
+  const [assignmentStatus, setAssignmentStatus] = useState(initialPlanTaskLinksDisabledReason ?? "");
   const [showHistory, setShowHistory] = useState(false);
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
   const dragStartBoardTasksRef = useRef<BoardPlanTask[] | null>(null);
@@ -5522,9 +5620,11 @@ function MonthViewState({
       }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Task edit save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
         if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Task saved in Tuesday");
       })
@@ -5561,9 +5661,11 @@ function MonthViewState({
       }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((data) => Promise.reject(new Error(data.error ?? "Move save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
         if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Move saved");
       })
@@ -5613,17 +5715,24 @@ function MonthViewState({
     setOpenOrderId(id);
   }
 
-  const applyPlanTaskLinkState = useCallback((state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }) => {
+  const applyPlanTaskLinkState = useCallback((state?: PlanTaskLinkStatePayload) => {
     setPlanTaskLinks(state?.links ?? {});
     setPlanTaskEdits(state?.taskEdits ?? {});
+    setOrderRowOrders(state?.orderRowOrders ?? {});
+    setOrderOverrides(state?.orderOverrides ?? {});
     setPlanTaskLinksLoaded(true);
     if (state?.updatedAt) planTaskLinksUpdatedAtRef.current = state.updatedAt;
   }, []);
 
   const loadPlanTaskLinkState = useCallback((statusMessage = "", options: { showStatusIfUnchanged?: boolean } = {}) => {
+    if (qaFixtureMode) {
+      setPlanTaskLinksLoaded(true);
+      if (statusMessage || options.showStatusIfUnchanged) setAssignmentStatus(statusMessage || "QA fixture only");
+      return;
+    }
     fetch("/api/production/plan-task-links", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Task links unavailable")))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage; disabledReason?: string }) => {
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage; disabledReason?: string }) => {
         if (data.storage) setPlanTaskLinksStorage(data.storage);
         const updatedAt = data.state?.updatedAt ?? null;
         const isInitialLoad = !planTaskLinksLoaded;
@@ -5639,7 +5748,7 @@ function MonthViewState({
         setPlanTaskLinksLoaded(true);
         setAssignmentStatus(err instanceof Error ? err.message : "Task links unavailable");
       });
-  }, [applyPlanTaskLinkState, planTaskLinksLoaded]);
+  }, [applyPlanTaskLinkState, planTaskLinksLoaded, qaFixtureMode]);
 
   const handlePlanTaskLinksRealtimeChange = useCallback(() => {
     loadPlanTaskLinkState("Updated from another screen", { showStatusIfUnchanged: true });
@@ -5870,10 +5979,12 @@ function MonthViewState({
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId, placement }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
         if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Order linked");
         selectOrder(orderId);
@@ -5903,10 +6014,12 @@ function MonthViewState({
       body: JSON.stringify({ taskId: taskKey, legacyTaskId: task.id, orderId: null }),
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
-      .then((data: { state?: { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; updatedAt?: string }; storage?: PlanTaskLinksStorage }) => {
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
         if (data.storage) setPlanTaskLinksStorage(data.storage);
         if (data.state?.links) setPlanTaskLinks(data.state.links);
         if (data.state?.taskEdits) setPlanTaskEdits(data.state.taskEdits);
+        if (data.state?.orderRowOrders) setOrderRowOrders(data.state.orderRowOrders);
+        if (data.state?.orderOverrides) setOrderOverrides(data.state.orderOverrides);
         broadcastPlanTaskLinkChange(data.state?.updatedAt);
         setAssignmentStatus("Order connection removed");
       })
@@ -6187,6 +6300,10 @@ function MonthViewState({
     />
   );
 
+  if (!planTaskLinksLoaded) {
+    return <TuesdayPlanStateLoading isNarrow={isRailNarrow} />;
+  }
+
   if (isRailNarrow) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -6223,6 +6340,9 @@ export type PlanClientProps = {
   mondayError?: string;
   delightEnabled?: boolean;
   qaFixtureMode?: boolean;
+  initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
+  initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
+  initialPlanTaskLinksDisabledReason?: string;
 };
 
 export default function PlanClient({
@@ -6233,6 +6353,9 @@ export default function PlanClient({
   mondayError,
   delightEnabled = false,
   qaFixtureMode = false,
+  initialPlanTaskLinkState,
+  initialPlanTaskLinksStorage = "blob",
+  initialPlanTaskLinksDisabledReason,
 }: PlanClientProps) {
   const [hasMounted, setHasMounted] = useState(false);
   const [railFilter, setRailFilter] = useState<RailFilter>("all");
@@ -6290,7 +6413,18 @@ export default function PlanClient({
             No Production Plan rows. {mondayError && `(${mondayError})`}
           </div>
         ) : (
-          <MonthView weeks={activeWeeks} newOrder={newOrder} orders={orders} delightEnabled={delightEnabled} railFilter={railFilter} onRailFilterChange={setRailFilter} />
+          <MonthView
+            weeks={activeWeeks}
+            newOrder={newOrder}
+            orders={orders}
+            delightEnabled={delightEnabled}
+            railFilter={railFilter}
+            onRailFilterChange={setRailFilter}
+            qaFixtureMode={qaFixtureMode}
+            initialPlanTaskLinkState={initialPlanTaskLinkState}
+            initialPlanTaskLinksStorage={initialPlanTaskLinksStorage}
+            initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}
+          />
         )}
         {delightEnabled && <DelightUnicorn />}
     </MissionControlShell>
