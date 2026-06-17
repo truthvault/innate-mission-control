@@ -36,6 +36,14 @@ function cleanOrderId(value: string | null) {
   return value && /^\d+$/.test(value) ? Number(value) : null;
 }
 
+function cleanOrderIds(value: string | null) {
+  if (!value) return [];
+  return Array.from(new Set(value.split(/[,\s]+/).flatMap((part) => {
+    const id = cleanOrderId(part);
+    return id ? [id] : [];
+  }))).slice(0, 100);
+}
+
 function pathFor(orderId: number) {
   return `production-order-workflow/${orderId}.json`;
 }
@@ -154,6 +162,46 @@ async function readSupabaseWorkflow(orderId: number) {
   return normalizeWorkflowState(orderId, rows[0]?.state);
 }
 
+async function readSupabaseWorkflows(orderIds: number[]) {
+  const supabase = supabaseWorkflowConfig();
+  if (!supabase || orderIds.length === 0) return new Map<number, OrderWorkflowState>();
+
+  const params = new URLSearchParams({
+    select: "order_id,state",
+    order_id: `in.(${orderIds.join(",")})`,
+  });
+  const response = await fetch(`${supabase.url}/rest/v1/${supabase.table}?${params}`, {
+    headers: {
+      apikey: supabase.serviceKey,
+      Authorization: `Bearer ${supabase.serviceKey}`,
+    },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase workflow read failed: HTTP ${response.status} ${text.slice(0, 240)}`);
+  }
+  const rows = (await response.json()) as Array<{ order_id?: number | string; state?: OrderWorkflowState }>;
+  return new Map(rows.flatMap((row) => {
+    const orderId = typeof row.order_id === "number" ? row.order_id : cleanOrderId(String(row.order_id ?? ""));
+    return orderId ? [[orderId, normalizeWorkflowState(orderId, row.state)] as const] : [];
+  }));
+}
+
+async function readWorkflowState(orderId: number, supabaseStates?: Map<number, OrderWorkflowState>) {
+  const supabaseState = supabaseStates ? supabaseStates.get(orderId) ?? null : await readSupabaseWorkflow(orderId);
+  if (supabaseState) return { state: supabaseState, storage: "supabase" as const };
+  if (supabaseStates && supabaseWorkflowConfig()) return { state: defaultState(orderId), storage: "supabase" as const };
+
+  try {
+    const blobState = await readEncryptedBlob<OrderWorkflowState>(pathFor(orderId), defaultState(orderId));
+    return { state: normalizeWorkflowState(orderId, blobState), storage: "blob" as const };
+  } catch (err) {
+    if (isMissingBlobToken(err)) return { state: defaultState(orderId), storage: "disabled" as const };
+    throw err;
+  }
+}
+
 async function writeSupabaseWorkflow(state: OrderWorkflowState) {
   const supabase = supabaseWorkflowConfig();
   if (!supabase) return null;
@@ -182,17 +230,34 @@ async function writeSupabaseWorkflow(state: OrderWorkflowState) {
 }
 
 export async function GET(request: NextRequest) {
+  const orderIds = cleanOrderIds(request.nextUrl.searchParams.get("orderIds"));
+  if (orderIds.length > 0) {
+    try {
+      const supabaseStates = await readSupabaseWorkflows(orderIds);
+      const results = await Promise.all(orderIds.map((orderId) => readWorkflowState(orderId, supabaseStates)));
+      const states = Object.fromEntries(results.map((result, index) => [String(orderIds[index]), result.state]));
+      const storageDisabled = results.some((result) => result.storage === "disabled");
+      const supabaseConfigured = Boolean(supabaseWorkflowConfig());
+      return NextResponse.json({
+        states,
+        storage: storageDisabled ? "disabled" : supabaseConfigured ? "supabase" : supabaseStates.size > 0 ? "supabase" : "blob",
+        disabledReason: storageDisabled ? "Workflow storage is not connected yet." : undefined,
+      });
+    } catch (err) {
+      return NextResponse.json({ error: err instanceof Error ? err.message : "Workflow state unavailable" }, { status: 500 });
+    }
+  }
+
   const orderId = cleanOrderId(request.nextUrl.searchParams.get("orderId"));
   if (!orderId) return NextResponse.json({ error: "Missing orderId" }, { status: 400 });
 
   try {
-    const supabaseState = await readSupabaseWorkflow(orderId);
-    if (supabaseState) return NextResponse.json({ state: supabaseState, storage: "supabase" });
-    return NextResponse.json({ state: await readEncryptedBlob<OrderWorkflowState>(pathFor(orderId), defaultState(orderId)), storage: "blob" });
-  } catch (err) {
-    if (isMissingBlobToken(err)) {
-      return NextResponse.json({ state: defaultState(orderId), disabledReason: "Workflow storage is not connected yet." });
+    const result = await readWorkflowState(orderId);
+    if (result.storage === "disabled") {
+      return NextResponse.json({ state: result.state, disabledReason: "Workflow storage is not connected yet." });
     }
+    return NextResponse.json({ state: result.state, storage: result.storage });
+  } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Workflow state unavailable" }, { status: 500 });
   }
 }

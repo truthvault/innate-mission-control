@@ -1424,6 +1424,9 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
   const realtimeInstanceId = useId();
   const [workflow, setWorkflow] = useState<OrderWorkflowState>(() => defaultWorkflowState(order.id));
   const [workflowStatus, setWorkflowStatus] = useState("");
+  const saveInFlightRef = useRef(false);
+  const pendingWorkflowRef = useRef<OrderWorkflowState | null>(null);
+  const saveRequestIdRef = useRef(0);
 
   const loadWorkflow = useCallback((statusPrefix = "") => {
     let active = true;
@@ -1464,10 +1467,9 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
     onChange: handleRealtimeWorkflowChange,
   });
 
-  function saveWorkflow(next: OrderWorkflowState) {
-    setWorkflow(next);
-    onWorkflowChange?.(next);
-    setWorkflowStatus("Saving...");
+  function sendWorkflow(next: OrderWorkflowState) {
+    saveInFlightRef.current = true;
+    const requestId = ++saveRequestIdRef.current;
     fetch("/api/production/order-workflow", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1475,13 +1477,40 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
     })
       .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Save failed"))))
       .then((data: { state?: OrderWorkflowState }) => {
+        if (pendingWorkflowRef.current || requestId !== saveRequestIdRef.current) return;
         if (data.state) {
           setWorkflow(data.state);
           onWorkflowChange?.(data.state);
         }
         setWorkflowStatus("Saved");
       })
-      .catch((err) => setWorkflowStatus(err instanceof Error ? err.message : "Save failed"));
+      .catch((err) => {
+        if (pendingWorkflowRef.current || requestId !== saveRequestIdRef.current) return;
+        setWorkflowStatus(err instanceof Error ? `${err.message} - reloading saved state` : "Save failed - reloading saved state");
+        loadWorkflow("Reloaded saved state");
+      })
+      .finally(() => {
+        if (requestId !== saveRequestIdRef.current && !pendingWorkflowRef.current) return;
+        saveInFlightRef.current = false;
+        const pending = pendingWorkflowRef.current;
+        if (pending) {
+          pendingWorkflowRef.current = null;
+          setWorkflowStatus("Saving latest...");
+          sendWorkflow(pending);
+        }
+      });
+  }
+
+  function saveWorkflow(next: OrderWorkflowState) {
+    setWorkflow(next);
+    onWorkflowChange?.(next);
+    if (saveInFlightRef.current) {
+      pendingWorkflowRef.current = next;
+      setWorkflowStatus("Saving latest...");
+      return;
+    }
+    setWorkflowStatus("Saving...");
+    sendWorkflow(next);
   }
 
   function updateWorkflow(patch: (state: OrderWorkflowState) => OrderWorkflowState) {

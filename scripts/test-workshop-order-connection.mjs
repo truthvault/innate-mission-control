@@ -30,6 +30,8 @@ const workflowApiMustHave = [
   ['workflow storage can normalize partial saved rows', 'function normalizeWorkflowState('],
   ['workflow task rows are cleaned before returning to UI', 'function normalizeWorkflowTask('],
   ['blank workflow tasks are ignored instead of breaking the order modal', 'if (!title) return null'],
+  ['order-row board can batch load workflow tasks', 'cleanOrderIds(request.nextUrl.searchParams.get("orderIds"))'],
+  ['batch workflow response returns states map', 'const states = Object.fromEntries'],
   ['Supabase workflow storage remains supported', 'storage: "supabase"'],
 ];
 
