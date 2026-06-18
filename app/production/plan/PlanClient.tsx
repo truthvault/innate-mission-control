@@ -25,6 +25,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip } from "@/components/mission-control-ui";
+import type { OrderCostingContext, OrderCostingMatch } from "@/lib/costings/fetch-order-costing-context";
 import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -1081,7 +1082,7 @@ type CompletedTuesdayItem = { id: string; kind: "order" | "intake" | "unknown"; 
 type ProductionPlanMode = "schedule" | "orderRows";
 type PersonFilter = "all" | Person;
 type OrderDayFilter = "allWeek" | "today" | DayKey;
-type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate";
+type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate" | "costing";
 type RailSort = "soonest" | "latest" | "customer";
 type OrderWorkflowState = {
   orderId: number;
@@ -1377,12 +1378,22 @@ function orderTrustSignal(order: UiOrder, tasks: Array<{ done?: boolean; schedul
   };
 }
 
+function costingIsFullyApproved(costing: OrderCostingMatch | undefined) {
+  return costing?.status === "verified_attached";
+}
+
+function costingHasVerifiedSource(costing: OrderCostingMatch | undefined) {
+  return costing?.status === "verified_attached" || costing?.status === "verified_needs_review";
+}
+
 function OrderHealthStrip({
   orders,
+  orderCostings,
   activeFilter,
   onFilterChange,
 }: {
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   activeFilter: RailFilter;
   onFilterChange: (filter: RailFilter) => void;
 }) {
@@ -1406,11 +1417,13 @@ function OrderHealthStrip({
   const blocked = active.filter((order) => orderHealth(order) === "blocked").length;
   const watch = active.filter((order) => orderHealth(order) === "watch").length;
   const onTrack = active.filter((order) => orderHealth(order) === "onTrack").length;
+  const needsCosting = active.filter((order) => !costingIsFullyApproved(orderCostings?.matches[order.id])).length;
   const cards: Array<{ label: string; mobileLabel: string; value: number; color: string; filter: RailFilter }> = [
     { label: "Active Orders", mobileLabel: "Active", value: active.length, color: DT.textPrimary, filter: "all" },
     { label: "On Track", mobileLabel: "Track", value: onTrack, color: "#15803d", filter: "onTrack" },
     { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
     { label: "Blocked", mobileLabel: "Block", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
+    { label: "Needs Costing", mobileLabel: "Costing", value: needsCosting, color: needsCosting ? "#b45309" : "#15803d", filter: "costing" },
     { label: "Due This Week", mobileLabel: "This wk", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
     { label: "Due Next Week", mobileLabel: "Next wk", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
@@ -2176,6 +2189,7 @@ function appTaskFallsInWeek(task: AppPlanTask, week: PlanWeek) {
 
 function OrderRail({
   orders,
+  orderCostings,
   selectedOrder,
   selectedOrderTasks,
   assignmentTask,
@@ -2200,6 +2214,7 @@ function OrderRail({
   tasksForOrder,
 }: {
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   selectedOrder: UiOrder | null;
   selectedOrderTasks: OrderJourneyTask[];
   assignmentTask: AssignablePlanTask | null;
@@ -2236,6 +2251,7 @@ function OrderRail({
       if (filter === "nextWeek" && !orderDueNextWeek(order)) return false;
       if (filter === "materials" && order.rawMondayStatus !== "Materials Ordered") return false;
       if (filter === "noDate" && order.shipDate) return false;
+      if (filter === "costing" && costingIsFullyApproved(orderCostings?.matches[order.id])) return false;
       if (!normalizedQuery) return true;
       return normalizeOrderText(`${order.customer} ${orderItemLabel(order)} ${orderStatusLabel(order)} ${order.deliveryLocation ?? ""}`).includes(normalizedQuery);
     });
@@ -2248,12 +2264,13 @@ function OrderRail({
       if (bTime === null) return -1;
       return sort === "latest" ? bTime - aTime : aTime - bTime;
     });
-  }, [activeOrders, filter, query, sort]);
+  }, [activeOrders, filter, orderCostings?.matches, query, sort]);
   const filterOptions: Array<{ id: RailFilter; label: string }> = [
     { id: "all", label: "All" },
     { id: "blocked", label: "Blocked" },
     { id: "thisWeek", label: "This week" },
     { id: "materials", label: "Materials" },
+    { id: "costing", label: "Costing" },
     { id: "noDate", label: "No date" },
   ];
   const railWidth = 318;
@@ -2328,6 +2345,7 @@ function OrderRail({
           onPlanTaskDoneToggle={onPlanTaskDoneToggle}
           onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle}
           onRemoveTaskLink={onRemoveTaskLink}
+          costing={orderCostings?.matches[selectedOrder.id]}
         />
       ) : (
         <div key="list" style={{ maxHeight: undefined, overflowY: "visible", padding: 10, animation: "orderRailIn 1000ms ease both" }}>
@@ -2367,7 +2385,7 @@ function OrderRail({
           </div>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflowX: "visible", WebkitOverflowScrolling: "touch" }}>
             {filteredOrders.map((order) => (
-              <OrderRailItem key={order.id} order={order} onSelect={onSelect} isNarrow={isNarrow} />
+              <OrderRailItem key={order.id} order={order} costing={orderCostings?.matches[order.id]} onSelect={onSelect} isNarrow={isNarrow} />
             ))}
             {filteredOrders.length === 0 && (
               <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35, padding: "8px 2px" }}>No active orders match that view.</div>
@@ -2379,7 +2397,68 @@ function OrderRail({
   );
 }
 
-function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect: (id: number) => void; isNarrow: boolean }) {
+function costingTone(costing: OrderCostingMatch | undefined) {
+  if (costing?.status === "verified_attached") return { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.24)" };
+  if (costing?.status === "verified_needs_review") return { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.22)" };
+  if (costing?.status === "costings_unavailable") return { color: "#922a23", bg: "rgba(146,42,35,0.07)", border: "rgba(146,42,35,0.18)" };
+  return { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.22)" };
+}
+
+function formatCostingMoney(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "Cost not shown";
+  return `$${Math.round(value).toLocaleString("en-NZ")} ex GST`;
+}
+
+function formatCostingPercent(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "Margin not shown";
+  return `${value.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}% margin`;
+}
+
+function OrderCostingPill({ costing }: { costing?: OrderCostingMatch }) {
+  const tone = costingTone(costing);
+  const label = costing?.label || "Needs costing match";
+  return (
+    <span title={costing?.detail || "No source-verified costing relation is attached to this order."} style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${tone.border}`, background: tone.bg, color: tone.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      {label}
+    </span>
+  );
+}
+
+function OrderCostingPanel({ costing }: { costing?: OrderCostingMatch }) {
+  const tone = costingTone(costing);
+  const status = costing?.status || "needs_match";
+  const hasVerifiedSource = costingHasVerifiedSource(costing);
+  const pillLabel = status === "verified_attached" ? "Approved" : status === "verified_needs_review" ? "Verified source" : "No match";
+  const pillTone = status === "verified_attached" ? "good" : status === "costings_unavailable" ? "danger" : "warn";
+  return (
+    <OrderCommandSection
+      eyebrow="Costing"
+      title={costing?.label || "Needs costing match"}
+      action={<OrderCommandPill label={pillLabel} tone={pillTone} />}
+    >
+      <div style={{ border: `1px solid ${tone.border}`, background: tone.bg, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, color: tone.color }}>
+        <div style={{ fontSize: 12, lineHeight: 1.35, fontWeight: 900 }}>{costing?.detail || "No source-verified product costing is explicitly attached to this order."}</div>
+        <div style={{ marginTop: 5, fontSize: 10, lineHeight: 1.35, fontWeight: 850 }}>
+          {hasVerifiedSource
+            ? `${formatCostingMoney(costing?.totalCostExGst)} · ${formatCostingPercent(costing?.grossMarginPercent)} · ${status === "verified_attached" ? "Approved for quote use" : "Needs approval before quote use"} · Matched by ${costing?.matchedBy || "verified source"}`
+            : "Needed relation: exact product code, Xero invoice/reference, or approved order-to-costing link."}
+        </div>
+      </div>
+      {costing?.sourceLabel && (
+        <div style={{ marginTop: 7, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <OrderCommandPill label={`Source: ${costing.sourceLabel}`} tone="neutral" />
+          {costing.sourceUrl && (
+            <a href={costing.sourceUrl} target="_blank" rel="noreferrer" style={{ border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>
+              Open proof
+            </a>
+          )}
+        </div>
+      )}
+    </OrderCommandSection>
+  );
+}
+
+function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder; costing?: OrderCostingMatch; onSelect: (id: number) => void; isNarrow: boolean }) {
   const healthLevel = orderHealth(order);
   const health = HEALTH_META[healthLevel];
   const trust = orderTrustSignal(order);
@@ -2419,7 +2498,10 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "normal" : "nowrap" }}>{order.customer}</div>
           <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "normal" : "nowrap" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
-          <div style={{ marginTop: 4, display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</div>
+          <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>
+            <OrderCostingPill costing={costing} />
+          </div>
           {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 850, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reason}</div>}
         </div>
         <div style={{ flex: "0 0 auto", textAlign: "right" }}>
@@ -3263,6 +3345,7 @@ function TaskAssignmentPanel({
 
 function OrderRailDetail({
   order,
+  costing,
   planTasks,
   onWorkflowChange,
   onOpen,
@@ -3273,6 +3356,7 @@ function OrderRailDetail({
   onRemoveTaskLink,
 }: {
   order: UiOrder;
+  costing?: OrderCostingMatch;
   planTasks: OrderJourneyTask[];
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onOpen: () => void;
@@ -3425,6 +3509,7 @@ function OrderRailDetail({
           <MiniFact label="Item" value={orderItemLabel(order)} />
           <MiniFact label="Current" value={activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} />
           <MiniFact label="Payment" value={paymentLabel || "No Supabase payment stage"} />
+          <MiniFact label="Costing" value={costing?.label || "Needs costing match"} />
           <MiniFact label="Next" value={nextJobTask?.title ?? nextPlanTask?.text ?? "No task set"} />
           <MiniFact label="Tasks" value={`${openJobTasks.length + openPlanTasks.length} open · ${doneJobTasks.length + donePlanTasks.length} done`} />
           <MiniFact label="QC / dispatch" value={`${qcDone}/${qcItems.length} · ${dispatch.label}`} />
@@ -3445,6 +3530,10 @@ function OrderRailDetail({
           Mark complete in Tuesday
         </button>
         {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <OrderCostingPanel costing={costing} />
       </div>
 
       <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.80)", borderRadius: 10, padding: "9px 10px" }}>
@@ -3812,6 +3901,7 @@ function CustomerMirrorPanel({ order }: { order: UiOrder }) {
 
 function OrderOverviewOverlay({
   order,
+  costing,
   planTasks,
   onMarkComplete,
   onPlanTaskEdit,
@@ -3822,6 +3912,7 @@ function OrderOverviewOverlay({
   onWorkflowChange,
 }: {
   order: UiOrder;
+  costing?: OrderCostingMatch;
   planTasks: OrderJourneyTask[];
   onMarkComplete: (order: UiOrder) => void;
   onPlanTaskEdit: (task: BoardPlanTask) => void;
@@ -3981,6 +4072,7 @@ function OrderOverviewOverlay({
           <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(280px, 0.95fr) minmax(320px, 1.05fr) minmax(380px, 1.25fr)", gap: isNarrow ? 12 : 14, alignItems: "start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
               <WorkshopSpec key={`${order.id}:${invoiceNumber ?? ""}`} order={order} packLabel={mode.label} packDetail={mode.detail} freightBookBy={freightBookBy} freightWorkingDays={mode.workingDays} xeroUrl={order.xero} xeroInvoiceNumber={invoiceNumber} onInvoiceNumberChange={(nextInvoiceNumber) => updateWorkflow((state) => ({ ...state, xeroInvoiceNumber: nextInvoiceNumber }))} prominent afterSpec={<QcChecklist order={order} workflow={workflow} onChange={updateWorkflow} compact includePhotos />} />
+              <OrderCostingPanel costing={costing} />
               <CustomerMirrorPanel order={order} />
             </div>
 
@@ -7229,6 +7321,7 @@ function MonthView({
   weeks,
   newOrder,
   orders,
+  orderCostings,
   delightEnabled,
   railFilter,
   onRailFilterChange,
@@ -7240,6 +7333,7 @@ function MonthView({
   weeks: PlanWeek[];
   newOrder: NewOrderPlanCandidate | null;
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   delightEnabled?: boolean;
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
@@ -7254,6 +7348,7 @@ function MonthView({
       weeks={weeks}
       newOrder={newOrder}
       ordersForHealth={orders}
+      orderCostings={orderCostings}
       delightEnabled={delightEnabled}
       railFilter={railFilter}
       onRailFilterChange={onRailFilterChange}
@@ -8343,6 +8438,7 @@ function MonthViewState({
   weeks,
   newOrder,
   ordersForHealth,
+  orderCostings,
   delightEnabled = false,
   railFilter,
   onRailFilterChange,
@@ -8354,6 +8450,7 @@ function MonthViewState({
   weeks: PlanWeek[];
   newOrder: NewOrderPlanCandidate | null;
   ordersForHealth: UiOrder[];
+  orderCostings?: OrderCostingContext;
   delightEnabled?: boolean;
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
@@ -9766,7 +9863,7 @@ function MonthViewState({
       <div style={{ display: "flex", flexDirection: "column", gap: isRailNarrow ? 8 : 14, minWidth: 0 }}>
         <style>{ORDER_JOURNEY_MOBILE_CSS}</style>
         {workshopHeaderControl}
-        {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
+        {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
         {planViewMode === "schedule" ? (
           <>
             {newOrderPanel}
@@ -9824,6 +9921,7 @@ function MonthViewState({
   const orderRail = (
     <OrderRail
       orders={activeTuesdayOrders}
+      orderCostings={orderCostings}
       selectedOrder={selectedOrder}
       selectedOrderTasks={selectedOrderTasks}
       assignmentTask={selectedAssignmentTask}
@@ -9858,7 +9956,7 @@ function MonthViewState({
   }
 
   const desktopHealthStrip = !isRailNarrow ? (
-    <OrderHealthStrip orders={activeTuesdayOrders} activeFilter={railFilter} onFilterChange={onRailFilterChange} />
+    <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />
   ) : null;
 
   if (isRailNarrow) {
@@ -9868,7 +9966,7 @@ function MonthViewState({
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {orderRail}
         {intakeReviewModal}
-        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} costing={orderCostings?.matches[openOrder.id]} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     );
   }
@@ -9889,7 +9987,7 @@ function MonthViewState({
         {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {intakeReviewModal}
-        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+        {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} costing={orderCostings?.matches[openOrder.id]} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
       </div>
     </div>
   );
@@ -9898,6 +9996,7 @@ function MonthViewState({
 export type PlanClientProps = {
   rows: PlanRow[];
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   syncedAt: string;
   source: "fresh" | "cache" | "snapshot" | "none";
   mondayError?: string;
@@ -9912,6 +10011,7 @@ export type PlanClientProps = {
 export default function PlanClient({
   rows,
   orders,
+  orderCostings,
   syncedAt,
   source,
   mondayError,
@@ -9979,6 +10079,7 @@ export default function PlanClient({
             weeks={activeWeeks}
             newOrder={newOrder}
             orders={orders}
+            orderCostings={orderCostings}
             delightEnabled={delightEnabled}
             railFilter={railFilter}
             onRailFilterChange={setRailFilter}

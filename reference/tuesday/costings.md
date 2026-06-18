@@ -27,10 +27,22 @@ The repeatable import script is:
 
 It reads selected Google Sheets through `/Users/mack-mini/.local/bin/hermes-drive-readonly` and writes only to Tuesday Costings Supabase tables. It does not print secrets and does not promote any values into `costing_current_prices`.
 
-Imported source sheets on 2026-06-18:
+Imported source sheets, re-opened and source-hashed on 2026-06-18:
 
 - Product Costing Sheet - Element 17 - cleaned source-control copy 2026-06-11 2204
 - Quintin Te Rūnanga boardroom table - simple costing
 - Innate Table Quote Calculator - Quintin v1
 - Jo Walsh - Timber Vision 2200 costing - 2026-05-07
 - Westimber Price Calculator
+
+## Source verification pass, 2026-06-18
+
+`/Users/mack-mini/.local/bin/hermes-python scripts/apply-costings-source-verification.py --apply` re-opened the five Drive source sheets, stored source hashes on product costing versions/source links, marked exact-matching observations and product lines as `fresh`, and added audit events. Xero read-only evidence also confirmed the Precision Woodworks and Jackson Electrical supplier-bill lines used by the boardroom-table costings.
+
+Current state after the pass:
+
+- `costing_current_prices` remains empty. No observed value has been promoted to approved current price.
+- Active material observations: 51 source-reverified observations, all `fresh`; 12 also have Xero line-level confirmation.
+- Product costing sheets: 4 active source-verified sheets, all still `needs_review` / `unapproved` for quoting approval.
+- Product costing lines: 59 source-reverified lines, all `fresh`; 12 also have Xero line-level confirmation.
+- Orders may show source-verified costing context when an order can be matched by strict product code or unique customer/project source label. It must still label unapproved costings as needing approval before quote use.
