@@ -55,6 +55,24 @@ export type ProductCostingSheetRow = {
   readyToQuoteStatus: string;
   notes: string | null;
   blocker: string | null;
+  lines: ProductCostingLineRow[];
+};
+
+export type ProductCostingLineRow = {
+  id: string;
+  productSheetId: string;
+  versionId: string;
+  lineType: string;
+  lineLabel: string;
+  quantity: number | null;
+  unit: string | null;
+  unitCostExGst: number | null;
+  totalCostExGst: number | null;
+  sourceLineReference: string | null;
+  freshnessStatus: CostingPriceStatus;
+  confidence: CostingConfidence;
+  notes: string | null;
+  blocker: string | null;
 };
 
 export type CostingsResult = {
@@ -138,6 +156,41 @@ function productRow(record: Record<string, unknown>): ProductCostingSheetRow {
     readyToQuoteStatus: asString(record.ready_to_quote_status) || "blocked",
     notes: asString(record.notes),
     blocker: asString(record.blocker),
+    lines: [],
+  };
+}
+
+type ProductCostingVersionRecord = {
+  id: string;
+  sheetId: string;
+};
+
+function productVersionRow(record: Record<string, unknown>): ProductCostingVersionRecord | null {
+  const id = asString(record.id);
+  const sheetId = asString(record.sheet_id);
+  if (!id || !sheetId) return null;
+  return { id, sheetId };
+}
+
+function productLineRow(versionToSheet: Map<string, string>) {
+  return (record: Record<string, unknown>): ProductCostingLineRow => {
+    const versionId = asString(record.version_id) || "unknown";
+    return {
+      id: asString(record.id) || `${versionId}-${asString(record.line_label) || "line"}`,
+      productSheetId: versionToSheet.get(versionId) || "unknown",
+      versionId,
+      lineType: asString(record.line_type) || "other",
+      lineLabel: asString(record.line_label) || "Unnamed costing line",
+      quantity: asNumber(record.quantity),
+      unit: asString(record.unit),
+      unitCostExGst: asNumber(record.unit_cost_ex_gst),
+      totalCostExGst: asNumber(record.total_cost_ex_gst),
+      sourceLineReference: asString(record.source_line_reference),
+      freshnessStatus: (asString(record.freshness_status) as CostingPriceStatus | null) || "missing_source",
+      confidence: (asString(record.confidence) as CostingConfidence | null) || "unknown",
+      notes: asString(record.notes),
+      blocker: asString(record.blocker),
+    };
   };
 }
 
@@ -161,6 +214,46 @@ async function readTable<T>(supabase: { url: string; serviceKey: string }, path:
   }
 }
 
+async function readProductLinesForLatestVersions(
+  supabase: { url: string; serviceKey: string },
+  products: ProductCostingSheetRow[]
+): Promise<{ linesByProductId: Map<string, ProductCostingLineRow[]>; error?: string }> {
+  const ids = products.map((product) => product.id).filter((id) => id !== "unknown");
+  const linesByProductId = new Map<string, ProductCostingLineRow[]>();
+  if (ids.length === 0) return { linesByProductId };
+
+  const versions = await readTable(
+    supabase,
+    `product_costing_versions?select=id,sheet_id&sheet_id=in.(${ids.join(",")})&order=imported_at.desc&limit=500`,
+    productVersionRow
+  );
+  if (versions.error) return { linesByProductId, error: versions.error };
+
+  const latestBySheet = new Map<string, ProductCostingVersionRecord>();
+  for (const version of versions.rows) {
+    if (!version) continue;
+    if (!latestBySheet.has(version.sheetId)) latestBySheet.set(version.sheetId, version);
+  }
+  const versionToSheet = new Map<string, string>();
+  for (const version of latestBySheet.values()) versionToSheet.set(version.id, version.sheetId);
+  const versionIds = Array.from(versionToSheet.keys());
+  if (versionIds.length === 0) return { linesByProductId };
+
+  const lines = await readTable(
+    supabase,
+    `product_costing_lines?select=id,version_id,line_type,line_label,quantity,unit,unit_cost_ex_gst,total_cost_ex_gst,source_line_reference,freshness_status,confidence,notes,blocker&version_id=in.(${versionIds.join(",")})&order=line_type.asc&order=line_label.asc&limit=1000`,
+    productLineRow(versionToSheet)
+  );
+  if (lines.error) return { linesByProductId, error: lines.error };
+
+  for (const line of lines.rows) {
+    const current = linesByProductId.get(line.productSheetId) || [];
+    current.push(line);
+    linesByProductId.set(line.productSheetId, current);
+  }
+  return { linesByProductId };
+}
+
 export async function listCostings(): Promise<CostingsResult> {
   const syncedAt = new Date().toISOString();
   const supabase = supabaseConfig();
@@ -180,12 +273,19 @@ export async function listCostings(): Promise<CostingsResult> {
       productRow
     ),
   ]);
+  const productLines: { linesByProductId: Map<string, ProductCostingLineRow[]>; error?: string } = products.rows.length
+    ? await readProductLinesForLatestVersions(supabase, products.rows)
+    : { linesByProductId: new Map<string, ProductCostingLineRow[]>() };
+  const productsWithLines = products.rows.map((product) => ({
+    ...product,
+    lines: productLines.linesByProductId.get(product.id) || [],
+  }));
 
   return {
     materials: materials.rows,
-    products: products.rows,
+    products: productsWithLines,
     syncedAt,
     source: "supabase",
-    errors: [materials.error, products.error].filter((error): error is string => Boolean(error)),
+    errors: [materials.error, products.error, productLines.error].filter((error): error is string => Boolean(error)),
   };
 }

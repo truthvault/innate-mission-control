@@ -5,7 +5,8 @@ Source-backed supplier/material/product costing data for Tuesday lives in Supaba
 ## Principles
 
 - Do not invent costs, quantities, margins, freight, or sell prices.
-- Unknown values stay null/blank and should display as `Unknown`.
+- Unknown values stay null/blank. In the UI, use workshop-friendly operational labels such as `Needs source`, `No approved price`, or `Needs review` instead of repeated raw `Unknown` boxes.
+- Costings is an oversight command view, not a field dump: lead with what can be used for quoting, what needs review, what is blocked, and where the proof came from; keep raw source detail secondary in the selected-row detail panel.
 - `costing_price_observations` stores observed evidence from Drive, Xero, Gmail, supplier PDFs, calculators, or manual notes.
 - `costing_current_prices` is intentionally separate and remains empty until Guido or an approved process selects an observation as the current approved price.
 - Inbound freight and customer delivery/quote allowance are separate fields.
@@ -33,4 +34,3 @@ Imported source sheets on 2026-06-18:
 - Innate Table Quote Calculator - Quintin v1
 - Jo Walsh - Timber Vision 2200 costing - 2026-05-07
 - Westimber Price Calculator
-
