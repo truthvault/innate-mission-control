@@ -1309,8 +1309,8 @@ function orderHealthReason(order: UiOrder) {
   if (order.rawMondayStatus === "Materials Ordered" && diff !== null && diff <= 7) return "Materials not ready and due soon";
   if (order.rawMondayStatus === "Materials Ordered") return "Waiting on materials";
   if (order.rawMondayStatus === "To Process" && diff !== null && diff <= 14) return "Not started inside 2 weeks";
-  if (diff !== null && diff <= 7 && pct < 60) return "Due soon for current progress";
-  if (diff !== null && diff <= 14 && pct < 30) return "Low progress for next fortnight";
+  if (diff !== null && diff <= 7 && pct < 60) return "Delivery risk: due soon for current progress";
+  if (diff !== null && diff <= 14 && pct < 30) return "Delivery risk: low progress for next fortnight";
   return "No schedule flags";
 }
 
@@ -1399,10 +1399,6 @@ function OrderHealthStrip({
     const due = dateOnlyAtNoon(order.shipDate);
     return Boolean(due && due >= nextMon && due < twoMon);
   }).length;
-  const overdue = active.filter((order) => {
-    const due = dateOnlyAtNoon(order.shipDate);
-    return Boolean(due && due < today);
-  }).length;
   const blocked = active.filter((order) => orderHealth(order) === "blocked").length;
   const watch = active.filter((order) => orderHealth(order) === "watch").length;
   const onTrack = active.filter((order) => orderHealth(order) === "onTrack").length;
@@ -1410,7 +1406,7 @@ function OrderHealthStrip({
     { label: "Active Orders", mobileLabel: "Active", value: active.length, color: DT.textPrimary, filter: "all" },
     { label: "On Track", mobileLabel: "Track", value: onTrack, color: "#15803d", filter: "onTrack" },
     { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
-    { label: "Blocked", mobileLabel: "Block", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
+    { label: "Blocked", mobileLabel: "Block", value: blocked, color: blocked ? "#991b1b" : "#15803d", filter: "blocked" },
     { label: "Due This Week", mobileLabel: "This wk", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
     { label: "Due Next Week", mobileLabel: "Next wk", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
@@ -1451,7 +1447,7 @@ function formatTaskDateLabel(date: string | null | undefined) {
 }
 
 function formatRailDueDate(order: UiOrder) {
-  return order.shipDate ? formatShortDate(order.shipDate) : "No date";
+  return order.shipDate ? formatShortDate(order.shipDate) : "No due date";
 }
 
 function formatCurrencyShort(value: number | null) {
@@ -2385,7 +2381,7 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
   const trust = orderTrustSignal(order);
   const trustStyle = signalStyle(trust.tone);
   const reason = orderHealthReason(order);
-  const showReason = healthLevel !== "onTrack" && !(reason === "No due date" && !order.shipDate);
+  const showReason = healthLevel !== "onTrack";
   return (
     <button
       type="button"

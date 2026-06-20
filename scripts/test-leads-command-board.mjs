@@ -16,7 +16,7 @@ const mustHave = [
   ['deduped warning helper', 'function leadWarnings('],
   ['drawer backdrop click', 'onClick={onClose}'],
   ['business labels not supabase labels', 'Add lead'],
-  ['cashflow-first copy', 'Start here: protect cashflow and unblock Monday follow-ups.'],
+  ['cashflow-first copy', 'Start here: protect cashflow and unblock source-backed follow-ups.'],
   ['source-of-truth copy', 'Tuesday source-of-truth board'],
   ['source link label', 'Open source'],
   ['next action label helper', 'function sourceActionLabel('],

@@ -27,13 +27,24 @@ type LeadFilter = "do_today" | "sample_followups" | "overdue" | "cashflow" | "ho
 type Warning = { label: string; tone: "red" | "amber" | "grey" | "teal" | "green" };
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return nzDateKey(new Date());
 }
 
 function addDaysKey(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return nzDateKey(date);
+}
+
+function nzDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Pacific/Auckland",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 function dateKey(value?: string) {
@@ -348,7 +359,7 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
         {bookedVisitSummary(lead) && <div style={{ background: "rgba(110,138,106,0.08)", border: "1px solid rgba(110,138,106,0.18)", borderRadius: DT.radiusSm, padding: 11, marginBottom: 12, fontFamily: DT.sans, fontSize: 13, color: DT.textSecondary }}><strong style={{ color: DT.textPrimary }}>Actual context:</strong> {bookedVisitSummary(lead)}</div>}
         <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
           <Info label="Last touch" value={lead.lastInteractionSummary || dateLabel(lead.lastInteractionAt) || "No summary stored"} />
-          <Info label="Notes / Monday context" value={lead.notes || "No notes stored"} />
+          <Info label="Notes / source context" value={lead.notes || "No notes stored"} />
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
           <SourceLink lead={lead} />
@@ -385,7 +396,7 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "end", marginBottom: 10 }}>
         <div>
           <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>Do Today</h2>
-          <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock Monday follow-ups.</p>
+          <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock source-backed follow-ups.</p>
         </div>
         <Chip label={`Top ${queue.length}`} tone="amber" />
       </div>
@@ -485,8 +496,17 @@ function NewLeadForm({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function EmptyState({ error }: { error?: string }) {
-  return <section style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 20 }}><h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>No leads found</h2><p style={{ color: DT.textSecondary, fontFamily: DT.sans, fontSize: 13, lineHeight: 1.5, maxWidth: 760 }}>Tuesday is connected, but there are no lead records to show. Add a manual lead or check the import/source settings.</p>{error && <p style={errorStyle}>{error}</p>}</section>;
+function EmptyState({ error, source }: { error?: string; source?: string }) {
+  const disconnected = Boolean(error || source === "none");
+  return (
+    <section style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 20 }}>
+      <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>{disconnected ? "Leads not connected yet" : "No leads found"}</h2>
+      <p style={{ color: DT.textSecondary, fontFamily: DT.sans, fontSize: 13, lineHeight: 1.5, maxWidth: 760 }}>
+        {disconnected ? "Tuesday could not read the Supabase leads source. Check the env/table state before treating this as a quiet sales day." : "Tuesday is connected, but there are no lead records to show. Ask Hermes to draft an import or manual lead update rather than assuming Monday is current."}
+      </p>
+      {error && <p style={errorStyle}>{error}</p>}
+    </section>
+  );
 }
 
 function MetricButton({ label, value, tone, active, onClick }: { label: string; value: string | number; tone?: "good" | "warn" | "bad" | "neutral"; active: boolean; onClick: () => void }) {
@@ -583,7 +603,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
         <NewLeadForm onSaved={refresh} />
       </div>
 
-      {result.rows.length === 0 ? <EmptyState error={result.error} /> : (
+      {result.rows.length === 0 ? <EmptyState error={result.error} source={result.source} /> : (
         <>
           {result.error && <div style={{ ...errorStyle, marginBottom: 12 }}>{result.error}</div>}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, color: DT.textMuted, fontFamily: DT.sans, fontSize: 12 }}>

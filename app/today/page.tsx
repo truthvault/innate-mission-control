@@ -56,6 +56,17 @@ export default function TodayPage() {
           Workshop tasks
         </h1>
 
+        <p style={{
+          marginTop: -18,
+          marginBottom: 18,
+          fontFamily: "var(--font-sans)",
+          fontSize: 11,
+          lineHeight: 1.45,
+          color: "var(--text-muted)",
+        }}>
+          Static local snapshot — use Production Plan for the source-backed workshop board.
+        </p>
+
         {/* Task cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {tasks.map((t) => (
