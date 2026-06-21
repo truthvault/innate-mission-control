@@ -6,6 +6,7 @@ import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT, KpiCard } from "@/components/mission-control-ui";
 import type { Lead, LeadsResult, LeadPriority, LeadStatus } from "@/lib/leads/types";
 import { isRecentSampleFollowUp, sampleDraftPrompt, sampleFollowUpLabel, sortSampleFollowUps } from "@/lib/leads/sample-followups.mjs";
+import { buildSupabaseLeadStudioUrl } from "@/lib/leads/supabase-studio.mjs";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   new: "New enquiry",
@@ -250,7 +251,9 @@ function sourceLabel(lead: Lead) {
   return lead.source || lead.sourceSystem;
 }
 
-function SourceLink({ lead }: { lead: Lead }) {
+function SourceLink({ lead, supabaseProjectRef }: { lead: Lead; supabaseProjectRef?: string }) {
+  const supabaseUrl = buildSupabaseLeadStudioUrl({ projectRef: supabaseProjectRef, leadId: lead.id });
+  if (supabaseUrl) return <a href={supabaseUrl.toString()} target="_blank" rel="noreferrer" aria-label={`Open Supabase Studio row for ${lead.customerName}`} style={sourceLinkStyle}>Open Supabase row ↗</a>;
   if (!lead.sourceUrl) return <span style={{ ...smallMutedStyle, justifySelf: "end" }}>No source link</span>;
   return <a href={lead.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Open source record for ${lead.customerName}`} style={sourceLinkStyle}>Open source ↗</a>;
 }
@@ -268,7 +271,7 @@ function LeadListHeader() {
   );
 }
 
-function LeadRow({ lead, selected, onSelect }: { lead: Lead; selected: boolean; onSelect: () => void }) {
+function LeadRow({ lead, selected, onSelect, supabaseProjectRef }: { lead: Lead; selected: boolean; onSelect: () => void; supabaseProjectRef?: string }) {
   const warnings = leadWarnings(lead);
   return (
     <article data-lead-row="true" style={{ ...rowStyle, borderColor: selected ? "rgba(210,174,109,0.80)" : isDue(lead) ? "rgba(180,107,70,0.30)" : DT.border }}>
@@ -292,14 +295,14 @@ function LeadRow({ lead, selected, onSelect }: { lead: Lead; selected: boolean; 
       <div data-lead-row-footer="true" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <span style={smallMutedStyle}>{sourceLabel(lead)}</span>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <SourceLink lead={lead} />
+          <SourceLink lead={lead} supabaseProjectRef={supabaseProjectRef} />
         </div>
       </div>
     </article>
   );
 }
 
-function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null; visibleIds: Set<string>; onClose: () => void; onSaved: () => void }) {
+function LeadDrawer({ lead, visibleIds, onClose, onSaved, supabaseProjectRef }: { lead: Lead | null; visibleIds: Set<string>; onClose: () => void; onSaved: () => void; supabaseProjectRef?: string }) {
   const [saving, startSaving] = useTransition();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -362,7 +365,7 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
           <Info label="Notes / Monday context" value={lead.notes || "No notes stored"} />
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
-          <SourceLink lead={lead} />
+          <SourceLink lead={lead} supabaseProjectRef={supabaseProjectRef} />
           <button type="button" onClick={() => setEditing((value) => !value)} style={editing ? primaryButtonStyle : secondaryButtonStyle}>{editing ? "Close edit fields" : "Edit lead"}</button>
         </div>
         {editing && (
@@ -433,7 +436,7 @@ function CashFirstStrip({ leads, limit = 4, onSelect }: { leads: Lead[]; limit?:
           <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Read-only: quotes and high-value leads only. No status changes here.</p>
         </div>
         <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
-          <span style={labelStyle}>Top cash value</span>
+          <span style={labelStyle}>Total visible cash value</span>
           <strong style={{ fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22 }}>{money(total)}</strong>
         </div>
       </div>
@@ -629,7 +632,7 @@ const LEADS_MOBILE_CSS = `
   }
 `;
 
-export default function LeadsClient({ result }: { result: LeadsResult }) {
+export default function LeadsClient({ result, supabaseProjectRef }: { result: LeadsResult; supabaseProjectRef?: string }) {
   const [filter, setFilter] = useState<LeadFilter>("do_today");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -711,7 +714,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
         </div>
       )}
 
-      <CashFirstStrip leads={activeRows} limit={isNarrow ? 2 : 4} onSelect={(lead) => setSelectedId(lead.id)} />
+      <CashFirstStrip leads={activeRows} onSelect={(lead) => setSelectedId(lead.id)} />
       <DecisionQueue leads={activeRows} limit={isNarrow ? 4 : 8} onSelect={(lead) => setSelectedId(lead.id)} />
 
       <div data-lead-filter-bar="true" style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(248,245,238,0.94)", backdropFilter: "blur(10px)" }}>
@@ -730,7 +733,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
           </div>
           <LeadListHeader />
           <div style={{ display: "grid", gap: 8 }}>
-            {visibleRows.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} />)}
+            {visibleRows.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} supabaseProjectRef={supabaseProjectRef} />)}
           </div>
           {visibleRows.length < visible.length && (
             <button type="button" onClick={() => setVisibleExpandedKey(visibleContextKey)} style={{ ...secondaryButtonStyle, width: "100%", marginTop: 10 }}>
@@ -739,7 +742,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
           )}
         </>
       )}
-      <LeadDrawer lead={selectedLead} visibleIds={visibleIds} onClose={() => setSelectedId(null)} onSaved={refresh} />
+      <LeadDrawer lead={selectedLead} visibleIds={visibleIds} onClose={() => setSelectedId(null)} onSaved={refresh} supabaseProjectRef={supabaseProjectRef} />
     </MissionControlShell>
   );
 }
