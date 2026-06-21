@@ -230,7 +230,13 @@ export default function SampleStockClient({ board, syncedAt, source, mondayError
             </div>
           </>
         ) : (
-          <div style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, padding: 20, color: DT.textSecondary, fontFamily: DT.sans }}>No sample stock data available. {mondayError && `(${mondayError})`}</div>
+          <section style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 20, color: DT.textSecondary, fontFamily: DT.sans }}>
+            <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>No sample stock data loaded</h2>
+            <p style={{ margin: "8px 0 0", maxWidth: 680, fontSize: 13, lineHeight: 1.5 }}>
+              Monday remains the current sample-stock source. This page cannot show ready/low/out sample counts until the read-only source is configured, so do not treat this as proof that samples are fully stocked.
+            </p>
+            {mondayError && <p style={{ margin: "12px 0 0", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, background: "rgba(180,107,70,0.08)", color: "#8f3f24", padding: 10, fontSize: 12, fontWeight: 850 }}>Sample stock source issue: {mondayError}</p>}
+          </section>
         )}
     </MissionControlShell>
   );

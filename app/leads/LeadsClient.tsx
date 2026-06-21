@@ -499,7 +499,17 @@ function NewLeadForm({ onSaved }: { onSaved: () => void }) {
 }
 
 function EmptyState({ error }: { error?: string }) {
-  return <section style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 20 }}><h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>No leads found</h2><p style={{ color: DT.textSecondary, fontFamily: DT.sans, fontSize: 13, lineHeight: 1.5, maxWidth: 760 }}>Tuesday is connected, but there are no lead records to show. Add a manual lead or check the import/source settings.</p>{error && <p style={errorStyle}>{error}</p>}</section>;
+  const copy = error
+    ? "Leads cannot load until the Supabase Leads environment/source settings are configured. This is a configuration gap, not proof that the lead pipeline is empty."
+    : "Tuesday is connected and there are no lead records to show. Add a manual lead or check the import/source settings.";
+
+  return (
+    <section style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 20 }}>
+      <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>No leads found</h2>
+      <p style={{ color: DT.textSecondary, fontFamily: DT.sans, fontSize: 13, lineHeight: 1.5, maxWidth: 760 }}>{copy}</p>
+      {error && <p style={errorStyle}>Leads source issue: {error}</p>}
+    </section>
+  );
 }
 
 function MetricButton({ label, value, tone, active, onClick }: { label: string; value: string | number; tone?: "good" | "warn" | "bad" | "neutral"; active: boolean; onClick: () => void }) {
