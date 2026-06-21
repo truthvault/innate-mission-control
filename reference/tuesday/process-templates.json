@@ -1,151 +1,240 @@
 {
-  "updatedAt": "2026-06-16T04:00:17.252Z",
+  "updatedAt": "2026-06-19T00:00:00.000Z",
   "templates": [
     {
       "id": "standard-dining-table",
-      "title": "Dining table",
-      "subtitle": "Rectangle, square, round, or pill unless a special route is triggered.",
+      "title": "Standard rectangular steel-frame dining table",
+      "subtitle": "Simple repeatable rectangular dining table with workshop timber, Westimber lamination, and steel-frame fit/check.",
       "detection": [
-        "Product: Table",
-        "Shape: rectangle / square / round / pill",
-        "Finish decides clear vs blackwash coating steps"
+        "Product: Dining table",
+        "Shape: rectangular",
+        "Steel frame/base",
+        "Workshop timber stock available"
       ],
       "suggestedTasks": [
         {
-          "title": "Load order",
+          "title": "Order/spec/payment/customer promise checked",
           "owner": "Guido",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Check the order is loaded, spec is clear, payment evidence is present, and customer promise is realistic before workshop trust."
         },
         {
-          "title": "Send PO",
+          "title": "Production spec and workshop timber confirmed",
           "owner": "Nick",
-          "estimatedHours": 0.5
+          "estimatedHours": 0.5,
+          "note": "Confirm production spec, steel-frame details, species, finish, and workshop timber availability before sending supplier POs. For rimu/tōtara, confirm the Timbers of NZ timber PO if required; for beech/in-stock timber, keep the process on the simple workshop-stock path."
         },
         {
-          "title": "Timber pulled",
-          "owner": "Dylan",
-          "estimatedHours": 1
+          "title": "Send Tube Fab PO",
+          "owner": "Nick",
+          "estimatedHours": 0.25,
+          "note": "Send the purchase order to Tube Fab for the steel components, frame, or base."
         },
         {
-          "title": "Materials received",
-          "owner": "Dylan",
-          "estimatedHours": 0.5
+          "title": "Send Westimber PO / lamination confirmation",
+          "owner": "Nick",
+          "estimatedHours": 0.25,
+          "note": "Send the Westimber purchase order or confirm the lamination job/spec before timber leaves the workshop."
         },
         {
-          "title": "Stress cuts",
+          "title": "Pull timber from workshop",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Pull the selected workshop timber and strap it ready for Westimber."
         },
         {
-          "title": "Sand and coat",
+          "title": "Timber to Westimber for lamination",
+          "owner": "Nick",
+          "estimatedHours": 0.5,
+          "note": "Get the strapped timber to Westimber against the confirmed lamination job."
+        },
+        {
+          "title": "Westimber lamination wait",
+          "owner": "Other",
+          "estimatedHours": 0,
+          "note": "Planning gate only. Westimber laminated panels are about 2 weeks after PO/spec confirmation."
+        },
+        {
+          "title": "Receive/check laminated top back at workshop",
+          "owner": "Nick",
+          "estimatedHours": 0.5,
+          "note": "Check the laminated top is back, sound, correctly sized, and ready for workshop processing."
+        },
+        {
+          "title": "Stress cuts + C-channels",
+          "owner": "Nick",
+          "estimatedHours": 1,
+          "note": "Make stress cuts and fit/check C-channels before sanding and coating."
+        },
+        {
+          "title": "Bottom prep",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Choose bottom face, prep underside, and resolve insert/flat-pack details if needed."
+        },
+        {
+          "title": "Bottom coat",
+          "owner": "Dylan",
+          "estimatedHours": 1,
+          "note": "Sand and coat the underside before top-side finishing."
+        },
+        {
+          "title": "Sand top/sides/edges",
+          "owner": "Dylan",
+          "estimatedHours": 1,
+          "note": "Fill defects, sand top/sides/ends, arise edges, remove dust, and check under light."
+        },
+        {
+          "title": "First coat",
+          "owner": "Dylan",
+          "estimatedHours": 1,
+          "note": "Apply first coat after final surface prep."
         },
         {
           "title": "Second coat",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Allow at least one working day between coats; two is better where possible."
         },
         {
-          "title": "3rd coat (clear final)",
+          "title": "Final coat",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Clear finish is normally three clear coats total. Blackwash uses two stain coats plus two clear coats."
         },
         {
-          "title": "Curing",
-          "owner": "Dylan",
-          "estimatedHours": 0.5
+          "title": "Cure",
+          "owner": "Other",
+          "estimatedHours": 0,
+          "note": "Planning gate only. Let finish cure before final handling; a full week is better where possible."
         },
         {
           "title": "QC + photos",
           "owner": "Nick",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Final proof photos, spec check, finish check, and customer-ready quality review."
         },
         {
-          "title": "Assemble / box",
+          "title": "Fit/check steel frame/base/assembly",
+          "owner": "Nick",
+          "estimatedHours": 1,
+          "note": "Fit or check the steel frame/base and confirm assembly before packing."
+        },
+        {
+          "title": "Box/pack/wrap",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 0.75,
+          "note": "Protect the top/base for freight, delivery, or collection."
         },
         {
-          "title": "Pack / wrap",
-          "owner": "Dylan",
-          "estimatedHours": 0.75
-        },
-        {
-          "title": "Balance invoice",
+          "title": "Balance invoice/payment release check",
           "owner": "Guido",
-          "estimatedHours": 0.5
+          "estimatedHours": 0.5,
+          "note": "Issue/check balance invoice and confirm payment release before the order leaves."
         },
         {
-          "title": "Book freight / delivery",
+          "title": "Book freight/delivery or customer collection",
           "owner": "Guido",
-          "estimatedHours": 0.5
-        },
-        {
-          "title": "Confirm paid before release",
-          "owner": "Guido",
-          "estimatedHours": 0.25
+          "estimatedHours": 0.5,
+          "note": "Book freight/delivery or confirm customer collection details."
         },
         {
           "title": "Customer update",
           "owner": "Guido",
-          "estimatedHours": 0.25
+          "estimatedHours": 0.25,
+          "note": "Guido sends the confirmed dispatch, delivery, or collection update."
         }
       ],
       "orderFlow": [
         {
           "key": "confirmed",
-          "label": "Order Confirmed",
-          "who": "Workshop",
+          "label": "Order confirmed",
+          "who": "Guido",
           "wait": false
         },
         {
-          "key": "pos",
-          "label": "POs Sent",
-          "who": "Workshop",
+          "key": "timber-spec",
+          "label": "Spec/timber confirmed",
+          "who": "Nick",
+          "wait": false
+        },
+        {
+          "key": "tube-fab-po",
+          "label": "Tube Fab PO sent",
+          "who": "Nick",
+          "wait": false
+        },
+        {
+          "key": "westimber-po",
+          "label": "Westimber PO confirmed",
+          "who": "Nick",
           "wait": false
         },
         {
           "key": "timber",
-          "label": "Timber Pulled",
-          "who": "Workshop",
+          "label": "Timber pulled",
+          "who": "Dylan",
           "wait": false
         },
         {
-          "key": "matwait",
-          "label": "Materials Wait",
+          "key": "westimber-send",
+          "label": "Timber to Westimber",
+          "who": "Nick",
+          "wait": false
+        },
+        {
+          "key": "westimber-wait",
+          "label": "Westimber wait",
           "who": null,
           "wait": true,
           "waitLabel": "~2 weeks"
         },
         {
           "key": "received",
-          "label": "Materials Received",
-          "who": "Workshop",
+          "label": "Laminated top received",
+          "who": "Nick",
           "wait": false
         },
         {
-          "key": "stress",
-          "label": "Stress Cuts",
-          "who": "Workshop",
+          "key": "stress-c-channels",
+          "label": "Stress cuts + C-channels",
+          "who": "Nick",
           "wait": false
         },
         {
-          "key": "sand",
-          "label": "Sand",
-          "who": "Workshop",
+          "key": "bottom-prep",
+          "label": "Bottom prep",
+          "who": "Dylan",
+          "wait": false
+        },
+        {
+          "key": "bottom-coat",
+          "label": "Bottom coat",
+          "who": "Dylan",
+          "wait": false
+        },
+        {
+          "key": "sand-top",
+          "label": "Sand top/sides/edges",
+          "who": "Dylan",
           "wait": false
         },
         {
           "key": "coat1",
-          "label": "1st Coat",
-          "who": "Workshop",
+          "label": "1st coat",
+          "who": "Dylan",
           "wait": false
         },
         {
           "key": "coat2",
-          "label": "2nd Coat",
-          "who": "Workshop",
+          "label": "2nd coat",
+          "who": "Dylan",
+          "wait": false
+        },
+        {
+          "key": "coat3",
+          "label": "3rd/final coat",
+          "who": "Dylan",
           "wait": false
         },
         {
@@ -157,25 +246,43 @@
         },
         {
           "key": "qc",
-          "label": "QC + Photos",
-          "who": "Workshop",
+          "label": "QC + photos",
+          "who": "Nick",
           "wait": false
         },
         {
-          "key": "assemble",
-          "label": "Assemble / Box",
-          "who": "Workshop",
+          "key": "frame-assembly",
+          "label": "Frame/base checked",
+          "who": "Nick",
+          "wait": false
+        },
+        {
+          "key": "wrap",
+          "label": "Box / pack / wrap",
+          "who": "Dylan",
+          "wait": false
+        },
+        {
+          "key": "payment-release",
+          "label": "Balance/payment release",
+          "who": "Guido",
           "wait": false
         },
         {
           "key": "freight",
-          "label": "Book Freight",
-          "who": "Workshop",
+          "label": "Freight/collection booked",
+          "who": "Guido",
+          "wait": false
+        },
+        {
+          "key": "customer-update",
+          "label": "Customer updated",
+          "who": "Guido",
           "wait": false
         }
       ],
-      "issueLevel": "watch",
-      "issueLabel": "Flow still shows broad table stages"
+      "issueLevel": "aligned",
+      "issueLabel": "Dining table path aligned to SOP-level production events"
     },
     {
       "id": "cnc-dining-table",
@@ -190,147 +297,220 @@
         {
           "title": "Order Loaded",
           "owner": "Guido",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Check invoice, spec, payment evidence, promised due date, supplier needs, and delivery method before workshop trust."
         },
         {
           "title": "POs sent",
           "owner": "Nick",
-          "estimatedHours": 0.5
+          "estimatedHours": 0.5,
+          "note": "Confirm required purchase orders and supplier requirements before workshop work starts."
         },
         {
           "title": "Timber pulled",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Pull timber and strap it ready for Westimber collection/laminating where required."
+        },
+        {
+          "title": "Westimber lamination wait",
+          "owner": "Other",
+          "estimatedHours": 0,
+          "note": "Planning gate only. Westimber laminated panels are about 2 weeks after PO/spec confirmation."
         },
         {
           "title": "Precision Woodworks CNC",
           "owner": "Guido",
-          "estimatedHours": 0.25
+          "estimatedHours": 0.25,
+          "note": "Non-standard shapes go to Precision Woodworks after Westimber."
+        },
+        {
+          "title": "Precision CNC wait",
+          "owner": "Other",
+          "estimatedHours": 0,
+          "note": "Planning gate only. Precision Woodworks CNC shape cutting adds about 2 weeks after Westimber."
         },
         {
           "title": "Book Pinpoint return",
           "owner": "Guido",
-          "estimatedHours": 0.25
+          "estimatedHours": 0.25,
+          "note": "Book Pinpoint to return CNC-cut panel(s) from Precision Woodworks to the workshop."
         },
         {
           "title": "Materials received",
           "owner": "Dylan",
-          "estimatedHours": 0.5
+          "estimatedHours": 0.5,
+          "note": "Confirm CNC-cut panel(s), base, hardware, and ordered materials are in hand."
         },
         {
-          "title": "Stress cuts",
+          "title": "Bottom prep",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "SOP stage: check size/colour, choose bottom face, L-channel cuts if required, stress cuts, inserts if flat-packed."
+        },
+        {
+          "title": "Bottom coat",
+          "owner": "Dylan",
+          "estimatedHours": 1,
+          "note": "SOP stage: sand sides/ends/bottom, arise edges, remove dust, apply and wipe back bottom coat, insert L-channel if required."
+        },
+        {
+          "title": "Sand top",
+          "owner": "Dylan",
+          "estimatedHours": 1,
+          "note": "SOP stage: fill defects, sand top/sides/ends, arise top edge, remove dust, check under light."
         },
         {
           "title": "Sand and coat",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Clear finish route: first clear coat after final surface prep."
         },
         {
           "title": "Second coat",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Allow at least one working day between coats; two is better where possible."
         },
         {
           "title": "3rd coat (clear final)",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Clear finish route: third/final clear coat. Blackwash needs two stain coats plus two clear coats instead."
         },
         {
           "title": "Curing",
-          "owner": "Dylan",
-          "estimatedHours": 0.5
+          "owner": "Other",
+          "estimatedHours": 0,
+          "note": "Planning gate only. SOP says cure for 1 week; Tuesday rule keeps at least 2 working days minimum."
         },
         {
           "title": "QC + photos",
           "owner": "Nick",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Final proof photos, spec check, and customer-ready quality review."
         },
         {
           "title": "Assemble / box",
           "owner": "Dylan",
-          "estimatedHours": 1
+          "estimatedHours": 1,
+          "note": "Assemble for local delivery or prepare the piece for final protection."
         },
         {
           "title": "Pack / wrap",
           "owner": "Dylan",
-          "estimatedHours": 0.75
+          "estimatedHours": 0.75,
+          "note": "Boxing SOP: foam, MDF/cardboard protection, delivery docs, warning labels, and finished-stage update."
         },
         {
           "title": "Balance invoice",
           "owner": "Guido",
-          "estimatedHours": 0.5
+          "estimatedHours": 0.5,
+          "note": "Guido issues/checks the balance invoice before release."
         },
         {
           "title": "Book freight / delivery",
           "owner": "Guido",
-          "estimatedHours": 0.5
+          "estimatedHours": 0.5,
+          "note": "Guido books freight or confirms local delivery/collection details for now."
         },
         {
           "title": "Confirm paid before release",
           "owner": "Guido",
-          "estimatedHours": 0.25
+          "estimatedHours": 0.25,
+          "note": "Guido confirms balance/payment is paid before the order leaves or is collected."
         },
         {
           "title": "Customer update",
           "owner": "Guido",
-          "estimatedHours": 0.25
+          "estimatedHours": 0.25,
+          "note": "Guido sends the confirmed dispatch, delivery, or collection update."
         }
       ],
       "orderFlow": [
         {
           "key": "confirmed",
-          "label": "Order Confirmed",
-          "who": "Workshop",
+          "label": "Order confirmed",
+          "who": "Guido",
           "wait": false
         },
         {
           "key": "pos",
-          "label": "POs Sent",
-          "who": "Workshop",
+          "label": "POs sent",
+          "who": "Nick",
           "wait": false
         },
         {
           "key": "timber",
-          "label": "Timber Pulled",
-          "who": "Workshop",
+          "label": "Timber pulled",
+          "who": "Dylan",
           "wait": false
         },
         {
-          "key": "matwait",
-          "label": "Materials Wait",
+          "key": "westimber-wait",
+          "label": "Westimber wait",
           "who": null,
           "wait": true,
           "waitLabel": "~2 weeks"
         },
         {
+          "key": "precision-cnc",
+          "label": "Precision CNC",
+          "who": "Guido",
+          "wait": false
+        },
+        {
+          "key": "precision-wait",
+          "label": "CNC wait",
+          "who": null,
+          "wait": true,
+          "waitLabel": "~2 weeks"
+        },
+        {
+          "key": "pinpoint-return",
+          "label": "Pinpoint return booked",
+          "who": "Guido",
+          "wait": false
+        },
+        {
           "key": "received",
-          "label": "Materials Received",
+          "label": "Materials received",
+          "who": "Dylan",
+          "wait": false
+        },
+        {
+          "key": "bottom-prep",
+          "label": "Bottom prep",
           "who": "Workshop",
           "wait": false
         },
         {
-          "key": "stress",
-          "label": "Stress Cuts",
+          "key": "bottom-coat",
+          "label": "Bottom coat",
           "who": "Workshop",
           "wait": false
         },
         {
-          "key": "sand",
-          "label": "Sand",
+          "key": "sand-top",
+          "label": "Sand top",
           "who": "Workshop",
           "wait": false
         },
         {
           "key": "coat1",
-          "label": "1st Coat",
+          "label": "1st coat",
           "who": "Workshop",
           "wait": false
         },
         {
           "key": "coat2",
-          "label": "2nd Coat",
+          "label": "2nd coat",
+          "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "coat3",
+          "label": "3rd/final coat",
           "who": "Workshop",
           "wait": false
         },
@@ -343,25 +523,49 @@
         },
         {
           "key": "qc",
-          "label": "QC + Photos",
+          "label": "QC + photos",
           "who": "Workshop",
           "wait": false
         },
         {
           "key": "assemble",
-          "label": "Assemble / Box",
+          "label": "Assemble / box",
           "who": "Workshop",
           "wait": false
         },
         {
-          "key": "freight",
-          "label": "Book Freight",
+          "key": "pack",
+          "label": "Pack / wrap",
           "who": "Workshop",
+          "wait": false
+        },
+        {
+          "key": "balance",
+          "label": "Balance invoice",
+          "who": "Guido",
+          "wait": false
+        },
+        {
+          "key": "freight",
+          "label": "Freight booked",
+          "who": "Guido",
+          "wait": false
+        },
+        {
+          "key": "paid-release",
+          "label": "Paid before release",
+          "who": "Guido",
+          "wait": false
+        },
+        {
+          "key": "customer-update",
+          "label": "Customer updated",
+          "who": "Guido",
           "wait": false
         }
       ],
-      "issueLevel": "gap",
-      "issueLabel": "Order-detail flow needs conditional CNC stages"
+      "issueLevel": "aligned",
+      "issueLabel": "CNC path includes Westimber, Precision, and Pinpoint gates"
     },
     {
       "id": "panel-benchtop",

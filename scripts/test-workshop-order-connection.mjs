@@ -7,8 +7,12 @@ const workflowApiSource = readFileSync(new URL('../app/api/production/order-work
 const mustHave = [
   ['order connection label helper', 'function orderConnectionLabel('],
   ['order linked badge copy', 'Order linked'],
+  ['auto-linked exact customer badge copy', 'Auto-linked'],
   ['needs order badge copy', 'Needs order'],
   ['possible match badge copy', 'Possible match'],
+  ['exact customer match helper', 'function exactOrderForPlanTask('],
+  ['exact match confidence before fuzzy scoring', 'confidence: "exact"'],
+  ['task card receives order connection confidence', 'resolveTaskOrderConnection={resolveTaskOrderConnection}'],
   ['task editor component', 'function WorkshopTaskEditor('],
   ['edit task action copy', 'Edit task'],
   ['save task action copy', 'Save task'],

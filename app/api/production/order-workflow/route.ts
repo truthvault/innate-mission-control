@@ -49,7 +49,7 @@ function pathFor(orderId: number) {
 }
 
 function supabaseWorkflowConfig() {
-  if (process.env.TUESDAY_WORKFLOW_STORAGE !== "supabase") return null;
+  if (process.env.TUESDAY_WORKFLOW_STORAGE === "blob") return null;
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
   const table = process.env.TUESDAY_WORKFLOW_TABLE || "production_order_workflows";

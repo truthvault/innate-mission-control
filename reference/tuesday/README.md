@@ -4,8 +4,19 @@ Created: 2026-05-17
 
 Purpose: fast capture and durable routing for Innate Mission Control, also called Tuesday. Hermes stays the Telegram front door; implementation workers use these lane briefs when Guido says `BUILD`.
 
-## Active lanes
+This README is the canonical router for Tuesday reference files. Dated handovers, audits, prompts, and implementation notes are current only when listed here as active; otherwise treat them as searchable evidence/history and re-check current source systems before acting.
+
+## Source-of-truth transition rule
+
+- Supabase/Tuesday is the forward source of truth for leads and for approved Tuesday-owned records.
+- Monday remains the current workshop/legacy source for stock, customer history, and production tasks until the Tuesday migration gates in `/Users/mack-mini/innate-mission-control/docs/current/business-operating-context.md` are met.
+- Old backfill or reconciliation handovers do not retire Monday by themselves.
+- Xero remains the accounting authority for invoices, quotes, payments, bills, and official accounting records.
+
+## Current routers and lane briefs
+
 - `leads.md`
+- `quoting.md` — quote spine, pricing policy approval, Hermes draft-only quote workflow, supplier freshness gates
 - `purchase-orders.md`
 - `stocktake.md`
 - `freight.md`
@@ -14,10 +25,26 @@ Purpose: fast capture and durable routing for Innate Mission Control, also calle
 - `inbox.md`
 - `costings.md` or `supabase-costings-schema-2026-06-18.sql` for source-backed supplier/material/product costing data.
 
+## Active operating handovers / current prep
+
+- `projects-tasks-workboard-handover-2026-05-20.md` — handover/spec for a Supabase-backed Workboard tab seeded from the Stephen meeting
+- `tuesday-readiness-audit-2026-05-24.md` — current percent-readiness audit for Innate lighthouse + external Workshop OS productisation
+- `tuesday-agent-handover-2026-05-24.md` — current operating handover for the Tuesday profile/worker
+- `nick-production-rollout-guide-2026-06-15.md` — short rollout script for introducing the Production Plan to Nick
+- `nick-live-order-trust-audit-2026-06-14.md` — live read-only order/intake shortlist for Nick's first guided training session
+
+## Historical / evidence unless re-verified
+
+- `source-of-truth-reconciliation-handover-2026-05-25.md` — useful reconciliation/backfill evidence, but its blanket wording that Supabase/Tuesday is already source of truth for orders/production must be read through the transition rule above.
+- `handover-plan-health-2026-05-21.md` — old restart/push-auth handover.
+- `codex-prompt-tuesday-master-shell.md` — task prompt, not durable operating truth.
+- `tuesday-overnight-goal-2026-06-08.md` and `tuesday-workshop-process-map-2026-06-08.md` — pointer notes to Air-side drafts; re-check before use.
+
 ## Gym Mode protocol
 
 Guido can send short ideas like:
 - `Tuesday Leads: ...`
+- `Tuesday Quoting: ...`
 - `Tuesday PO: ...`
 - `Tuesday Stocktake: ...`
 - `Tuesday Freight: ...`
@@ -37,4 +64,4 @@ Hermes should:
 - No customer emails, public website publishing, Shopify writes, Monday writes, Xero writes, payments, file deletion, or service restarts.
 - Build work starts only when Guido says `BUILD`.
 - During Gym Mode, append and dedupe ideas; do not rewrite architecture constantly.
-- Treat Monday/Shopify/Xero as sources of truth unless an approved local Tuesday database table is defined.
+- Use the current source-of-truth split: Supabase/Tuesday is forward truth for leads and approved Tuesday-owned records; Monday remains current workshop/legacy truth for stock, customer history, and production tasks until migration gates are met; Xero remains accounting authority; Shopify remains website/product truth.

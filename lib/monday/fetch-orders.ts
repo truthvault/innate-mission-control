@@ -13,6 +13,7 @@ import { unstable_cache } from "next/cache";
 import { getOrders } from "./client";
 import { transformAllOrders, type UiOrder, type TransformWarning } from "./mapping";
 import { writeSnapshot, readSnapshot } from "./snapshot-blob";
+import { enrichOrdersWithPaymentLifecycle } from "@/lib/production/order-payment-lifecycle";
 
 export const ORDERS_CACHE_TAG = "monday-orders";
 const CACHE_REVALIDATE_SECONDS = 15 * 60; // 15 minutes
@@ -51,13 +52,15 @@ const cachedFetch = unstable_cache(
 );
 
 export async function getOrdersCached(): Promise<OrdersFetchResult> {
-  return cachedFetch();
+  const result = await cachedFetch();
+  return { ...result, items: await enrichOrdersWithPaymentLifecycle(result.items) };
 }
 
 export async function getOrdersFresh(
   opts: { writeSnapshot?: boolean } = {}
 ): Promise<OrdersFetchResult> {
-  const result = await fetchAndTransform();
+  const rawResult = await fetchAndTransform();
+  const result = { ...rawResult, items: await enrichOrdersWithPaymentLifecycle(rawResult.items) };
   if (opts.writeSnapshot) {
     try {
       await writeSnapshot({
@@ -86,7 +89,7 @@ export async function getOrdersWithFallback(): Promise<OrdersFetchResult> {
     if (snap) {
       return {
         syncedAt: snap.syncedAt,
-        items: snap.items,
+        items: await enrichOrdersWithPaymentLifecycle(snap.items),
         warnings: snap.warnings,
         source: "snapshot",
         mondayError,

@@ -50,7 +50,9 @@ export function defaultPlanTaskLinksState(): PlanTaskLinksState {
 }
 
 export function planTaskLinksStorage(): PlanTaskLinksStorage {
-  return process.env.TUESDAY_PLAN_TASK_STORAGE === "supabase" ? "supabase" : "blob";
+  if (process.env.TUESDAY_PLAN_TASK_STORAGE === "blob") return "blob";
+  if (process.env.TUESDAY_PLAN_TASK_STORAGE === "supabase") return "supabase";
+  return supabaseConfig() ? "supabase" : "blob";
 }
 
 function normalizeOrderRowOrders(value: unknown): PlanRowOrders {

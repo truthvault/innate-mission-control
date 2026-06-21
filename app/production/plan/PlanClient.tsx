@@ -24,7 +24,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
-import { Chip } from "@/components/mission-control-ui";
+import { Chip, DT } from "@/components/mission-control-ui";
+import type { OrderCostingContext, OrderCostingMatch } from "@/lib/costings/fetch-order-costing-context";
 import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -71,28 +72,6 @@ import {
 const PLAN_TASK_LINKS_REALTIME_CHANNEL = "production-plan-task-links";
 const PLAN_TASK_LINKS_REALTIME_EVENT = "plan-task-links-changed";
 type PlanTaskLinksStorage = "blob" | "supabase";
-
-const DT = {
-  pageBg: "#f5f3ee",
-  cardBg: "#ffffff",
-  headerBg: "#1a1a1a",
-  teal: "#0c7c7a",
-  tealSoft: "rgba(12,124,122,0.08)",
-  gold: "#c8a96e",
-  sage: "#6e8a6a",
-  goldSoft: "rgba(200,169,110,0.06)",
-  textPrimary: "#22201a",
-  textSecondary: "#5a5549",
-  textMuted: "#7c746b",
-  textFaint: "#9a9088",
-  border: "rgba(0,0,0,0.06)",
-  shadow: "0 1px 3px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.02)",
-  radius: 14,
-  radiusSm: 8,
-  sans: "'DM Sans', -apple-system, sans-serif",
-  serif: "'Fraunces', Georgia, serif",
-};
-
 
 const TUESDAY_THEME = {
   page: "#f6f3ed",
@@ -1079,9 +1058,10 @@ type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdi
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type CompletedTuesdayItem = { id: string; kind: "order" | "intake" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type ProductionPlanMode = "schedule" | "orderRows";
+type MobilePlanPrimaryView = "plan" | "orders";
 type PersonFilter = "all" | Person;
 type OrderDayFilter = "allWeek" | "today" | DayKey;
-type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate";
+type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate" | "costing";
 type RailSort = "soonest" | "latest" | "customer";
 type OrderWorkflowState = {
   orderId: number;
@@ -1147,7 +1127,7 @@ function orderDaysUntil(date: string | null) {
   return Math.ceil((due.getTime() - today.getTime()) / 864e5);
 }
 
-function orderProgressPct(order: UiOrder, stepIndex = order.currentStep, qcFraction = 0) {
+function orderProgressPct(order: UiOrder, stepIndex = order.currentStep, qcFraction = 0, openTaskCount?: number, releaseComplete?: boolean) {
   const stepCount = stepsForOrder(order).length;
   if (!stepCount) return 0;
   const steps = stepsForOrder(order);
@@ -1156,7 +1136,12 @@ function orderProgressPct(order: UiOrder, stepIndex = order.currentStep, qcFract
   const adjustedStepIndex = qcIndex > 0 && stepIndex >= qcIndex - 1
     ? Math.max(stepIndex, qcIndex - 1 + clampedQcFraction)
     : stepIndex;
-  return Math.min(100, Math.round((adjustedStepIndex / Math.max(1, stepCount - 1)) * 100));
+  let pct = Math.min(100, Math.round((adjustedStepIndex / Math.max(1, stepCount - 1)) * 100));
+  if (typeof openTaskCount === "number" && openTaskCount > 0) pct = Math.min(pct, 94);
+  if (qcIndex >= 0 && stepIndex >= qcIndex && clampedQcFraction < 1) pct = Math.min(pct, 90);
+  if (releaseComplete === false && pct >= 96) pct = 95;
+  if (releaseComplete && (!openTaskCount || openTaskCount <= 0) && clampedQcFraction >= 1) pct = Math.max(pct, 100);
+  return pct;
 }
 
 function stepsForOrder(order: UiOrder) {
@@ -1180,6 +1165,12 @@ function productionTaskLabelForStep(step: Step, order: UiOrder): string | null {
       return "Materials received";
     case "stress":
       return "Stress cuts";
+    case "bottom-prep":
+      return "Bottom prep";
+    case "bottom-coat":
+      return "Bottom coat";
+    case "sand-top":
+      return "Sand top";
     case "cut":
       return order.stepsKey === "PANEL_STEPS" ? "Cut / prep" : "Cut / machine / prep";
     case "sand":
@@ -1187,6 +1178,8 @@ function productionTaskLabelForStep(step: Step, order: UiOrder): string | null {
       return "Sand and coat";
     case "coat2":
       return "Second coat";
+    case "coat3":
+      return "3rd coat (clear final)";
     case "cure":
       return "Curing";
     case "qc":
@@ -1195,8 +1188,14 @@ function productionTaskLabelForStep(step: Step, order: UiOrder): string | null {
       return "Assemble / box";
     case "wrap":
       return "Pack / wrap";
+    case "balance":
+      return "Balance invoice";
     case "freight":
-      return "Book freight";
+      return "Book freight / delivery";
+    case "paid-release":
+      return "Confirm paid before release";
+    case "customer-update":
+      return "Customer update";
     default:
       return null;
   }
@@ -1251,7 +1250,22 @@ function taskTitleMatchesProductionLabel(title: string, label: string | null) {
 }
 
 function productionStepTaskTitles(step: Step, order: UiOrder) {
-  return [productionTaskLabelForStep(step, order), suggestedJobTaskLabelForStep(step, order)].filter(Boolean) as string[];
+  const aliases: Record<string, string[]> = {
+    matWait: ["Supplier/material wait", "Westimber lamination wait", "Materials ordered"],
+    "bottom-prep": ["Stress cuts", "Stress cuts & L-channels", "Bottom: stress cuts + inserts"],
+    "bottom-coat": ["Bottom coat"],
+    "sand-top": ["Sand top", "Sand and 1st coat"],
+    coat1: ["Sand and coat", "Sand and 1st coat"],
+    coat3: ["3rd coat (clear final)", "Final coat"],
+    freight: ["Book freight / delivery", "Book freight"],
+    "paid-release": ["Confirm paid before release"],
+    "customer-update": ["Customer update"],
+  };
+  return [
+    productionTaskLabelForStep(step, order),
+    suggestedJobTaskLabelForStep(step, order),
+    ...(aliases[step.key] ?? []),
+  ].filter(Boolean) as string[];
 }
 
 function taskMatchesProductionStep(title: string, step: Step, order: UiOrder) {
@@ -1377,12 +1391,22 @@ function orderTrustSignal(order: UiOrder, tasks: Array<{ done?: boolean; schedul
   };
 }
 
+function costingIsFullyApproved(costing: OrderCostingMatch | undefined) {
+  return costing?.status === "verified_attached";
+}
+
+function costingHasVerifiedSource(costing: OrderCostingMatch | undefined) {
+  return costing?.status === "verified_attached" || costing?.status === "verified_needs_review";
+}
+
 function OrderHealthStrip({
   orders,
+  orderCostings,
   activeFilter,
   onFilterChange,
 }: {
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   activeFilter: RailFilter;
   onFilterChange: (filter: RailFilter) => void;
 }) {
@@ -1406,13 +1430,15 @@ function OrderHealthStrip({
   const blocked = active.filter((order) => orderHealth(order) === "blocked").length;
   const watch = active.filter((order) => orderHealth(order) === "watch").length;
   const onTrack = active.filter((order) => orderHealth(order) === "onTrack").length;
+  const needsCosting = active.filter((order) => !costingIsFullyApproved(orderCostings?.matches[order.id])).length;
   const cards: Array<{ label: string; mobileLabel: string; value: number; color: string; filter: RailFilter }> = [
     { label: "Active Orders", mobileLabel: "Active", value: active.length, color: DT.textPrimary, filter: "all" },
     { label: "On Track", mobileLabel: "Track", value: onTrack, color: "#15803d", filter: "onTrack" },
     { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
     { label: "Blocked", mobileLabel: "Block", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
-    { label: "Due This Week", mobileLabel: "This wk", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
-    { label: "Due Next Week", mobileLabel: "Next wk", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
+    { label: "Needs Costing", mobileLabel: "Cost", value: needsCosting, color: needsCosting ? "#b45309" : "#15803d", filter: "costing" },
+    { label: "Due This Week", mobileLabel: "Week", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
+    { label: "Due Next Week", mobileLabel: "Next", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
   return (
     <div data-mobile-health-strip="one-row-health" style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? `repeat(${cards.length}, minmax(0, 1fr))` : undefined, alignItems: "stretch", justifyContent: "flex-end", gap: isNarrow ? 3 : 6, flexWrap: "wrap", overflowX: "visible", paddingBottom: isNarrow ? 0 : 0, width: "100%" }}>
@@ -2176,6 +2202,7 @@ function appTaskFallsInWeek(task: AppPlanTask, week: PlanWeek) {
 
 function OrderRail({
   orders,
+  orderCostings,
   selectedOrder,
   selectedOrderTasks,
   assignmentTask,
@@ -2200,6 +2227,7 @@ function OrderRail({
   tasksForOrder,
 }: {
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   selectedOrder: UiOrder | null;
   selectedOrderTasks: OrderJourneyTask[];
   assignmentTask: AssignablePlanTask | null;
@@ -2236,6 +2264,7 @@ function OrderRail({
       if (filter === "nextWeek" && !orderDueNextWeek(order)) return false;
       if (filter === "materials" && order.rawMondayStatus !== "Materials Ordered") return false;
       if (filter === "noDate" && order.shipDate) return false;
+      if (filter === "costing" && costingIsFullyApproved(orderCostings?.matches[order.id])) return false;
       if (!normalizedQuery) return true;
       return normalizeOrderText(`${order.customer} ${orderItemLabel(order)} ${orderStatusLabel(order)} ${order.deliveryLocation ?? ""}`).includes(normalizedQuery);
     });
@@ -2248,12 +2277,13 @@ function OrderRail({
       if (bTime === null) return -1;
       return sort === "latest" ? bTime - aTime : aTime - bTime;
     });
-  }, [activeOrders, filter, query, sort]);
+  }, [activeOrders, filter, orderCostings?.matches, query, sort]);
   const filterOptions: Array<{ id: RailFilter; label: string }> = [
     { id: "all", label: "All" },
     { id: "blocked", label: "Blocked" },
     { id: "thisWeek", label: "This week" },
     { id: "materials", label: "Materials" },
+    { id: "costing", label: "Costing" },
     { id: "noDate", label: "No date" },
   ];
   const railWidth = 318;
@@ -2320,6 +2350,7 @@ function OrderRail({
         <OrderRailDetail
           key={`detail-${selectedOrder.id}`}
           order={selectedOrder}
+          costing={orderCostings?.matches[selectedOrder.id]}
           planTasks={selectedOrderTasks}
           onWorkflowChange={onWorkflowChange}
           onOpen={() => onOpenOrder(selectedOrder.id)}
@@ -2367,7 +2398,7 @@ function OrderRail({
           </div>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflowX: "visible", WebkitOverflowScrolling: "touch" }}>
             {filteredOrders.map((order) => (
-              <OrderRailItem key={order.id} order={order} onSelect={onSelect} isNarrow={isNarrow} />
+              <OrderRailItem key={order.id} order={order} costing={orderCostings?.matches[order.id]} onSelect={onSelect} isNarrow={isNarrow} />
             ))}
             {filteredOrders.length === 0 && (
               <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35, padding: "8px 2px" }}>No active orders match that view.</div>
@@ -2379,7 +2410,68 @@ function OrderRail({
   );
 }
 
-function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect: (id: number) => void; isNarrow: boolean }) {
+function costingTone(costing: OrderCostingMatch | undefined) {
+  if (costing?.status === "verified_attached") return { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.24)" };
+  if (costing?.status === "verified_needs_review") return { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.22)" };
+  if (costing?.status === "costings_unavailable") return { color: "#922a23", bg: "rgba(146,42,35,0.07)", border: "rgba(146,42,35,0.18)" };
+  return { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.22)" };
+}
+
+function formatCostingMoney(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "Cost not shown";
+  return `$${Math.round(value).toLocaleString("en-NZ")} ex GST`;
+}
+
+function formatCostingPercent(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "Margin not shown";
+  return `${value.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}% margin`;
+}
+
+function OrderCostingPill({ costing }: { costing?: OrderCostingMatch }) {
+  const tone = costingTone(costing);
+  const label = costing?.label || "Needs costing match";
+  return (
+    <span title={costing?.detail || "No source-verified costing relation is attached to this order."} style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${tone.border}`, background: tone.bg, color: tone.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      {label}
+    </span>
+  );
+}
+
+function OrderCostingPanel({ costing }: { costing?: OrderCostingMatch }) {
+  const tone = costingTone(costing);
+  const status = costing?.status || "needs_match";
+  const hasVerifiedSource = costingHasVerifiedSource(costing);
+  const pillLabel = status === "verified_attached" ? "Approved" : status === "verified_needs_review" ? "Verified source" : "No match";
+  const pillTone = status === "verified_attached" ? "good" : status === "costings_unavailable" ? "danger" : "warn";
+  return (
+    <OrderCommandSection
+      eyebrow="Costing"
+      title={costing?.label || "Needs costing match"}
+      action={<OrderCommandPill label={pillLabel} tone={pillTone} />}
+    >
+      <div style={{ border: `1px solid ${tone.border}`, background: tone.bg, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, color: tone.color }}>
+        <div style={{ fontSize: 12, lineHeight: 1.35, fontWeight: 900 }}>{costing?.detail || "No source-verified product costing is explicitly attached to this order."}</div>
+        <div style={{ marginTop: 5, fontSize: 10, lineHeight: 1.35, fontWeight: 850 }}>
+          {hasVerifiedSource
+            ? `${formatCostingMoney(costing?.totalCostExGst)} · ${formatCostingPercent(costing?.grossMarginPercent)} · ${status === "verified_attached" ? "Approved for quote use" : "Needs approval before quote use"} · Matched by ${costing?.matchedBy || "verified source"}`
+            : "Needed relation: exact product code, Xero invoice/reference, or approved order-to-costing link."}
+        </div>
+      </div>
+      {costing?.sourceLabel && (
+        <div style={{ marginTop: 7, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <OrderCommandPill label={`Source: ${costing.sourceLabel}`} tone="neutral" />
+          {costing.sourceUrl && (
+            <a href={costing.sourceUrl} target="_blank" rel="noreferrer" style={{ border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>
+              Open proof
+            </a>
+          )}
+        </div>
+      )}
+    </OrderCommandSection>
+  );
+}
+
+function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder; costing?: OrderCostingMatch; onSelect: (id: number) => void; isNarrow: boolean }) {
   const healthLevel = orderHealth(order);
   const health = HEALTH_META[healthLevel];
   const trust = orderTrustSignal(order);
@@ -2417,10 +2509,13 @@ function OrderRailItem({ order, onSelect, isNarrow }: { order: UiOrder; onSelect
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "normal" : "nowrap" }}>{order.customer}</div>
-          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "normal" : "nowrap" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
-          <div style={{ marginTop: 4, display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</div>
-          {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 850, lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{reason}</div>}
+          <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, whiteSpace: "normal", overflowWrap: "anywhere" }}>{order.customer}</div>
+          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, lineHeight: 1.2, whiteSpace: "normal", overflowWrap: "anywhere" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
+          <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>
+            <OrderCostingPill costing={costing} />
+          </div>
+          {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 850, lineHeight: 1.25, whiteSpace: "normal", overflowWrap: "anywhere" }}>{reason}</div>}
         </div>
         <div style={{ flex: "0 0 auto", textAlign: "right" }}>
           <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 950, color: DT.textPrimary }}>{formatRailDueDate(order)}</div>
@@ -2583,17 +2678,17 @@ const COMPLETION_REASONS = [
   "Other",
 ] as const;
 
-function requestCompletionReason(label: string) {
-  const answer = window.prompt(
-    `Why mark ${label} complete in Tuesday?\n\nUse one of: ${COMPLETION_REASONS.join(", ")}`,
-    COMPLETION_REASONS[0]
-  );
-  if (answer === null) return null;
-  const normalized = answer.trim().toLowerCase();
-  const reason = COMPLETION_REASONS.find((candidate) => candidate.toLowerCase() === normalized) || (answer.trim() ? "Other" : null);
-  if (!reason) return null;
-  const note = reason === "Other" ? answer.trim().slice(0, 180) : undefined;
-  return { reason, note };
+type CompletionReason = (typeof COMPLETION_REASONS)[number];
+type CompletionDecision = { reason: CompletionReason; note?: string };
+type TuesdayCompletionRequest =
+  | { type: "order"; order: UiOrder }
+  | { type: "intake"; item: OrderIntakeItem }
+  | { type: "restore"; item: CompletedTuesdayItem };
+
+function completionRequestKey(request: TuesdayCompletionRequest) {
+  if (request.type === "order") return `${request.type}:${request.order.id}`;
+  if (request.type === "intake") return `${request.type}:${request.item.orderId}`;
+  return `${request.type}:${request.item.id}`;
 }
 
 function OrderIntakeRailCard({
@@ -2620,7 +2715,7 @@ function OrderIntakeRailCard({
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.teal, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{actionableCount}</div>
         </div>
-        <button type="button" onClick={onRefresh} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>
+        <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
           {busy ? "Checking" : "Refresh"}
         </button>
       </div>
@@ -2664,7 +2759,7 @@ function CompletedTuesdayOrdersCard({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        style={{ border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap" }}
+        style={{ minHeight: 40, border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 10px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", touchAction: "manipulation" }}
         aria-expanded={open}
       >
         Completed {items.length}
@@ -2686,6 +2781,68 @@ function CompletedTuesdayOrdersCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function TuesdayCompletionDialog({
+  request,
+  onCancel,
+  onConfirm,
+}: {
+  request: TuesdayCompletionRequest;
+  onCancel: () => void;
+  onConfirm: (decision: CompletionDecision | null) => void;
+}) {
+  const [reason, setReason] = useState<CompletionReason>(COMPLETION_REASONS[0]);
+  const [note, setNote] = useState("");
+  const isRestore = request.type === "restore";
+  const label = request.type === "order" ? request.order.customer : request.type === "intake" ? request.item.customerName : request.item.label;
+  const detail = request.type === "order"
+    ? "This hides the order from active Tuesday views only. Monday and Xero stay unchanged."
+    : request.type === "intake"
+      ? "This hides the intake order and its Tuesday schedule suggestions only. Xero and the source invoice stay unchanged."
+      : "This removes the Tuesday completion override only. Monday, Xero, and saved invoices stay unchanged.";
+
+  function confirm() {
+    if (isRestore) {
+      onConfirm(null);
+      return;
+    }
+    const trimmedNote = note.trim().slice(0, 180);
+    onConfirm({ reason, note: trimmedNote || undefined });
+  }
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={isRestore ? `Restore ${label}` : `Mark ${label} complete in Tuesday`} style={{ position: "fixed", inset: 0, zIndex: 260, display: "grid", placeItems: "center", background: "rgba(26,22,17,0.38)", padding: 16 }}>
+      <div style={{ width: "min(520px, 100%)", border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(146,42,35,0.18)"}`, background: DT.cardBg, borderRadius: 18, boxShadow: "0 24px 64px rgba(37,30,20,0.22)", overflow: "hidden" }}>
+        <div style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${DT.border}` }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: isRestore ? DT.teal : "#922a23" }}>{isRestore ? "Restore order" : "Complete in Tuesday"}</div>
+          <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 31, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 900, overflowWrap: "anywhere" }}>{label}</h3>
+          <div style={{ marginTop: 8, fontFamily: DT.sans, fontSize: 12, lineHeight: 1.45, color: DT.textMuted, fontWeight: 800 }}>{detail}</div>
+        </div>
+        <div style={{ padding: 20, display: "grid", gap: 10 }}>
+          {!isRestore && (
+            <>
+              <label style={{ display: "grid", gap: 5 }}>
+                <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Reason</span>
+                <select value={reason} onChange={(event) => setReason(event.target.value as CompletionReason)} style={{ width: "100%", border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 10, padding: "10px 11px", fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 850 }}>
+                  {COMPLETION_REASONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 5 }}>
+                <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Note</span>
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Optional context for why this was completed" style={{ width: "100%", resize: "vertical", border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 10, padding: "10px 11px", fontFamily: DT.sans, fontSize: 13, lineHeight: 1.35, color: DT.textPrimary, fontWeight: 750 }} />
+              </label>
+            </>
+          )}
+          {isRestore && <div style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, borderRadius: 12, padding: "10px 11px", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.45, color: DT.teal, fontWeight: 850 }}>Use this when an order was hidden from Tuesday by mistake and should come back into the active boards.</div>}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" onClick={onCancel} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}>Cancel</button>
+            <button type="button" onClick={confirm} style={{ border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(146,42,35,0.18)"}`, background: isRestore ? DT.teal : "rgba(146,42,35,0.08)", color: isRestore ? "#fff" : "#922a23", borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}>{isRestore ? "Restore to active" : "Mark complete"}</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2883,12 +3040,12 @@ function OrderIntakeReviewModal({
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: isNarrow ? 0 : 64, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "center", padding: isNarrow ? 8 : "10px 18px 14px", overflow: "hidden" }}>
-      <section style={{ width: isNarrow ? "calc(100vw - 16px)" : "min(1480px, calc(100vw - 36px))", height: isNarrow ? "calc(100vh - 16px)" : "calc(100vh - 88px)", maxHeight: isNarrow ? "calc(100vh - 16px)" : "calc(100vh - 88px)", overflow: "hidden", display: "flex", flexDirection: "column", border: `1px solid ${DT.border}`, borderRadius: isNarrow ? 12 : 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
-        <header style={{ flex: "0 0 auto", background: "rgba(251,250,247,0.98)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "9px 12px" : "10px 18px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 14 }}>
+	    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: isNarrow ? 0 : 64, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "center", padding: isNarrow ? 0 : "10px 18px 14px", overflow: "hidden" }}>
+	      <section style={{ width: isNarrow ? "100vw" : "min(1480px, calc(100vw - 36px))", height: isNarrow ? "100vh" : "calc(100vh - 88px)", maxHeight: isNarrow ? "100vh" : "calc(100vh - 88px)", overflow: "hidden", display: "flex", flexDirection: "column", border: isNarrow ? "none" : `1px solid ${DT.border}`, borderRadius: isNarrow ? 0 : 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
+	        <header style={{ flex: "0 0 auto", background: "rgba(251,250,247,0.98)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "10px 12px" : "10px 18px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 14 }}>
           <div style={{ minWidth: 0, flex: "1 1 auto" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 23 : 28, lineHeight: 1.0, color: DT.textPrimary, overflowWrap: "anywhere" }}>{item.customerName}</h2>
+	              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 28, lineHeight: 1.0, color: DT.textPrimary, overflowWrap: "anywhere" }}>{item.customerName}</h2>
               <span title={item.stateDetail} style={{ border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, color: reviewSignal.color, borderRadius: 999, padding: "5px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{headerStatusLabel}</span>
             </div>
             <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontFamily: DT.sans }}>
@@ -2902,42 +3059,34 @@ function OrderIntakeReviewModal({
             </div>
           </div>
           <div style={{ flex: "0 0 auto", display: "flex", gap: 7, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <button type="button" onClick={onMarkComplete} disabled={busy} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 11px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Mark complete</button>
-            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
-          </div>
-        </header>
-        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(220px, 0.72fr) minmax(220px, 0.72fr) minmax(0, 1.65fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden" }}>
-          <aside style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
+	            <button type="button" onClick={onMarkComplete} disabled={busy} title="Move this pending order out of active Tuesday review if it has already been handled elsewhere." style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 11px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Complete / hide</button>
+	            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
+	          </div>
+	        </header>
+	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(240px, 0.78fr) minmax(240px, 0.78fr) minmax(0, 1.62fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
+	          {isNarrow && (
+	            <nav aria-label="Order review sections" style={{ position: "sticky", top: 0, zIndex: 2, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, padding: "0 0 2px", background: "rgba(251,250,247,0.94)", backdropFilter: "blur(10px)" }}>
+	              {[
+	                ["Details", "#intake-order-details"],
+	                ["Payments", "#intake-payments"],
+	                ["Plan", "#intake-plan"],
+	              ].map(([label, href]) => <a key={label} href={href} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.84)", color: DT.textMuted, borderRadius: 999, padding: "7px 6px", textAlign: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>{label}</a>)}
+	            </nav>
+	          )}
+	          <aside id="intake-order-details" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
             <section style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 10, background: "rgba(237,248,247,0.72)", padding: 8 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Order details</div>
-              <div style={{ marginTop: 6, display: "grid", gap: 5 }}>
-                {item.lineItems.length === 0 ? <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div> : item.lineItems.map((line, index) => {
-                  const parsed = parseIntakeInvoiceLine(line.description);
-                  const isPrimary = index === 0;
-                  return (
-                    <div key={`${line.description}:${index}`} style={{ border: `1px solid ${isPrimary ? "rgba(12,124,122,0.28)" : DT.border}`, borderRadius: 10, padding: isPrimary ? 10 : 7, background: isPrimary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.72)", boxShadow: isPrimary ? "0 7px 16px rgba(37,30,20,0.06)" : "none" }}>
-                      <div style={{ display: "grid", gap: isPrimary ? 5 : 2, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
-                        <div style={{ fontFamily: DT.serif, fontSize: isPrimary ? 22 : 13, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.02 }}>{parsed.title}</div>
-                        {formatParsedIntakeSpec(parsed).map((fact) => (
-                          <div key={`${fact.label}:${fact.value}`} style={{ display: isPrimary ? "grid" : "block", gridTemplateColumns: isPrimary ? "84px minmax(0, 1fr)" : undefined, gap: 8, fontSize: isPrimary ? 12 : 9.5, fontWeight: 900, overflowWrap: "anywhere" }}>
-                            <span style={{ color: DT.textMuted, fontWeight: 950 }}>{fact.label}{isPrimary ? "" : ":"}</span>
-                            <span>{fact.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {parsed.notes.map((note) => <div key={note} style={{ marginTop: 6, fontFamily: DT.sans, fontSize: isPrimary ? 11 : 9.5, color: DT.textMuted, fontWeight: 850, lineHeight: 1.2 }}>{note}</div>)}
-                      <div style={{ marginTop: 7, display: "flex", gap: 8, flexWrap: "wrap", fontFamily: DT.sans, fontSize: isPrimary ? 11 : 9, color: DT.textMuted, fontWeight: 950 }}>
-                        <span>Qty {formatXeroQuantity(line.quantity)}</span>
-                        <span>{formatXeroMoney(line.lineAmount)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+	              <div style={{ marginTop: 6, display: "grid", gap: 5 }}>
+	                {item.lineItems.length === 0 ? (
+	                  <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div>
+	                ) : item.lineItems.map((line, index) => (
+	                  <InvoiceSpecCard key={`${line.description}:${index}`} line={line} primary={index === 0} compact={!isNarrow && index > 0} />
+	                ))}
+	              </div>
             </section>
           </aside>
 
-          <aside style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
+	          <aside id="intake-payments" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
             <section style={{ border: `1px solid ${expectedReadyDate ? "rgba(12,124,122,0.20)" : "rgba(154,91,18,0.22)"}`, borderRadius: 10, background: expectedReadyDate ? "rgba(237,248,247,0.70)" : "rgba(250,204,21,0.10)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: expectedReadyDate ? DT.teal : "#9a5b12", fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{expectedReady.label}</div>
@@ -2992,8 +3141,8 @@ function OrderIntakeReviewModal({
             </section>
           </aside>
 
-          <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 10, minWidth: 0, minHeight: 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+	          <section id="intake-plan" style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 10, minWidth: 0, minHeight: isNarrow ? undefined : 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: isNarrow ? "visible" : "hidden" }}>
+	            <div style={{ display: "flex", flexDirection: isNarrow ? "column" : "row", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 12 }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production plan</div>
                 <div style={{ marginTop: 2, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -3002,10 +3151,10 @@ function OrderIntakeReviewModal({
                   <InfoDot title="Review stages, owners, dates, and hours before approving them into the live schedule." />
                 </div>
               </div>
-              <div style={{ flex: "0 0 auto", display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
-                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>-1 workday</button>
-                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>+1 workday</button>
-                <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Add task</button>
+	              <div style={{ flex: "0 0 auto", display: "flex", gap: 6, alignItems: "center", justifyContent: isNarrow ? "stretch" : "flex-end", flexWrap: "wrap" }}>
+	                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>-1 workday</button>
+	                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>+1 workday</button>
+	                <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Add task</button>
               </div>
             </div>
             <div style={{ marginTop: 8, border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, borderRadius: 10, padding: "7px 9px" }}>
@@ -3019,7 +3168,7 @@ function OrderIntakeReviewModal({
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: 8, minHeight: 0, overflowY: "auto", paddingRight: 3 }}>
+	            <div style={{ marginTop: 8, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 3 }}>
               <DndContext id="order-intake-task-draft" sensors={taskSensors} collisionDetection={closestCorners} onDragEnd={handleIntakeTaskDragEnd}>
                 <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                   <div style={{ display: "grid", gap: 5 }}>
@@ -3040,7 +3189,7 @@ function OrderIntakeReviewModal({
                 </SortableContext>
               </DndContext>
             </div>
-            <footer style={{ flex: "0 0 auto", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+	            <footer style={{ flex: "0 0 auto", position: isNarrow ? "sticky" : undefined, bottom: isNarrow ? 0 : undefined, zIndex: isNarrow ? 2 : undefined, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.92)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", backdropFilter: isNarrow ? "blur(10px)" : undefined }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                 {modalStatus && <div style={{ fontFamily: DT.sans, fontSize: 11, color: canApprove ? DT.textMuted : "#9a5b12", fontWeight: 850 }}>{modalStatus}</div>}
                 {canApprove && (
@@ -3263,6 +3412,7 @@ function TaskAssignmentPanel({
 
 function OrderRailDetail({
   order,
+  costing,
   planTasks,
   onWorkflowChange,
   onOpen,
@@ -3273,6 +3423,7 @@ function OrderRailDetail({
   onRemoveTaskLink,
 }: {
   order: UiOrder;
+  costing?: OrderCostingMatch;
   planTasks: OrderJourneyTask[];
   onWorkflowChange: (workflow: OrderWorkflowState | null) => void;
   onOpen: () => void;
@@ -3297,6 +3448,7 @@ function OrderRailDetail({
   const [draftCustom, setDraftCustom] = useState("");
   const [draftOwner, setDraftOwner] = useState<WorkshopPerson>("Nick");
   const [draftDate, setDraftDate] = useState(today);
+  const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState<string | null>(null);
   const selectedDraftAction = taskOptions.some((option) => option.label === draftAction) ? draftAction : defaultDraftAction;
   const draftTitle = selectedDraftAction === "Custom" ? draftCustom.trim() : selectedDraftAction;
   const orderedWorkflowTasks = [...workflow.tasks].sort((a, b) => {
@@ -3340,6 +3492,7 @@ function OrderRailDetail({
       ...state,
       tasks: state.tasks.filter((task) => task.id !== id),
     }));
+    setPendingDeleteTaskId(null);
   }
 
   function addWorkflowTask() {
@@ -3405,46 +3558,58 @@ function OrderRailDetail({
     };
   }
 
-  const addDisabled = !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate;
+	  const addDisabled = !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate;
+	  const nextActionLabel = nextJobTask?.title ?? nextPlanTask?.text ?? nextOrderPrompt(order);
+	  const paymentDisplay = paymentLabel || "Payment not tracked";
+	  const costingDisplay = costing?.label || "Costing not linked";
 
-  return (
-    <div data-order-rail-compact-detail="true" style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.86)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-          <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.04, color: DT.textPrimary }}>{order.customer}</h3>
+	  return (
+	    <div data-order-rail-compact-detail="true" style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
+	      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.86)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
+	        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+	          <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.04, color: DT.textPrimary }}>{order.customer}</h3>
           <div style={{ flex: "0 0 auto", display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}>
             {paymentLabel && <span style={{ border: `1px solid ${paymentStageTone(order.paymentStage) === "warn" ? "rgba(154,91,18,0.24)" : "rgba(12,124,122,0.20)"}`, background: paymentStageTone(order.paymentStage) === "warn" ? "rgba(154,91,18,0.08)" : DT.tealSoft, color: paymentStageTone(order.paymentStage) === "warn" ? "#9a5b12" : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{paymentLabel}</span>}
             <span title={`${trust.detail} ${trust.source}`} style={{ border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{trust.label}</span>
             <span style={{ border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</span>
           </div>
         </div>
-        <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 800, lineHeight: 1.3 }}>{nextOrderPrompt(order)}</div>
-        <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 9.5, color: trustStyle.color, fontWeight: 850, lineHeight: 1.25 }}>{trust.detail} · {trust.source}</div>
-        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          <MiniFact label="Due" value={`${formatShortDate(order.shipDate)} · ${dueLabel(order)}`} />
-          <MiniFact label="Item" value={orderItemLabel(order)} />
-          <MiniFact label="Current" value={activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} />
-          <MiniFact label="Payment" value={paymentLabel || "No Supabase payment stage"} />
-          <MiniFact label="Next" value={nextJobTask?.title ?? nextPlanTask?.text ?? "No task set"} />
-          <MiniFact label="Tasks" value={`${openJobTasks.length + openPlanTasks.length} open · ${doneJobTasks.length + donePlanTasks.length} done`} />
-          <MiniFact label="QC / dispatch" value={`${qcDone}/${qcItems.length} · ${dispatch.label}`} />
-        </div>
-	        <button
-	          type="button"
-	          onClick={onOpen}
-	          style={{ marginTop: 12, width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 950, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
-	        >
-	          Open full order details
-	        </button>
-        <button
-          type="button"
-          onClick={() => onMarkComplete(order)}
-          title="Hide this order from active Tuesday views without changing Monday"
-          style={{ marginTop: 6, width: "100%", border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
-        >
-          Mark complete in Tuesday
-        </button>
+	        <div style={{ marginTop: 8, border: `1px solid ${openJobTasks.length + openPlanTasks.length ? "rgba(12,124,122,0.20)" : DT.border}`, background: openJobTasks.length + openPlanTasks.length ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: 10, padding: "8px 9px" }}>
+	          <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: openJobTasks.length + openPlanTasks.length ? DT.teal : DT.textFaint }}>Next action</div>
+	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 14, lineHeight: 1.18, color: DT.textPrimary, fontWeight: 950, overflowWrap: "anywhere" }}>{nextActionLabel}</div>
+	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{nextJobTask?.owner || (nextPlanTask ? PERSON_LABELS[nextPlanTask.person] : "No owner set")} · {activeProductionStep?.label ?? order.rawMondayStatus ?? "Stage not set"}</div>
+	        </div>
+	        <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 9.5, color: trustStyle.color, fontWeight: 850, lineHeight: 1.25 }}>{trust.detail} · {trust.source}</div>
+	        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+	          <MiniFact label="Due" value={`${formatShortDate(order.shipDate)} · ${dueLabel(order)}`} />
+	          <MiniFact label="Item" value={orderItemLabel(order)} />
+	          <MiniFact label="Tasks" value={`${openJobTasks.length + openPlanTasks.length} open · ${doneJobTasks.length + donePlanTasks.length} done`} />
+	          <MiniFact label="QC / dispatch" value={`${qcDone}/${qcItems.length} · ${dispatch.label}`} />
+	          <MiniFact label="Payment" value={paymentDisplay} />
+	          <MiniFact label="Costing" value={costingDisplay} />
+	        </div>
+	        <div aria-label="Order actions" style={{ marginTop: 12, display: "grid", gap: 6 }}>
+	          <button
+	            type="button"
+	            onClick={onOpen}
+	            style={{ display: "block", width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 950, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
+	          >
+		            Open full order details
+	          </button>
+	          <button
+	            type="button"
+	            onClick={() => onMarkComplete(order)}
+	            title="Hide this order from active Tuesday views without changing Monday"
+	            style={{ display: "block", width: "100%", border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
+	          >
+	            Mark complete in Tuesday
+	          </button>
+	        </div>
         {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <OrderCostingPanel costing={costing} />
       </div>
 
       <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.80)", borderRadius: 10, padding: "9px 10px" }}>
@@ -3460,7 +3625,7 @@ function OrderRailDetail({
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 76px", gap: 6 }}>
             <select value={selectedDraftAction} onChange={(event) => setDraftAction(event.target.value)} style={compactSelectStyle()}>
               {productionTaskOptions.length > 0 && (
-                <optgroup label="Production flow">
+                <optgroup label="Production path">
                   {productionTaskOptions.map((option, optionIndex) => <option key={option.label} value={option.label}>{numberedJobTaskOptionLabel(option.label, optionIndex)}</option>)}
                 </optgroup>
               )}
@@ -3493,6 +3658,7 @@ function OrderRailDetail({
             <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>No job tasks saved for this order yet.</div>
           ) : visibleWorkflowTasks.map((task) => {
             const done = Boolean(task.done);
+            const deleteArmed = pendingDeleteTaskId === task.id;
             return (
               <div key={task.id} data-order-workflow-task-card="order-workflow-task-card" style={compactTaskCardStyle(done)}>
                 <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0,1fr)", gap: 7, alignItems: "start" }}>
@@ -3531,12 +3697,16 @@ function OrderRailDetail({
                       <button
                         type="button"
                         onClick={() => {
-                          if (window.confirm("Delete this task from this order?")) deleteWorkflowTask(task.id);
+                          if (deleteArmed) {
+                            deleteWorkflowTask(task.id);
+                            return;
+                          }
+                          setPendingDeleteTaskId(task.id);
                         }}
                         aria-label="Delete job task"
-                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: deleteArmed ? "rgba(146,42,35,0.12)" : "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
                       >
-                        Delete
+                        {deleteArmed ? "Delete now" : "Delete"}
                       </button>
                     </div>
                   </div>
@@ -3837,16 +4007,15 @@ function OrderOverviewOverlay({
   const freightBookBy = addWorkingDays(order.shipDate, -mode.workingDays);
   const { workflow, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
   const productionStepIndex = derivedProductionStepIndex(order, workflow.tasks, planTasks);
-  const activeProductionStep = productionStepForOrder(order, productionStepIndex);
-  const qcItems = dispatchQcItems(order);
-  const qcDone = qcItems.filter((label) => workflow.qc[label]?.done).length;
-  const qcTotal = qcItems.length;
-  const progress = orderProgressPct(order, productionStepIndex, qcTotal > 0 ? qcDone / qcTotal : 0);
-  const openJobTasks = workflow.tasks.filter((task) => !task.done);
-  const doneJobTasks = workflow.tasks.length - openJobTasks.length;
-  const openPlanTasks = planTasks.filter((task) => !task.done).length;
-  const donePlanTasks = planTasks.length - openPlanTasks;
-  const openTaskCount = openJobTasks.length + openPlanTasks;
+	  const activeProductionStep = productionStepForOrder(order, productionStepIndex);
+	  const qcItems = dispatchQcItems(order);
+	  const qcDone = qcItems.filter((label) => workflow.qc[label]?.done).length;
+	  const qcTotal = qcItems.length;
+	  const openJobTasks = workflow.tasks.filter((task) => !task.done);
+	  const doneJobTasks = workflow.tasks.length - openJobTasks.length;
+	  const openPlanTasks = planTasks.filter((task) => !task.done).length;
+	  const donePlanTasks = planTasks.length - openPlanTasks;
+	  const openTaskCount = openJobTasks.length + openPlanTasks;
   const doneTaskCount = doneJobTasks + donePlanTasks;
   const totalTaskCount = workflow.tasks.length + planTasks.length;
   const nextJobTask = openJobTasks[0] ?? null;
@@ -3863,11 +4032,12 @@ function OrderOverviewOverlay({
   const invoiceHasXeroLink = Boolean(order.xero);
   const invoiceHasNumber = Boolean(invoiceNumber);
   const invoiceTone = !invoiceExpectation.requiresInvoice ? "neutral" : invoiceHasXeroLink ? "teal" : invoiceHasNumber ? "warn" : "danger";
-  const invoiceLabel = !invoiceExpectation.requiresInvoice ? invoiceExpectation.label : invoiceHasXeroLink ? "Linked" : invoiceHasNumber ? "Number saved" : "Needed";
-  const paymentLabel = paymentStageBadge(order);
-  const paymentDetail = order.paymentNextAction || (paymentLabel ? "Payment info is synced for reference." : "No workshop payment action.");
-  const productionStatus = order.rawMondayStatus || order.status || "Not set";
-  const completeInTuesday = workflow.collection.status === "collected" || (qcTotal > 0 && qcDone === qcTotal && isCompleteOrder(order));
+	  const invoiceLabel = !invoiceExpectation.requiresInvoice ? invoiceExpectation.label : invoiceHasXeroLink ? "Linked" : invoiceHasNumber ? "Number saved" : "Needed";
+	  const paymentLabel = paymentStageBadge(order);
+	  const paymentDetail = order.paymentNextAction || (paymentLabel ? "Payment info is synced for reference." : "No payment task is currently tracked on this order.");
+	  const productionStatus = order.rawMondayStatus || order.status || "Not set";
+	  const completeInTuesday = workflow.collection.status === "collected" || (qcTotal > 0 && qcDone === qcTotal && isCompleteOrder(order));
+	  const progress = orderProgressPct(order, productionStepIndex, qcTotal > 0 ? qcDone / qcTotal : 1, openTaskCount, completeInTuesday);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -3929,7 +4099,6 @@ function OrderOverviewOverlay({
                 <OrderCommandPill label={health.label} tone={orderHealth(order) === "blocked" ? "danger" : orderHealth(order) === "watch" ? "warn" : "good"} />
                 {completeInTuesday && <OrderCommandPill label="Complete in Tuesday" tone="good" />}
                 <OrderCommandPill label={`Source: ${invoiceLabel}`} tone={invoiceTone} />
-                {paymentLabel && <OrderCommandPill label={paymentLabel} tone={paymentStageTone(order.paymentStage)} />}
               </div>
               <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textMuted }}>
                 <span>Due {formatShortDate(order.shipDate)}</span>
@@ -3947,10 +4116,10 @@ function OrderOverviewOverlay({
                   if (!completeInTuesday) onMarkComplete(order);
                 }}
                 disabled={completeInTuesday}
-                title="Hide this order from active Tuesday views without changing Monday"
-                style={{ border: `1px solid ${DT.border}`, background: completeInTuesday ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.74)", color: completeInTuesday ? DT.sage : DT.textMuted, borderRadius: 999, padding: "8px 11px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: completeInTuesday ? "default" : "pointer" }}
-              >
-                {completeInTuesday ? "Complete in Tuesday" : "Hide from active"}
+	                title="Move this order to the completed Tuesday list without changing Monday"
+	                style={{ border: `1px solid ${DT.border}`, background: completeInTuesday ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.74)", color: completeInTuesday ? DT.sage : DT.textMuted, borderRadius: 999, padding: "8px 11px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: completeInTuesday ? "default" : "pointer" }}
+	              >
+	                {completeInTuesday ? "Complete in Tuesday" : "Mark complete"}
               </button>
               <button
                 type="button"
@@ -3975,79 +4144,23 @@ function OrderOverviewOverlay({
             <OrderCommandMetric label="Tasks" value={`${openTaskCount} open`} detail={`${doneTaskCount} done · ${totalTaskCount} total`} tone={openTaskCount ? "teal" : "neutral"} />
             <OrderCommandMetric label="Dispatch" value={collection.label} detail={workflow.collection.by || mode.label} tone={collection.tone} />
             <OrderCommandMetric label="QC" value={`${qcDone}/${qcTotal}`} detail="Final check before leaving" tone={qcDone === qcTotal ? "good" : "warn"} />
-            <OrderCommandMetric label="Payment" value={paymentLabel || "No action"} detail={paymentDetail} tone={paymentStageTone(order.paymentStage)} compact />
-          </div>
+	            <OrderCommandMetric label="Payment" value={paymentLabel || "Payment not tracked"} detail={paymentDetail} tone={paymentStageTone(order.paymentStage)} compact />
+	          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(280px, 0.95fr) minmax(320px, 1.05fr) minmax(380px, 1.25fr)", gap: isNarrow ? 12 : 14, alignItems: "start" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-              <WorkshopSpec key={`${order.id}:${invoiceNumber ?? ""}`} order={order} packLabel={mode.label} packDetail={mode.detail} freightBookBy={freightBookBy} freightWorkingDays={mode.workingDays} xeroUrl={order.xero} xeroInvoiceNumber={invoiceNumber} onInvoiceNumberChange={(nextInvoiceNumber) => updateWorkflow((state) => ({ ...state, xeroInvoiceNumber: nextInvoiceNumber }))} prominent afterSpec={<QcChecklist order={order} workflow={workflow} onChange={updateWorkflow} compact includePhotos />} />
-              <CustomerMirrorPanel order={order} />
-            </div>
+	          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(330px, 0.9fr) minmax(0, 1.7fr)", gap: isNarrow ? 12 : 14, alignItems: "start" }}>
+	            <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+	              <WorkshopSpec key={`${order.id}:${invoiceNumber ?? ""}`} order={order} packLabel={mode.label} packDetail={mode.detail} freightBookBy={freightBookBy} freightWorkingDays={mode.workingDays} xeroUrl={order.xero} xeroInvoiceNumber={invoiceNumber} onInvoiceNumberChange={(nextInvoiceNumber) => updateWorkflow((state) => ({ ...state, xeroInvoiceNumber: nextInvoiceNumber }))} prominent afterSpec={<QcChecklist order={order} workflow={workflow} onChange={updateWorkflow} compact includePhotos />} />
+	              <CollectionControl workflow={workflow} status={workflowStatus} onChange={updateWorkflow} />
+	              <CustomerMirrorPanel order={order} />
+	              <RepairNotesPanel order={order} workflow={workflow} onChange={updateWorkflow} />
+	            </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <OrderCommandSection eyebrow="Order record" title="Production flow">
-                <OrderStepTimeline order={order} currentStepIndex={productionStepIndex} />
-              </OrderCommandSection>
-              <CollectionControl workflow={workflow} status={workflowStatus} onChange={updateWorkflow} />
-              <RepairNotesPanel order={order} workflow={workflow} onChange={updateWorkflow} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
-              <OrderTasksPanel key={order.id} order={order} workflow={workflow} planTasks={planTasks} productionStepIndex={productionStepIndex} onWorkflowChange={updateWorkflow} onPlanTaskEdit={onPlanTaskEdit} onPlanTaskDoneToggle={onPlanTaskDoneToggle} onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle} onRemoveTaskLink={onRemoveTaskLink} />
-            </div>
-          </div>
+	            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+	              <OrderTasksPanel key={order.id} order={order} workflow={workflow} planTasks={planTasks} productionStepIndex={productionStepIndex} onWorkflowChange={updateWorkflow} onPlanTaskEdit={onPlanTaskEdit} onPlanTaskDoneToggle={onPlanTaskDoneToggle} onWorkflowTaskDoneToggle={onWorkflowTaskDoneToggle} onRemoveTaskLink={onRemoveTaskLink} />
+	            </div>
+	          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function OrderStepTimeline({ order, currentStepIndex = order.currentStep }: { order: UiOrder; currentStepIndex?: number }) {
-  const steps = stepsForOrder(order);
-  const repair = order.rawMondayTopPanel === "Repair";
-  if (steps.length === 0) {
-    return <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>No production steps available for this item yet.</div>;
-  }
-  const clampedStepIndex = Math.max(0, Math.min(currentStepIndex, steps.length - 1));
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-      {steps.map((step, index) => {
-        const done = index < clampedStepIndex;
-        const active = index === clampedStepIndex;
-        const isRepair = repair && active;
-        const fill = isRepair ? "#d97706" : DT.teal;
-        const taskLabel = suggestedJobTaskLabelForStep(step, order);
-        const showTaskLabel = active && taskLabel && taskLabel.toLocaleLowerCase() !== step.label.toLocaleLowerCase();
-        return (
-          <div key={step.key} style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20, flexShrink: 0 }}>
-              {index > 0 && <div style={{ width: 2, flex: "1 1 0", minHeight: 4, background: done || active ? fill : "rgba(0,0,0,0.06)" }} />}
-              {index === 0 && <div style={{ flex: "1 1 0" }} />}
-              {step.wait ? (
-                <div style={{ width: 14, height: 14, borderRadius: 3, background: done ? `${fill}18` : active ? "rgba(200,169,110,0.12)" : "rgba(0,0,0,0.03)", border: `1.5px dashed ${done ? fill : active ? DT.gold : "rgba(0,0,0,0.10)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontSize: 7 }}>{done ? "✓" : ""}</span>
-                </div>
-              ) : (
-                <div style={{ width: done ? 10 : active ? 14 : 10, height: done ? 10 : active ? 14 : 10, borderRadius: "50%", background: done ? fill : active ? fill : "transparent", border: done || active ? `2px solid ${fill}` : "2px solid rgba(0,0,0,0.08)", boxShadow: active ? `0 0 0 3px ${fill}18` : "none", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {done && <span style={{ color: "#fff", fontSize: 7, lineHeight: 1 }}>✓</span>}
-                </div>
-              )}
-              {index < steps.length - 1 && <div style={{ width: 2, flex: "1 1 0", minHeight: 4, background: done ? fill : "rgba(0,0,0,0.06)" }} />}
-              {index === steps.length - 1 && <div style={{ flex: "1 1 0" }} />}
-            </div>
-            <div style={{ padding: "4px 0", flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 13, fontFamily: DT.sans, fontWeight: active ? 800 : done ? 650 : 500, color: active ? fill : done ? DT.textSecondary : DT.textFaint, textDecorationLine: done && !active ? "line-through" : "none", textDecorationColor: done ? "rgba(0,0,0,0.12)" : "transparent" }}>
-                  {step.label}
-                </span>
-                {showTaskLabel && <span style={{ border: "1px solid rgba(12,124,122,0.16)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850 }}>Task: {taskLabel}</span>}
-                {step.who && !done && <span style={{ fontSize: 9, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 500 }}>{step.who}</span>}
-                {step.wait && !done && <span style={{ fontSize: 9, color: DT.gold, fontFamily: DT.sans, fontWeight: 650, fontStyle: "italic" }}>{step.waitLabel}</span>}
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -4081,7 +4194,7 @@ function CollectionControl({
     <div style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Tuesday</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Dispatch</div>
           <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 15, color: DT.textPrimary, fontWeight: 950 }}>Collection / dispatch</div>
         </div>
         {status && <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{status}</span>}
@@ -4198,19 +4311,58 @@ function OrderTasksPanel({
   const [draftOwner, setDraftOwner] = useState<WorkshopPerson>("Nick");
   const [draftDate, setDraftDate] = useState(today);
   const [editingWorkflowTaskId, setEditingWorkflowTaskId] = useState<string | null>(null);
+  const [pendingDeleteTaskId, setPendingDeleteTaskId] = useState<string | null>(null);
   const selectedDraftAction = taskOptions.some((option) => option.label === draftAction) ? draftAction : defaultDraftAction;
   const draftTitle = selectedDraftAction === "Custom" ? draftCustom.trim() : selectedDraftAction;
   const orderedWorkflowTasks = [...workflow.tasks].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
     return (a.scheduledDate || "").localeCompare(b.scheduledDate || "");
   });
-  const orderedPlanTasks = [...planTasks].sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    return a.sortKey.localeCompare(b.sortKey);
-  });
-  const openCount = workflow.tasks.filter((task) => !task.done).length + planTasks.filter((task) => !task.done).length;
-  const doneCount = workflow.tasks.length + planTasks.length - openCount;
-  const totalCount = workflow.tasks.length + planTasks.length;
+	  const orderedPlanTasks = [...planTasks].sort((a, b) => {
+	    if (a.done !== b.done) return a.done ? 1 : -1;
+	    return a.sortKey.localeCompare(b.sortKey);
+	  });
+	  const openCount = workflow.tasks.filter((task) => !task.done).length + planTasks.filter((task) => !task.done).length;
+	  const doneCount = workflow.tasks.length + planTasks.length - openCount;
+	  const totalCount = workflow.tasks.length + planTasks.length;
+	  const productionSteps = stepsForOrder(order);
+	  type UnifiedPathTask = {
+	    key: string;
+	    kind: "workflow" | "plan";
+	    title: string;
+	    done: boolean;
+	    meta: string;
+	    notes?: string | null;
+	    workflowTask?: WorkflowTask;
+	    planTask?: OrderJourneyTask;
+	  };
+	  const unifiedPathTasks: UnifiedPathTask[] = [
+	    ...orderedWorkflowTasks.map((task) => ({
+	      key: `workflow-${task.id}`,
+	      kind: "workflow" as const,
+	      title: task.title,
+	      done: Boolean(task.done),
+	      meta: `${task.owner || "No owner"} · ${task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}${task.completedAt ? ` · Done ${formatCompletedAt(task.completedAt)}` : ""}`,
+	      notes: task.notes,
+	      workflowTask: task,
+	    })),
+	    ...orderedPlanTasks.map((task) => ({
+	      key: `plan-${task.id}`,
+	      kind: "plan" as const,
+	      title: task.text,
+	      done: Boolean(task.done),
+	      meta: `${task.dateLabel} · ${PERSON_LABELS[task.person]} · ${task.rowName}`,
+	      notes: task.notes,
+	      planTask: task,
+	    })),
+	  ];
+	  const usedTaskKeys = new Set<string>();
+	  const pathRows = productionSteps.map((step, index) => {
+	    const rowTasks = unifiedPathTasks.filter((task) => !usedTaskKeys.has(task.key) && taskMatchesProductionStep(task.title, step, order));
+	    rowTasks.forEach((task) => usedTaskKeys.add(task.key));
+	    return { step, index, rowTasks };
+	  });
+	  const supportTasks = unifiedPathTasks.filter((task) => !usedTaskKeys.has(task.key));
 
   useEffect(() => {
     setDraftAction((current) => {
@@ -4232,6 +4384,7 @@ function OrderTasksPanel({
       ...state,
       tasks: state.tasks.filter((task) => task.id !== id),
     }));
+    setPendingDeleteTaskId(null);
   }
 
   function addWorkflowTask() {
@@ -4268,24 +4421,148 @@ function OrderTasksPanel({
     };
   }
 
-  function taskMetaStyle(done: boolean): CSSProperties {
-    return {
-      fontFamily: DT.sans,
-      fontSize: 10,
+	  function taskMetaStyle(done: boolean): CSSProperties {
+	    return {
+	      fontFamily: DT.sans,
+	      fontSize: 10,
       color: done ? DONE_TASK_VISUAL.text : DT.textMuted,
       fontWeight: 750,
       lineHeight: 1.32,
-    };
-  }
+	    };
+	  }
 
-  return (
+	  function renderUnifiedTask(task: UnifiedPathTask) {
+	    const done = Boolean(task.done);
+	    if (task.kind === "workflow" && task.workflowTask) {
+	      const workflowTask = task.workflowTask;
+	      const editing = editingWorkflowTaskId === workflowTask.id;
+	      const deleteArmed = pendingDeleteTaskId === workflowTask.id;
+	      return (
+	        <div key={task.key} data-order-workflow-task-card="order-workflow-task-card" style={{ ...taskCardStyle(done), padding: "7px 8px", boxShadow: done ? DONE_TASK_VISUAL.shadow : "none" }}>
+	          <input
+	            type="checkbox"
+	            checked={done}
+	            aria-label={`Mark ${workflowTask.title} ${done ? "not done" : "done"}`}
+	            onChange={(event) => {
+	              const checked = event.target.checked;
+	              if (checked) {
+	                const checkboxRect = event.currentTarget.getBoundingClientRect();
+	                const cardElement = event.currentTarget.closest("[data-order-workflow-task-card]") as HTMLElement | null;
+	                onWorkflowTaskDoneToggle?.(checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
+	              }
+	              updateWorkflowTask(workflowTask.id, {
+	                done: checked,
+	                completedAt: checked ? new Date().toISOString() : null,
+	                completedBy: checked ? (workflowTask.completedBy || workflowTask.owner) : "",
+	              });
+	            }}
+	            style={{ marginTop: 5 }}
+	          />
+	          <div style={{ minWidth: 0 }}>
+	            {editing ? (
+	              <>
+	                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "center" }}>
+	                  <input
+	                    aria-label="Edit job task"
+	                    value={workflowTask.title}
+	                    onChange={(event) => updateWorkflowTask(workflowTask.id, { title: event.target.value })}
+	                    style={{ width: "100%", border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? "rgba(255,255,255,0.50)" : DT.cardBg, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textDecoration: done ? "line-through" : "none", outline: "none" }}
+	                  />
+	                  <button
+	                    type="button"
+	                    onClick={() => {
+	                      if (deleteArmed) {
+	                        deleteWorkflowTask(workflowTask.id);
+	                        return;
+	                      }
+	                      setPendingDeleteTaskId(workflowTask.id);
+	                    }}
+	                    aria-label="Delete job task"
+	                    style={{ border: "1px solid rgba(146,42,35,0.16)", background: deleteArmed ? "rgba(146,42,35,0.12)" : "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+	                  >
+	                    {deleteArmed ? "Delete now" : "Delete"}
+	                  </button>
+	                </div>
+	                <div style={{ marginTop: 5, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
+	                  <OrderCommandPill label="Tuesday task" tone={done ? "good" : "teal"} />
+	                  <PersonSelect value={workflowTask.owner} onChange={(value) => updateWorkflowTask(workflowTask.id, { owner: value })} workshopOnly />
+	                  <input
+	                    type="date"
+	                    value={workflowTask.scheduledDate || ""}
+	                    onChange={(event) => updateWorkflowTask(workflowTask.id, { scheduledDate: event.target.value })}
+	                    style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+	                  />
+	                  {workflowTask.done && <PersonSelect value={workflowTask.completedBy} onChange={(value) => updateWorkflowTask(workflowTask.id, { completedBy: value })} />}
+	                </div>
+	                <input
+	                  value={workflowTask.notes}
+	                  onChange={(event) => updateWorkflowTask(workflowTask.id, { notes: event.target.value })}
+	                  placeholder="Task notes"
+	                  style={{ marginTop: 5, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+	                />
+	                <button type="button" onClick={() => setEditingWorkflowTaskId(null)} style={{ marginTop: 6, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Done editing</button>
+	              </>
+	            ) : (
+	              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+	                <div style={{ minWidth: 0 }}>
+	                  <div style={{ fontFamily: DT.sans, fontSize: 12.5, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.2, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{workflowTask.title}</div>
+	                  <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.meta}</div>
+	                  {workflowTask.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{workflowTask.notes}</div>}
+	                </div>
+	                <button type="button" onClick={() => setEditingWorkflowTaskId(workflowTask.id)} style={{ flex: "0 0 auto", border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
+	              </div>
+	            )}
+	          </div>
+	        </div>
+	      );
+	    }
+	    const planTask = task.planTask;
+	    if (!planTask) return null;
+	    const placementLabel = planTaskPlacementLabel(planTask);
+	    return (
+	      <div key={task.key} data-order-plan-task-card="order-plan-task-card" style={{ ...taskCardStyle(done), padding: "7px 8px" }}>
+	        <input
+	          type="checkbox"
+	          checked={done}
+	          aria-label={`Mark ${planTask.text} ${done ? "not done" : "done"}`}
+	          onChange={(event) => {
+	            const checked = event.target.checked;
+	            const checkboxRect = event.currentTarget.getBoundingClientRect();
+	            const cardElement = event.currentTarget.closest("[data-order-plan-task-card]") as HTMLElement | null;
+	            onPlanTaskDoneToggle(planTask, checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
+	          }}
+	          style={{ marginTop: 5 }}
+	        />
+	        <div style={{ minWidth: 0 }}>
+	          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "start" }}>
+	            <div style={{ minWidth: 0 }}>
+	              <div style={{ fontFamily: DT.sans, fontSize: 12.5, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.2, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{planTask.text}</div>
+	              <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.meta}</div>
+	              {planTask.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{planTask.notes}</div>}
+	              <div style={{ marginTop: 5, display: "flex", gap: 5, flexWrap: "wrap" }}>
+	                <OrderCommandPill label="Schedule" tone={done ? "good" : "teal"} />
+	                {placementLabel && <OrderCommandPill label={placementLabel} tone="neutral" />}
+	              </div>
+	            </div>
+	            <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+	              <button type="button" onClick={(event) => onPlanTaskDoneToggle(planTask, !done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.20)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
+	              <button type="button" onClick={() => onPlanTaskEdit(planTask)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
+	              {planTask.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(planTask)} style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Unlink</button>}
+	            </div>
+	          </div>
+	        </div>
+	      </div>
+	    );
+	  }
+
+	  return (
     <div style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Tuesday</div>
-          <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 16, color: DT.textPrimary, fontWeight: 950 }}>Tasks</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Production path</div>
+          <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 16, color: DT.textPrimary, fontWeight: 950 }}>Scheduled tasks</div>
           <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, lineHeight: 1.35 }}>
-            Current step: {activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} · suggested next: {defaultDraftAction}
+            Current stage: {activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} · next task: {defaultDraftAction}
           </div>
         </div>
         <OrderCommandPill label={`${openCount} open · ${doneCount} done`} tone={openCount ? "teal" : "neutral"} />
@@ -4300,7 +4577,7 @@ function OrderTasksPanel({
             style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "7px 8px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg }}
           >
             {productionTaskOptions.length > 0 && (
-              <optgroup label="Production flow">
+              <optgroup label="Production path">
                 {productionTaskOptions.map((option, optionIndex) => <option key={option.label} value={option.label}>{numberedJobTaskOptionLabel(option.label, optionIndex)}</option>)}
               </optgroup>
             )}
@@ -4345,147 +4622,62 @@ function OrderTasksPanel({
         </div>
       </div>
 
-      <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
-        {totalCount === 0 && <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, lineHeight: 1.35 }}>No tasks saved for this order yet.</div>}
-        {orderedWorkflowTasks.map((task) => {
-          const done = Boolean(task.done);
-          const editing = editingWorkflowTaskId === task.id;
-          return (
-            <div key={`workflow-${task.id}`} data-order-workflow-task-card="order-workflow-task-card" style={taskCardStyle(done)}>
-              <input
-                type="checkbox"
-                checked={done}
-                onChange={(event) => {
-                  const checked = event.target.checked;
-                  if (checked) {
-                    const checkboxRect = event.currentTarget.getBoundingClientRect();
-                    const cardElement = event.currentTarget.closest("[data-order-workflow-task-card]") as HTMLElement | null;
-                    onWorkflowTaskDoneToggle?.(checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
-                  }
-                  updateWorkflowTask(task.id, {
-                    done: checked,
-                    completedAt: checked ? new Date().toISOString() : null,
-                    completedBy: checked ? (task.completedBy || task.owner) : "",
-                  });
-                }}
-                style={{ marginTop: 7 }}
-              />
-              <div style={{ minWidth: 0 }}>
-                {editing ? (
-                  <>
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "center" }}>
-                      <input
-                        aria-label="Edit job task"
-                        value={task.title}
-                        onChange={(event) => updateWorkflowTask(task.id, { title: event.target.value })}
-                        style={{ width: "100%", border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? "rgba(255,255,255,0.50)" : DT.cardBg, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textDecoration: done ? "line-through" : "none", outline: "none" }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm("Delete this task from this order?")) deleteWorkflowTask(task.id);
-                        }}
-                        aria-label="Delete job task"
-                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                    <div style={{ marginTop: 5, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : "rgba(12,124,122,0.16)"}`, background: done ? "rgba(255,255,255,0.45)" : DT.tealSoft, color: done ? DONE_TASK_VISUAL.text : DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>Added</span>
-                      <PersonSelect value={task.owner} onChange={(value) => updateWorkflowTask(task.id, { owner: value })} workshopOnly />
-                      <input
-                        type="date"
-                        value={task.scheduledDate || ""}
-                        onChange={(event) => updateWorkflowTask(task.id, { scheduledDate: event.target.value })}
-                        style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
-                      />
-                      {task.done && <PersonSelect value={task.completedBy} onChange={(value) => updateWorkflowTask(task.id, { completedBy: value })} />}
-                      {task.completedAt && <span style={taskMetaStyle(done)}>Done {formatCompletedAt(task.completedAt)}</span>}
-                    </div>
-                    <input
-                      value={task.notes}
-                      onChange={(event) => updateWorkflowTask(task.id, { notes: event.target.value })}
-                      placeholder="Task notes"
-                      style={{ marginTop: 5, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
-                    />
-                    <button type="button" onClick={() => setEditingWorkflowTaskId(null)} style={{ marginTop: 6, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Done editing</button>
-                  </>
-                ) : (
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.22, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{task.title}</div>
-                      <div style={{ marginTop: 4, ...taskMetaStyle(done) }}>
-                        {task.owner || "No owner"} · {task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}
-                        {task.completedAt ? ` · Done ${formatCompletedAt(task.completedAt)}` : ""}
-                      </div>
-                      {task.notes && <div style={{ marginTop: 4, ...taskMetaStyle(done) }}>{task.notes}</div>}
-                    </div>
-                    <button type="button" onClick={() => setEditingWorkflowTaskId(task.id)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {orderedPlanTasks.map((task) => {
-          const done = Boolean(task.done);
-          const placementLabel = planTaskPlacementLabel(task);
-          return (
-            <div key={`plan-${task.id}`} data-order-plan-task-card="order-plan-task-card" style={taskCardStyle(done)}>
-              <input
-                type="checkbox"
-                checked={done}
-                onChange={(event) => {
-                  const checked = event.target.checked;
-                  const checkboxRect = event.currentTarget.getBoundingClientRect();
-                  const cardElement = event.currentTarget.closest("[data-order-plan-task-card]") as HTMLElement | null;
-                  onPlanTaskDoneToggle(task, checked, { x: checkboxRect.left + checkboxRect.width / 2, y: checkboxRect.top + checkboxRect.height / 2, cardRect: cardElement?.getBoundingClientRect() });
-                }}
-                style={{ marginTop: 7 }}
-              />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "start" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.22, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{task.text}</div>
-                    <div style={{ marginTop: 4, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : "rgba(12,124,122,0.16)"}`, background: done ? "rgba(255,255,255,0.45)" : DT.tealSoft, color: done ? DONE_TASK_VISUAL.text : DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>Schedule</span>
-                      {placementLabel && <span style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : "rgba(12,124,122,0.16)"}`, background: done ? "rgba(255,255,255,0.45)" : "rgba(12,124,122,0.08)", color: done ? DONE_TASK_VISUAL.text : DT.teal, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{placementLabel}</span>}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <button
-                      type="button"
-                      onClick={(event) => onPlanTaskDoneToggle(task, !done, { x: event.clientX, y: event.clientY })}
-                      style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.20)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
-                    >
-                      {done ? "Undo" : "Done"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPlanTaskEdit(task)}
-                      style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
-                    >
-                      Edit
-                    </button>
-                    {task.assignedViaTuesday && (
-                      <button
-                        type="button"
-                        onClick={() => onRemoveTaskLink(task)}
-                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
-                      >
-                        Unlink
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div style={{ marginTop: 5, ...taskMetaStyle(done) }}>{task.dateLabel} · {PERSON_LABELS[task.person]} · {task.rowName}</div>
-                {task.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.notes}</div>}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+	      <div style={{ marginTop: 10, display: "grid", gap: 7 }}>
+	        {productionSteps.length === 0 && totalCount === 0 && <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, lineHeight: 1.35 }}>No tasks saved for this order yet.</div>}
+	        {pathRows.map(({ step, index, rowTasks }) => {
+	          const done = index < productionStepIndex;
+	          const active = index === productionStepIndex;
+	          const fill = active ? DT.teal : done ? DT.sage : DT.textFaint;
+	          const suggested = suggestedJobTaskLabelForStep(step, order);
+	          const waitActive = step.wait && active;
+	          return (
+	            <div key={step.key} style={{ border: `1px solid ${active ? "rgba(12,124,122,0.24)" : waitActive ? TUESDAY_THEME.amberLine : DT.border}`, background: active ? "rgba(237,248,247,0.70)" : waitActive ? TUESDAY_THEME.amberSoft : "rgba(255,255,255,0.74)", borderRadius: 11, padding: "8px 9px", display: "grid", gridTemplateColumns: "32px minmax(0, 1fr)", gap: 9, alignItems: "start" }}>
+	              <div style={{ width: 28, height: 28, borderRadius: step.wait ? 8 : 999, border: `1px ${step.wait ? "dashed" : "solid"} ${active ? fill : done ? "rgba(95,127,95,0.35)" : DT.border}`, background: done ? "rgba(95,127,95,0.12)" : active ? "rgba(12,124,122,0.10)" : "rgba(255,255,255,0.76)", color: fill, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>
+	                {done ? "✓" : index + 1}
+	              </div>
+	              <div style={{ minWidth: 0 }}>
+	                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
+	                  <div style={{ minWidth: 0 }}>
+	                    <div style={{ fontFamily: DT.sans, fontSize: 13.5, lineHeight: 1.2, color: active ? DT.teal : done ? DT.textSecondary : DT.textPrimary, fontWeight: 950, textDecoration: done && !active ? "line-through" : "none", overflowWrap: "anywhere" }}>{step.label}</div>
+	                    <div style={{ marginTop: 2, display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+	                      {suggested && <span style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 850 }}>{suggested}</span>}
+	                      {step.wait && <OrderCommandPill label={step.waitLabel || "Wait"} tone="warn" />}
+	                      {active && <OrderCommandPill label="Current" tone="teal" />}
+	                    </div>
+	                  </div>
+	                  {rowTasks.length === 0 && suggested && (
+	                    <button
+	                      type="button"
+	                      onClick={() => {
+	                        if (taskOptions.some((option) => option.label === suggested)) {
+	                          setDraftAction(suggested);
+	                          return;
+	                        }
+	                        setDraftAction("Custom");
+	                        setDraftCustom(suggested);
+	                      }}
+	                      style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+	                    >
+	                      Plan this
+	                    </button>
+	                  )}
+	                </div>
+	                <div style={{ marginTop: rowTasks.length ? 7 : 5, display: "grid", gap: 6 }}>
+	                  {rowTasks.length ? rowTasks.map((task) => renderUnifiedTask(task)) : (
+	                    <div style={{ border: `1px dashed ${DT.border}`, background: "rgba(255,255,255,0.52)", borderRadius: 9, padding: "6px 7px", fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 850 }}>No scheduled task on this step yet.</div>
+	                  )}
+	                </div>
+	              </div>
+	            </div>
+	          );
+	        })}
+	        {supportTasks.length > 0 && (
+	          <div style={{ border: `1px solid ${DT.border}`, background: "rgba(247,245,239,0.76)", borderRadius: 11, padding: "8px 9px" }}>
+	            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Support / off-path tasks</div>
+	            <div style={{ marginTop: 7, display: "grid", gap: 6 }}>{supportTasks.map((task) => renderUnifiedTask(task))}</div>
+	          </div>
+	        )}
+	      </div>
     </div>
   );
 }
@@ -4797,6 +4989,65 @@ function formatOrderQuantity(value: number | null | undefined) {
   return `${quantity} ${value === 1 ? "item" : "items"}`;
 }
 
+type InvoiceSpecLineLike = {
+  description: string;
+  quantity?: number | null;
+  lineAmount?: number | null;
+};
+
+function InvoiceSpecCard({
+  line,
+  sourceLabel,
+  primary = false,
+  compact = false,
+  showDelivery = true,
+}: {
+  line: InvoiceSpecLineLike;
+  sourceLabel?: string;
+  primary?: boolean;
+  compact?: boolean;
+  showDelivery?: boolean;
+}) {
+  const parsed = parseIntakeInvoiceLine(line.description);
+  const facts = formatParsedIntakeSpec(parsed);
+  const specFacts = facts.filter((fact) => !DELIVERY_FACT_LABELS.has(fact.label));
+  const deliveryFacts = facts.filter((fact) => DELIVERY_FACT_LABELS.has(fact.label));
+  const titleSize = compact ? 17 : primary ? 24 : 15;
+  const labelWidth = compact ? 74 : primary ? 98 : 78;
+  return (
+    <div style={{ border: `1px solid ${primary ? "rgba(12,124,122,0.26)" : DT.border}`, borderRadius: 11, padding: compact ? 9 : primary ? 12 : 8, background: primary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.74)", boxShadow: primary ? "0 8px 18px rgba(37,30,20,0.045)" : "none", minWidth: 0 }}>
+      <div style={{ display: "grid", gap: compact ? 5 : 6, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
+        <div style={{ fontFamily: DT.serif, fontSize: titleSize, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.03, overflowWrap: "anywhere" }}>{parsed.title}</div>
+        {specFacts.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: compact ? 10.5 : 11.5, color: DT.textMuted, fontWeight: 850 }}>No structured spec captured yet.</div>}
+        {specFacts.map((fact) => (
+          <div key={`${fact.label}:${fact.value}`} style={{ display: "grid", gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, gap: compact ? 7 : 10, fontSize: compact ? 11 : 12.5, fontWeight: 900, overflowWrap: "anywhere", alignItems: "baseline" }}>
+            <span style={{ color: DT.textMuted, fontWeight: 950 }}>{fact.label}</span>
+            <span>{fact.value}</span>
+          </div>
+        ))}
+      </div>
+      {parsed.notes.map((note) => <div key={note} style={{ marginTop: 7, fontFamily: DT.sans, fontSize: compact ? 10.5 : 11, color: DT.textMuted, fontWeight: 850, lineHeight: 1.25, overflowWrap: "anywhere" }}>{note}</div>)}
+      {showDelivery && deliveryFacts.length > 0 && (
+        <div style={{ marginTop: 9, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(247,245,239,0.72)", borderRadius: 9, padding: "7px 8px" }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Delivered to</div>
+          <div style={{ marginTop: 4, display: "grid", gap: 3 }}>
+            {deliveryFacts.map((fact) => (
+              <div key={`${fact.label}:${fact.value}`} style={{ fontFamily: DT.sans, fontSize: compact ? 10 : 10.5, fontWeight: 850, color: DT.textSecondary, lineHeight: 1.28, overflowWrap: "anywhere" }}>
+                {fact.value}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap", fontFamily: DT.sans, fontSize: compact ? 10 : 11, color: DT.textMuted, fontWeight: 950 }}>
+        {line.quantity !== undefined && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>Qty {formatXeroQuantity(line.quantity)}</span>}
+        {line.lineAmount !== undefined && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>{formatXeroMoney(line.lineAmount)}</span>}
+        {sourceLabel && <span style={{ border: `1px solid rgba(12,124,122,0.14)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 6px" }}>{sourceLabel}</span>}
+      </div>
+    </div>
+  );
+}
+
 function activeOrderFallbackDescription(order: UiOrder) {
   const lines = [order.rawMondayItem || order.product || "Order"];
   if (order.rawMondayTopPanel) lines.push(`Top / panel: ${order.rawMondayTopPanel}`);
@@ -4907,47 +5158,17 @@ function WorkshopSpec({
 	          )}
 	        </div>
 	      </div>
-	      <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 11, background: "rgba(237,248,247,0.45)", padding: 8, display: "grid", gap: 7 }}>
-	        {visibleSpecLines.map((line, index) => {
-	          const parsed = parseIntakeInvoiceLine(line.description);
-	          const isPrimary = index === 0;
-	          const facts = formatParsedIntakeSpec(parsed);
-            const specFacts = facts.filter((fact) => !DELIVERY_FACT_LABELS.has(fact.label));
-            const deliveryFacts = facts.filter((fact) => DELIVERY_FACT_LABELS.has(fact.label));
-	          return (
-	            <div key={`${line.description}:${index}`} style={{ border: `1px solid ${isPrimary ? "rgba(12,124,122,0.24)" : DT.border}`, borderRadius: 10, padding: isPrimary ? 10 : 7, background: isPrimary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.72)", boxShadow: isPrimary ? "0 7px 16px rgba(37,30,20,0.045)" : "none" }}>
-	              <div style={{ display: "grid", gap: isPrimary ? 6 : 3, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
-	                <div style={{ fontFamily: DT.serif, fontSize: isPrimary ? 20 : 13, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.04 }}>{parsed.title}</div>
-	                {specFacts.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 850 }}>No structured spec captured yet.</div>}
-	                {specFacts.map((fact) => (
-	                  <div key={`${fact.label}:${fact.value}`} style={{ display: "grid", gridTemplateColumns: isPrimary ? "92px minmax(0, 1fr)" : "74px minmax(0, 1fr)", gap: isPrimary ? 10 : 7, fontSize: isPrimary ? 11.5 : 9.5, fontWeight: 900, overflowWrap: "anywhere", alignItems: "baseline" }}>
-	                    <span style={{ color: DT.textMuted, fontWeight: 950 }}>{fact.label}</span>
-	                    <span>{fact.value}</span>
-	                  </div>
-	                ))}
-	              </div>
-	              {parsed.notes.map((note) => <div key={note} style={{ marginTop: 6, fontFamily: DT.sans, fontSize: isPrimary ? 11 : 9.5, color: DT.textMuted, fontWeight: 850, lineHeight: 1.2 }}>{note}</div>)}
-                {deliveryFacts.length > 0 && (
-                  <div style={{ marginTop: 8, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(247,245,239,0.72)", borderRadius: 8, padding: "7px 8px" }}>
-                    <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Delivery</div>
-                    <div style={{ marginTop: 4, display: "grid", gap: 3 }}>
-                      {deliveryFacts.map((fact) => (
-                        <div key={`${fact.label}:${fact.value}`} style={{ fontFamily: DT.sans, fontSize: isPrimary ? 10.5 : 9.5, fontWeight: 850, color: DT.textSecondary, lineHeight: 1.28, overflowWrap: "anywhere" }}>
-                          {fact.value}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-	              <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontFamily: DT.sans, fontSize: isPrimary ? 10 : 9, color: DT.textMuted, fontWeight: 950 }}>
-	                <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>Qty {formatXeroQuantity(line.quantity)}</span>
-	                <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>{formatXeroMoney(line.lineAmount)}</span>
-	                <span style={{ border: `1px solid rgba(12,124,122,0.14)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 6px" }}>{specSourceLabel}</span>
-	              </div>
-	            </div>
-	          );
-		        })}
-		      </div>
+		      <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 11, background: "rgba(237,248,247,0.45)", padding: 8, display: "grid", gap: 7 }}>
+		        {visibleSpecLines.map((line, index) => (
+		          <InvoiceSpecCard
+		            key={`${line.description}:${index}`}
+		            line={line}
+		            sourceLabel={specSourceLabel}
+		            primary={index === 0}
+		            compact={index > 0}
+		          />
+		        ))}
+			      </div>
 		      {afterSpec && <div style={{ marginTop: 8 }}>{afterSpec}</div>}
 		      {deliveryDetail && !visibleSpecLines.some((line) => parseIntakeInvoiceLine(line.description).facts.some((fact) => DELIVERY_FACT_LABELS.has(fact.label))) && (
 		        <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "8px 9px" }}>
@@ -5048,6 +5269,7 @@ function OrderPhotoTray({ orderId, embedded = false, onPhotoUploaded }: { orderI
   const [status, setStatus] = useState<string>("Loading photos...");
   const [disabledReason, setDisabledReason] = useState<string>("");
   const [deletingPathname, setDeletingPathname] = useState<string>("");
+  const [pendingDeletePathname, setPendingDeletePathname] = useState<string>("");
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -5072,7 +5294,6 @@ function OrderPhotoTray({ orderId, embedded = false, onPhotoUploaded }: { orderI
 
 
   async function deletePhoto(photo: OrderPhoto) {
-    if (!window.confirm("Delete this order photo?")) return;
     setDeletingPathname(photo.pathname);
     setStatus("Deleting photo...");
     try {
@@ -5084,7 +5305,17 @@ function OrderPhotoTray({ orderId, embedded = false, onPhotoUploaded }: { orderI
       setStatus("Photo deleted");
     } finally {
       setDeletingPathname("");
+      setPendingDeletePathname("");
     }
+  }
+
+  function requestDeletePhoto(photo: OrderPhoto) {
+    if (pendingDeletePathname !== photo.pathname) {
+      setPendingDeletePathname(photo.pathname);
+      setStatus("Press Delete again to remove this photo.");
+      return;
+    }
+    deletePhoto(photo).catch((err) => setStatus(err instanceof Error ? err.message : "Delete failed"));
   }
 
   async function uploadPhoto(file: File) {
@@ -5154,12 +5385,12 @@ function OrderPhotoTray({ orderId, embedded = false, onPhotoUploaded }: { orderI
               <button
                 type="button"
                 disabled={deletingPathname === photo.pathname}
-                onClick={() => deletePhoto(photo).catch((err) => setStatus(err instanceof Error ? err.message : "Delete failed"))}
-                style={{ position: "absolute", right: 4, top: 4, border: "1px solid rgba(0,0,0,0.10)", background: "rgba(255,253,249,0.92)", color: deletingPathname === photo.pathname ? DT.textFaint : DT.textMuted, borderRadius: 999, width: 24, height: 24, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: deletingPathname === photo.pathname ? "wait" : "pointer", lineHeight: "20px" }}
+                onClick={() => requestDeletePhoto(photo)}
+                style={{ position: "absolute", right: 4, top: 4, border: "1px solid rgba(146,42,35,0.16)", background: pendingDeletePathname === photo.pathname ? "rgba(146,42,35,0.88)" : "rgba(255,253,249,0.92)", color: deletingPathname === photo.pathname ? DT.textFaint : pendingDeletePathname === photo.pathname ? "#fff" : DT.textMuted, borderRadius: 999, minWidth: 30, height: 24, padding: "0 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: deletingPathname === photo.pathname ? "wait" : "pointer", lineHeight: "20px" }}
                 aria-label="Delete photo"
                 title="Delete photo"
               >
-                x
+                {pendingDeletePathname === photo.pathname ? "Sure" : "Del"}
               </button>
             </div>
           ))}
@@ -7229,6 +7460,7 @@ function MonthView({
   weeks,
   newOrder,
   orders,
+  orderCostings,
   delightEnabled,
   railFilter,
   onRailFilterChange,
@@ -7240,6 +7472,7 @@ function MonthView({
   weeks: PlanWeek[];
   newOrder: NewOrderPlanCandidate | null;
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   delightEnabled?: boolean;
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
@@ -7254,6 +7487,7 @@ function MonthView({
       weeks={weeks}
       newOrder={newOrder}
       ordersForHealth={orders}
+      orderCostings={orderCostings}
       delightEnabled={delightEnabled}
       railFilter={railFilter}
       onRailFilterChange={onRailFilterChange}
@@ -7325,6 +7559,26 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
   );
 }
 
+function MobilePlanPrimaryToggle({ view, onViewChange, orderCount }: { view: MobilePlanPrimaryView; onViewChange: (view: MobilePlanPrimaryView) => void; orderCount: number }) {
+  const options: Array<{ id: MobilePlanPrimaryView; label: string; meta: string }> = [
+    { id: "plan", label: "Plan", meta: "Schedule" },
+    { id: "orders", label: "Orders", meta: `${orderCount} live` },
+  ];
+  return (
+    <div data-mobile-plan-primary-toggle="true" aria-label="Mobile production plan section" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 4, padding: 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.78)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", position: "sticky", top: 56, zIndex: 42 }}>
+      {options.map((option) => {
+        const active = view === option.id;
+        return (
+          <button key={option.id} type="button" aria-pressed={active} onClick={() => onViewChange(option.id)} style={{ minWidth: 0, minHeight: 42, border: 0, borderRadius: 999, background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", touchAction: "manipulation", display: "grid", alignContent: "center", gap: 2 }}>
+            <span style={{ fontSize: 12, lineHeight: 1 }}>{option.label}</span>
+            <span style={{ fontSize: 8.5, lineHeight: 1, opacity: active ? 0.82 : 0.72 }}>{option.meta}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function processTemplateIssueStyle(level: ProcessTemplateIssueLevel): CSSProperties {
   if (level === "aligned") return { borderColor: "rgba(12,124,122,0.22)", background: "rgba(12,124,122,0.08)", color: DT.teal };
   if (level === "gap") return { borderColor: "rgba(161,31,31,0.22)", background: "rgba(161,31,31,0.07)", color: "#a11f1f" };
@@ -7356,9 +7610,26 @@ function processTemplateInputStyle(extra: CSSProperties = {}): CSSProperties {
     fontFamily: DT.sans,
     fontSize: 11,
     fontWeight: 850,
+    minHeight: 40,
     padding: "5px 7px",
     outline: "none",
     lineHeight: 1.15,
+    boxSizing: "border-box",
+    ...extra,
+  };
+}
+
+function processTemplateTextareaStyle(extra: CSSProperties = {}): CSSProperties {
+  return {
+    ...processTemplateInputStyle({
+      minHeight: 56,
+      padding: "8px 9px",
+      lineHeight: 1.28,
+      resize: "vertical",
+      overflow: "auto",
+      whiteSpace: "normal",
+      overflowWrap: "anywhere",
+    }),
     ...extra,
   };
 }
@@ -7371,9 +7642,10 @@ function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" =
     background: danger ? "rgba(161,31,31,0.06)" : primary ? DT.tealSoft : "rgba(255,255,255,0.74)",
     color: danger ? "#a11f1f" : primary ? DT.teal : DT.textMuted,
     borderRadius: 999,
-    padding: "4px 7px",
+    minHeight: 40,
+    padding: "8px 10px",
     fontFamily: DT.sans,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 950,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -7420,87 +7692,312 @@ function processTemplateColumnStyle(tone: "logic" | "tasks" | "flow"): CSSProper
   };
 }
 
-function reorderProcessTemplateItem<T>(items: T[], index: number, direction: -1 | 1) {
-  const nextIndex = index + direction;
-  if (nextIndex < 0 || nextIndex >= items.length) return items;
-  return arrayMove(items, index, nextIndex);
-}
-
 function processTemplateStepKey(label: string, index: number) {
   return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `step-${index + 1}`;
 }
 
-function ProcessTemplateTaskEditor({
-  tasks,
-  onChange,
+function processTemplatePathRowId(index: number) {
+  return `process-path-row-${index}`;
+}
+
+type ProcessTemplatePathRow = {
+  id: string;
+  task: ProcessTemplatePreview["suggestedTasks"][number] | undefined;
+  step: ProductionStep | undefined;
+};
+
+function SortableProcessTemplatePathRow({
+  row,
+  index,
+  rowCount,
+  onUpdateTask,
+  onUpdateStep,
+  onMove,
+  onDelete,
 }: {
-  tasks: ProcessTemplatePreview["suggestedTasks"];
-  onChange: (tasks: ProcessTemplatePreview["suggestedTasks"]) => void;
+  row: ProcessTemplatePathRow;
+  index: number;
+  rowCount: number;
+  onUpdateTask: (index: number, patch: Partial<ProcessTemplatePreview["suggestedTasks"][number]>) => void;
+  onUpdateStep: (index: number, patch: Partial<ProductionStep>) => void;
+  onMove: (index: number, direction: -1 | 1) => void;
+  onDelete: (index: number) => void;
 }) {
-  const updateTask = (index: number, patch: Partial<ProcessTemplatePreview["suggestedTasks"][number]>) => {
-    onChange(tasks.map((task, taskIndex) => taskIndex === index ? { ...task, ...patch } : task));
-  };
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: row.id,
+    data: { type: "process-template-path-row" },
+  });
+  const { task, step } = row;
+  const pathWait = Boolean(step?.wait);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {tasks.map((task, index) => (
-        <div key={`task-row-${index}`} data-process-template-row="task" style={{ display: "grid", gridTemplateColumns: "24px minmax(112px, 1fr) minmax(70px, 0.58fr) 60px 42px 96px", gap: 4, alignItems: "center", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "4px 5px", background: "rgba(255,255,255,0.86)", boxSizing: "border-box" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 24, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: DT.tealSoft, color: DT.teal, fontSize: 9, fontWeight: 950 }}>{index + 1}</span>
-          <input aria-label={`Suggested task ${index + 1} title`} value={task.title} onChange={(event) => updateTask(index, { title: event.target.value })} style={processTemplateInputStyle()} />
-          <input aria-label={`Suggested task ${index + 1} note`} value={task.note || ""} placeholder="Note" onChange={(event) => updateTask(index, { note: event.target.value })} style={processTemplateInputStyle({ color: DT.textMuted })} />
-          <select aria-label={`Suggested task ${index + 1} owner`} value={task.owner} onChange={(event) => updateTask(index, { owner: event.target.value as ProcessTemplatePreview["suggestedTasks"][number]["owner"] })} style={processTemplateInputStyle()}>
-            {PROCESS_TEMPLATE_OWNER_OPTIONS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
-          </select>
-          <input aria-label={`Suggested task ${index + 1} hours`} type="number" min={0} step={0.25} value={task.estimatedHours} onChange={(event) => updateTask(index, { estimatedHours: Number(event.target.value) })} style={processTemplateInputStyle()} />
-          <div style={processTemplateActionGroupStyle()}>
-            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(tasks, index, -1))} style={processTemplateTinyButtonStyle()} aria-label={`Move task ${index + 1} up`} title="Move up">Up</button>
-            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(tasks, index, 1))} style={processTemplateTinyButtonStyle()} aria-label={`Move task ${index + 1} down`} title="Move down">Dn</button>
-            <button type="button" onClick={() => onChange(tasks.filter((_, taskIndex) => taskIndex !== index))} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete task ${index + 1}`} title="Delete">Del</button>
-          </div>
-        </div>
-      ))}
-      <button type="button" onClick={() => onChange([...tasks, { title: "New task", owner: "Guido", estimatedHours: 0.5 }])} style={processTemplateTinyButtonStyle("primary")}>Add task</button>
+    <div
+      ref={setNodeRef}
+      key={row.id}
+      data-process-template-row="path"
+      style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 9, padding: "5px 6px", background: isDragging ? "rgba(237,248,247,0.96)" : pathWait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
+    >
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label={`Drag production path row ${index + 1}`}
+        title="Drag to reorder"
+        style={{ display: "grid", gridTemplateColumns: "1fr", alignItems: "center", gap: 2, minHeight: 40, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: pathWait ? "rgba(255,246,199,0.72)" : DT.tealSoft, color: pathWait ? "#9a6a14" : DT.teal, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: isDragging ? "grabbing" : "grab", touchAction: "none", padding: "5px 6px" }}
+      >
+        <span aria-hidden="true" style={{ color: DT.textMuted, fontSize: 7, lineHeight: 1, textTransform: "uppercase", letterSpacing: "0.04em" }}>Drag</span>
+        <span>{index + 1}</span>
+      </button>
+      <textarea aria-label={`Production path ${index + 1} task`} value={task?.title || ""} placeholder="Scheduled task" rows={2} onChange={(event) => onUpdateTask(index, { title: event.target.value })} style={processTemplateTextareaStyle()} />
+      <select aria-label={`Production path ${index + 1} task owner`} value={task?.owner || "Guido"} onChange={(event) => onUpdateTask(index, { owner: event.target.value as ProcessTemplatePreview["suggestedTasks"][number]["owner"] })} style={processTemplateInputStyle()}>
+        {PROCESS_TEMPLATE_OWNER_OPTIONS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+      </select>
+      <input aria-label={`Production path ${index + 1} hours`} type="number" min={0} step={0.25} value={task?.estimatedHours ?? 0} onChange={(event) => onUpdateTask(index, { estimatedHours: Number(event.target.value) })} style={processTemplateInputStyle()} />
+      <textarea aria-label={`Production path ${index + 1} flow stage`} value={step?.label || ""} placeholder="Visible flow stage" rows={2} onChange={(event) => onUpdateStep(index, { label: event.target.value, key: processTemplateStepKey(event.target.value, index) })} style={processTemplateTextareaStyle({ background: "rgba(255,253,249,0.94)" })} />
+      <select aria-label={`Production path ${index + 1} flow owner`} value={step?.who || ""} onChange={(event) => onUpdateStep(index, { who: event.target.value || null })} style={processTemplateInputStyle()}>
+        {PROCESS_TEMPLATE_WHO_OPTIONS.map((who) => <option key={who || "none"} value={who}>{who || "No owner"}</option>)}
+      </select>
+      <label style={{ position: "relative", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: DT.textMuted, fontSize: 9, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>
+        <input type="checkbox" checked={pathWait} onChange={(event) => onUpdateStep(index, { wait: event.target.checked })} style={{ position: "absolute", opacity: 0, width: 1, height: 1, margin: 0, pointerEvents: "none" }} />
+        <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,246,199,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? "#9a6a14" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 950, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
+        Supplier wait
+      </label>
+      <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="Wait label" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
+      <div style={processTemplateActionGroupStyle()}>
+        <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
+        <button type="button" onClick={() => onMove(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Dn</button>
+        <button type="button" onClick={() => onDelete(index)} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete production path row ${index + 1}`} title="Delete">Del</button>
+      </div>
+      <textarea aria-label={`Production path ${index + 1} note`} value={task?.note || ""} placeholder="Task note" rows={2} onChange={(event) => onUpdateTask(index, { note: event.target.value })} style={{ ...processTemplateTextareaStyle({ color: DT.textMuted, minHeight: 54 }), gridColumn: "2 / span 4" }} />
+      <div style={{ gridColumn: "6 / span 3", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850, lineHeight: 1.25, overflow: "visible", textOverflow: "clip", whiteSpace: "normal", overflowWrap: "anywhere" }}>
+        {task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Shows as ${step.label} in the order flow` : "Task and visible flow stage are aligned"}
+      </div>
     </div>
   );
 }
 
-function ProcessTemplateFlowEditor({
+function ProcessTemplatePathEditor({
+  tasks,
   steps,
-  onChange,
+  onTasksChange,
+  onStepsChange,
 }: {
+  tasks: ProcessTemplatePreview["suggestedTasks"];
   steps: ProductionStep[];
-  onChange: (steps: ProductionStep[]) => void;
+  onTasksChange: (tasks: ProcessTemplatePreview["suggestedTasks"]) => void;
+  onStepsChange: (steps: ProductionStep[]) => void;
 }) {
+  const rowCount = Math.max(tasks.length, steps.length);
+  const rows = Array.from({ length: rowCount }, (_, index) => ({ id: processTemplatePathRowId(index), task: tasks[index], step: steps[index] }));
+  const rowIds = rows.map((row) => row.id);
+  const pathSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const defaultTask = (index: number): ProcessTemplatePreview["suggestedTasks"][number] => ({
+    title: steps[index]?.label || "New task",
+    owner: "Guido",
+    estimatedHours: 0.5,
+  });
+  const defaultStep = (index: number): ProductionStep => ({
+    key: processTemplateStepKey(tasks[index]?.title || `Step ${index + 1}`, index),
+    label: tasks[index]?.title || "New flow step",
+    who: tasks[index]?.owner === "Guido" ? "Guido" : "Workshop",
+    wait: false,
+  });
+  const updateTask = (index: number, patch: Partial<ProcessTemplatePreview["suggestedTasks"][number]>) => {
+    const next = [...tasks];
+    next[index] = { ...(next[index] ?? defaultTask(index)), ...patch };
+    onTasksChange(next);
+  };
   const updateStep = (index: number, patch: Partial<ProductionStep>) => {
-    onChange(steps.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step));
+    const next = [...steps];
+    next[index] = { ...(next[index] ?? defaultStep(index)), ...patch };
+    onStepsChange(next);
+  };
+  const reorderPathRow = (index: number, direction: -1 | 1) => {
+    const nextRows = arrayMove(rows, index, index + direction);
+    onTasksChange(nextRows.flatMap((row) => row.task ? [row.task] : []));
+    onStepsChange(nextRows.flatMap((row) => row.step ? [row.step] : []));
+  };
+  const handlePathDragEnd = (event: DragEndEvent) => {
+    const activeId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : "";
+    if (!overId || activeId === overId) return;
+    const from = rows.findIndex((row) => row.id === activeId);
+    const to = rows.findIndex((row) => row.id === overId);
+    if (from < 0 || to < 0) return;
+    const nextRows = arrayMove(rows, from, to);
+    onTasksChange(nextRows.flatMap((row) => row.task ? [row.task] : []));
+    onStepsChange(nextRows.flatMap((row) => row.step ? [row.step] : []));
+  };
+  const deletePathRow = (index: number) => {
+    onTasksChange(tasks.filter((_, taskIndex) => taskIndex !== index));
+    onStepsChange(steps.filter((_, stepIndex) => stepIndex !== index));
   };
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {steps.length === 0 && (
-        <div style={{ border: "1px dashed rgba(161,31,31,0.26)", background: "rgba(161,31,31,0.04)", color: "#a11f1f", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontWeight: 900 }}>
-          No dedicated order-detail flow yet
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      {rowCount > 0 && (
+        <div
+          data-process-template-row="path-header"
+          style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "end", padding: "0 6px 2px", boxSizing: "border-box", fontFamily: DT.sans, fontSize: 8.5, lineHeight: 1.1, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}
+        >
+          <span>Drag</span>
+          <span>Task to schedule</span>
+          <span>Who does it</span>
+          <span>Hours</span>
+          <span>Stage shown on order</span>
+          <span>Stage owner</span>
+          <span>Supplier wait?</span>
+          <span>Wait time</span>
+          <span>Move / delete</span>
         </div>
       )}
-      {steps.map((step, index) => (
-        <div key={`flow-row-${index}`} data-process-template-row="flow" style={{ display: "grid", gridTemplateColumns: "24px minmax(112px, 1fr) 76px 50px minmax(70px, 0.54fr) 96px", gap: 4, alignItems: "center", border: `1px solid ${step.wait ? "rgba(190,137,24,0.20)" : DT.border}`, borderRadius: 8, padding: "4px 5px", background: step.wait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.86)", boxSizing: "border-box" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", height: 24, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: step.wait ? "rgba(255,246,199,0.72)" : DT.tealSoft, color: step.wait ? "#9a6a14" : DT.teal, fontSize: 9, fontWeight: 950 }}>{index + 1}</span>
-          <input aria-label={`Order flow step ${index + 1} label`} value={step.label} onChange={(event) => updateStep(index, { label: event.target.value, key: processTemplateStepKey(event.target.value, index) })} style={processTemplateInputStyle()} />
-          <select aria-label={`Order flow step ${index + 1} owner`} value={step.who || ""} onChange={(event) => updateStep(index, { who: event.target.value || null })} style={processTemplateInputStyle()}>
-            {PROCESS_TEMPLATE_WHO_OPTIONS.map((who) => <option key={who || "none"} value={who}>{who || "No owner"}</option>)}
-          </select>
-          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, color: DT.textMuted, fontSize: 9, fontWeight: 950 }}>
-            <input type="checkbox" checked={step.wait} onChange={(event) => updateStep(index, { wait: event.target.checked })} />
-            Wait
-          </label>
-          <input aria-label={`Order flow step ${index + 1} wait label`} value={step.waitLabel || ""} placeholder="Wait label" onChange={(event) => updateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
-          <div style={processTemplateActionGroupStyle()}>
-            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(steps, index, -1))} style={processTemplateTinyButtonStyle()} aria-label={`Move flow step ${index + 1} up`} title="Move up">Up</button>
-            <button type="button" onClick={() => onChange(reorderProcessTemplateItem(steps, index, 1))} style={processTemplateTinyButtonStyle()} aria-label={`Move flow step ${index + 1} down`} title="Move down">Dn</button>
-            <button type="button" onClick={() => onChange(steps.filter((_, stepIndex) => stepIndex !== index))} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete flow step ${index + 1}`} title="Delete">Del</button>
-          </div>
+      {rowCount === 0 && (
+        <div style={{ border: "1px dashed rgba(161,31,31,0.26)", background: "rgba(161,31,31,0.04)", color: "#a11f1f", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontWeight: 900 }}>
+          No production path yet
         </div>
-      ))}
-      <button type="button" onClick={() => onChange([...steps, { key: `step-${steps.length + 1}`, label: "New flow step", who: "Workshop", wait: false }])} style={processTemplateTinyButtonStyle("primary")}>Add step</button>
+      )}
+      <DndContext id="process-template-path" sensors={pathSensors} collisionDetection={closestCorners} onDragEnd={handlePathDragEnd}>
+        <SortableContext items={rowIds} strategy={verticalListSortingStrategy}>
+          {rows.map((row, index) => (
+            <SortableProcessTemplatePathRow
+              key={row.id}
+              row={row}
+              index={index}
+              rowCount={rowCount}
+              onUpdateTask={updateTask}
+              onUpdateStep={updateStep}
+              onMove={reorderPathRow}
+              onDelete={deletePathRow}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
+      <button
+        type="button"
+        onClick={() => {
+          onTasksChange([...tasks, { title: "New task", owner: "Guido", estimatedHours: 0.5 }]);
+          onStepsChange([...steps, { key: `step-${steps.length + 1}`, label: "New flow step", who: "Workshop", wait: false }]);
+        }}
+        style={processTemplateTinyButtonStyle("primary")}
+      >
+        Add path row
+      </button>
     </div>
+  );
+}
+
+function processTemplateRowCount(template: ProcessTemplatePreview) {
+  return Math.max(template.suggestedTasks.length, template.orderFlow.length);
+}
+
+function processTemplateTotalHours(template: ProcessTemplatePreview) {
+  return template.suggestedTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 0), 0);
+}
+
+function ProcessTemplateSummaryChip({ label }: { label: string }) {
+  return (
+    <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>
+      {label}
+    </span>
+  );
+}
+
+function ProcessTemplateCard({
+  template,
+  templateIndex,
+  isNarrow,
+  expanded,
+  onExpand,
+  updateTemplate,
+}: {
+  template: ProcessTemplatePreview;
+  templateIndex: number;
+  isNarrow: boolean;
+  expanded: boolean;
+  onExpand: () => void;
+  updateTemplate: (index: number, updater: (template: ProcessTemplatePreview) => ProcessTemplatePreview) => void;
+}) {
+  const showEditor = !isNarrow || expanded;
+  const rowCount = processTemplateRowCount(template);
+  const totalHours = processTemplateTotalHours(template);
+  const waitCount = template.orderFlow.filter((step) => step.wait).length;
+  const summaryLabel = `${rowCount} ${rowCount === 1 ? "step" : "steps"}`;
+  const titleRows = template.title.length > 26 ? 2 : 1;
+  return (
+    <article
+      key={template.id}
+      data-process-template-card="true"
+      data-process-template-expanded={expanded ? "true" : "false"}
+      style={{ border: `1px solid ${expanded || !isNarrow ? DT.border : "rgba(12,124,122,0.18)"}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? 10 : 12, display: "grid", gridTemplateColumns: showEditor ? "minmax(280px, 0.46fr) minmax(620px, 1fr)" : "1fr", gap: isNarrow ? 8 : 16, alignItems: "start" }}
+    >
+      <div style={processTemplateColumnStyle("logic")}>
+        <div style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? "1fr" : undefined, gap: 5, alignItems: "center", flexWrap: "wrap" }}>
+          {isNarrow && !showEditor ? (
+            <div title={template.title} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.88)", color: DT.textPrimary, fontFamily: DT.serif, fontSize: 18, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "11px 12px", overflowWrap: "anywhere" }}>
+              {template.title}
+            </div>
+          ) : isNarrow ? (
+            <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 18, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "9px 10px", resize: "vertical", minHeight: titleRows > 1 ? 76 : 54 })} />
+          ) : (
+            <input aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 20, lineHeight: 1.02, letterSpacing: "-0.03em", fontWeight: 850, padding: "5px 7px", flex: "1 1 164px" })} />
+          )}
+          <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: isNarrow ? "100%" : 110, flex: isNarrow ? undefined : "0 0 110px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
+            {PROCESS_TEMPLATE_ISSUE_OPTIONS.map((level) => <option key={level} value={level}>{PROCESS_TEMPLATE_ISSUE_LABELS[level]}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 7 }}>
+          <ProcessTemplateSummaryChip label={summaryLabel} />
+          <ProcessTemplateSummaryChip label={`${totalHours.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}h`} />
+          <ProcessTemplateSummaryChip label={`${template.detection.length} rules`} />
+          {waitCount ? <ProcessTemplateSummaryChip label={`${waitCount} waits`} /> : null}
+          <ProcessTemplateSummaryChip label={PROCESS_TEMPLATE_ISSUE_LABELS[template.issueLevel]} />
+        </div>
+        {isNarrow ? (
+          <textarea aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} rows={2} style={processTemplateInputStyle({ marginTop: 5, fontSize: 10, lineHeight: 1.25, minHeight: 58, resize: "vertical" })} />
+        ) : (
+          <input aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} style={processTemplateInputStyle({ marginTop: 5, fontSize: 10 })} />
+        )}
+        {showEditor ? (
+          <>
+            <textarea aria-label={`${template.title} description`} value={template.subtitle} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, subtitle: event.target.value }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ margin: "5px 0 8px", minHeight: isNarrow ? 74 : 44, resize: "vertical", color: DT.textMuted, lineHeight: 1.25, overflow: "auto" })} />
+            <div title="Rules Tuesday uses to decide when this process template applies." style={{ marginBottom: 5, fontSize: 9, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {template.detection.map((rule, ruleIndex) => (
+                <div key={`detection-row-${ruleIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 48px", gap: 6, alignItems: "start" }}>
+                  <textarea aria-label={`${template.title} matching rule ${ruleIndex + 1}`} value={rule} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.map((current, index) => index === ruleIndex ? event.target.value : current) }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ background: "rgba(245,243,238,0.65)", color: DT.textSecondary, fontSize: 10, minHeight: isNarrow ? 74 : 44, lineHeight: 1.22, resize: "vertical", overflow: "auto" })} />
+                  <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.filter((_, index) => index !== ruleIndex) }))} style={processTemplateTinyButtonStyle("danger")}>Del</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: [...item.detection, "New rule"] }))} style={processTemplateTinyButtonStyle("primary")}>Add rule</button>
+            </div>
+          </>
+        ) : (
+          <p style={{ margin: "7px 0 0", fontFamily: DT.sans, color: DT.textMuted, fontSize: 11, lineHeight: 1.35 }}>{template.subtitle}</p>
+        )}
+        {isNarrow && (
+          <button type="button" onClick={onExpand} aria-expanded={expanded} style={{ ...processTemplateTinyButtonStyle(expanded ? "neutral" : "primary"), width: "100%", marginTop: 8 }}>
+            {expanded ? "Editor open" : "Edit path and rules"}
+          </button>
+        )}
+      </div>
+      {showEditor && (
+        <div style={{ ...processTemplateColumnStyle("tasks"), overflowX: "auto" }}>
+          <div style={{ marginBottom: 7, display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
+            <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
+            <div style={{ fontSize: 9, fontWeight: 850, color: DT.textMuted }}>One row links the scheduled task to the visible order-flow stage.</div>
+          </div>
+          <ProcessTemplatePathEditor
+            tasks={template.suggestedTasks}
+            steps={template.orderFlow}
+            onTasksChange={(suggestedTasks) => updateTemplate(templateIndex, (item) => ({ ...item, suggestedTasks }))}
+            onStepsChange={(orderFlow) => updateTemplate(templateIndex, (item) => ({ ...item, orderFlow }))}
+          />
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -7509,6 +8006,8 @@ function ProcessTemplatesView() {
   const [dirty, setDirty] = useState(false);
   const [source, setSource] = useState<"loading" | "file" | "defaults" | "error">("loading");
   const [saveStatus, setSaveStatus] = useState<string>("Loading saved templates...");
+  const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
+  const isNarrow = useIsNarrow(760);
   const changeVersionRef = useRef(0);
   useEffect(() => {
     let active = true;
@@ -7517,7 +8016,9 @@ function ProcessTemplatesView() {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Process template load failed");
         if (!active) return;
-        setTemplates(Array.isArray(body.templates) ? body.templates : DEFAULT_PROCESS_TEMPLATE_PREVIEWS);
+        const nextTemplates: ProcessTemplatePreview[] = Array.isArray(body.templates) ? body.templates as ProcessTemplatePreview[] : DEFAULT_PROCESS_TEMPLATE_PREVIEWS;
+        setTemplates(nextTemplates);
+        setExpandedTemplateId((current) => current && nextTemplates.some((template) => template.id === current) ? current : null);
         setSource(body.source === "file" ? "file" : "defaults");
         setSaveStatus(body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Using built-in defaults");
       })
@@ -7547,11 +8048,13 @@ function ProcessTemplatesView() {
     }
     const savedAt = body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Saved";
     if (options.resetToDefaults) {
-      setTemplates(Array.isArray(body.templates) ? body.templates : DEFAULT_PROCESS_TEMPLATE_PREVIEWS);
+      const nextTemplates: ProcessTemplatePreview[] = Array.isArray(body.templates) ? body.templates as ProcessTemplatePreview[] : DEFAULT_PROCESS_TEMPLATE_PREVIEWS;
+      setTemplates(nextTemplates);
       changeVersionRef.current += 1;
       setDirty(false);
       setSource("file");
       setSaveStatus(savedAt);
+      setExpandedTemplateId(null);
       return;
     }
     if (options.mode === "manual" || options.version === changeVersionRef.current) {
@@ -7585,6 +8088,9 @@ function ProcessTemplatesView() {
           min-width: 0;
         }
         @media (max-width: 980px) {
+          [data-process-template-row="path-header"] {
+            display: none !important;
+          }
           [data-process-template-card] {
             grid-template-columns: 1fr !important;
           }
@@ -7604,10 +8110,7 @@ function ProcessTemplatesView() {
         }
         @media (min-width: 981px) and (max-width: 1320px) {
           [data-process-template-card] {
-            grid-template-columns: minmax(320px, 0.82fr) minmax(470px, 1fr) !important;
-          }
-          [data-process-template-flow-column] {
-            grid-column: 1 / -1 !important;
+            grid-template-columns: 1fr !important;
           }
         }
       `}</style>
@@ -7624,42 +8127,23 @@ function ProcessTemplatesView() {
         </div>
       </div>
       {templates.map((template, templateIndex) => (
-        <article key={template.id} data-process-template-card="true" style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: 12, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16, alignItems: "start" }}>
-          <div style={processTemplateColumnStyle("logic")}>
-            <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-              <input aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 20, lineHeight: 1.02, letterSpacing: "-0.03em", fontWeight: 850, padding: "5px 7px", flex: "1 1 164px" })} />
-              <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: 110, flex: "0 0 110px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
-                {PROCESS_TEMPLATE_ISSUE_OPTIONS.map((level) => <option key={level} value={level}>{PROCESS_TEMPLATE_ISSUE_LABELS[level]}</option>)}
-              </select>
-            </div>
-            <input aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} style={processTemplateInputStyle({ marginTop: 5, fontSize: 10 })} />
-            <textarea aria-label={`${template.title} description`} value={template.subtitle} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, subtitle: event.target.value }))} rows={2} style={processTemplateInputStyle({ margin: "5px 0 8px", minHeight: 44, resize: "vertical", color: DT.textMuted, lineHeight: 1.25, overflow: "hidden" })} />
-            <div title="Rules Tuesday uses to decide when this process template applies." style={{ marginBottom: 5, fontSize: 9, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {template.detection.map((rule, ruleIndex) => (
-                <div key={`detection-row-${ruleIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 48px", gap: 6, alignItems: "start" }}>
-                  <textarea aria-label={`${template.title} matching rule ${ruleIndex + 1}`} value={rule} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.map((current, index) => index === ruleIndex ? event.target.value : current) }))} rows={2} style={processTemplateInputStyle({ background: "rgba(245,243,238,0.65)", color: DT.textSecondary, fontSize: 10, minHeight: 36, lineHeight: 1.22, resize: "vertical", overflow: "hidden" })} />
-                  <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.filter((_, index) => index !== ruleIndex) }))} style={processTemplateTinyButtonStyle("danger")}>Del</button>
-                </div>
-              ))}
-              <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: [...item.detection, "New rule"] }))} style={processTemplateTinyButtonStyle("primary")}>Add rule</button>
-            </div>
-          </div>
-          <div style={processTemplateColumnStyle("tasks")}>
-            <div style={{ marginBottom: 7, fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Suggested tasks</div>
-            <ProcessTemplateTaskEditor tasks={template.suggestedTasks} onChange={(tasks) => updateTemplate(templateIndex, (item) => ({ ...item, suggestedTasks: tasks }))} />
-          </div>
-          <div data-process-template-flow-column="true" style={processTemplateColumnStyle("flow")}>
-            <div style={{ marginBottom: 7, fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Order-detail flow</div>
-            <ProcessTemplateFlowEditor steps={template.orderFlow} onChange={(orderFlow) => updateTemplate(templateIndex, (item) => ({ ...item, orderFlow }))} />
-          </div>
-        </article>
+        <ProcessTemplateCard
+          key={template.id}
+          template={template}
+          templateIndex={templateIndex}
+          isNarrow={isNarrow}
+          expanded={!isNarrow || expandedTemplateId === template.id}
+          onExpand={() => setExpandedTemplateId(template.id)}
+          updateTemplate={updateTemplate}
+        />
       ))}
       <button
         type="button"
         onClick={() => {
+          const newTemplateId = `template-${templates.length + 1}`;
           changeVersionRef.current += 1;
-          setTemplates((current) => [...current, { id: `template-${current.length + 1}`, title: "New template", subtitle: "Describe when this process applies.", detection: ["New detection rule"], suggestedTasks: [{ title: "Order Loaded", owner: "Guido", estimatedHours: 1 }], orderFlow: [], issueLevel: "watch", issueLabel: "Needs review" }]);
+          setTemplates((current) => [...current, { id: newTemplateId, title: "New template", subtitle: "Describe when this process applies.", detection: ["New detection rule"], suggestedTasks: [{ title: "Order Loaded", owner: "Guido", estimatedHours: 1 }], orderFlow: [], issueLevel: "watch", issueLabel: "Needs review" }]);
+          setExpandedTemplateId(newTemplateId);
           setDirty(true);
           setSaveStatus("Unsaved changes - autosave pending");
         }}
@@ -7728,7 +8212,7 @@ function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow
   const tasksForDay = (day: DayKey) => rows.flatMap((row) => row.tasks).filter((task) => task.day === day);
   const hoursFor = (tasks: OrderJourneyTask[], person?: Person) => tasks.filter((task) => !person || task.person === person).reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
   const compactControl = (label: string, active: boolean, onClick: () => void, disabled = false, disabledReason = "") => (
-    <button type="button" aria-pressed={active} aria-label={`${label} order schedule filter${disabledReason ? ` - ${disabledReason}` : ""}`} disabled={disabled} onClick={onClick} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.28)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "5px 9px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 10, fontWeight: 950, cursor: disabled ? "not-allowed" : "pointer", lineHeight: 1.05, whiteSpace: "nowrap", touchAction: "manipulation" }}>{label}</button>
+    <button type="button" aria-pressed={active} aria-label={`${label} order schedule filter${disabledReason ? ` - ${disabledReason}` : ""}`} disabled={disabled} onClick={onClick} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.28)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "5px 9px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 10, fontWeight: 950, cursor: disabled ? "not-allowed" : "pointer", lineHeight: 1.05, whiteSpace: "nowrap", touchAction: "manipulation" }}>{label}</button>
   );
   const dayGauge = (day: DayKey) => {
     const tasks = tasksForDay(day);
@@ -7932,7 +8416,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
             </span>
             <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
           </div>
-          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: compactMobile ? 2 : 3, minHeight: compactMobile ? 36 : undefined, display: compactMobile ? "flex" : undefined, alignItems: compactMobile ? "center" : undefined, padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: compactMobile ? 11.5 : 11.5, lineHeight: compactMobile ? 1.18 : 1.16, fontWeight: 950, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1 }}>{friendlyWorkshopTaskText(task.text)}</button>
+          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: compactMobile ? 2 : 3, minWidth: compactMobile ? 40 : undefined, minHeight: compactMobile ? 40 : undefined, display: compactMobile ? "flex" : undefined, alignItems: compactMobile ? "center" : undefined, padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: compactMobile ? 11.5 : 11.5, lineHeight: compactMobile ? 1.18 : 1.16, fontWeight: 950, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1, touchAction: compactMobile ? "manipulation" : undefined }}>{friendlyWorkshopTaskText(task.text)}</button>
         </div>
         <button
           type="button"
@@ -8064,14 +8548,14 @@ function OrderJourneyView({
           <div data-order-row-summary="true" style={{ padding: "7px 9px 6px", background: "rgba(255,253,249,0.72)" }}>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start" }}>
               {row.order ? (
-                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: 38, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 760, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, overflowWrap: "anywhere", touchAction: "manipulation" }}>{row.name}</button>
+                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 760, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, overflowWrap: "anywhere", touchAction: "manipulation" }}>{row.name}</button>
               ) : (
                 <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 760, overflowWrap: "anywhere" }}>{row.name}</div>
               )}
               {canMoveRow && (
                 <div data-order-row-priority-controls="order-row-priority-controls" title="Priority: move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
-                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ width: 36, height: 36, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 14, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1 }}>↑</button>
-                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ width: 36, height: 36, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 14, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1 }}>↓</button>
+                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ width: 40, height: 40, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 15, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1, touchAction: "manipulation" }}>↑</button>
+                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ width: 40, height: 40, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 15, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1, touchAction: "manipulation" }}>↓</button>
                 </div>
               )}
             </div>
@@ -8117,7 +8601,7 @@ function OrderJourneyView({
                 );
               })}
               {hiddenTaskCount > 0 && (
-                <button type="button" onClick={() => row.order && onOrderOpen(row.order.id)} style={{ border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.textMuted, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textAlign: "left", cursor: row.order ? "pointer" : "default" }}>
+                <button type="button" onClick={() => row.order && onOrderOpen(row.order.id)} style={{ minHeight: 40, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.textMuted, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textAlign: "left", cursor: row.order ? "pointer" : "default", touchAction: "manipulation" }}>
                   + {hiddenTaskCount} more task{hiddenTaskCount === 1 ? "" : "s"}
                 </button>
               )}
@@ -8132,13 +8616,13 @@ function OrderJourneyView({
           <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
               {row.order ? (
-	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 38 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 750, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
+	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 40 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 750, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
 	              ) : (
 	                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 16, lineHeight: 1.04, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
 	              )}
               {canMoveRow && (
                 <div data-order-row-drag-handle="order-row-drag-handle" data-order-row-priority-controls="order-row-priority-controls" title="Priority: move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
-                  <span aria-hidden="true" style={{ padding: "0 6px", height: 23, display: "inline-flex", alignItems: "center", borderRight: `1px solid ${DT.border}`, color: DT.textFaint, fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1 }}>
+                  <span aria-hidden="true" style={{ padding: "0 6px", height: isNarrow ? 40 : 23, display: "inline-flex", alignItems: "center", borderRight: `1px solid ${DT.border}`, color: DT.textFaint, fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1 }}>
                     Priority
                   </span>
                   <button
@@ -8150,7 +8634,7 @@ function OrderJourneyView({
                       const previousRow = activeRows[rowPriorityIndex - 1];
                       if (previousRow) onMoveRow(row.id, previousRow.id);
                     }}
-		                    style={{ width: 23, height: 23, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1 }}
+		                    style={{ width: isNarrow ? 40 : 23, height: isNarrow ? 40 : 23, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: isNarrow ? 15 : 12, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1, touchAction: isNarrow ? "manipulation" : undefined }}
 		                  >
 		                    ↑
 		                  </button>
@@ -8163,7 +8647,7 @@ function OrderJourneyView({
                       const nextRow = activeRows[rowPriorityIndex + 1];
                       if (nextRow) onMoveRow(nextRow.id, row.id);
                     }}
-		                    style={{ width: 23, height: 23, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1 }}
+		                    style={{ width: isNarrow ? 40 : 23, height: isNarrow ? 40 : 23, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: isNarrow ? 15 : 12, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1, touchAction: isNarrow ? "manipulation" : undefined }}
 		                  >
 		                    ↓
 		                  </button>
@@ -8239,10 +8723,10 @@ function OrderJourneyView({
         </div>
       </div>
       <div style={{ display: "flex", gap: isNarrow ? 4 : 6, alignItems: "center", flexWrap: "wrap" }}>
-        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset order" : "Reset to due-date order"}</button>}
-        <button type="button" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Prev" : "Previous week"}</button>
-        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "This" : "This week"}</button>
-        <button type="button" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 38 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Next" : "Next week"}</button>
+        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset order" : "Reset to due-date order"}</button>}
+        <button type="button" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Prev" : "Previous week"}</button>
+        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "This" : "This week"}</button>
+        <button type="button" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Next" : "Next week"}</button>
       </div>
     </div>
   );
@@ -8343,6 +8827,7 @@ function MonthViewState({
   weeks,
   newOrder,
   ordersForHealth,
+  orderCostings,
   delightEnabled = false,
   railFilter,
   onRailFilterChange,
@@ -8354,6 +8839,7 @@ function MonthViewState({
   weeks: PlanWeek[];
   newOrder: NewOrderPlanCandidate | null;
   ordersForHealth: UiOrder[];
+  orderCostings?: OrderCostingContext;
   delightEnabled?: boolean;
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
@@ -8368,6 +8854,7 @@ function MonthViewState({
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("orderRows");
+  const [mobilePrimaryView, setMobilePrimaryView] = useState<MobilePlanPrimaryView>("plan");
   const [orderRowsWeekIndex, setOrderRowsWeekIndex] = useState(0);
   const [orderDayFilter, setOrderDayFilter] = useState<OrderDayFilter>("allWeek");
   const [orderRowOrders, setOrderRowOrders] = useState<PlanRowOrders>(() => initialPlanTaskLinkState?.orderRowOrders ?? {});
@@ -8399,6 +8886,7 @@ function MonthViewState({
   const [orderIntakeBusy, setOrderIntakeBusy] = useState(false);
   const [openIntakeOrderId, setOpenIntakeOrderId] = useState<string | null>(null);
   const [orderWorkflowsById, setOrderWorkflowsById] = useState<Record<string, OrderWorkflowState>>({});
+  const [completionRequest, setCompletionRequest] = useState<TuesdayCompletionRequest | null>(null);
   const undoBoardLayoutsRef = useRef<BoardPlanTask[][]>([]);
   const dragStartBoardTasksRef = useRef<BoardPlanTask[] | null>(null);
   const lastBoardPreviewRef = useRef<string | null>(null);
@@ -8955,11 +9443,8 @@ function MonthViewState({
     if (!orderRowsWeekKey) return;
     persistOrderJourneyRowOrder(orderRowsWeekKey, null);
   }
-  function markOrderCompleteInTuesday(order: UiOrder) {
-    const completion = requestCompletionReason(order.customer);
-    if (!completion) return;
+  function executeMarkOrderCompleteInTuesday(order: UiOrder, completion: CompletionDecision) {
     const note = completion.note || `Marked complete in Tuesday. Source Monday status at time of edit: ${orderStatusLabel(order)}.`;
-    if (!window.confirm(`Mark ${order.customer} complete in Tuesday?\n\nThis hides it from active Tuesday order views. It does not change Monday.`)) return;
     const previousOrderOverrides = orderOverrides;
     setOrderOverrides((current) => ({
       ...current,
@@ -8993,11 +9478,12 @@ function MonthViewState({
       });
   }
 
-  function markIntakeOrderCompleteInTuesday(item: OrderIntakeItem) {
-    const completion = requestCompletionReason(item.customerName);
-    if (!completion) return;
+  function markOrderCompleteInTuesday(order: UiOrder) {
+    setCompletionRequest({ type: "order", order });
+  }
+
+  function executeMarkIntakeOrderCompleteInTuesday(item: OrderIntakeItem, completion: CompletionDecision) {
     const note = completion.note || `Marked complete in Tuesday from intake review. Invoice: ${item.invoiceNumber || "not recorded"}.`;
-    if (!window.confirm(`Mark ${item.customerName} complete in Tuesday?\n\nThis hides it from the Tuesday intake queue and schedule views. It does not change Xero or the source invoice.`)) return;
     const previousOrderOverrides = orderOverrides;
     setOrderOverrides((current) => ({
       ...current,
@@ -9030,8 +9516,11 @@ function MonthViewState({
       });
   }
 
-  function restoreCompletedTuesdayOrder(item: CompletedTuesdayItem) {
-    if (!window.confirm(`Restore ${item.label} to active Tuesday views?\n\nThis removes the Tuesday completion override only. It does not change Xero, Monday, or the source invoice.`)) return;
+  function markIntakeOrderCompleteInTuesday(item: OrderIntakeItem) {
+    setCompletionRequest({ type: "intake", item });
+  }
+
+  function executeRestoreCompletedTuesdayOrder(item: CompletedTuesdayItem) {
     const previousOrderOverrides = orderOverrides;
     setOrderOverrides((current) => {
       const next = { ...current };
@@ -9068,6 +9557,23 @@ function MonthViewState({
         setOrderIntakeStatus(message);
       });
   }
+
+  function restoreCompletedTuesdayOrder(item: CompletedTuesdayItem) {
+    setCompletionRequest({ type: "restore", item });
+  }
+
+  function confirmCompletionRequest(decision: CompletionDecision | null) {
+    const request = completionRequest;
+    if (!request) return;
+    setCompletionRequest(null);
+    if (request.type === "restore") {
+      executeRestoreCompletedTuesdayOrder(request.item);
+      return;
+    }
+    if (!decision) return;
+    if (request.type === "order") executeMarkOrderCompleteInTuesday(request.order, decision);
+    else executeMarkIntakeOrderCompleteInTuesday(request.item, decision);
+  }
   const openOrderTasks = useMemo(() => {
     if (!openOrder) return [];
     return boardOrderJourneyRows.find((row) => row.order?.id === openOrder.id)?.tasks ?? [];
@@ -9081,6 +9587,7 @@ function MonthViewState({
     setSelectedAssignmentTask(null);
     setSelectedWorkflow(null);
     setSelectedOrderId(id);
+    if (isRailNarrow) setMobilePrimaryView("orders");
   }
 
   function openOrderOverview(id: number) {
@@ -9766,7 +10273,7 @@ function MonthViewState({
       <div style={{ display: "flex", flexDirection: "column", gap: isRailNarrow ? 8 : 14, minWidth: 0 }}>
         <style>{ORDER_JOURNEY_MOBILE_CSS}</style>
         {workshopHeaderControl}
-        {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
+        {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
         {planViewMode === "schedule" ? (
           <>
             {newOrderPanel}
@@ -9824,6 +10331,7 @@ function MonthViewState({
   const orderRail = (
     <OrderRail
       orders={activeTuesdayOrders}
+      orderCostings={orderCostings}
       selectedOrder={selectedOrder}
       selectedOrderTasks={selectedOrderTasks}
       assignmentTask={selectedAssignmentTask}
@@ -9852,23 +10360,35 @@ function MonthViewState({
       tasksForOrder={(order) => planTasksForOrder(weeks, order, planTaskLinks)}
     />
   );
+  const mobilePrimaryToggle = isRailNarrow ? (
+    <MobilePlanPrimaryToggle view={mobilePrimaryView} onViewChange={setMobilePrimaryView} orderCount={activeTuesdayOrders.length} />
+  ) : null;
+  const completionDialog = completionRequest ? (
+    <TuesdayCompletionDialog
+      key={completionRequestKey(completionRequest)}
+      request={completionRequest}
+      onCancel={() => setCompletionRequest(null)}
+      onConfirm={confirmCompletionRequest}
+    />
+  ) : null;
 
   if (!planTaskLinksLoaded) {
     return <TuesdayPlanStateLoading isNarrow={isRailNarrow} />;
   }
 
   const desktopHealthStrip = !isRailNarrow ? (
-    <OrderHealthStrip orders={activeTuesdayOrders} activeFilter={railFilter} onFilterChange={onRailFilterChange} />
+    <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />
   ) : null;
 
   if (isRailNarrow) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {planningBoard}
+        {mobilePrimaryToggle}
+        {mobilePrimaryView === "plan" ? planningBoard : orderRail}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
-        {orderRail}
         {intakeReviewModal}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+        {completionDialog}
       </div>
     );
   }
@@ -9890,6 +10410,7 @@ function MonthViewState({
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {intakeReviewModal}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
+        {completionDialog}
       </div>
     </div>
   );
@@ -9898,6 +10419,7 @@ function MonthViewState({
 export type PlanClientProps = {
   rows: PlanRow[];
   orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
   syncedAt: string;
   source: "fresh" | "cache" | "snapshot" | "none";
   mondayError?: string;
@@ -9912,6 +10434,7 @@ export type PlanClientProps = {
 export default function PlanClient({
   rows,
   orders,
+  orderCostings,
   syncedAt,
   source,
   mondayError,
@@ -9979,6 +10502,7 @@ export default function PlanClient({
             weeks={activeWeeks}
             newOrder={newOrder}
             orders={orders}
+            orderCostings={orderCostings}
             delightEnabled={delightEnabled}
             railFilter={railFilter}
             onRailFilterChange={setRailFilter}

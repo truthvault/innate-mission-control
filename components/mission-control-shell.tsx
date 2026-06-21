@@ -5,10 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates";
+export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates";
 
 const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
   { section: "plan", label: "Production Plan", href: "/production/plan" },
+  { section: "stock", label: "Stock", href: "/production/stock" },
   { section: "samples", label: "Samples", href: "/production/samples" },
   { section: "processTemplates", label: "Processes", href: "/production/plan?view=process-templates" },
 ];
@@ -31,8 +32,8 @@ function relativeAge(iso: string): string {
 }
 
 function scopeFor(section: MissionControlSection): string {
-  if (section === "leads" || section === "calls" || section === "quoting" || section === "costings") return "local";
-  if (section === "plan" || section === "processTemplates") return "plan";
+  if (section === "leads" || section === "calls" || section === "quoting" || section === "costings" || section === "processTemplates" || section === "stock") return "local";
+  if (section === "plan") return "plan";
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
   return "orders";
@@ -133,7 +134,7 @@ function TuesdayMark() {
 
 function TuesdayBrand({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 11, width: isNarrow ? "100%" : 300, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 0 300px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", maxWidth: isNarrow ? undefined : 300, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 1 300px" }}>
       <TuesdayMark />
       <div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
@@ -173,16 +174,18 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
       setErr(e instanceof Error ? e.message : String(e));
     }
   };
+  const actionLabel = section === "processTemplates" ? "Reload" : "Refresh";
+  const refreshedLabel = section === "processTemplates" ? "Reloaded just now" : "Refreshed just now";
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8 }}>
       {!compact && err && <span style={{ fontSize: 10, color: "#fca5a5", fontFamily: DT.sans }} title={err}>Refresh error</span>}
-      {!compact && refreshed && !err && <span style={{ fontSize: 10, color: DT.gold, fontFamily: DT.sans }}>Refreshed just now</span>}
+      {!compact && refreshed && !err && <span style={{ fontSize: 10, color: DT.gold, fontFamily: DT.sans }}>{refreshedLabel}</span>}
       <button
         onClick={onClick}
         disabled={isPending}
-        aria-label={compact ? "Refresh Tuesday" : undefined}
-        title={compact ? err || (refreshed ? "Refreshed just now" : "Refresh Tuesday") : undefined}
+        aria-label={compact ? `${actionLabel} Tuesday` : undefined}
+        title={compact ? err || (refreshed ? refreshedLabel : `${actionLabel} Tuesday`) : undefined}
         style={{
           minWidth: compact ? 72 : undefined,
           minHeight: compact ? 40 : undefined,
@@ -199,7 +202,7 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
           opacity: isPending ? 0.6 : 1,
         }}
       >
-        {compact ? (isPending ? "..." : "Refresh") : isPending ? "Refreshing…" : "Refresh"}
+        {compact ? (isPending ? "..." : actionLabel) : isPending ? `${actionLabel}ing...` : actionLabel}
       </button>
     </div>
   );
@@ -311,7 +314,7 @@ export function MissionControlShell({
           }
         `}</style>
       <header style={{ position: "sticky", top: 0, zIndex: 1000 }}>
-        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "8px 10px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "300px minmax(620px, 1fr) 150px", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflow: "visible" }}>
+        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "8px 10px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(220px, 300px) minmax(0, 1fr) auto", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflow: "visible" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           {compactMobile && (
             <div className="mc-mobile-only" style={{ alignItems: "center", gap: 7 }}>
