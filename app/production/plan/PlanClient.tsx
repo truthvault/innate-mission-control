@@ -7221,6 +7221,160 @@ function DroppablePlanLane({
   );
 }
 
+function MobileScheduleAgenda({
+  week,
+  tasks = [],
+  suggestedSteps = [],
+  approvedSuggestions = false,
+  selectedOrder,
+  appTasks = [],
+  planTaskLinksLoaded = false,
+  resolveTaskOrderId,
+  resolveTaskOrderConnection,
+  isCurrentWeek,
+  isDraftChanged = false,
+  showDraftControls = false,
+  onResetDraftLayout,
+  onTaskSelect,
+  onTaskOpen,
+  onTaskEdit,
+  onTaskDoneToggle,
+  onAppTaskSelect,
+  onAppTaskOpen,
+  onSuggestedStepSelect,
+  onSuggestedStepOpen,
+  suggestedStepCustomer,
+  personFilter = "all",
+}: {
+  week: PlanWeek;
+  tasks?: BoardPlanTask[];
+  suggestedSteps?: SuggestedOrderPlanStep[];
+  approvedSuggestions?: boolean;
+  selectedOrder?: UiOrder | null;
+  appTasks?: AppPlanTask[];
+  planTaskLinksLoaded?: boolean;
+  resolveTaskOrderId?: (task: DraggablePlanTask) => number | null;
+  resolveTaskOrderConnection?: (task: DraggablePlanTask) => PlanTaskOrderConnection;
+  isCurrentWeek: boolean;
+  isDraftChanged?: boolean;
+  showDraftControls?: boolean;
+  onResetDraftLayout?: () => void;
+  onTaskSelect?: (task: DraggablePlanTask) => void;
+  onTaskOpen?: (task: DraggablePlanTask) => void;
+  onTaskEdit?: (task: BoardPlanTask) => void;
+  onTaskDoneToggle?: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onAppTaskSelect?: (task: AppPlanTask) => void;
+  onAppTaskOpen?: (task: AppPlanTask) => void;
+  onSuggestedStepSelect?: () => void;
+  onSuggestedStepOpen?: () => void;
+  suggestedStepCustomer?: string;
+  personFilter?: PersonFilter;
+}) {
+  const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
+  const todayKey = currentDayKey();
+  const days = DAYS.map((day) => {
+    const dateOption = suggestedDateOptionForWeekDay(week, day);
+    const people = visiblePeople.map((person) => {
+      const laneTasks = tasks.filter((task) => task.weekId === week.id && task.day === day && task.person === person).sort(sortBoardTasksForLane);
+      const laneAppTasks = appTasks.filter((task) => appTaskFallsInWeek(task, week) && task.day === day && task.person === person);
+      const laneSuggestions = suggestedSteps.filter((step) => step.day === day && step.person === person);
+      const hours = laneTasks.reduce((sum, task) => sum + cleanTaskEstimatedHours(task.estimatedHours), 0)
+        + laneAppTasks.filter((task) => !task.done).reduce((sum, task) => sum + cleanTaskEstimatedHours(task.estimatedHours), 0)
+        + laneSuggestions.reduce((sum, step) => sum + cleanTaskEstimatedHours(step.estimatedHours), 0);
+      return { person, laneTasks, laneAppTasks, laneSuggestions, hours };
+    });
+    const totalHours = people.reduce((sum, lane) => sum + lane.hours, 0);
+    const hasItems = people.some((lane) => lane.laneTasks.length || lane.laneAppTasks.length || lane.laneSuggestions.length);
+    return { day, dateOption, people, totalHours, hasItems, isToday: isCurrentWeek && todayKey === day };
+  });
+  const visibleDays = days.filter((day) => day.hasItems || day.isToday);
+  const taskRow = (task: BoardPlanTask) => {
+    const personVisual = PERSON_VISUALS[task.person];
+    const done = Boolean(task.done);
+    const connection = resolveTaskOrderConnection?.(task) ?? { orderId: resolveTaskOrderId?.(task) ?? null, confidence: "none" as PlanTaskOrderMatchConfidence };
+    const needsOrder = planTaskLinksLoaded && connection.confidence === "none";
+    const possibleOrder = planTaskLinksLoaded && connection.confidence === "possible";
+    const title = friendlyWorkshopTaskText(task.text);
+    return (
+      <div key={task.id} style={{ borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: `${done ? DONE_TASK_VISUAL.border : personVisual.taskBorder} ${done ? DONE_TASK_VISUAL.border : personVisual.taskBorder} ${done ? DONE_TASK_VISUAL.border : personVisual.taskBorder} ${done ? DONE_TASK_VISUAL.stripe : personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.88)", padding: "4px 5px", display: "grid", gap: 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr) auto auto", gap: 5, alignItems: "center" }}>
+          <button type="button" role="checkbox" aria-checked={done} aria-label={done ? "Mark task not done" : "Mark task done"} onClick={(event) => { event.stopPropagation(); onTaskDoneToggle?.(task, !done, { x: event.clientX, y: event.clientY }); }} style={{ width: 18, height: 18, border: `1.5px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: done ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 4, padding: 0, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, lineHeight: 1 }}>{done ? "✓" : ""}</button>
+          <button type="button" onClick={() => onTaskSelect?.(task)} onDoubleClick={() => onTaskOpen?.(task)} style={{ minWidth: 0, border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>
+            {title}
+          </button>
+          <span style={{ color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
+          <button type="button" aria-label="Edit task" onClick={(event) => { event.stopPropagation(); onTaskEdit?.(task); }} style={{ width: 22, height: 22, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 999, padding: 0, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>✎</button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, paddingLeft: 23 }}>
+          {(needsOrder || possibleOrder) && <span style={{ border: "1px solid rgba(190,137,24,0.24)", background: "rgba(255,246,199,0.78)", color: "#9a5b12", borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{needsOrder ? "Needs order" : "Check order"}</span>}
+          <span style={{ minWidth: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName || selectedOrder?.customer || "Workshop task"}</span>
+        </div>
+      </div>
+    );
+  };
+  const appTaskRow = (task: AppPlanTask) => {
+    const personVisual = PERSON_VISUALS[task.person];
+    const done = Boolean(task.done);
+    return (
+      <button key={task.id} type="button" onClick={() => onAppTaskSelect?.(task)} onDoubleClick={() => onAppTaskOpen?.(task)} style={{ width: "100%", borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : `rgba(190,137,24,0.42) rgba(190,137,24,0.42) rgba(190,137,24,0.42) ${personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.90)", padding: "4px 5px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 5, alignItems: "center", textAlign: "left" }}>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>{task.title}</span>
+          <span style={{ display: "block", marginTop: 2, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"}</span>
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours ?? 1)} <span style={{ color: DT.teal }}>{task.source === "intake" ? "Order" : "Job"}</span></span>
+      </button>
+    );
+  };
+  const suggestionRow = (step: SuggestedOrderPlanStep) => (
+    <button key={step.id} type="button" onClick={onSuggestedStepSelect} onDoubleClick={onSuggestedStepOpen} style={{ width: "100%", border: "1px dashed rgba(12,124,122,0.26)", borderLeft: `3px solid ${PERSON_VISUALS[step.person].stripe}`, borderRadius: 8, background: approvedSuggestions ? "rgba(237,248,247,0.78)" : "rgba(255,246,199,0.62)", padding: "4px 5px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 5, alignItems: "center", textAlign: "left" }}>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: "block", color: DT.textPrimary, fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.title}</span>
+        <span style={{ display: "block", marginTop: 2, color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{suggestedStepCustomer || selectedOrder?.customer || step.detail || "Suggested order task"}</span>
+      </span>
+      <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap" }}>{formatTaskHours(step.estimatedHours)}</span>
+    </button>
+  );
+  return (
+    <section data-mobile-schedule-agenda="true" style={{ border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.34)" : DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.78)", boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.08)" : DT.shadow, padding: 6, display: "grid", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 950, color: DT.textPrimary, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayWeekTitle(week.title)}</div>
+          {isCurrentWeek && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.teal, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current week</div>}
+        </div>
+        {showDraftControls && isDraftChanged && <button type="button" onClick={onResetDraftLayout} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 9, fontFamily: DT.sans, fontWeight: 900 }}>Revert</button>}
+      </div>
+      <nav aria-label="Schedule days" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {visibleDays.map((day) => <a key={day.day} href={`#schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.28)" : DT.border}`, background: day.isToday ? DT.tealSoft : "rgba(255,255,255,0.78)", color: day.isToday ? DT.teal : DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textDecoration: "none" }}>{day.isToday ? "Today" : DAY_LABELS[day.day].slice(0, 3)}</a>)}
+      </nav>
+      {visibleDays.length === 0 ? <div style={{ padding: 12, color: DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 850 }}>No scheduled tasks for this week.</div> : visibleDays.map((day) => (
+        <section key={day.day} id={`schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: 12, background: day.isToday ? "rgba(237,248,247,0.54)" : "rgba(255,255,255,0.62)", padding: 6, display: "grid", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+            <h3 style={{ margin: 0, color: day.isToday ? DT.teal : DT.textPrimary, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, lineHeight: 1 }}>{day.isToday ? "Today · " : ""}{day.dateOption?.dateLabel ?? DAY_LABELS[day.day]}</h3>
+            <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(day.totalHours)}</span>
+          </div>
+          {day.people.filter((lane) => lane.laneTasks.length || lane.laneAppTasks.length || lane.laneSuggestions.length).map((lane) => {
+            const personVisual = PERSON_VISUALS[lane.person];
+            const overCapacity = lane.hours > 7;
+            return (
+              <div key={lane.person} style={{ display: "grid", gap: 3 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: personVisual.text, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.04em" }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: personVisual.stripe }} />{PERSON_LABELS[lane.person]}</span>
+                  <span style={{ color: overCapacity ? "#991b1b" : DT.textMuted, background: overCapacity ? "rgba(153,27,27,0.08)" : "rgba(255,255,255,0.70)", border: `1px solid ${overCapacity ? "rgba(153,27,27,0.18)" : DT.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{formatTaskHours(lane.hours)} / 7h</span>
+                </div>
+                <div style={{ display: "grid", gap: 3 }}>
+                  {lane.laneTasks.map(taskRow)}
+                  {lane.laneAppTasks.map(appTaskRow)}
+                  {lane.laneSuggestions.map(suggestionRow)}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      ))}
+    </section>
+  );
+}
+
 function MonthWeekSection({
   week,
   tasks = [],
@@ -7293,6 +7447,36 @@ function MonthWeekSection({
   const isCurrentWeek = Boolean(weekRange && weekRange.start.getTime() === visibleStart.getTime());
   const hasVisibleTasks = tasks.length > 0 || weekAppTasks.length > 0 || suggestedSteps.length > 0;
   const showPlanningLanes = forcePlanningLanes || hasVisibleTasks;
+
+  if (isNarrow) {
+    return (
+      <MobileScheduleAgenda
+        week={week}
+        tasks={tasks}
+        suggestedSteps={suggestedSteps}
+        approvedSuggestions={approvedSuggestions}
+        selectedOrder={selectedOrder}
+        appTasks={appTasks}
+        planTaskLinksLoaded={planTaskLinksLoaded}
+        resolveTaskOrderId={resolveTaskOrderId}
+        resolveTaskOrderConnection={resolveTaskOrderConnection}
+        isCurrentWeek={isCurrentWeek}
+        isDraftChanged={isDraftChanged}
+        showDraftControls={showDraftControls}
+        onResetDraftLayout={onResetDraftLayout}
+        onTaskSelect={onTaskSelect}
+        onTaskOpen={onTaskOpen}
+        onTaskEdit={onTaskEdit}
+        onTaskDoneToggle={onTaskDoneToggle}
+        onAppTaskSelect={onAppTaskSelect}
+        onAppTaskOpen={onAppTaskOpen}
+        onSuggestedStepSelect={onSuggestedStepSelect}
+        onSuggestedStepOpen={onSuggestedStepOpen}
+        suggestedStepCustomer={suggestedStepCustomer}
+        personFilter={personFilter}
+      />
+    );
+  }
 
   return (
     <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ background: DT.cardBg, border: `${isCurrentWeek ? 3 : 1}px solid ${isCurrentWeek ? "rgba(12,124,122,0.58)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 4px rgba(12,124,122,0.10), 0 8px 28px rgba(34,32,26,0.09)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
