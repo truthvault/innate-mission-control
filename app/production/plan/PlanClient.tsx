@@ -1058,7 +1058,6 @@ type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdi
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type CompletedTuesdayItem = { id: string; kind: "order" | "intake" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type ProductionPlanMode = "schedule" | "orderRows";
-type MobilePlanPrimaryView = "plan" | "orders";
 type PersonFilter = "all" | Person;
 type OrderDayFilter = "allWeek" | "today" | DayKey;
 type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate" | "costing";
@@ -7550,28 +7549,8 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
       {options.map((option) => {
         const active = mode === option.id;
         return (
-          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 32 : undefined, padding: isNarrow ? "6px 8px" : "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 11 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
+          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 32 : undefined, padding: isNarrow ? "6px 8px" : "7px 10px", background: active ? DT.tealSoft : "transparent", color: active ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 11 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
             {option.id === "schedule" ? <><span className="plan-schedule-mobile-label">Schedule</span><span className="plan-schedule-desktop-label">{option.label}</span></> : option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function MobilePlanPrimaryToggle({ view, onViewChange, orderCount }: { view: MobilePlanPrimaryView; onViewChange: (view: MobilePlanPrimaryView) => void; orderCount: number }) {
-  const options: Array<{ id: MobilePlanPrimaryView; label: string; meta: string }> = [
-    { id: "plan", label: "Plan", meta: "Schedule" },
-    { id: "orders", label: "Orders", meta: `${orderCount} live` },
-  ];
-  return (
-    <div data-mobile-plan-primary-toggle="true" aria-label="Mobile production plan section" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 3, padding: 2, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.78)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", position: "sticky", top: 42, zIndex: 42 }}>
-      {options.map((option) => {
-        const active = view === option.id;
-        return (
-          <button key={option.id} type="button" aria-pressed={active} onClick={() => onViewChange(option.id)} style={{ minWidth: 0, minHeight: 32, border: 0, borderRadius: 999, background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", touchAction: "manipulation", display: "grid", alignContent: "center", gap: 0 }}>
-            <span style={{ fontSize: 11, lineHeight: 1 }}>{option.label}</span>
-            <span style={{ fontSize: 8, lineHeight: 1, opacity: active ? 0.82 : 0.72 }}>{option.meta}</span>
           </button>
         );
       })}
@@ -8854,7 +8833,6 @@ function MonthViewState({
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("orderRows");
-  const [mobilePrimaryView, setMobilePrimaryView] = useState<MobilePlanPrimaryView>("plan");
   const [orderRowsWeekIndex, setOrderRowsWeekIndex] = useState(0);
   const [orderDayFilter, setOrderDayFilter] = useState<OrderDayFilter>("allWeek");
   const [orderRowOrders, setOrderRowOrders] = useState<PlanRowOrders>(() => initialPlanTaskLinkState?.orderRowOrders ?? {});
@@ -9587,7 +9565,6 @@ function MonthViewState({
     setSelectedAssignmentTask(null);
     setSelectedWorkflow(null);
     setSelectedOrderId(id);
-    if (isRailNarrow) setMobilePrimaryView("orders");
   }
 
   function openOrderOverview(id: number) {
@@ -10360,9 +10337,6 @@ function MonthViewState({
       tasksForOrder={(order) => planTasksForOrder(weeks, order, planTaskLinks)}
     />
   );
-  const mobilePrimaryToggle = isRailNarrow ? (
-    <MobilePlanPrimaryToggle view={mobilePrimaryView} onViewChange={setMobilePrimaryView} orderCount={activeTuesdayOrders.length} />
-  ) : null;
   const completionDialog = completionRequest ? (
     <TuesdayCompletionDialog
       key={completionRequestKey(completionRequest)}
@@ -10382,9 +10356,8 @@ function MonthViewState({
 
   if (isRailNarrow) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {mobilePrimaryToggle}
-        {mobilePrimaryView === "plan" ? planningBoard : orderRail}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {intakeReviewModal}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
