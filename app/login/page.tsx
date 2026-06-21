@@ -27,7 +27,9 @@ export default async function LoginPage({
           </div>
         </div>
         {error && (
-          <p className="text-red-500 text-sm text-center">Wrong password. Try again.</p>
+          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-center text-sm font-bold text-red-700">
+            Wrong password. Please check it and press the gold Enter button again.
+          </div>
         )}
         <input
           type="password"
@@ -36,6 +38,10 @@ export default async function LoginPage({
           autoFocus
           required
           autoComplete="current-password"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="go"
           className="w-full px-3 py-3 rounded-xl border border-[#2c2520]/10 bg-white text-sm text-[#2c2520] focus:outline-none focus:ring-2 focus:ring-[#d2ae6d]/35"
         />
         <button

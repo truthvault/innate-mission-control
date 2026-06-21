@@ -3,9 +3,9 @@ import { AUTH_COOKIE_MAX_AGE_SECONDS, AUTH_COOKIE_NAME, createAuthCookieValue } 
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const password = formData.get("password");
+  const password = String(formData.get("password") || "").trim();
 
-  if (password !== process.env.SITE_PASSWORD) {
+  if (!process.env.SITE_PASSWORD || password !== process.env.SITE_PASSWORD) {
     return new NextResponse(null, { status: 303, headers: { Location: "/login?error=1" } });
   }
 
