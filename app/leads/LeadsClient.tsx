@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT, KpiCard } from "@/components/mission-control-ui";
@@ -25,6 +25,17 @@ const CLOSED_STATUSES = new Set<LeadStatus>(["won", "lost", "parked"]);
 type LeadFilter = "do_today" | "sample_followups" | "overdue" | "cashflow" | "hot" | "needs_next_step" | "waiting" | "active" | "closed" | "all";
 
 type Warning = { label: string; tone: "red" | "amber" | "grey" | "teal" | "green" };
+
+function useIsNarrow(breakpoint = 760) {
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const update = () => setIsNarrow(window.innerWidth <= breakpoint);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [breakpoint]);
+  return isNarrow;
+}
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -246,7 +257,7 @@ function SourceLink({ lead }: { lead: Lead }) {
 
 function LeadListHeader() {
   return (
-    <div style={headerRowStyle}>
+    <div data-lead-list-header="true" style={headerRowStyle}>
       <span>Lead</span>
       <span>Status</span>
       <span>Next step</span>
@@ -260,25 +271,25 @@ function LeadListHeader() {
 function LeadRow({ lead, selected, onSelect }: { lead: Lead; selected: boolean; onSelect: () => void }) {
   const warnings = leadWarnings(lead);
   return (
-    <article style={{ ...rowStyle, borderColor: selected ? "rgba(210,174,109,0.80)" : isDue(lead) ? "rgba(180,107,70,0.30)" : DT.border }}>
-      <button type="button" onClick={onSelect} aria-expanded={selected} aria-label={`Open details for ${lead.customerName}`} style={rowButtonStyle}>
-        <div style={{ minWidth: 0 }}>
+    <article data-lead-row="true" style={{ ...rowStyle, borderColor: selected ? "rgba(210,174,109,0.80)" : isDue(lead) ? "rgba(180,107,70,0.30)" : DT.border }}>
+      <button data-lead-row-button="true" type="button" onClick={onSelect} aria-expanded={selected} aria-label={`Open details for ${lead.customerName}`} style={rowButtonStyle}>
+        <div data-lead-row-main="true" style={{ minWidth: 0 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0 }}>
             <span style={{ width: 9, height: 9, borderRadius: 999, background: lead.priority === "hot" ? "#b46b46" : lead.priority === "low" ? "#b9b2a4" : DT.gold, flex: "0 0 auto" }} />
               <strong title={lead.customerName} style={{ fontFamily: DT.serif, fontSize: 17, color: DT.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lead.customerName}</strong>
           </div>
           <div style={{ ...smallMutedStyle, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{[lead.productCategory, lead.contactName].filter(Boolean).join(" · ") || "Lead"}</div>
         </div>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        <div data-lead-row-status="true" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           <Chip label={STATUS_LABELS[lead.status]} tone={statusTone(lead.status)} />
           {lead.priority !== "normal" && <Chip label={lead.priority.toUpperCase()} tone={priorityTone(lead.priority)} />}
           {warnings.slice(0, 2).map((warning) => <Chip key={warning.label} label={warning.label} tone={warning.tone} />)}
         </div>
-        <span style={rowTextStyle}>{isRecentSampleFollowUp(lead) ? sampleFollowUpLabel(lead) : bookedVisitSummary(lead) || sourceActionLabel(lead)}</span>
-        <span style={{ ...rowTextStyle, color: isDue(lead) ? "#8f3f24" : DT.textPrimary, fontWeight: 900 }}>{dateLabel(lead.nextFollowUpAt)}</span>
-        <span style={{ ...rowTextStyle, fontWeight: 900, color: lead.estimatedValue ? DT.textPrimary : DT.textFaint }}>{valueLabel(lead.estimatedValue)}</span>
+        <span data-lead-row-next="true" style={rowTextStyle}>{isRecentSampleFollowUp(lead) ? sampleFollowUpLabel(lead) : bookedVisitSummary(lead) || sourceActionLabel(lead)}</span>
+        <span data-lead-row-followup="true" style={{ ...rowTextStyle, color: isDue(lead) ? "#8f3f24" : DT.textPrimary, fontWeight: 900 }}>{dateLabel(lead.nextFollowUpAt)}</span>
+        <span data-lead-row-value="true" style={{ ...rowTextStyle, fontWeight: 900, color: lead.estimatedValue ? DT.textPrimary : DT.textFaint }}>{valueLabel(lead.estimatedValue)}</span>
       </button>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <div data-lead-row-footer="true" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         <span style={smallMutedStyle}>{sourceLabel(lead)}</span>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <SourceLink lead={lead} />
@@ -311,8 +322,8 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
 
   const hiddenByFilter = !visibleIds.has(lead.id);
   return (
-    <aside style={drawerOverlayStyle} aria-label="Lead detail drawer" onClick={onClose}>
-      <div style={drawerStyle} onClick={(event) => event.stopPropagation()}>
+    <aside data-lead-drawer-overlay="true" style={drawerOverlayStyle} aria-label="Lead detail drawer" onClick={onClose}>
+      <div data-lead-drawer-panel="true" style={drawerStyle} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 12, marginBottom: 12 }}>
           <div>
             <div style={labelStyle}>Lead detail</div>
@@ -377,8 +388,9 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
   );
 }
 
-function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Lead) => void }) {
-  const queue = leads.filter(doToday).sort(sortByUrgency).slice(0, 8);
+function DecisionQueue({ leads, limit = 8, onSelect }: { leads: Lead[]; limit?: number; onSelect: (lead: Lead) => void }) {
+  const fullQueue = leads.filter(doToday).sort(sortByUrgency);
+  const queue = fullQueue.slice(0, limit);
   if (queue.length === 0) return null;
   return (
     <section style={{ background: "linear-gradient(135deg, rgba(248,241,228,0.98), rgba(255,252,246,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, marginBottom: 14 }}>
@@ -387,7 +399,7 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
           <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>Do Today</h2>
           <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock Monday follow-ups.</p>
         </div>
-        <Chip label={`Top ${queue.length}`} tone="amber" />
+        <Chip label={`Top ${queue.length} of ${fullQueue.length}`} tone="amber" />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))", gap: 8 }}>
         {queue.map((lead) => (
@@ -407,9 +419,10 @@ function DecisionQueue({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Le
   );
 }
 
-function CashFirstStrip({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: Lead) => void }) {
-  const cashLeads = cashFirstLeads(leads);
-  const total = cashLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
+function CashFirstStrip({ leads, limit = 4, onSelect }: { leads: Lead[]; limit?: number; onSelect: (lead: Lead) => void }) {
+  const allCashLeads = cashFirstLeads(leads);
+  const cashLeads = allCashLeads.slice(0, limit);
+  const total = allCashLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
   if (cashLeads.length === 0) return null;
   return (
     <section style={{ background: "linear-gradient(135deg, rgba(255,250,239,0.98), rgba(246,237,219,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, marginBottom: 14 }}>
@@ -420,7 +433,7 @@ function CashFirstStrip({ leads, onSelect }: { leads: Lead[]; onSelect: (lead: L
           <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Read-only: quotes and high-value leads only. No status changes here.</p>
         </div>
         <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
-          <span style={labelStyle}>Total visible cash value</span>
+          <span style={labelStyle}>Top cash value</span>
           <strong style={{ fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22 }}>{money(total)}</strong>
         </div>
       </div>
@@ -493,11 +506,20 @@ function MetricButton({ label, value, tone, active, onClick }: { label: string; 
   return <button type="button" onClick={onClick} style={{ border: `1px solid ${active ? "rgba(210,174,109,0.65)" : DT.border}`, borderRadius: DT.radius, background: active ? DT.goldSoft : "transparent", padding: 0, textAlign: "left", cursor: "pointer" }}><KpiCard label={label} value={value} tone={tone} /></button>;
 }
 
+function MobileMetricButton({ label, value, active, onClick }: { label: string; value: string | number; active: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active} style={{ minWidth: 0, minHeight: 44, border: `1px solid ${active ? "rgba(210,174,109,0.58)" : DT.border}`, borderRadius: 10, background: active ? DT.goldSoft : "rgba(255,255,255,0.76)", color: active ? "#8a5b1f" : DT.textSecondary, padding: "7px 6px", textAlign: "center", cursor: "pointer", touchAction: "manipulation" }}>
+      <span style={{ display: "block", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.03em", lineHeight: 1.1, color: DT.textFaint }}>{label}</span>
+      <strong style={{ display: "block", marginTop: 3, fontFamily: DT.serif, fontSize: 17, lineHeight: 1, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</strong>
+    </button>
+  );
+}
+
 const inputStyle: CSSProperties = { width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 10, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: "#fff" };
 const fieldStyle: CSSProperties = { display: "grid", gap: 4, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 800, color: DT.textFaint, fontFamily: DT.sans };
 const labelStyle: CSSProperties = { fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 900, color: DT.textFaint, fontFamily: DT.sans };
-const primaryButtonStyle: CSSProperties = { border: "none", background: DT.gold, color: DT.headerBg, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 900, fontFamily: DT.sans, cursor: "pointer" };
-const secondaryButtonStyle: CSSProperties = { border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textSecondary, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" };
+const primaryButtonStyle: CSSProperties = { minHeight: 40, border: "none", background: DT.gold, color: DT.headerBg, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 900, fontFamily: DT.sans, cursor: "pointer", touchAction: "manipulation" };
+const secondaryButtonStyle: CSSProperties = { minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textSecondary, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer", touchAction: "manipulation" };
 const secondaryTinyButtonStyle: CSSProperties = { ...secondaryButtonStyle, padding: "6px 9px", fontSize: 10 };
 const sourceLinkStyle: CSSProperties = { ...secondaryTinyButtonStyle, display: "inline-flex", gap: 5, alignItems: "center", textDecoration: "none" };
 const errorStyle: CSSProperties = { color: "#8f3f24", background: "rgba(180,107,70,0.08)", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, padding: 10, fontFamily: DT.sans, fontSize: 12 };
@@ -508,11 +530,111 @@ const rowButtonStyle: CSSProperties = { display: "grid", gridTemplateColumns: "m
 const rowTextStyle: CSSProperties = { fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
 const drawerOverlayStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 80, background: "rgba(38,32,25,0.30)", cursor: "default", display: "grid", placeItems: "center", padding: 18 };
 const drawerStyle: CSSProperties = { width: "min(760px, calc(100vw - 36px))", maxHeight: "min(760px, calc(100vh - 36px))", overflowY: "auto", background: "#fffaf1", border: `1px solid ${DT.border}`, borderRadius: 22, boxShadow: "0 28px 70px rgba(31,24,15,0.28)", padding: 20 };
+const LEADS_MOBILE_CSS = `
+  @media (max-width: 759px) {
+    [data-lead-list-header="true"] { display: none !important; }
+    [data-lead-row="true"] { border-radius: 16px !important; padding: 12px !important; gap: 10px !important; }
+    [data-lead-row-button="true"] {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      grid-template-areas:
+        "main value"
+        "status status"
+        "next next"
+        "follow follow" !important;
+      gap: 8px !important;
+      align-items: start !important;
+      width: 100% !important;
+    }
+    [data-lead-row-main="true"] { grid-area: main !important; }
+    [data-lead-row-main="true"] strong {
+      display: block !important;
+      max-width: 100% !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      line-height: 1.14 !important;
+    }
+    [data-lead-row-main="true"] > div {
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      line-height: 1.28 !important;
+    }
+    [data-lead-row-status="true"] { grid-area: status !important; gap: 5px !important; }
+    [data-lead-row-next="true"] {
+      grid-area: next !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+      line-height: 1.35 !important;
+    }
+    [data-lead-row-followup="true"] {
+      grid-area: follow !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+    [data-lead-row-value="true"] {
+      grid-area: value !important;
+      justify-self: end !important;
+      text-align: right !important;
+      white-space: nowrap !important;
+      max-width: 104px !important;
+    }
+    [data-lead-row-footer="true"] {
+      align-items: flex-start !important;
+      flex-direction: column !important;
+      gap: 6px !important;
+    }
+    [data-lead-filter-bar="true"] {
+      position: sticky !important;
+      top: 57px !important;
+      z-index: 45 !important;
+      margin-left: -12px !important;
+      margin-right: -12px !important;
+      padding: 8px 12px !important;
+      background: rgba(248,245,238,0.96) !important;
+    }
+    [data-lead-filter-scroll="true"] {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      gap: 7px !important;
+      overflow-x: auto !important;
+      max-width: 100% !important;
+      padding-bottom: 2px !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    [data-lead-filter-scroll="true"] button { min-width: 44px !important; min-height: 40px !important; white-space: nowrap !important; flex: 0 0 auto !important; }
+    [data-lead-filter-bar="true"] form { flex: 0 0 auto !important; }
+    [data-lead-filter-bar="true"] form button { min-height: 40px !important; }
+    [data-lead-result-copy="true"] {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 4px !important;
+      align-items: start !important;
+      line-height: 1.35 !important;
+    }
+    [data-lead-drawer-overlay="true"] {
+      padding: 0 !important;
+      place-items: stretch !important;
+      align-items: stretch !important;
+    }
+    [data-lead-drawer-panel="true"] {
+      width: 100% !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      padding: 16px !important;
+    }
+  }
+`;
 
 export default function LeadsClient({ result }: { result: LeadsResult }) {
   const [filter, setFilter] = useState<LeadFilter>("do_today");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [visibleExpandedKey, setVisibleExpandedKey] = useState<string | null>(null);
+  const isNarrow = useIsNarrow(760);
   const router = useRouter();
 
   const activeRows = useMemo(() => result.rows.filter((lead) => !isClosed(lead)), [result.rows]);
@@ -540,6 +662,10 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
   }, [filter, result.rows, search]);
 
   const visibleIds = useMemo(() => new Set(visible.map((lead) => lead.id)), [visible]);
+  const mobileVisibleLimit = 24;
+  const visibleContextKey = `${filter}:${search.trim().toLowerCase()}`;
+  const visibleExpanded = visibleExpandedKey === visibleContextKey;
+  const visibleRows = isNarrow && !visibleExpanded ? visible.slice(0, mobileVisibleLimit) : visible;
   const hot = activeRows.filter((lead) => lead.priority === "hot").length;
   const overdue = activeRows.filter(isDue).length;
   const quotedValue = cashflowRows.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
@@ -562,22 +688,34 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
   const refresh = () => router.refresh();
 
   return (
-    <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
-        <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
-        <MetricButton label="Recent sample follow-ups" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
-        <MetricButton label="Open quoted value" value={money(quotedValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
-        <MetricButton label="Hot leads" value={hot} tone={hot ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
-        <MetricButton label="Missing next step" value={missingNext} tone={missingNext ? "bad" : "good"} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
-        <KpiCard label="Active leads" value={activeRows.length} />
-        <KpiCard label="Closed leads hidden" value={closed} tone="neutral" />
-      </div>
+    <MissionControlShell section="leads" pageTitle="Leads" pageSubtitle="Tuesday source-of-truth board: scan the work, then ask Hermes to follow up" syncedAt={result.syncedAt} source={result.source} mondayError={result.error} pageTitleAccessory={<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all visible fields…" style={{ width: "100%", minHeight: 40, border: `1px solid ${DT.border}`, borderRadius: 999, padding: "9px 13px", fontFamily: DT.sans, fontSize: 12, background: DT.cardBg, color: DT.textPrimary }} />}>
+      <style>{LEADS_MOBILE_CSS}</style>
+      {isNarrow ? (
+        <div data-lead-mobile-metrics="true" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
+          <MobileMetricButton label="Overdue" value={overdue} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
+          <MobileMetricButton label="Samples" value={sampleFollowUpRows.length} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
+          <MobileMetricButton label="Quoted" value={money(quotedValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
+          <MobileMetricButton label="Hot" value={hot} active={filter === "hot"} onClick={() => setFilter("hot")} />
+          <MobileMetricButton label="No step" value={missingNext} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
+          <MobileMetricButton label="Active" value={activeRows.length} active={filter === "active"} onClick={() => setFilter("active")} />
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
+          <MetricButton label="Overdue now" value={overdue} tone={overdue ? "warn" : "good"} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
+          <MetricButton label="Recent sample follow-ups" value={sampleFollowUpRows.length} tone={sampleFollowUpRows.length ? "warn" : "good"} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
+          <MetricButton label="Open quoted value" value={money(quotedValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
+          <MetricButton label="Hot leads" value={hot} tone={hot ? "bad" : "neutral"} active={filter === "hot"} onClick={() => setFilter("hot")} />
+          <MetricButton label="Missing next step" value={missingNext} tone={missingNext ? "bad" : "good"} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
+          <KpiCard label="Active leads" value={activeRows.length} />
+          <KpiCard label="Closed leads hidden" value={closed} tone="neutral" />
+        </div>
+      )}
 
-      <CashFirstStrip leads={activeRows} onSelect={(lead) => setSelectedId(lead.id)} />
-      <DecisionQueue leads={activeRows} onSelect={(lead) => setSelectedId(lead.id)} />
+      <CashFirstStrip leads={activeRows} limit={isNarrow ? 2 : 4} onSelect={(lead) => setSelectedId(lead.id)} />
+      <DecisionQueue leads={activeRows} limit={isNarrow ? 4 : 8} onSelect={(lead) => setSelectedId(lead.id)} />
 
-      <div style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(248,245,238,0.94)", backdropFilter: "blur(10px)" }}>
-        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+      <div data-lead-filter-bar="true" style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(248,245,238,0.94)", backdropFilter: "blur(10px)" }}>
+        <div data-lead-filter-scroll="true" style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {filters.map(([key, label]) => <button key={key} onClick={() => setFilter(key)} style={{ border: `1px solid ${filter === key ? "rgba(210,174,109,0.50)" : DT.border}`, background: filter === key ? DT.goldSoft : DT.cardBg, color: filter === key ? "#8a5b1f" : DT.textSecondary, borderRadius: 999, padding: "7px 11px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" }}>{label}</button>)}
         </div>
         <NewLeadForm onSaved={refresh} />
@@ -586,14 +724,19 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
       {result.rows.length === 0 ? <EmptyState error={result.error} /> : (
         <>
           {result.error && <div style={{ ...errorStyle, marginBottom: 12 }}>{result.error}</div>}
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, color: DT.textMuted, fontFamily: DT.sans, fontSize: 12 }}>
-            <span>{visible.length} of {result.rows.length} leads shown · closed leads live in Closed / history or All</span>
-            <span>{filter === "do_today" ? "Default: full priority list. Top 8 are highlighted above." : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : "Sorted by urgency, cashflow, follow-up date"}</span>
+          <div data-lead-result-copy="true" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, color: DT.textMuted, fontFamily: DT.sans, fontSize: 12 }}>
+            <span>{visibleRows.length} of {visible.length} matching leads shown · {result.rows.length} total</span>
+            <span>{filter === "do_today" ? `Default: priority list. Top ${isNarrow ? 4 : 8} are highlighted above.` : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : "Sorted by urgency, cashflow, follow-up date"}</span>
           </div>
           <LeadListHeader />
           <div style={{ display: "grid", gap: 8 }}>
-            {visible.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} />)}
+            {visibleRows.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} />)}
           </div>
+          {visibleRows.length < visible.length && (
+            <button type="button" onClick={() => setVisibleExpandedKey(visibleContextKey)} style={{ ...secondaryButtonStyle, width: "100%", marginTop: 10 }}>
+              Show all {visible.length} matching leads
+            </button>
+          )}
         </>
       )}
       <LeadDrawer lead={selectedLead} visibleIds={visibleIds} onClose={() => setSelectedId(null)} onSaved={refresh} />

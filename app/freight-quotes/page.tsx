@@ -137,7 +137,7 @@ function QuoteCard({ row }: { row: FreightQuoteRow }) {
 export default async function FreightQuotesPage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = searchParams ? await searchParams : {};
   const internalParam = firstParam(params.internal);

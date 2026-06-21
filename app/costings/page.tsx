@@ -24,7 +24,9 @@ function Tabs({ active }: { active: CostingsTab }) {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 36,
+    minHeight: 44,
+    flex: "1 1 160px",
+    boxSizing: "border-box" as const,
     padding: "0 13px",
     borderRadius: 999,
     border: `1px solid ${selected ? TAB.textPrimary : TAB.border}`,
@@ -32,7 +34,8 @@ function Tabs({ active }: { active: CostingsTab }) {
     color: selected ? "#fff" : TAB.textSecondary,
     fontFamily: TAB.sans,
     fontSize: 12,
-    fontWeight: 850,
+    fontWeight: 900,
+    textAlign: "center" as const,
     textDecoration: "none",
     boxShadow: selected ? "0 4px 12px rgba(44,37,32,0.10)" : "none",
   });
@@ -51,7 +54,7 @@ function Tabs({ active }: { active: CostingsTab }) {
 export default async function CostingsPage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = searchParams ? await searchParams : {};
   const tab: CostingsTab = firstParam(params.tab) === "products" ? "products" : "materials";
