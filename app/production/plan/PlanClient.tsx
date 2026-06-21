@@ -10486,17 +10486,27 @@ export default function PlanClient({
         {initialUtilityView === "processTemplates" ? (
           <ProcessTemplatesView />
         ) : rows.length === 0 ? (
-          <div
+          <section
             style={{
-              padding: "60px 20px",
+              margin: "0 auto",
+              maxWidth: 780,
+              padding: "42px 24px",
               textAlign: "center",
               fontSize: 13,
-              color: DT.textFaint,
+              color: DT.textSecondary,
               fontFamily: DT.sans,
+              background: DT.cardBg,
+              border: `1px solid ${DT.border}`,
+              borderRadius: DT.radius,
+              boxShadow: DT.shadow,
             }}
           >
-            No Production Plan rows. {mondayError && `(${mondayError})`}
-          </div>
+            <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 26 }}>No Production Plan rows loaded</h2>
+            <p style={{ margin: "9px auto 0", maxWidth: 640, lineHeight: 1.5 }}>
+              Monday remains the current workshop source for production. This empty state means Tuesday could not load that source in this environment; do not treat it as proof that the workshop plan is empty.
+            </p>
+            {mondayError && <p style={{ margin: "14px auto 0", maxWidth: 640, border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, background: "rgba(180,107,70,0.08)", color: "#8f3f24", padding: 10, fontWeight: 850 }}>Production source issue: {mondayError}</p>}
+          </section>
         ) : (
           <MonthView
             weeks={activeWeeks}

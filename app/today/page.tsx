@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const tasks = [
   { task: "Sand top coat", job: "Blair York — table and bench", stripe: "#0c7c7a" },
   { task: "Engrave small and large", job: "Samples", stripe: "#c8a96e" },
@@ -55,6 +57,24 @@ export default function TodayPage() {
         }}>
           Workshop tasks
         </h1>
+
+        <div style={{
+          border: "1px solid rgba(180,107,70,0.18)",
+          background: "rgba(180,107,70,0.07)",
+          borderRadius: 14,
+          padding: "12px 14px",
+          marginBottom: 18,
+          fontFamily: "var(--font-sans)",
+          color: "var(--text-main)",
+          fontSize: 12,
+          lineHeight: 1.45,
+        }}>
+          <strong>Prototype only:</strong> this page uses hardcoded sample tasks. For Nick or America Mode daily control, use{" "}
+          <Link href="/production/plan?delight=off" style={{ color: "#8f3f24", fontWeight: 800 }}>
+            Production Plan
+          </Link>{" "}
+          and the Leads board as the current source-backed surfaces.
+        </div>
 
         {/* Task cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
