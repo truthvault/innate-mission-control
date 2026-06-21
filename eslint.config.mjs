@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     ".vercel/**",
     "out/**",
     "build/**",
+    ".next-static-archive/**",
     "next-env.d.ts",
 
     // Local agent/runtime and audit artifacts. They are kept out of Vercel
@@ -19,7 +20,13 @@ const eslintConfig = defineConfig([
     ".hermes/**",
     "backups/**",
     "reference/**",
+    "reports/**",
+    "artifacts/**",
+    "captures/**",
+    "screenshots/**",
     "seo/**",
+    "shopify-theme-worktrees/**",
+    "tmp/**",
     "tmp_*.js",
     "tmp_*.py",
   ]),
