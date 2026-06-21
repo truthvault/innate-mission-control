@@ -1430,17 +1430,18 @@ function OrderHealthStrip({
   const watch = active.filter((order) => orderHealth(order) === "watch").length;
   const onTrack = active.filter((order) => orderHealth(order) === "onTrack").length;
   const needsCosting = active.filter((order) => !costingIsFullyApproved(orderCostings?.matches[order.id])).length;
-  const cards: Array<{ label: string; mobileLabel: string; value: number; color: string; filter: RailFilter }> = [
+  const allCards: Array<{ label: string; mobileLabel: string; value: number; color: string; filter: RailFilter }> = [
     { label: "Active Orders", mobileLabel: "Active", value: active.length, color: DT.textPrimary, filter: "all" },
     { label: "On Track", mobileLabel: "Track", value: onTrack, color: "#15803d", filter: "onTrack" },
     { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
-    { label: "Blocked", mobileLabel: "Block", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
+    { label: "Blocked", mobileLabel: "Blocked", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
     { label: "Needs Costing", mobileLabel: "Cost", value: needsCosting, color: needsCosting ? "#b45309" : "#15803d", filter: "costing" },
-    { label: "Due This Week", mobileLabel: "Week", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
+    { label: "Due This Week", mobileLabel: "This week", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
     { label: "Due Next Week", mobileLabel: "Next", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
+  const cards = isNarrow ? allCards.filter((card) => ["all", "watch", "blocked", "thisWeek"].includes(card.filter)) : allCards;
   return (
-    <div data-mobile-health-strip="one-row-health" style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? `repeat(${cards.length}, minmax(0, 1fr))` : undefined, alignItems: "stretch", justifyContent: "flex-end", gap: isNarrow ? 3 : 6, flexWrap: "wrap", overflowX: "visible", paddingBottom: isNarrow ? 0 : 0, width: "100%" }}>
+    <div data-mobile-health-strip="one-row-health" style={{ display: "flex", alignItems: "stretch", justifyContent: isNarrow ? "flex-start" : "flex-end", gap: isNarrow ? 4 : 6, flexWrap: isNarrow ? "nowrap" : "wrap", overflowX: isNarrow ? "auto" : "visible", paddingBottom: 0, width: "100%" }}>
       {cards.map((card) => {
         const selected = activeFilter === card.filter;
         return (
@@ -1449,10 +1450,10 @@ function OrderHealthStrip({
           key={card.label}
           aria-pressed={selected}
           onClick={() => onFilterChange(selected ? "all" : card.filter)}
-          style={{ flex: "1 1 88px", minWidth: 0, minHeight: isNarrow ? 44 : undefined, padding: isNarrow ? "7px 3px 6px" : "7px 9px", background: selected ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: isNarrow ? 10 : 9, border: `1px solid ${selected ? "rgba(12,124,122,0.28)" : DT.border}`, boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.06)" : "0 1px 4px rgba(0,0,0,0.025)", cursor: "pointer", textAlign: "center", overflow: "hidden", touchAction: "manipulation" }}
+          style={{ flex: isNarrow ? "0 0 auto" : "1 1 88px", minWidth: isNarrow ? 72 : 0, minHeight: isNarrow ? 30 : undefined, padding: isNarrow ? "5px 8px" : "7px 9px", background: selected ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: 999, border: `1px solid ${selected ? "rgba(12,124,122,0.28)" : DT.border}`, boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.06)" : "0 1px 4px rgba(0,0,0,0.025)", cursor: "pointer", textAlign: "center", overflow: "hidden", touchAction: "manipulation", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 4 : 0, flexDirection: isNarrow ? "row" : "column" }}
         >
-          <div style={{ fontSize: isNarrow ? 7.5 : 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: isNarrow ? 0 : "0.06em", color: DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{isNarrow ? card.mobileLabel : card.label}</div>
-          <div style={{ fontSize: isNarrow ? 17 : 18, fontWeight: 800, color: card.color, fontFamily: DT.serif, marginTop: 1, lineHeight: 1 }}>{card.value}</div>
+          <span style={{ fontSize: isNarrow ? 9.5 : 8, fontWeight: 900, textTransform: isNarrow ? "none" : "uppercase", letterSpacing: isNarrow ? 0 : "0.06em", color: selected ? DT.teal : DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{isNarrow ? card.mobileLabel : card.label}</span>
+          <span style={{ fontSize: isNarrow ? 11 : 18, fontWeight: 900, color: card.color, fontFamily: isNarrow ? DT.sans : DT.serif, marginTop: isNarrow ? 0 : 1, lineHeight: 1 }}>{card.value}</span>
         </button>
       );})}
     </div>
@@ -7526,9 +7527,9 @@ function WorkshopFocusBar({
             aria-pressed={active}
             aria-label={`${option.label} crew filter, ${option.sublabel}`}
             onClick={() => onPersonFilterChange(option.id)}
-            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 3 : 5, border: isNarrow ? 0 : `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : isNarrow ? "transparent" : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 8px" : "6px 10px", fontFamily: DT.sans, cursor: "pointer", minHeight: isNarrow ? 40 : undefined, minWidth: isNarrow ? 0 : 112, flex: isNarrow ? "1 1 0" : undefined, textAlign: "center", whiteSpace: "nowrap", touchAction: "manipulation" }}
+            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 3 : 5, border: isNarrow ? 0 : `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : isNarrow ? "transparent" : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 8px" : "6px 10px", fontFamily: DT.sans, cursor: "pointer", minHeight: isNarrow ? 30 : undefined, minWidth: isNarrow ? 0 : 112, flex: isNarrow ? "1 1 0" : undefined, textAlign: "center", whiteSpace: "nowrap", touchAction: "manipulation" }}
           >
-            <span style={{ fontSize: isNarrow ? 12 : 11, fontWeight: 950, lineHeight: 1 }}>{option.label}</span>
+            <span style={{ fontSize: isNarrow ? 11 : 11, fontWeight: 950, lineHeight: 1 }}>{option.label}</span>
             {!isNarrow && <span style={{ fontSize: 9, fontWeight: 850, lineHeight: 1, color: active ? DT.teal : DT.textFaint }}>{option.sublabel}</span>}
           </button>
         );
@@ -7549,7 +7550,7 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
       {options.map((option) => {
         const active = mode === option.id;
         return (
-          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 32 : undefined, padding: isNarrow ? "6px 8px" : "7px 10px", background: active ? DT.tealSoft : "transparent", color: active ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 11 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
+          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 30 : undefined, padding: isNarrow ? "5px 8px" : "7px 10px", background: active ? DT.tealSoft : "transparent", color: active ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 11 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
             {option.id === "schedule" ? <><span className="plan-schedule-mobile-label">Schedule</span><span className="plan-schedule-desktop-label">{option.label}</span></> : option.label}
           </button>
         );
@@ -8205,10 +8206,20 @@ function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow
     const bg = totalHours > capacityHours ? "rgba(155,47,34,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
     return { totalHours, nickHours, dylanHours, capacityHours, fillWidth, color, bg };
   };
+  const daySummaries = DAYS.map((day) => ({ day, ...dayGauge(day) }));
+  const busiestDay = daySummaries.reduce((best, current) => current.totalHours > best.totalHours ? current : best, daySummaries[0]);
+  const mobileCapacitySummary = busiestDay && busiestDay.totalHours > 0
+    ? `${DAY_LABELS[busiestDay.day].slice(0, 3)} busiest · ${formatTaskHours(busiestDay.totalHours)}`
+    : "No scheduled hours yet";
   return (
     <>
-      <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-mobile-capacity-strip="temperature-pill-row" data-order-capacity-strip-mobile="true" aria-hidden={!isNarrow} style={{ display: "none", gap: 3, border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.78)", boxShadow: DT.shadow, overflow: "hidden", padding: 3 }}>
-        <div style={{ padding: "2px 4px 0", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Allocated capacity</div>
+      <details data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-mobile-capacity-strip="temperature-pill-row" data-order-capacity-strip-mobile="true" aria-hidden={!isNarrow} style={{ display: "none", border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.72)", boxShadow: "0 1px 4px rgba(0,0,0,0.025)", overflow: "hidden" }}>
+        <summary style={{ listStyle: "none", minHeight: 30, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "4px 9px", cursor: "pointer", fontFamily: DT.sans }}>
+          <span style={{ fontSize: 9.5, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>Capacity</span>
+          <span style={{ minWidth: 0, flex: "1 1 auto", textAlign: "right", fontSize: 9.5, fontWeight: 850, color: DT.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mobileCapacitySummary}</span>
+          <span aria-hidden="true" style={{ fontSize: 10, fontWeight: 950, color: DT.teal }}>View</span>
+        </summary>
+        <div style={{ display: "grid", gap: 4, padding: "0 4px 4px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
         {compactControl("Week", dayFilter === "allWeek", () => onDayFilterChange("allWeek"))}
         {compactControl("Today", dayFilter === "today", () => onDayFilterChange("today"), !todayKey, "today is not a workshop weekday")}
@@ -8231,6 +8242,7 @@ function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow
         })}
       </div>
       </div>
+      </details>
       <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-order-capacity-strip-desktop="true" aria-hidden={isNarrow} style={{ display: "grid", gridTemplateColumns: "220px repeat(5, minmax(104px, 1fr))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,255,255,0.84)", boxShadow: DT.shadow, overflow: "hidden" }}>
       <div style={{ padding: 7, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", borderRight: `1px solid ${DT.border}` }}>
         <span style={{ width: "100%", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Allocated capacity</span>
@@ -8485,9 +8497,9 @@ function OrderJourneyView({
   const needsRows = filteredRows.filter((row) => !row.order || row.health === "internal" || row.health === "unlinked");
   const weekLabel = displayWeekTitle(week.title);
   const renderSectionLabel = (label: string, count: number, detail: string) => (
-    <div data-order-journey-section-label="true" style={{ padding: "5px 2px 2px", display: "flex", flexDirection: isNarrow ? "column" : "row", alignItems: isNarrow ? "flex-start" : "baseline", justifyContent: "space-between", gap: isNarrow ? 2 : 10, fontFamily: DT.sans }}>
-      <div style={{ fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ fontSize: 10, fontWeight: 850, color: DT.textMuted }}>{count} {count === 1 ? "order" : "orders"} · {detail}</div>
+    <div data-order-journey-section-label="true" style={{ padding: isNarrow ? "2px 1px 0" : "5px 2px 2px", display: "flex", flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: isNarrow ? 6 : 10, fontFamily: DT.sans }}>
+      <div style={{ fontSize: isNarrow ? 9.5 : 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: isNarrow ? "0.05em" : "0.08em", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ fontSize: isNarrow ? 9.5 : 10, fontWeight: 850, color: DT.textMuted, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{count} {count === 1 ? "order" : "orders"} · {detail}</div>
     </div>
   );
   const renderRow = (row: OrderJourneyRow) => {
@@ -8694,18 +8706,16 @@ function OrderJourneyView({
   };
 
   const header = (
-    <div style={{ border: `1px solid ${DT.border}`, borderRadius: isNarrow ? 11 : DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? "6px 8px" : "8px 10px", display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? "1fr" : undefined, alignItems: "center", justifyContent: "space-between", gap: isNarrow ? 5 : 8, flexWrap: "wrap" }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: isNarrow ? 8 : 9, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: isNarrow ? "0.04em" : "0.08em", flex: "0 0 auto" }}>Orders</div>
-          <div style={{ fontFamily: DT.serif, color: DT.textPrimary, fontSize: isNarrow ? 18 : 20, lineHeight: 1, minWidth: 0 }}>{weekLabel}</div>
-        </div>
+    <div style={{ border: `1px solid ${DT.border}`, borderRadius: isNarrow ? 999 : DT.radius, background: isNarrow ? "rgba(255,255,255,0.72)" : DT.cardBg, boxShadow: isNarrow ? "0 1px 4px rgba(0,0,0,0.025)" : DT.shadow, padding: isNarrow ? "3px 4px 3px 8px" : "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: isNarrow ? 4 : 8, flexWrap: isNarrow ? "nowrap" : "wrap" }}>
+      <div style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 5 }}>
+        <div style={{ fontFamily: DT.sans, fontSize: isNarrow ? 9 : 9, fontWeight: 950, color: DT.teal, textTransform: isNarrow ? "none" : "uppercase", letterSpacing: isNarrow ? 0 : "0.08em", flex: "0 0 auto" }}>{isNarrow ? "This week" : "Orders"}</div>
+        <div style={{ fontFamily: isNarrow ? DT.sans : DT.serif, color: DT.textPrimary, fontSize: isNarrow ? 11 : 20, fontWeight: isNarrow ? 900 : 400, lineHeight: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</div>
       </div>
-      <div style={{ display: "flex", gap: isNarrow ? 4 : 6, alignItems: "center", flexWrap: "wrap" }}>
-        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset order" : "Reset to due-date order"}</button>}
-        <button type="button" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Prev" : "Previous week"}</button>
-        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "This" : "This week"}</button>
-        <button type="button" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "Next" : "Next week"}</button>
+      <div style={{ display: "flex", gap: isNarrow ? 2 : 6, alignItems: "center", flex: "0 0 auto" }}>
+        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset" : "Reset to due-date order"}</button>}
+        <button type="button" aria-label="Previous week" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "‹" : "Previous week"}</button>
+        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "5px 8px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "This" : "This week"}</button>
+        <button type="button" aria-label="Next week" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "›" : "Next week"}</button>
       </div>
     </div>
   );
@@ -8715,7 +8725,7 @@ function OrderJourneyView({
   }
 
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: isNarrow ? 6 : 8 }}>
+    <section style={{ display: "flex", flexDirection: "column", gap: isNarrow ? 5 : 8 }}>
       {header}
       <OrderCapacityStrip rows={rows} week={week} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} isNarrow={isNarrow} />
       {activeRows.length === 0 && needsRows.length === 0 && <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No order tasks match this filter.</div>}
