@@ -68,7 +68,7 @@ const clientMustHave = [
   ['delight burst blends smoke into flame', 'flameMix'],
   ['delight burst has responsive card explosion shards', 'const shardCount = width < 760 ? 12 : 16'],
   ['delight burst uses shard count for card explosion', 'Array.from({ length: shardCount }'],
-  ['delight burst runs for three seconds', 'DELIGHT_CANVAS_DURATION_MS = 3000'], 
+  ['delight burst runs for three seconds', 'DELIGHT_CANVAS_DURATION_MS = 3000'],
   ['delight burst clears without an older timer killing a newer burst', 'current?.id === burstId ? null : current'],
   ['delight burst has legacy pineapple marker for live verification', 'data-delight-pineapple="delight-pineapple"'],
   ['delight burst has legacy flying unicorn marker for live verification', 'data-delight-flying-unicorn="delight-flying-unicorn"'],

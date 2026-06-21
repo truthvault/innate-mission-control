@@ -1,9 +1,9 @@
 # Tuesday handover: Supabase source-of-truth reconciliation and payment spine
 
-Created: 2026-05-25 14:20 NZST  
-Owner: Tuesday agent  
-From: Hermes/default  
-Scope: Innate Furniture Tuesday/Supabase source-of-truth guardrails  
+Created: 2026-05-25 14:20 NZST
+Owner: Tuesday agent
+From: Hermes/default
+Scope: Innate Furniture Tuesday/Supabase source-of-truth guardrails
 Status: historical reconciliation/backfill handover. No Tuesday app/code changes were made in this pass.
 
 Current-use warning, added 2026-06-14:

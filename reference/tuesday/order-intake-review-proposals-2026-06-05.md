@@ -154,4 +154,3 @@ Do not approve until existing in-production status is reconciled. If Nick confir
 3. Add an `absorbed_existing_plan` or similar review outcome for Janette-style rows, so old planner work is not duplicated.
 4. Add a `sample/shopify/manual_review` path for Sherry-style rows.
 5. Update draft tasks one order at a time only after Guido approves that specific order's proposed plan.
-
