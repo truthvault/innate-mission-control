@@ -1,0 +1,476 @@
+{
+  "schema_version": "0.1.0",
+  "name": "innate-tuesday-agent-interface",
+  "title": "Innate / Tuesday / Mission Control agent interface",
+  "status": "internal_reference_not_enforced",
+  "created": "2026-06-21",
+  "owner": "Hermes/default front door with Tuesday/Mission Control as operating surface",
+  "purpose": "Machine-readable capability map for safe agent work across Innate, Tuesday, and Mission Control. This file documents permissions and evidence requirements. It does not grant live-system permission by itself.",
+  "source_documents": [
+    "reference/INDEX.md",
+    "reference/tuesday/README.md",
+    "reference/tuesday/foundations.md",
+    "reference/tuesday/dashboard.md",
+    "reference/tuesday/freight.md",
+    "reference/tuesday/agent-ready-interface-checklist-2026-06-21.md",
+    "Hermes/default approval rules",
+    "Innate Furniture Operations approval rules"
+  ],
+  "global_rules": {
+    "external_send_policy": "forbidden_without_exact_approval_and_current_policy_change_for_send_capability",
+    "read_only_policy": "read_search_check_compare_and_summarise_are_allowed_by_default",
+    "draft_policy": "drafts_and_private_previews_are_allowed_when_requested_or_when_they_reduce_management_burden",
+    "standing_update_policy": "only internal Supabase/Tuesday customer-touchpoint/source-of-truth updates covered by current standing approval",
+    "exact_approval_policy": "customer_visible_team_visible_financial_destructive_live_system_config_schema_cron_deploy_or_external_actions_need_exact_Guido_approval",
+    "secret_policy": "never print API keys tokens passwords connection strings or secrets in prompts logs drafts or reports",
+    "source_state_policy": "old notes handovers drafts and memories are not live state until the narrow source of truth is read back",
+    "customer_message_policy": "Hermes never sends emails or messages for Guido under current Innate policy; create drafts only",
+    "build_policy": "this reference file is planning; app integration or enforcement code still needs BUILD-level approval"
+  },
+  "permission_levels": [
+    {
+      "id": "read",
+      "level": 0,
+      "label": "Read",
+      "allowed_by_default": true,
+      "description": "Inspect, search, compare, summarise, and read source state without mutation.",
+      "examples": [
+        "gmail_thread_read",
+        "supabase_readback",
+        "monday_item_lookup",
+        "xero_status_check",
+        "shopify_live_page_check",
+        "drive_sheet_read"
+      ]
+    },
+    {
+      "id": "draft_preview",
+      "level": 1,
+      "label": "Draft or preview",
+      "allowed_by_default": true,
+      "description": "Prepare private artifacts that are not sent, published, booked, paid, deployed, or made team-visible.",
+      "examples": [
+        "gmail_draft_when_requested",
+        "quote_packet",
+        "mainfreight_booking_preview",
+        "pinpoint_email_text",
+        "pickup_instruction_draft",
+        "mission_control_ui_spec"
+      ]
+    },
+    {
+      "id": "standing_update",
+      "level": 2,
+      "label": "Standing internal update",
+      "allowed_by_default": false,
+      "description": "Internal Supabase/Tuesday source-of-truth updates already covered by standing approval, after verified source evidence and readback.",
+      "examples": [
+        "supabase_lead_touchpoint_update",
+        "supabase_order_touchpoint_update",
+        "verified_lead_detail_capture",
+        "stale_next_action_cleanup",
+        "internal_reference_update"
+      ]
+    },
+    {
+      "id": "exact_approval",
+      "level": 3,
+      "label": "Exact approval required",
+      "allowed_by_default": false,
+      "description": "Any external, risky, team-visible, customer-visible, financial, destructive, schema/config, deploy, cron, or live-system action.",
+      "examples": [
+        "send_email",
+        "book_freight",
+        "publish_shopify",
+        "write_monday",
+        "create_or_send_xero_quote",
+        "schema_migration",
+        "restart_service",
+        "delete_data"
+      ]
+    },
+    {
+      "id": "forbidden_by_default",
+      "level": 4,
+      "label": "Forbidden by default",
+      "allowed_by_default": false,
+      "description": "Actions agents should not perform unless Guido explicitly changes policy in a separate, clear instruction and the implementation has a safety gate.",
+      "examples": [
+        "send_as_Guido_without_policy_change",
+        "pay_bills",
+        "delete_customer_records",
+        "bypass_approval_gates",
+        "print_secrets",
+        "silently_change_provider_or_gateway_config"
+      ]
+    }
+  ],
+  "source_of_truth_split": {
+    "leads": {
+      "authority": "Supabase/Tuesday forward source of truth",
+      "read": ["Supabase leads", "Gmail threads", "Monday when legacy context matters", "Xero when quote/payment context matters"],
+      "write_boundary": "Supabase/Tuesday standing customer-touchpoint updates only; customer replies are drafts only"
+    },
+    "orders": {
+      "authority": "Supabase/Tuesday order spine where available, with Monday still legacy/workshop source until migration gates are met",
+      "read": ["Supabase orders", "order_items", "order_links", "order_events", "Monday production item", "Xero invoice/payment context"],
+      "write_boundary": "Supabase/Tuesday standing or exact-approved updates only; Monday writes need exact approval unless covered by a future approved sync workflow"
+    },
+    "production_tasks": {
+      "authority": "Monday legacy plus Tuesday/Mission Control views",
+      "read": ["Monday boards/items/columns", "Tuesday production views", "Supabase workflow records where available"],
+      "write_boundary": "draft internal actions only unless exact approval covers the write"
+    },
+    "accounting": {
+      "authority": "Xero",
+      "read": ["Xero quotes", "Xero invoices", "Xero payments", "Xero bills", "Xero contacts", "PDFs/source records"],
+      "write_boundary": "read and draft only unless exact approval covers a specific Xero mutation"
+    },
+    "payments": {
+      "authority": "Xero, Akahu, bank evidence, or approved payment source depending on task",
+      "read": ["settlement evidence", "transaction reference", "amount", "payer/contact", "invoice/order match"],
+      "write_boundary": "mark paid only after verified settled exact match and readback"
+    },
+    "website_product": {
+      "authority": "Shopify live/admin/theme plus Mission Control website references",
+      "read": ["live public page", "Shopify admin/product data", "theme role and ID", "local file only after pull/compare"],
+      "write_boundary": "no Shopify/theme/live public write without exact approval, backup, and verification"
+    },
+    "email": {
+      "authority": "Gmail thread, Sent, and Draft state",
+      "read": ["thread", "latest inbound", "latest sent", "drafts"],
+      "write_boundary": "draft creation only when requested/approved; sending is forbidden under current policy"
+    },
+    "freight_dispatch": {
+      "authority": "Supabase/Tuesday plus Monday, Xero, and carrier evidence",
+      "read": ["order", "payment", "QC", "photos", "welcome sheet", "provenance card", "gift board", "route", "address/contact", "package lines", "carrier refs"],
+      "write_boundary": "packet previews and internal prompts only; booking or customer/carrier message needs exact approval"
+    }
+  },
+  "evidence_requirements": {
+    "gmail_draft": ["draft_id", "thread_id", "to", "cc", "subject", "DRAFT_present", "SENT_absent", "latest_thread_fit", "signature_present"],
+    "gmail_sent_verification": ["message_id", "thread_id", "SENT_present", "date_filtered_to_NZ_time_when_day_bounded", "to", "cc", "subject"],
+    "supabase_tuesday_write": ["row_id", "before_fields", "after_fields", "updated_at_or_event_id", "source_evidence", "readback"],
+    "monday_write": ["board_id", "item_id", "column_id", "value", "item_readback_link", "source_reason", "exact_approval"],
+    "xero_context": ["quote_or_invoice_number", "contact", "status", "total", "currency", "GST_basis", "payment_state", "source_or_pdf_when_relevant"],
+    "xero_mutation": ["exact_approval", "dry_run_or_preview", "created_or_updated_id", "status", "totals", "send_state", "readback"],
+    "shopify_theme_change": ["theme_id", "theme_role", "objects_or_files_changed", "backup_path", "preview_or_live_url", "desktop_check", "mobile_check"],
+    "freight_booking": ["carrier", "service", "account_mapping", "collection_address", "delivery_address", "package_lines", "booking_ref", "tracking_ref", "labels_or_docs"],
+    "payment_update": ["source", "transaction_id_or_reference", "settled_date", "amount", "payer_match", "invoice_or_order_link"],
+    "worker_code_task": ["worktree", "branch", "process_or_job_id", "changed_files", "diff_summary", "test_output", "dirty_tree_status"],
+    "cron_job": ["job_id", "schedule", "prompt_or_script", "delivery_target", "dry_run_or_run_output"],
+    "local_reference_update": ["file_path", "changed_section", "readback", "no_customer_visible_side_effect"]
+  },
+  "capabilities": [
+    {
+      "id": "dashboard.read_daily_state",
+      "lane": "dashboard",
+      "permission_level": "read",
+      "status": "desired_missing_api",
+      "description": "Read today's active business state: hot leads, waiting customers, active orders, production blockers, freight blockers, cash/payment blockers, stale drafts, and source health.",
+      "sources": ["Supabase/Tuesday", "Monday", "Gmail", "Xero", "Shopify", "guardrail outputs"],
+      "inputs_required": ["date", "lookback_window", "source_filter_optional"],
+      "outputs": ["prioritised_cards", "source_health", "evidence_refs", "last_refresh"],
+      "allowed_mutations": [],
+      "forbidden_actions": ["customer_message_send", "team_visible_message_send", "source_write"],
+      "readback_required": ["source_health", "evidence_refs", "timestamp"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "return partial_state_with_source_warnings_and_no_mutation"
+    },
+    {
+      "id": "leads.read_and_classify",
+      "lane": "leads",
+      "permission_level": "read",
+      "status": "partly_available_via_existing_helpers",
+      "description": "Read lead email/source context and classify customer priority while excluding supplier/admin/bookkeeping noise.",
+      "sources": ["Gmail", "Supabase leads", "Monday if legacy context matters", "Xero if quote/payment context matters", "website evidence when product facts matter"],
+      "inputs_required": ["gmail_thread_or_message_id_or_search_query"],
+      "outputs": ["classification", "customer_proof", "non_customer_role_indicators", "next_action_recommendation", "evidence_refs"],
+      "allowed_mutations": [],
+      "forbidden_actions": ["send_email", "create_unrequested_customer_visible_artifact"],
+      "readback_required": ["latest_thread_state", "supabase_match_or_none", "evidence_refs"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "classify_as_review_needed_if_customer_proof_is_insufficient"
+    },
+    {
+      "id": "leads.update_touchpoint",
+      "lane": "leads",
+      "permission_level": "standing_update",
+      "status": "allowed_under_current_standing_rules_when_verified",
+      "description": "Update Supabase/Tuesday lead touchpoint facts after verified customer communication or verified source evidence.",
+      "sources": ["Gmail", "Sent", "customer report from Guido", "Supabase leads", "Xero quote/payment when relevant"],
+      "inputs_required": ["lead_id_or_high_confidence_match", "source_evidence", "fields_to_update", "reason"],
+      "outputs": ["updated_lead", "changed_fields", "readback", "remaining_gaps"],
+      "allowed_mutations": ["lead latest_summary", "lead next_action", "lead contact details", "lead status when verified", "lead notes fields where available"],
+      "forbidden_actions": ["send_email", "invent_lead_match", "update_customer_promise_without_source", "write_Monday_without_approval"],
+      "readback_required": ["row_id", "before_fields", "after_fields", "source_evidence"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "stop_before_write_if_match_confidence_or_source_evidence_is_weak"
+    },
+    {
+      "id": "leads.create_customer_reply_draft",
+      "lane": "leads",
+      "permission_level": "draft_preview",
+      "status": "available_with_gmail_draft_gate",
+      "description": "Create or present a customer reply draft based on latest thread, source-of-truth context, and Innate voice rules.",
+      "sources": ["Gmail latest thread", "Sent", "Drafts", "Supabase/Tuesday", "Monday", "Xero", "website evidence when relevant"],
+      "inputs_required": ["thread_id", "recipient", "draft_body_or_goal", "context_evidence"],
+      "outputs": ["draft_id_or_inline_draft", "subject", "body", "readback"],
+      "allowed_mutations": ["Gmail draft only when requested/approved"],
+      "forbidden_actions": ["send_email", "draft_against_stale_thread", "omit_signature_when_Gmail_draft"],
+      "readback_required": ["DRAFT_present", "SENT_absent", "correct_recipient", "thread_id", "signature_present"],
+      "audit_event_required": true,
+      "approval_phrase_required": "Approve creating this Gmail draft only",
+      "safe_failure_mode": "provide_inline_draft_and_block_Gmail_draft_if_signature_or_thread_readback_fails"
+    },
+    {
+      "id": "quoting.prepare_quote_packet",
+      "lane": "quoting",
+      "permission_level": "draft_preview",
+      "status": "available_as_draft_workflow",
+      "description": "Prepare quote packet with source-backed assumptions, pricing/margin clarity, and Xero/customer-draft boundaries.",
+      "sources": ["customer request", "Gmail", "Supabase/Tuesday", "quote spine", "costing sheet", "supplier/source invoices", "Xero precedents"],
+      "inputs_required": ["customer_or_lead_id", "spec", "quantity", "location", "timing", "costing_source"],
+      "outputs": ["quote_packet", "assumptions", "margin_or_markup", "missing_facts", "suggested_customer_draft"],
+      "allowed_mutations": ["private packet file", "Supabase lead/order note under standing rule if source fact verified"],
+      "forbidden_actions": ["create_Xero_quote_without_exact_approval", "send_quote", "change_customer_price_anchor_without_approval"],
+      "readback_required": ["sources_checked", "arithmetic_check", "Xero_status_when_relevant", "assumptions_labelled"],
+      "audit_event_required": true,
+      "approval_phrase_required": "Approve creating/updating Xero quote [number or contact] with these line items and totals",
+      "safe_failure_mode": "return_needs_one_fact_packet_and_do_not_quote_if_pricing_source_is_stale_or_missing"
+    },
+    {
+      "id": "orders.read_live_order_state",
+      "lane": "orders_production",
+      "permission_level": "read",
+      "status": "partly_available_via_existing_helpers",
+      "description": "Read current order state across Supabase/Tuesday and Monday before making production, dispatch, or customer-status claims.",
+      "sources": ["Supabase orders", "order_items", "order_events", "order_links", "production_order_workflows", "Monday", "Xero"],
+      "inputs_required": ["order_id_or_invoice_or_customer"],
+      "outputs": ["order_state", "source_mismatches", "next_action", "evidence_refs"],
+      "allowed_mutations": [],
+      "forbidden_actions": ["write_status", "promise_customer_date", "write_Monday"],
+      "readback_required": ["Supabase row", "Monday item when relevant", "Xero state when payment/accounting matters"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "report_not_checked_or_source_mismatch_instead_of_guessing"
+    },
+    {
+      "id": "orders.update_touchpoint",
+      "lane": "orders_production",
+      "permission_level": "standing_update",
+      "status": "allowed_under_current_standing_rules_when_verified",
+      "description": "Update Supabase/Tuesday order touchpoint, status detail, or next action after verified customer-visible event or source evidence.",
+      "sources": ["Gmail", "Sent", "customer report from Guido", "Supabase order", "Monday", "Xero", "payment source", "carrier evidence"],
+      "inputs_required": ["order_id", "source_evidence", "fields_to_update", "reason"],
+      "outputs": ["updated_order", "changed_fields", "event_or_note", "readback"],
+      "allowed_mutations": ["order next_action", "order notes/details", "order delivery metadata", "order status only when verified and within standing rule"],
+      "forbidden_actions": ["write_Monday_without_approval", "mark_paid_without_settled_match", "mark_delivered_without_evidence", "send_customer_message"],
+      "readback_required": ["row_id", "before_fields", "after_fields", "source_evidence"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "write_only_note_or_stop_if_status_evidence_is_not_strong_enough"
+    },
+    {
+      "id": "freight_dispatch.validate_readiness",
+      "lane": "freight_dispatch",
+      "permission_level": "read",
+      "status": "partly_available_in_dispatch_scaffold_and_guardrail",
+      "description": "Validate dispatch readiness before any carrier/customer action.",
+      "sources": ["Supabase order", "Monday", "Xero payment", "QC/photos", "welcome sheet", "provenance card", "gift board", "delivery/contact fields", "package dimensions"],
+      "inputs_required": ["order_id_or_invoice"],
+      "outputs": ["readiness_ok", "missing_gates", "route", "evidence_refs", "internal_prompt"],
+      "allowed_mutations": [],
+      "forbidden_actions": ["book_freight", "email_customer", "email_carrier", "invent_package_fields"],
+      "readback_required": ["all_gate_values", "missing_gate_codes", "source_refs"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "return_internal_prompt_only_when_any_required_gate_is_missing"
+    },
+    {
+      "id": "freight_dispatch.build_route_packet",
+      "lane": "freight_dispatch",
+      "permission_level": "draft_preview",
+      "status": "scaffold_exists_for_preview_work",
+      "description": "Build deterministic Mainfreight, Pinpoint, or pickup packet after readiness validation.",
+      "sources": ["dispatch readiness result", "Supabase order", "Monday", "Xero", "carrier config", "package lines"],
+      "inputs_required": ["order_id", "route", "package_lines", "contact_details", "address", "service_mapping"],
+      "outputs": ["packet", "missing_fields", "draft_text", "approval_phrase"],
+      "allowed_mutations": ["private packet file", "internal prompt"],
+      "forbidden_actions": ["submit_booking", "send_Pinpoint_email", "send_customer_update", "use_real_account_mapping_in_tests"],
+      "readback_required": ["readiness_ok", "packet_fields", "missing_fields_empty_or_listed"],
+      "audit_event_required": true,
+      "approval_phrase_required": "Approve [carrier or pickup] action for [invoice/order] with this packet",
+      "safe_failure_mode": "packet_preview_only_or_blocked_missing_fields"
+    },
+    {
+      "id": "freight_dispatch.book_or_notify",
+      "lane": "freight_dispatch",
+      "permission_level": "exact_approval",
+      "status": "not_implemented_live",
+      "description": "Submit carrier booking or notify customer/carrier after exact approval and readiness proof.",
+      "sources": ["approved_packet", "readiness_result", "carrier_response", "Gmail draft/readback if email"],
+      "inputs_required": ["exact_approval", "order_id", "packet", "readiness_proof"],
+      "outputs": ["booking_ref_or_message_state", "tracking_ref", "labels_docs", "readback"],
+      "allowed_mutations": ["carrier_booking_when_future_tool_exists", "Supabase dispatch fields after carrier confirmation", "Gmail send only if policy changes in future"],
+      "forbidden_actions": ["book_without_approval", "send_without_policy_change", "mark_collected_without_carrier_confirmation"],
+      "readback_required": ["carrier_ref", "tracking_ref", "labels_or_docs", "Supabase readback"],
+      "audit_event_required": true,
+      "approval_phrase_required": "Approve Mainfreight booking for [invoice/order] with these package lines and addresses",
+      "safe_failure_mode": "do_not_submit_and_return_blocker_if_approval_or_readiness_missing"
+    },
+    {
+      "id": "payments.verify_and_update",
+      "lane": "payments",
+      "permission_level": "standing_update",
+      "status": "allowed_only_after_settled_exact_match",
+      "description": "Verify settled payment evidence and update relevant Supabase/Tuesday payment state only after exact match.",
+      "sources": ["Akahu or approved bank source", "Xero", "Supabase order", "Gmail if customer reports payment"],
+      "inputs_required": ["invoice_or_order", "expected_amount", "payer_or_reference", "payment_source"],
+      "outputs": ["match_result", "updated_payment_state", "readback", "remaining_gap"],
+      "allowed_mutations": ["paid_on_date", "payment status", "payment note"],
+      "forbidden_actions": ["mark_paid_on_pending_or_unmatched_payment", "send_payment_ack", "change_Xero_payment"],
+      "readback_required": ["transaction_reference", "settled_date", "amount", "payer_match", "order_or_invoice_match", "Supabase readback"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "surface_pending_or_unmatched_evidence_without_updating_paid_state"
+    },
+    {
+      "id": "website.read_live_state",
+      "lane": "website_shopify",
+      "permission_level": "read",
+      "status": "available_via_existing_workflows",
+      "description": "Read live website, Shopify admin/theme state, and local references before website claims or draft changes.",
+      "sources": ["live public URL", "Shopify admin/product/theme", "docs/current/site-state.md", "reference/brand-kit.md", "website-change-log"],
+      "inputs_required": ["url_or_theme_or_product_handle"],
+      "outputs": ["source_checked", "theme_id_role", "current_state", "evidence_refs"],
+      "allowed_mutations": [],
+      "forbidden_actions": ["push_theme", "publish_live", "change_product", "assume_local_equals_live"],
+      "readback_required": ["live_or_admin_source", "theme_id", "timestamp", "evidence"],
+      "audit_event_required": true,
+      "approval_phrase_required": null,
+      "safe_failure_mode": "report_source_mismatch_and_stop_before_recommendation_if_live_state_unclear"
+    },
+    {
+      "id": "website.stage_or_publish_change",
+      "lane": "website_shopify",
+      "permission_level": "exact_approval",
+      "status": "available_only_through_scoped_shopify_workflow",
+      "description": "Push scoped theme/page/product changes to staging or live only after exact approval, backup, and visual checks.",
+      "sources": ["approved change", "target theme", "backup", "visual QA"],
+      "inputs_required": ["exact_approval", "target_theme_id", "scoped_files_or_objects", "backup"],
+      "outputs": ["push_result", "preview_or_live_url", "desktop_check", "mobile_check", "change_log_entry"],
+      "allowed_mutations": ["approved_scoped_staging_push", "approved_scoped_live_push"],
+      "forbidden_actions": ["unscoped_push", "live_publish_without_approval", "skip_visual_QA"],
+      "readback_required": ["theme_id_role", "files_changed", "backup", "visual_check", "public_check_if_live"],
+      "audit_event_required": true,
+      "approval_phrase_required": "Approve scoped Shopify [staging/live] push for [files/objects] to theme [theme_id]",
+      "safe_failure_mode": "stop_before_push_if_theme_role_or_scope_is_unclear"
+    },
+    {
+      "id": "stocktake_purchase_orders.draft_supplier_action",
+      "lane": "stocktake_purchase_orders",
+      "permission_level": "draft_preview",
+      "status": "desired_workflow",
+      "description": "Read stock/supplier context and draft PO or supplier email without ordering, paying, or sending.",
+      "sources": ["stocktake records", "supplier emails", "Drive docs", "Xero bills", "Monday/Supabase order blockers"],
+      "inputs_required": ["supplier_or_material", "need_or_order_context", "source_evidence"],
+      "outputs": ["draft_PO_or_email", "supplier_constraints", "customer_impact", "missing_facts"],
+      "allowed_mutations": ["internal draft", "order/lead supplier-blocker note under standing rule when customer-impacting and verified"],
+      "forbidden_actions": ["send_supplier_email", "place_order", "pay_bill", "promote_supplier_email_to_customer_priority_by_keyword_only"],
+      "readback_required": ["source_evidence", "draft_only_state", "customer_impact_note_if_updated"],
+      "audit_event_required": true,
+      "approval_phrase_required": "Approve sending supplier message or placing PO [details]",
+      "safe_failure_mode": "return_supplier_blocker_summary_without_external_action"
+    }
+  ],
+  "audit_event_schema_proposal": {
+    "table": "agent_action_events",
+    "status": "missing",
+    "required_fields": [
+      "id",
+      "created_at",
+      "actor_profile",
+      "actor_role",
+      "lane",
+      "capability_id",
+      "permission_level",
+      "source_systems",
+      "entity_type",
+      "entity_id",
+      "action_summary",
+      "before_snapshot_ref",
+      "after_snapshot_ref",
+      "evidence_refs",
+      "approval_text",
+      "result",
+      "safe_failure_mode",
+      "redaction_status"
+    ]
+  },
+  "missing_interfaces": [
+    {
+      "id": "agent_action_events",
+      "priority": 1,
+      "description": "Central audit table or equivalent log for all agent reads, drafts, writes, approvals, and readbacks."
+    },
+    {
+      "id": "daily_state_read_api",
+      "priority": 1,
+      "description": "Read-only API/view for hot leads, waiting customers, active orders, production blockers, freight blockers, cash/payment blockers, and stale drafts."
+    },
+    {
+      "id": "standing_touchpoint_update_helper",
+      "priority": 1,
+      "description": "Write-safe Supabase/Tuesday helper requiring source evidence, allowed fields, automatic readback, and audit event."
+    },
+    {
+      "id": "dispatch_readiness_api",
+      "priority": 1,
+      "description": "Read-only API/view exposing dispatch readiness gates and route-specific blocker state."
+    },
+    {
+      "id": "approval_queue_ui",
+      "priority": 1,
+      "description": "Mission Control queue where drafts and packets can be reviewed, approved, rejected, or edited."
+    },
+    {
+      "id": "redaction_layer",
+      "priority": 1,
+      "description": "Shared redaction of secrets and unnecessary sensitive customer data before worker prompts/logs."
+    }
+  ],
+  "recommended_build_order": [
+    "Add central agent_action_events audit table or file-backed equivalent.",
+    "Build read-only daily state API/view.",
+    "Build standing-approved Supabase touchpoint update helper with automatic readback and audit event.",
+    "Build dispatch readiness API/view and packet preview around current scaffold.",
+    "Build Mission Control approval queue for drafts and packets.",
+    "Only then add live carrier/API/send integrations behind exact approval and audit gates."
+  ],
+  "validation": {
+    "minimum_acceptance_questions": [
+      "What entity does it act on?",
+      "Which source of truth does it read?",
+      "What permission level is it?",
+      "What inputs are required?",
+      "What fields can it change, if any?",
+      "What actions are explicitly forbidden?",
+      "What proof must be read back?",
+      "Where is the audit event stored?",
+      "What is the safe failure mode?",
+      "What exact approval phrase is needed if it crosses into exact_approval?"
+    ],
+    "not_agent_ready_if": [
+      "permission_level_missing",
+      "source_of_truth_missing",
+      "readback_required_missing",
+      "forbidden_actions_missing",
+      "audit_event_plan_missing",
+      "safe_failure_mode_missing"
+    ]
+  }
+}

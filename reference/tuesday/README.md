@@ -33,6 +33,8 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 - `tuesday-agent-handover-2026-05-24.md` — current operating handover for the Tuesday profile/worker
 - `nick-production-rollout-guide-2026-06-15.md` — short rollout script for introducing the Production Plan to Nick
 - `nick-live-order-trust-audit-2026-06-14.md` — live read-only order/intake shortlist for Nick's first guided training session
+- `agent-ready-interface-checklist-2026-06-21.md` — current checklist for making Innate/Tues/Mission Control agent-readable, permissioned, evidence-backed, and audit-ready without bypassing approval gates
+- `agent-interface.json` — machine-readable capability map for current lanes, permission levels, evidence readbacks, approval gates, missing interfaces, and build order; internal reference only, not enforcement yet
 
 ## Historical / evidence unless re-verified
 
