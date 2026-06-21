@@ -7546,11 +7546,11 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
     { id: "schedule", label: "Schedule board", hint: "Day / person capacity" },
   ];
   return (
-    <div data-mobile-production-actions="workshop-primary-actions" aria-label="Production plan view" style={{ display: "flex", gap: 4, padding: isNarrow ? 2 : 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", width: isNarrow ? "100%" : undefined }}>
+    <div data-mobile-production-actions="workshop-primary-actions" aria-label="Production plan view" style={{ display: "flex", gap: 3, padding: isNarrow ? 2 : 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", width: isNarrow ? "100%" : undefined }}>
       {options.map((option) => {
         const active = mode === option.id;
         return (
-          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 40 : undefined, padding: isNarrow ? "9px 10px" : "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 12 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
+          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 32 : undefined, padding: isNarrow ? "6px 8px" : "7px 10px", background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 11 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
             {option.id === "schedule" ? <><span className="plan-schedule-mobile-label">Schedule</span><span className="plan-schedule-desktop-label">{option.label}</span></> : option.label}
           </button>
         );
@@ -7565,13 +7565,13 @@ function MobilePlanPrimaryToggle({ view, onViewChange, orderCount }: { view: Mob
     { id: "orders", label: "Orders", meta: `${orderCount} live` },
   ];
   return (
-    <div data-mobile-plan-primary-toggle="true" aria-label="Mobile production plan section" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 4, padding: 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.78)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", position: "sticky", top: 56, zIndex: 42 }}>
+    <div data-mobile-plan-primary-toggle="true" aria-label="Mobile production plan section" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 3, padding: 2, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.78)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", position: "sticky", top: 42, zIndex: 42 }}>
       {options.map((option) => {
         const active = view === option.id;
         return (
-          <button key={option.id} type="button" aria-pressed={active} onClick={() => onViewChange(option.id)} style={{ minWidth: 0, minHeight: 42, border: 0, borderRadius: 999, background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", touchAction: "manipulation", display: "grid", alignContent: "center", gap: 2 }}>
-            <span style={{ fontSize: 12, lineHeight: 1 }}>{option.label}</span>
-            <span style={{ fontSize: 8.5, lineHeight: 1, opacity: active ? 0.82 : 0.72 }}>{option.meta}</span>
+          <button key={option.id} type="button" aria-pressed={active} onClick={() => onViewChange(option.id)} style={{ minWidth: 0, minHeight: 32, border: 0, borderRadius: 999, background: active ? DT.headerBg : "transparent", color: active ? "#fff" : DT.textMuted, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", touchAction: "manipulation", display: "grid", alignContent: "center", gap: 0 }}>
+            <span style={{ fontSize: 11, lineHeight: 1 }}>{option.label}</span>
+            <span style={{ fontSize: 8, lineHeight: 1, opacity: active ? 0.82 : 0.72 }}>{option.meta}</span>
           </button>
         );
       })}

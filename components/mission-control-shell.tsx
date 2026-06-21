@@ -94,15 +94,16 @@ function useIsNarrow(breakpoint = 760) {
   return isNarrow;
 }
 
-function TuesdayMark() {
+function TuesdayMark({ compact = false }: { compact?: boolean }) {
+  const scale = compact ? 0.78 : 1;
   const capsule = (background: string, width: number, rotate: number, left: number, top: number) => (
     <span
       style={{
         position: "absolute",
-        width,
-        height: 9,
-        left,
-        top,
+        width: Math.round(width * scale),
+        height: Math.round(9 * scale),
+        left: Math.round(left * scale),
+        top: Math.round(top * scale),
         borderRadius: 999,
         background,
         transform: `rotate(${rotate}deg)`,
@@ -115,10 +116,10 @@ function TuesdayMark() {
       aria-hidden="true"
       style={{
         position: "relative",
-        width: 36,
-        height: 36,
+        width: compact ? 28 : 36,
+        height: compact ? 28 : 36,
         flex: "0 0 auto",
-        borderRadius: 14,
+        borderRadius: compact ? 10 : 14,
         background: "linear-gradient(145deg, rgba(255,253,249,0.13), rgba(210,174,109,0.10))",
         border: "1px solid rgba(210,174,109,0.22)",
         overflow: "hidden",
@@ -127,18 +128,18 @@ function TuesdayMark() {
       {capsule(DT.clay, 22, -18, 5, 9)}
       {capsule(DT.gold, 23, -18, 7, 16)}
       {capsule(DT.sage, 22, -18, 9, 23)}
-      <span style={{ position: "absolute", width: 7, height: 7, right: 7, top: 6, borderRadius: 999, background: DT.teal }} />
+      <span style={{ position: "absolute", width: compact ? 5 : 7, height: compact ? 5 : 7, right: compact ? 5 : 7, top: compact ? 5 : 6, borderRadius: 999, background: DT.teal }} />
     </div>
   );
 }
 
 function TuesdayBrand({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", maxWidth: isNarrow ? undefined : 300, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 1 300px" }}>
-      <TuesdayMark />
+    <div style={{ display: "flex", alignItems: "center", gap: isNarrow ? 7 : 11, width: "100%", maxWidth: isNarrow ? undefined : 300, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 1 300px" }}>
+      <TuesdayMark compact={isNarrow} />
       <div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
-          <div style={{ fontSize: 23, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
+          <div style={{ fontSize: isNarrow ? 18 : 23, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
         </div>
         <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
       </div>
@@ -187,15 +188,15 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
         aria-label={compact ? `${actionLabel} Tuesday` : undefined}
         title={compact ? err || (refreshed ? refreshedLabel : `${actionLabel} Tuesday`) : undefined}
         style={{
-          minWidth: compact ? 72 : undefined,
-          minHeight: compact ? 40 : undefined,
-          padding: compact ? "0 12px" : "6px 12px",
+          minWidth: compact ? 56 : undefined,
+          minHeight: compact ? 32 : undefined,
+          padding: compact ? "0 9px" : "6px 12px",
           borderRadius: 999,
           background: DT.gold,
           color: DT.headerBg,
           border: "none",
           fontWeight: 700,
-          fontSize: 11,
+          fontSize: compact ? 10 : 11,
           cursor: isPending ? "wait" : "pointer",
           fontFamily: DT.sans,
           letterSpacing: "0.02em",
@@ -211,10 +212,10 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
 function MobileManagementMenu({ section, pathname }: { section: MissionControlSection; pathname: string | null }) {
   return (
     <details style={{ position: "relative", justifySelf: "end", zIndex: 1200 }}>
-      <summary style={{ listStyle: "none", border: "1px solid rgba(210,174,109,0.24)", background: "rgba(255,253,249,0.08)", color: "rgba(255,255,255,0.90)", borderRadius: 999, minHeight: 40, padding: "0 13px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 950, fontFamily: DT.sans, cursor: "pointer", whiteSpace: "nowrap" }}>
+      <summary style={{ listStyle: "none", border: "1px solid rgba(210,174,109,0.24)", background: "rgba(255,253,249,0.08)", color: "rgba(255,255,255,0.90)", borderRadius: 999, minHeight: 32, padding: "0 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 950, fontFamily: DT.sans, cursor: "pointer", whiteSpace: "nowrap" }}>
         Menu
       </summary>
-      <div style={{ position: "absolute", top: 44, right: 0, minWidth: 188, padding: 7, border: "1px solid rgba(210,174,109,0.22)", borderRadius: 14, background: DT.headerBg2, boxShadow: "0 16px 36px rgba(0,0,0,0.28)", display: "flex", flexDirection: "column", gap: 5, zIndex: 1201 }}>
+      <div style={{ position: "absolute", top: 36, right: 0, minWidth: 188, padding: 7, border: "1px solid rgba(210,174,109,0.22)", borderRadius: 14, background: DT.headerBg2, boxShadow: "0 16px 36px rgba(0,0,0,0.28)", display: "flex", flexDirection: "column", gap: 5, zIndex: 1201 }}>
         {ALL_NAV.map((item) => {
           const active = navItemActive(item, section, pathname);
           return (
@@ -297,13 +298,13 @@ export function MissionControlShell({
           @media (max-width: 759px) {
             .mc-mobile-only { display: flex; }
             .mc-mobile-hide { display: none !important; }
-            .mc-mobile-grid { grid-template-columns: minmax(0, 1fr) auto !important; padding: 8px 10px !important; }
-            .mc-plan-mobile-main { padding: 8px 8px 24px !important; }
-            .mc-plan-mobile-title-wrap { margin-bottom: 8px !important; }
+            .mc-mobile-grid { grid-template-columns: minmax(0, 1fr) auto !important; padding: 5px 8px !important; }
+            .mc-plan-mobile-main { padding: 6px 6px 22px !important; }
+            .mc-plan-mobile-title-wrap { margin-bottom: 6px !important; }
             .production-plan-layout-grid { display: flex !important; flex-direction: column !important; gap: 8px !important; }
             [data-order-row-week-grid] { grid-template-columns: 1fr !important; }
             [data-mobile-crew-pill="crew-filter"] { gap: 0 !important; flex-wrap: nowrap !important; border: 1px solid rgba(0,0,0,0.06) !important; border-radius: 999px !important; background: rgba(255,255,255,0.78) !important; padding: 2px !important; overflow: hidden !important; width: 100% !important; }
-            [data-mobile-crew-pill="crew-filter"] > button { min-width: 0 !important; flex: 1 1 0 !important; border: 0 !important; padding: 6px 8px !important; }
+            [data-mobile-crew-pill="crew-filter"] > button { min-width: 0 !important; min-height: 32px !important; flex: 1 1 0 !important; border: 0 !important; padding: 5px 8px !important; }
             [data-mobile-crew-pill="crew-filter"] > button span:nth-child(2), [data-mobile-crew-pill="crew-filter"] > button + button + button + button { display: none !important; }
             .plan-schedule-desktop-label { display: none; }
             .plan-schedule-mobile-label { display: inline; }
@@ -314,7 +315,7 @@ export function MissionControlShell({
           }
         `}</style>
       <header style={{ position: "sticky", top: 0, zIndex: 1000 }}>
-        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "8px 10px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(220px, 300px) minmax(0, 1fr) auto", alignItems: "center", gap: isNarrow ? 8 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflow: "visible" }}>
+        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "5px 8px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(220px, 300px) minmax(0, 1fr) auto", alignItems: "center", gap: isNarrow ? 6 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflow: "visible" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           {compactMobile && (
             <div className="mc-mobile-only" style={{ alignItems: "center", gap: 7 }}>
@@ -353,7 +354,7 @@ export function MissionControlShell({
           </nav>}
           {!compactMobile && <div className="mc-mobile-hide" style={{ justifySelf: "end" }}><RefreshButton section={section} /></div>}
         </div>
-        <div style={{ height: 3, background: `linear-gradient(90deg, ${DT.clay} 0%, ${DT.gold} 38%, ${DT.sage} 72%, ${DT.teal} 100%)` }} />
+        <div style={{ height: isNarrow ? 2 : 3, background: `linear-gradient(90deg, ${DT.clay} 0%, ${DT.gold} 38%, ${DT.sage} 72%, ${DT.teal} 100%)` }} />
       </header>
       <main className={section === "plan" ? "mc-plan-mobile-main" : undefined} style={{ maxWidth, margin: "0 auto", padding: isNarrow ? compactPlanMobile ? "8px 8px 24px" : "14px 12px 28px" : "18px 20px 22px" }}>
         <div className={section === "plan" ? "mc-plan-mobile-title-wrap" : undefined} style={{ marginBottom: compactPlanMobile ? 8 : 14 }}>
