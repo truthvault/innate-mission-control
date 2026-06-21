@@ -546,4 +546,3 @@ Note: This project uses Next.js 16. Read local Next docs before changing framewo
 ## Handoff summary
 
 Build a small, source-linked Workboard in Tuesday. Use the Stephen meeting as the first clean test case. Store the clean record separately from tasks. Keep the daily view tiny. Prioritise cash and conversion. Preserve traceability. No external actions without Guido’s approval.
-

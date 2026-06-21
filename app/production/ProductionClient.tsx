@@ -2,55 +2,12 @@
 
 import { useState } from "react";
 import { MissionControlShell } from "@/components/mission-control-shell";
+import { DT } from "@/components/mission-control-ui";
 import type { UiOrder } from "@/lib/monday/mapping";
-
-const DT = {
-  pageBg:"#f5f3ee",cardBg:"#ffffff",headerBg:"#1a1a1a",
-  teal:"#0c7c7a",tealSoft:"rgba(12,124,122,0.08)",
-  gold:"#c8a96e",goldSoft:"rgba(200,169,110,0.06)",
-  textPrimary:"#22201a",textSecondary:"#5a5549",
-  textMuted:"#7c746b",textFaint:"#9a9088",
-  green:"#15803d",greenBg:"rgba(21,128,61,0.08)",
-  border:"rgba(0,0,0,0.06)",
-  shadow:"0 1px 3px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.02)",
-  shadowHover:"0 2px 6px rgba(0,0,0,0.05), 0 6px 20px rgba(0,0,0,0.03)",
-  radius:14,radiusSm:8,
-  sans:"'DM Sans', -apple-system, sans-serif",
-  serif:"'Fraunces', Georgia, serif",
-};
+import { PANEL_STEPS, TABLE_STEPS, type ProductionStep } from "@/lib/production/order-display";
 
 // ── PRODUCTION STEPS BY PRODUCT TYPE ──────────────────────────
-type Step = { key: string; label: string; who: string | null; wait: boolean; waitLabel?: string };
-
-const TABLE_STEPS: Step[] = [
-  {key:"confirmed",label:"Order Confirmed",who:"Workshop",wait:false},
-  {key:"pos",label:"POs Sent",who:"Workshop",wait:false},
-  {key:"timber",label:"Timber Pulled",who:"Workshop",wait:false},
-  {key:"matWait",label:"Materials Wait",who:null,wait:true,waitLabel:"~2 weeks"},
-  {key:"received",label:"Materials Received",who:"Workshop",wait:false},
-  {key:"stress",label:"Stress Cuts",who:"Workshop",wait:false},
-  {key:"sand",label:"Sand",who:"Workshop",wait:false},
-  {key:"coat1",label:"1st Coat",who:"Workshop",wait:false},
-  {key:"coat2",label:"2nd Coat",who:"Workshop",wait:false},
-  {key:"cure",label:"Curing",who:null,wait:true,waitLabel:"~1 week"},
-  {key:"qc",label:"QC + Photos",who:"Workshop",wait:false},
-  {key:"assemble",label:"Assemble / Box",who:"Workshop",wait:false},
-  {key:"freight",label:"Book Freight",who:"Workshop",wait:false},
-];
-
-const PANEL_STEPS: Step[] = [
-  {key:"confirmed",label:"Order Confirmed",who:"Workshop",wait:false},
-  {key:"pos",label:"POs Sent",who:"Workshop",wait:false},
-  {key:"matWait",label:"Materials Wait",who:null,wait:true,waitLabel:"~2 weeks"},
-  {key:"received",label:"Materials Received",who:"Workshop",wait:false},
-  {key:"cut",label:"CNC / Cut",who:"Workshop",wait:false},
-  {key:"sand",label:"Sand",who:"Workshop",wait:false},
-  {key:"coat1",label:"1st Coat",who:"Workshop",wait:false},
-  {key:"coat2",label:"2nd Coat",who:"Workshop",wait:false},
-  {key:"cure",label:"Curing",who:null,wait:true,waitLabel:"~1 week"},
-  {key:"qc",label:"QC",who:"Workshop",wait:false},
-  {key:"wrap",label:"Wrap + Dispatch",who:"Workshop",wait:false},
-];
+type Step = ProductionStep;
 
 const STEPS_BY_KEY: Record<string, Step[]> = {
   TABLE_STEPS,
@@ -145,7 +102,7 @@ function trackState(order: DisplayOrder, pct=progressPct(order)): {level: TrackL
   if(order.rawMondayStatus==="To Process"&&diff!==null&&diff<=14) return {level:"watch",label:"Watch",reason:"Not started inside 2 weeks",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
   if(diff!==null&&diff<=7&&pct<60) return {level:"watch",label:"Watch",reason:"Due soon for current progress",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
   if(diff!==null&&diff<=14&&pct<30) return {level:"watch",label:"Watch",reason:"Low progress for next fortnight",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
-  return {level:"onTrack",label:"On track",reason:"No obvious schedule flag",bg:"rgba(21,128,61,0.08)",color:DT.green,border:"rgba(21,128,61,0.18)"};
+  return {level:"onTrack",label:"On track",reason:"No schedule flags",bg:"rgba(21,128,61,0.08)",color:DT.green,border:"rgba(21,128,61,0.18)"};
 }
 
 function nextStepText(order: DisplayOrder){

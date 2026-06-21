@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { Chip, DT } from "@/components/mission-control-ui";
 
@@ -135,6 +135,17 @@ function TinyLabel({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint, fontFamily: DT.sans }}>{children}</div>;
 }
 
+function useIsNarrow(breakpoint = 760) {
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const update = () => setIsNarrow(window.innerWidth < breakpoint);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [breakpoint]);
+  return isNarrow;
+}
+
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ padding: 12, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.62)", minHeight: 58 }}>
@@ -236,6 +247,7 @@ function SuggestedPlan() {
 }
 
 export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
+  const isNarrow = useIsNarrow();
   const [checked, setChecked] = useState<boolean[]>([true, true, false, false, false]);
   const doneCount = useMemo(() => checked.filter(Boolean).length, [checked]);
   const activeIndex = Math.min(doneCount, STEPS.length - 1);
@@ -256,28 +268,28 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
       maxWidth={1280}
     >
       <Card style={{ marginBottom: 14, background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(210,174,109,0.16) 100%)` }}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(280px, 0.65fr)", gap: 18, alignItems: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "minmax(0, 1fr)" : "minmax(0, 1.35fr) minmax(280px, 0.65fr)", gap: isNarrow ? 12 : 18, alignItems: "center" }}>
           <div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
               <Chip label="Local replay" tone="amber" />
               <Chip label="Read-only" tone="grey" />
               <Chip label="Completed 2025 replay" tone="green" />
             </div>
-            <h2 style={{ margin: "10px 0 0", fontSize: 30, lineHeight: 1.02, letterSpacing: "-0.05em", color: DT.textPrimary, fontFamily: DT.serif }}>
+            <h2 style={{ margin: "10px 0 0", fontSize: isNarrow ? 26 : 30, lineHeight: 1.04, letterSpacing: "-0.05em", color: DT.textPrimary, fontFamily: DT.serif }}>
               Steel Crossroads order intake proof
             </h2>
             <p style={{ margin: "10px 0 0", color: DT.textSecondary, fontSize: 14, lineHeight: 1.5, maxWidth: 760 }}>
               This is the screen I think Nick/admin should see before a paid order becomes workshop truth: one source-backed customer order, the production process steps it requires, one green process confirmation gate, then a suggested Week Plan.
             </p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", gap: 8 }}>
             <Fact label="Current state" value={currentState} />
             <Fact label="Replay progress" value={`${doneCount}/${STEPS.length} checks`} />
           </div>
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.08fr) minmax(360px, 0.92fr)", gap: 14, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "minmax(0, 1fr)" : "minmax(0, 1.08fr) minmax(360px, 0.92fr)", gap: 14, alignItems: "start" }}>
         <div style={{ display: "grid", gap: 14 }}>
           <Card style={{ borderLeft: `4px solid ${DT.gold}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 14 }}>
@@ -287,7 +299,7 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
               </div>
               <Chip label="Needs process confirmation" tone="amber" />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "minmax(0, 1fr)" : "repeat(3, minmax(0, 1fr))", gap: 10 }}>
               <Fact label="Invoice" value={`${ORDER.invoice} · ${ORDER.invoiceDate}`} />
               <Fact label="Payment" value={`${ORDER.paidDate} · ${ORDER.value}`} />
               <Fact label="Source" value={ORDER.source} />
@@ -307,8 +319,8 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
                 const done = checked[index];
                 const active = index === activeIndex;
                 return (
-                  <div key={step.title} style={{ display: "grid", gridTemplateColumns: "32px minmax(0, 1fr)", gap: 10, padding: 12, borderRadius: 14, border: `1px solid ${active ? "rgba(210,174,109,0.5)" : DT.border}`, background: done ? DT.greenBg : active ? DT.goldSoft : "rgba(255,255,255,0.58)" }}>
-                    <input aria-label={step.title} type="checkbox" checked={done} onChange={() => setChecked((prev) => prev.map((v, i) => i === index ? !v : v))} style={{ width: 22, height: 22, accentColor: DT.green, marginTop: 2 }} />
+                  <div key={step.title} style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", gap: 8, padding: 12, borderRadius: 14, border: `1px solid ${active ? "rgba(210,174,109,0.5)" : DT.border}`, background: done ? DT.greenBg : active ? DT.goldSoft : "rgba(255,255,255,0.58)" }}>
+                    <input aria-label={step.title} type="checkbox" checked={done} onChange={() => setChecked((prev) => prev.map((v, i) => i === index ? !v : v))} style={{ width: 40, height: 40, accentColor: DT.green, margin: 0, touchAction: "manipulation" }} />
                     <div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                         <h4 style={{ margin: 0, color: DT.textPrimary, fontFamily: DT.serif, fontSize: 18, letterSpacing: "-0.03em" }}>{step.title}</h4>
@@ -325,7 +337,7 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
           </Card>
         </div>
 
-        <div style={{ display: "grid", gap: 14, position: "sticky", top: 92 }}>
+        <div style={{ display: "grid", gap: 14, position: isNarrow ? "static" : "sticky", top: 92 }}>
           <Card style={{ borderLeft: `4px solid ${DT.teal}` }}>
             <TinyLabel>Order Inbox states</TinyLabel>
             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>

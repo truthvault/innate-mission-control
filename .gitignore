@@ -15,6 +15,8 @@
 
 # next.js
 /.next/
+/.next-deployment-id
+/.next-static-archive/
 /out/
 
 # production
@@ -54,6 +56,19 @@ scripts/__pycache__/
 # throwaway scripts
 /tmp_*.py
 /tmp_*.js
+/tmp_*.mjs
+/scripts/tmp_*
 
 # website/archive working folders
 /seo/
+
+# local generated evidence and agent artifacts
+/reports/
+/artifacts/
+/captures/
+/screenshots/
+
+# local tool dependency/install folders, source scripts stay reviewed separately
+/tools/content-recording/node_modules/
+/tools/content-recording/test-results/
+/tools/content-recording/.playwright/

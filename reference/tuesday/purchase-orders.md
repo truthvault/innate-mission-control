@@ -12,28 +12,36 @@ Replicate the useful parts of the Monday purchase orders board inside Tuesday so
 
 ## Captured requirements
 - Add a top tab for Purchase Orders.
-- It should replicate the Monday.com purchase orders board.
+- It should replicate the useful workshop shape of the Monday.com purchase orders board, not reinterpret it as customer orders.
+- The first/name column is the **materials/items ordered**.
+- Dedicated columns must carry:
+  - supplier,
+  - date ordered,
+  - notes = either `stock` or the customer/order it is for,
+  - clickable Xero invoice/bill link so workshop can check exact supplier details while receipting goods.
+- For PO rows with attached Xero-generated PO PDFs/updates, read the PDF/reference before classifying the row; legacy Monday notes may only contain rough material shorthand.
 
 ## Core jobs-to-be-done
 - See outstanding purchase orders.
-- Track supplier, order status, expected arrival, and linked job/customer.
+- Track materials/items ordered, supplier, ordered date, order status, received date, invoice/admin approval, and stock/customer allocation.
+- Give Nick/workshop a clickable Xero invoice/bill link for exact receipting detail.
 - Spot blockers for production.
 - Draft supplier follow-up emails without sending automatically.
 
 ## Likely data needed
-- PO number/id
+- Materials/items ordered (Monday first/name column)
 - Supplier
-- Linked job/customer
-- Items/materials
+- Date ordered
+- Notes: `stock` or customer/order name
+- Xero invoice/bill URL
+- PO number/id where available
 - Quantity
-- Order date
 - Expected arrival
-- Actual arrival
-- Status
+- Actual arrival / Date Received
+- Invoice approved / Date Approved
+- Status/group
 - Cost/estimate
-- Invoice/payment link if relevant
 - Monday item link/id
-- Notes
 
 ## Source of truth
 - Monday purchase orders board initially.
@@ -60,7 +68,7 @@ Replicate the useful parts of the Monday purchase orders board inside Tuesday so
 - No customer emails, public website publishing, Shopify writes, Monday writes, Xero writes, payments, file deletion, or service restarts.
 - Build work starts only when Guido says `BUILD`.
 - During Gym Mode, append and dedupe ideas; do not rewrite architecture constantly.
-- Treat Monday/Shopify/Xero as sources of truth unless an approved local Tuesday database table is defined.
+- Use the current source-of-truth split: Supabase/Tuesday is forward truth for leads and approved Tuesday-owned records; Monday remains current workshop/legacy truth for stock, customer history, and production tasks until migration gates are met; Xero remains accounting authority; Shopify remains website/product truth.
 
 
 ## Open questions

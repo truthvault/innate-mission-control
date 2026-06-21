@@ -1,23 +1,3 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { AUTH_COOKIE_MAX_AGE_SECONDS, AUTH_COOKIE_NAME, createAuthCookieValue } from "@/lib/tuesday/auth";
-
-async function login(formData: FormData) {
-  "use server";
-  const password = formData.get("password") as string;
-  if (password === process.env.SITE_PASSWORD) {
-    (await cookies()).set(AUTH_COOKIE_NAME, await createAuthCookieValue(), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
-    });
-    redirect("/");
-  } else {
-    redirect("/login?error=1");
-  }
-}
-
 export default async function LoginPage({
   searchParams,
 }: {
@@ -28,7 +8,8 @@ export default async function LoginPage({
   return (
     <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top_left,rgba(210,174,109,0.18),transparent_34%),#f8f5ee] px-4">
       <form
-        action={login}
+        action="/login/submit"
+        method="post"
         className="bg-[#fffdf9] rounded-2xl shadow-[0_18px_60px_rgba(44,37,32,0.10)] border border-[#d2ae6d]/30 p-8 w-full max-w-sm space-y-5"
       >
         <div className="text-center space-y-3">

@@ -1,14 +1,7 @@
-import DispatchClient from "./DispatchClient";
-import { getOrdersWithFallback } from "@/lib/monday/fetch-orders";
+import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function DispatchPage() {
-  const result = await getOrdersWithFallback();
-  return (
-    <DispatchClient
-      orders={result.items}
-      syncedAt={result.syncedAt}
-      source={result.source}
-      mondayError={result.mondayError}
-    />
-  );
+  redirect("/production/plan");
 }
