@@ -8335,7 +8335,7 @@ function OrderJourneyDropLane({
       data-order-row-drop-active={isDropTarget ? "true" : "false"}
       data-order-row-drop-has-items={hasItems ? "true" : "false"}
       data-order-row-drop-mobile-visible={mobileVisible ? "true" : "false"}
-      style={{ minHeight: compactMobile ? 0 : hasItems || isDropTarget ? 58 : 31, boxSizing: "border-box", display: "flex", flexDirection: "column", borderWidth: compactMobile ? "0 0 0 3px" : "1px 1px 1px 3px", borderStyle: compactMobile ? "solid" : isDropTarget ? "solid solid solid solid" : "dashed dashed dashed solid", borderColor: compactMobile ? (isDropTarget ? DT.teal : personVisual.stripe) : `${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? DT.teal : personVisual.stripe}`, borderRadius: compactMobile ? 7 : 10, background: compactMobile ? "transparent" : isDropTarget ? "rgba(12,124,122,0.12)" : hasItems ? readyBackground : "rgba(255,255,255,0.42)", padding: compactMobile ? "0 0 0 5px" : hasItems || isDropTarget ? 6 : "5px 6px", transition: "background 150ms ease, border-color 150ms ease, box-shadow 150ms ease", boxShadow: compactMobile ? undefined : isDropTarget ? "inset 0 0 0 1px rgba(12,124,122,0.12), 0 8px 18px rgba(12,124,122,0.10)" : hasItems ? "inset 0 0 0 1px rgba(255,255,255,0.42)" : undefined }}
+      style={{ minHeight: compactMobile ? 0 : hasItems || isDropTarget ? 58 : 31, boxSizing: "border-box", display: "flex", flexDirection: "column", borderWidth: compactMobile ? "0 0 0 2px" : "1px 1px 1px 3px", borderStyle: compactMobile ? "solid" : isDropTarget ? "solid solid solid solid" : "dashed dashed dashed solid", borderColor: compactMobile ? (isDropTarget ? DT.teal : personVisual.stripe) : `${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? DT.teal : personVisual.stripe}`, borderRadius: compactMobile ? 5 : 10, background: compactMobile ? "transparent" : isDropTarget ? "rgba(12,124,122,0.12)" : hasItems ? readyBackground : "rgba(255,255,255,0.42)", padding: compactMobile ? "0 0 0 4px" : hasItems || isDropTarget ? 6 : "5px 6px", transition: "background 150ms ease, border-color 150ms ease, box-shadow 150ms ease", boxShadow: compactMobile ? undefined : isDropTarget ? "inset 0 0 0 1px rgba(12,124,122,0.12), 0 8px 18px rgba(12,124,122,0.10)" : hasItems ? "inset 0 0 0 1px rgba(255,255,255,0.42)" : undefined }}
     >
       <div data-order-row-lane-header="true" style={{ marginBottom: hasItems || isDropTarget ? 5 : 0, display: compactMobile ? "none" : "flex", alignItems: "center", justifyContent: "space-between", gap: 6, minWidth: 0 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -8345,7 +8345,7 @@ function OrderJourneyDropLane({
         {items.length > 0 && <span style={{ color: DT.textFaint, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{items.length}</span>}
       </div>
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
-        <div style={{ display: "flex", flexDirection: "column", gap: compactMobile ? 3 : 5, minWidth: 0, minHeight: 0 }}>{children}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: compactMobile ? 2 : 5, minWidth: 0, minHeight: 0 }}>{children}</div>
       </SortableContext>
     </div>
   );
@@ -8362,6 +8362,74 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
   const connectionMessage = task.connectionState === "possible" ? "Possible order match. Use edit to confirm the customer/order." : task.connectionState === "needs-order" ? "No confirmed order link yet. Use edit to connect this task." : "";
   const editLabel = task.appTask ? "Open task details" : "Edit task";
   const dragCursor = isDragging ? "grabbing" : "grab";
+  if (compactMobile) {
+    const compactDoneSize = 18;
+    const compactEditSize = 22;
+    return (
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        key={task.id}
+        data-order-row-task-id={task.id}
+        data-order-row-sortable-task="order-row-sortable-task"
+        data-order-row-drag-surface="order-row-drag-surface"
+        data-order-row-task-compact="true"
+        title="Drag this task to another day or person"
+        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 7, background: orderRowTaskBg, padding: "3px 4px", minHeight: 28, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+      >
+        <div style={{ display: "grid", gridTemplateColumns: "18px auto minmax(0, 1fr) auto 22px", gap: 5, alignItems: "center", minWidth: 0 }}>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={taskDone}
+            aria-label={task.done ? "Mark task not done" : "Mark task done"}
+            title={task.done ? "Mark task not done" : "Mark task done"}
+            data-order-row-done-button="order-row-done-button"
+            data-order-row-done-checkbox="order-row-done-checkbox"
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
+              onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
+            }}
+            style={{ width: compactDoneSize, height: compactDoneSize, minWidth: compactDoneSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${taskDone ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: taskDone ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: taskDone ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 4, padding: 0, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, lineHeight: 1, cursor: "pointer", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.72)" }}
+          >
+            {task.done ? "✓" : ""}
+          </button>
+          <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>
+            {PERSON_LABELS[task.person]}
+          </span>
+          <button type="button" onClick={() => onTaskSelect(task)} style={{ minWidth: 0, padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.05, fontWeight: 900, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", touchAction: "manipulation" }}>{friendlyWorkshopTaskText(task.text)}</button>
+          <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
+          <button
+            type="button"
+            aria-label={editLabel}
+            title={editLabel}
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (task.appTask) {
+                onTaskOpen(task);
+              } else {
+                onTaskEdit(task);
+              }
+            }}
+            style={{ width: compactEditSize, height: compactEditSize, minWidth: compactEditSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: 0, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", lineHeight: 1 }}
+          >
+            ✎
+          </button>
+        </div>
+        {connectionMessage && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 8.5, fontWeight: 850, color: connection.color, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{connectionMessage}</div>}
+      </div>
+    );
+  }
   const doneSize = compactMobile ? 40 : 19;
   const editSize = compactMobile ? 40 : 20;
   return (
