@@ -5418,7 +5418,7 @@ function feedbackStorageKey(scope: string, id: string | number) {
 }
 
 function useIsNarrow(breakpoint = 760) {
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(true);
   useEffect(() => {
     const update = () => setIsNarrow(window.innerWidth < breakpoint);
     update();
@@ -7241,6 +7241,7 @@ function MobileScheduleAgenda({
   onTaskDoneToggle,
   onAppTaskSelect,
   onAppTaskOpen,
+  onAppTaskDoneToggle,
   onSuggestedStepSelect,
   onSuggestedStepOpen,
   suggestedStepCustomer,
@@ -7265,6 +7266,7 @@ function MobileScheduleAgenda({
   onTaskDoneToggle?: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
+  onAppTaskDoneToggle?: (task: AppPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onSuggestedStepSelect?: () => void;
   onSuggestedStepOpen?: () => void;
   suggestedStepCustomer?: string;
@@ -7307,7 +7309,7 @@ function MobileScheduleAgenda({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, paddingLeft: 23 }}>
           {(needsOrder || possibleOrder) && <span style={{ border: "1px solid rgba(190,137,24,0.24)", background: "rgba(255,246,199,0.78)", color: "#9a5b12", borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{needsOrder ? "Needs order" : "Check order"}</span>}
-          <span style={{ minWidth: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName || selectedOrder?.customer || "Workshop task"}</span>
+          <button type="button" onClick={() => needsOrder ? onTaskEdit?.(task) : onTaskOpen?.(task)} style={{ minWidth: 0, border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName || selectedOrder?.customer || "Workshop task"}</button>
         </div>
       </div>
     );
@@ -7316,13 +7318,15 @@ function MobileScheduleAgenda({
     const personVisual = PERSON_VISUALS[task.person];
     const done = Boolean(task.done);
     return (
-      <button key={task.id} type="button" onClick={() => onAppTaskSelect?.(task)} onDoubleClick={() => onAppTaskOpen?.(task)} style={{ width: "100%", borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : `rgba(190,137,24,0.42) rgba(190,137,24,0.42) rgba(190,137,24,0.42) ${personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.90)", padding: "4px 5px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 5, alignItems: "center", textAlign: "left" }}>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ display: "block", color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>{task.title}</span>
-          <span style={{ display: "block", marginTop: 2, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"}</span>
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours ?? 1)} <span style={{ color: DT.teal }}>{task.source === "intake" ? "Order" : "Job"}</span></span>
-      </button>
+      <div key={task.id} style={{ width: "100%", borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : `rgba(190,137,24,0.42) rgba(190,137,24,0.42) rgba(190,137,24,0.42) ${personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.90)", padding: "4px 5px", display: "grid", gap: 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr) auto auto", gap: 5, alignItems: "center" }}>
+          <button type="button" role="checkbox" aria-checked={done} aria-label={done ? "Mark task not done" : "Mark task done"} onClick={(event) => { event.stopPropagation(); onAppTaskDoneToggle?.(task, !done, { x: event.clientX, y: event.clientY }); }} style={{ width: 18, height: 18, border: `1.5px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: done ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 4, padding: 0, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, lineHeight: 1 }}>{done ? "✓" : ""}</button>
+          <button type="button" onClick={() => onAppTaskSelect?.(task)} onDoubleClick={() => onAppTaskOpen?.(task)} style={{ minWidth: 0, border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>{task.title}</button>
+          <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+          <button type="button" aria-label="Open task details" onClick={(event) => { event.stopPropagation(); onAppTaskOpen?.(task); }} style={{ width: 22, height: 22, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 999, padding: 0, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>↗</button>
+        </div>
+        <button type="button" onClick={() => onAppTaskOpen?.(task)} style={{ marginLeft: 23, minWidth: 0, border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"} · {task.source === "intake" ? "Order" : "Job"}</button>
+      </div>
     );
   };
   const suggestionRow = (step: SuggestedOrderPlanStep) => (
@@ -7398,6 +7402,7 @@ function MonthWeekSection({
   onTaskDoneToggle,
   onAppTaskSelect,
   onAppTaskOpen,
+  onAppTaskDoneToggle,
   onSuggestedStepMove,
   onSuggestedStepSelect,
   onSuggestedStepOpen,
@@ -7428,6 +7433,7 @@ function MonthWeekSection({
   onTaskDoneToggle?: (task: BoardPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
+  onAppTaskDoneToggle?: (task: AppPlanTask, done: boolean, origin?: DelightOrigin) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
   onSuggestedStepSelect?: () => void;
   onSuggestedStepOpen?: () => void;
@@ -7470,6 +7476,7 @@ function MonthWeekSection({
         onTaskDoneToggle={onTaskDoneToggle}
         onAppTaskSelect={onAppTaskSelect}
         onAppTaskOpen={onAppTaskOpen}
+        onAppTaskDoneToggle={onAppTaskDoneToggle}
         onSuggestedStepSelect={onSuggestedStepSelect}
         onSuggestedStepOpen={onSuggestedStepOpen}
         suggestedStepCustomer={suggestedStepCustomer}
@@ -10451,6 +10458,7 @@ function MonthViewState({
       onTaskDoneToggle={toggleBoardTaskDone}
       onAppTaskSelect={selectOrderForAppTask}
       onAppTaskOpen={openAppTask}
+      onAppTaskDoneToggle={(task, done, origin) => updateAppTask(task, { done }, origin)}
       onSuggestedStepMove={moveSuggestedStep}
       onSuggestedStepSelect={selectNewOrderReview}
       onSuggestedStepOpen={openNewOrderOverview}
@@ -10481,6 +10489,7 @@ function MonthViewState({
           onTaskDoneToggle={toggleBoardTaskDone}
           onAppTaskSelect={selectOrderForAppTask}
           onAppTaskOpen={openAppTask}
+          onAppTaskDoneToggle={(task, done, origin) => updateAppTask(task, { done }, origin)}
         />
       ))}
     </section>
