@@ -10532,7 +10532,12 @@ function MonthViewState({
           </>
         ) : (
           orderRowsWeek ? (
-            <OrderJourneyView
+            !planTaskLinksLoaded ? (
+              <section data-order-journey-loading="saved-order-state" style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: isRailNarrow ? 14 : 22, fontFamily: DT.sans, color: DT.textMuted, boxShadow: DT.shadow }}>
+                Loading saved order list...
+              </section>
+            ) : (
+              <OrderJourneyView
               rows={orderJourneyRows}
               week={orderRowsWeek}
               weekIndex={orderRowsWeekIndex}
@@ -10555,6 +10560,7 @@ function MonthViewState({
               onOrderOpen={openOrderOverview}
               onTaskDoneToggle={toggleOrderJourneyTaskDone}
             />
+            )
           ) : (
             <section style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No production weeks available.</section>
           )
