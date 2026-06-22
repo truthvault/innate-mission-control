@@ -42,6 +42,7 @@ mustNotMatch(plan, /onClick=\{\(\) => row\.order && onOrderOpen\(row\.order\.id\
 
 // Fast Today mode should be visible in the mobile Orders header.
 mustMatch(plan, /aria-pressed=\{dayFilter === "today"\}/, "Mobile Orders should expose a one-tap Today mode");
+mustMatch(plan, /\{dayFilter === "today" \? "This week" : "Today"\}/, "Today button should relabel to This week while Today mode is active");
 mustMatch(plan, /onDayFilterChange\(dayFilter === "today" \? "allWeek" : "today"\)/, "Today mode should toggle back to the full week");
 
 // Runtime audit must authenticate and fail on login/small-body false positives.
