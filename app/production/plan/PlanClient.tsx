@@ -8739,6 +8739,7 @@ function OrderJourneyView({
   onTaskDoneToggle: (task: OrderJourneyTask, done: boolean, origin?: DelightOrigin) => void;
 }) {
   const isNarrow = useIsNarrow(880);
+  const [expandedMobileRows, setExpandedMobileRows] = useState<Set<string>>(() => new Set());
   const todayKey = currentDayKey();
   const weekRange = weekRangeFromTitle(week.title);
   const isCurrentWeek = Boolean(weekRange && weekRange.start.getTime() === planningVisibleStart(new Date()).getTime());
@@ -8789,7 +8790,8 @@ function OrderJourneyView({
     };
     if (isNarrow && !activeTaskId) {
       const visibleDays = DAYS.filter(shouldShowDayOnMobile);
-      const compactTaskLimit = dayFilter === "allWeek" && personFilter === "all" ? 2 : 3;
+      const mobileRowExpanded = expandedMobileRows.has(row.id);
+      const compactTaskLimit = mobileRowExpanded ? row.tasks.length : dayFilter === "allWeek" && personFilter === "all" ? 2 : 3;
       const compactTaskIds = new Set(row.tasks.slice(0, compactTaskLimit).map((task) => task.id));
       const compactVisibleDays = visibleDays.filter((day) => row.tasks.some((task) => task.day === day && compactTaskIds.has(task.id)));
       const hiddenTaskCount = Math.max(0, row.tasks.length - compactTaskIds.size);
@@ -8851,7 +8853,7 @@ function OrderJourneyView({
                 );
               })}
               {hiddenTaskCount > 0 && (
-                <button type="button" onClick={() => row.order && onOrderOpen(row.order.id)} style={{ minHeight: 40, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.textMuted, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textAlign: "left", cursor: row.order ? "pointer" : "default", touchAction: "manipulation" }}>
+                <button type="button" aria-expanded={mobileRowExpanded} onClick={() => setExpandedMobileRows((current) => { const next = new Set(current); next.add(row.id); return next; })} style={{ minHeight: 36, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "left", cursor: "pointer", touchAction: "manipulation", transition: "background 180ms ease, color 180ms ease" }}>
                   + {hiddenTaskCount} more task{hiddenTaskCount === 1 ? "" : "s"}
                 </button>
               )}
