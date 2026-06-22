@@ -1,3 +1,4 @@
+import { MissionControlShell } from "@/components/mission-control-shell";
 import { getFreightPublicAccessStatus } from "@/lib/freight/publicAccess";
 import { getFreightQuoteLogStatus, listQuoteEvents, type FreightQuoteRow } from "@/lib/freight/quoteLog";
 
@@ -151,7 +152,15 @@ export default async function FreightQuotesPage({
   const activeStore = logStatus.supabaseConfigured ? "Supabase" : logStatus.airtableConfigured ? "Airtable fallback" : "not configured";
 
   return (
-    <main className="page">
+    <MissionControlShell
+      section="freight"
+      pageTitle="Freight quotes"
+      pageSubtitle="Customer freight-calculator signal and quote-log health. Guido-only so Nick/Dylan stay focused on workshop work."
+      syncedAt={new Date().toISOString()}
+      source={logStatus.supabaseConfigured || logStatus.airtableConfigured ? "supabase" : "none"}
+      mondayError={error || undefined}
+    >
+      <div className="page">
       <style>{`
         :root{color-scheme:light;background:#f4f1eb;color:#283229;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
         body{margin:0;background:#f4f1eb;color:#283229}
@@ -227,6 +236,7 @@ export default async function FreightQuotesPage({
           ))}
         </section>
       )}
-    </main>
+      </div>
+    </MissionControlShell>
   );
 }

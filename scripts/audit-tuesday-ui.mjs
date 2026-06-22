@@ -35,7 +35,7 @@ function signedAuthCookie() {
 const VIEWPORTS = {
   desktop: { width: 1440, height: 1000, isMobile: false },
   mobile: { width: 390, height: 844, isMobile: true },
-  interactions: { width: 1280, height: 900, isMobile: false },
+  interactions: { width: 390, height: 844, isMobile: true },
 };
 
 const PAGES = [
@@ -66,10 +66,73 @@ async function assertPageHealthy(page, path) {
 async function runInteractionSmoke(page) {
   await page.goto(`${BASE_URL}/production/plan`, { waitUntil: "domcontentloaded", timeout: 15000 });
   await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => undefined);
+
+  const metrics = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+    firstScreenText: document.body.innerText.slice(0, 1600),
+  }));
+  if (metrics.scrollWidth > metrics.clientWidth + 2) {
+    throw new Error(`Mobile /production/plan has horizontal scroll: ${metrics.scrollWidth}px > ${metrics.clientWidth}px`);
+  }
+  if (!/TASKS THIS WEEK|TASKS TODAY|Loading saved order list/i.test(metrics.firstScreenText)) {
+    throw new Error("Mobile /production/plan first screen does not expose workshop work or an honest saved-state loader");
+  }
+
+  const todayButton = page.getByRole("button", { name: /show today/i }).first();
+  const hasTodayButton = await todayButton.count();
+  let todayToggleOk = false;
+  if (!hasTodayButton) throw new Error("Mobile /production/plan missing Today toggle");
+  if (hasTodayButton) {
+    const before = await todayButton.innerText();
+    await todayButton.click();
+    const thisWeekButton = page.getByRole("button", { name: /show this week/i }).first();
+    await thisWeekButton.waitFor({ timeout: 5000 });
+    const after = await thisWeekButton.innerText();
+    todayToggleOk = /Today/i.test(before) && /This week/i.test(after);
+    await thisWeekButton.click();
+  }
+
+  const moreButton = page.getByRole("button", { name: /more task/i }).first();
+  const hasMoreButton = await moreButton.count();
+  let moreInlineOk = false;
+  if (hasMoreButton) {
+    const urlBefore = page.url();
+    await moreButton.click();
+    await page.waitForTimeout(120);
+    moreInlineOk = page.url() === urlBefore;
+    if (!moreInlineOk) throw new Error("+more tasks navigated instead of expanding inline");
+  }
+
+  const scheduleTab = page.getByRole("button", { name: /^Schedule$/i }).first();
+  const hasScheduleTab = await scheduleTab.count();
+  let scheduleAgendaOk = false;
+  if (hasScheduleTab) {
+    await scheduleTab.click();
+    await page.waitForTimeout(150);
+    scheduleAgendaOk = await page.locator('[data-mobile-schedule-agenda="true"]').count().then(Boolean);
+    if (!scheduleAgendaOk) throw new Error("Mobile Schedule did not render the agenda view");
+  }
+
+  const rowAffordanceCount = await page.locator('[data-order-row-done-checkbox="order-row-done-checkbox"], [role="checkbox"]').count();
+  if (rowAffordanceCount < 1) throw new Error("Mobile /production/plan did not expose any task checkbox affordance");
+
   const refresh = page.getByRole("button", { name: /refresh|reload/i }).first();
   const canRefresh = await refresh.count();
   const navLinks = await page.locator("nav a, header a").count();
-  return { interactionSmoke: true, refreshButtonPresent: Boolean(canRefresh), navLinkCount: navLinks };
+  return {
+    interactionSmoke: true,
+    mobileProductionPlan: true,
+    noHorizontalScroll: true,
+    firstScreenWork: true,
+    todayToggleOk,
+    moreInlineChecked: Boolean(hasMoreButton),
+    moreInlineOk: hasMoreButton ? moreInlineOk : "no hidden tasks on current data",
+    scheduleAgendaOk,
+    rowAffordanceCount,
+    refreshButtonPresent: Boolean(canRefresh),
+    navLinkCount: navLinks,
+  };
 }
 
 async function main() {

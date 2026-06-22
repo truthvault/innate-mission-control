@@ -5,5 +5,6 @@ export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
   const result = await listLeads();
-  return <LeadsClient result={result} />;
+  const writesEnabled = process.env.TUESDAY_LEADS_WRITES_ENABLED === "true";
+  return <LeadsClient result={result} writesEnabled={writesEnabled} />;
 }

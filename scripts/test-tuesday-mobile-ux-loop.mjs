@@ -47,6 +47,11 @@ mustMatch(plan, /onDayFilterChange\(dayFilter === "today" \? "allWeek" : "today"
 
 // Runtime audit must authenticate and fail on login/small-body false positives.
 mustMatch(audit, /signedAuthCookie/, "Tuesday UI audit should generate a signed auth cookie from local env");
+mustMatch(audit, /interactions: \{ width: 390, height: 844, isMobile: true \}/, "Interactions audit should use the mobile /production/plan path");
+mustMatch(audit, /Mobile \/production\/plan has horizontal scroll/, "Interactions audit should fail on horizontal mobile scroll");
+mustMatch(audit, /show today/i, "Interactions audit should exercise the Today/This week toggle");
+mustMatch(audit, /Mobile Schedule did not render the agenda view/, "Interactions audit should verify mobile Schedule agenda rendering");
+mustMatch(audit, /rowAffordanceCount/, "Interactions audit should verify visible row checkbox/action affordances");
 mustMatch(audit, /rendered an unexpectedly small body/, "Tuesday UI audit should fail if it only sees login chrome");
 mustMatch(audit, /rendered login\/auth chrome/, "Tuesday UI audit should fail on protected-route auth false positives");
 

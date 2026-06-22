@@ -453,7 +453,7 @@ function CashFirstStrip({ leads, limit = 4, onSelect }: { leads: Lead[]; limit?:
   );
 }
 
-function NewLeadForm({ onSaved }: { onSaved: () => void }) {
+function NewLeadForm({ onSaved, writesEnabled }: { onSaved: () => void; writesEnabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -473,6 +473,9 @@ function NewLeadForm({ onSaved }: { onSaved: () => void }) {
       }
     });
   };
+  if (!writesEnabled) {
+    return <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><button type="button" disabled style={{ ...secondaryButtonStyle, opacity: 0.58, cursor: "not-allowed" }}>Add lead</button><span style={smallMutedStyle}>Safe creation disabled until `TUESDAY_LEADS_WRITES_ENABLED=true` is set.</span></div>;
+  }
   if (!open) return <button type="button" onClick={() => setOpen(true)} style={secondaryButtonStyle}>Add lead</button>;
   return (
     <form onSubmit={submitCreate} style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, display: "grid", gap: 10, marginBottom: 14 }}>
@@ -488,6 +491,7 @@ function NewLeadForm({ onSaved }: { onSaved: () => void }) {
         <Select name="priority" label="Priority" defaultValue="normal" options={PRIORITY_OPTIONS} />
         <Input name="nextFollowUpAt" label="Next follow-up" type="date" />
         <Input name="source" label="Source" />
+        <Input name="sourceUrl" label="Source URL" type="url" />
       </div>
       <Input name="nextAction" label="Next step" />
       <Input name="lastInteractionSummary" label="Last touch summary" />
@@ -639,7 +643,7 @@ const LEADS_MOBILE_CSS = `
   }
 `;
 
-export default function LeadsClient({ result }: { result: LeadsResult }) {
+export default function LeadsClient({ result, writesEnabled }: { result: LeadsResult; writesEnabled: boolean }) {
   const [filter, setFilter] = useState<LeadFilter>("do_today");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -728,7 +732,7 @@ export default function LeadsClient({ result }: { result: LeadsResult }) {
         <div data-lead-filter-scroll="true" style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
           {filters.map(([key, label]) => <button key={key} onClick={() => setFilter(key)} style={{ border: `1px solid ${filter === key ? "rgba(210,174,109,0.50)" : DT.border}`, background: filter === key ? DT.goldSoft : DT.cardBg, color: filter === key ? "#8a5b1f" : DT.textSecondary, borderRadius: 999, padding: "7px 11px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" }}>{label}</button>)}
         </div>
-        <NewLeadForm onSaved={refresh} />
+        <NewLeadForm onSaved={refresh} writesEnabled={writesEnabled} />
       </div>
 
       {result.rows.length === 0 ? <EmptyState error={result.error} /> : (

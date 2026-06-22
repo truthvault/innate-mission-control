@@ -5,19 +5,26 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates";
+export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates" | "freight" | "configurator" | "today";
 
-const NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
+type NavItem = { section: MissionControlSection; label: string; href: string; group?: "Control" | "Sales" | "Ops" | "Drafts" };
+
+const NAV: NavItem[] = [
   { section: "plan", label: "Production Plan", href: "/production/plan" },
   { section: "stock", label: "Stock", href: "/production/stock" },
   { section: "samples", label: "Samples", href: "/production/samples" },
   { section: "processTemplates", label: "Processes", href: "/production/plan?view=process-templates" },
 ];
-const GUIDO_NAV: Array<{ section: MissionControlSection; label: string; href: string }> = [
-  { section: "leads", label: "Leads", href: "/leads" },
-  { section: "quoting", label: "Quoting", href: "/quoting" },
-  { section: "costings", label: "Costings", href: "/costings" },
-  { section: "calls", label: "Calls", href: "/call-intelligence" },
+const GUIDO_NAV: NavItem[] = [
+  { section: "today", label: "Today / America Mode", href: "/today", group: "Control" },
+  { section: "leads", label: "Leads", href: "/leads", group: "Sales" },
+  { section: "quoting", label: "Quoting", href: "/quoting", group: "Sales" },
+  { section: "costings", label: "Costings", href: "/costings", group: "Sales" },
+  { section: "freight", label: "Freight quotes", href: "/freight-quotes", group: "Ops" },
+  { section: "configurator", label: "Configurator", href: "/configurator", group: "Drafts" },
+  { section: "calls", label: "Calls", href: "/call-intelligence", group: "Drafts" },
+  { section: "dispatch", label: "Dispatch", href: "/production/dispatch", group: "Drafts" },
+  { section: "test", label: "Test job", href: "/production/test", group: "Drafts" },
 ];
 const ALL_NAV = [...NAV, ...GUIDO_NAV];
 
@@ -32,7 +39,7 @@ function relativeAge(iso: string): string {
 }
 
 function scopeFor(section: MissionControlSection): string {
-  if (section === "leads" || section === "calls" || section === "quoting" || section === "costings" || section === "processTemplates" || section === "stock") return "local";
+  if (["leads", "calls", "quoting", "costings", "processTemplates", "stock", "freight", "configurator", "today"].includes(section)) return "local";
   if (section === "plan") return "plan";
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
@@ -252,13 +259,17 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
       }}>
         Guido ▾
       </summary>
-      <div style={{ position: "absolute", top: 34, left: "50%", transform: "translateX(-50%)", minWidth: 156, padding: 6, border: "1px solid rgba(210,174,109,0.22)", borderRadius: 14, background: DT.headerBg2, boxShadow: "0 16px 36px rgba(0,0,0,0.28)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201 }}>
-        {GUIDO_NAV.map((item) => {
+      <div style={{ position: "absolute", top: 34, left: "50%", transform: "translateX(-50%)", minWidth: 190, padding: 6, border: "1px solid rgba(210,174,109,0.22)", borderRadius: 14, background: DT.headerBg2, boxShadow: "0 16px 36px rgba(0,0,0,0.28)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201 }}>
+        {GUIDO_NAV.map((item, index) => {
           const itemActive = navItemActive(item, section, pathname);
+          const showGroup = item.group && (index === 0 || GUIDO_NAV[index - 1]?.group !== item.group);
           return (
-            <Link key={item.section} href={item.href} style={{ color: itemActive ? DT.headerBg : "rgba(255,255,255,0.84)", background: itemActive ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.07)", border: itemActive ? "1px solid rgba(210,174,109,0.34)" : "1px solid rgba(210,174,109,0.12)", borderRadius: 10, padding: "8px 10px", fontSize: 11, textDecoration: "none", fontFamily: DT.sans, fontWeight: 850 }}>
-              {item.label}
-            </Link>
+            <div key={item.section} style={{ display: "grid", gap: 4 }}>
+              {showGroup && <div style={{ padding: "5px 8px 1px", color: "rgba(255,255,255,0.46)", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{item.group}</div>}
+              <Link href={item.href} style={{ color: itemActive ? DT.headerBg : "rgba(255,255,255,0.84)", background: itemActive ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.07)", border: itemActive ? "1px solid rgba(210,174,109,0.34)" : "1px solid rgba(210,174,109,0.12)", borderRadius: 10, padding: "8px 10px", fontSize: 11, textDecoration: "none", fontFamily: DT.sans, fontWeight: 850 }}>
+                {item.label}
+              </Link>
+            </div>
           );
         })}
       </div>
