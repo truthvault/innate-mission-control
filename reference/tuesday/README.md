@@ -24,6 +24,7 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 - `foundations.md`
 - `inbox.md`
 - `costings.md` or `supabase-costings-schema-2026-06-18.sql` for source-backed supplier/material/product costing data.
+- `lead-to-quote-loop-v0.1.md` for the read-only daily lead-to-quote control strip and draft quote-prep packet prototype.
 
 ## Active operating handovers / current prep
 
@@ -32,6 +33,8 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 - `tuesday-agent-handover-2026-05-24.md` — current operating handover for the Tuesday profile/worker
 - `nick-production-rollout-guide-2026-06-15.md` — short rollout script for introducing the Production Plan to Nick
 - `nick-live-order-trust-audit-2026-06-14.md` — live read-only order/intake shortlist for Nick's first guided training session
+- `source-of-truth-reconciliation-runbook-2026-05-25.md` — read-only reconciliation foundation for Supabase/Monday/Xero/Akahu evidence
+- `tuesday-accuracy-spine-goal-2026-05-25.md` — active north-star goal: source-of-truth accuracy before more UI
 
 ## Historical / evidence unless re-verified
 
