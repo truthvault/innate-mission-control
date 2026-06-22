@@ -39,8 +39,8 @@ assert.match(plan, /data-order-journey-empty-mobile/, 'Mobile order cards should
 assert.match(plan, /data-order-journey-row-compact="true"/, 'Mobile order cards should use the compact agenda card path');
 assert.match(plan, /compactTaskLimit/, 'Mobile order cards should cap visible task rows so multi-task orders do not dominate the first screen');
 assert.match(plan, /\+ \{hiddenTaskCount\} more task/, 'Mobile order cards should summarize hidden tasks with a clear more-tasks line');
-assert.match(plan, /const doneSize = compactMobile \? 40 : 19/, 'Mobile done controls should be large enough to tap reliably');
-assert.match(plan, /const editSize = compactMobile \? 40 : 20/, 'Mobile edit controls should be large enough to tap reliably');
+assert.match(plan, /const compactDoneSize = 18/, 'Mobile compact order rows should use a visible done checkbox in each task row');
+assert.match(plan, /const compactEditSize = 22/, 'Mobile compact order rows should keep an inline edit/open control');
 assert.match(plan, /width: 40, height: 40/, 'Mobile priority arrows should use larger touch targets');
 assert.match(plan, /aria-pressed=\{active\}/, 'Mobile segmented controls should expose selected state to assistive tech');
 assert.match(plan, /aria-label=\{`\$\{option\?\.dateLabel/, 'Capacity day controls should expose full scheduled-hour labels');

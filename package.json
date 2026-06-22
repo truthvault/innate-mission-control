@@ -24,6 +24,7 @@
     "test:planning:orders-all-active": "node scripts/test-plan-orders-all-active.mjs",
     "test:planning:order-priority": "node scripts/test-plan-order-priority-persistence.mjs",
     "test:planning:mobile-compact": "node scripts/test-plan-mobile-compact-chrome.mjs",
+    "test:tuesday-mobile-ux-loop": "node scripts/test-tuesday-mobile-ux-loop.mjs",
     "test:planning": "npm run test:planning:new-order && npm run test:planning:colours && npm run test:planning:drag && npm run test:planning:stage-suggestions && npm run test:planning:nick-feedback && npm run test:planning:orders-all-active && npm run test:planning:order-priority && npm run test:planning:mobile-compact",
     "test:order-intake": "node scripts/test-order-intake-api.mjs && python3 scripts/test-akahu-order-payments.py",
     "reconcile:order-intake": "node scripts/reconcile-order-intake.mjs && python3 scripts/sync-akahu-order-payments.py --refresh && node scripts/reconcile-order-intake.mjs"
