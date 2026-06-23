@@ -246,8 +246,8 @@ function Select<T extends string>({ name, label, defaultValue, options }: { name
 }
 
 function sourceLabel(lead: Lead) {
-  if (lead.sourceSystem === "monday") return lead.mondayItemId ? `Monday ${lead.mondayItemId}` : "Monday";
-  return lead.source || lead.sourceSystem;
+  const source = lead.sourceSystem === "monday" ? lead.mondayItemId ? `Monday ${lead.mondayItemId}` : "Monday" : lead.source || lead.sourceSystem || "Supabase";
+  return `${source} · updated ${dateLabel(lead.updatedAt)}`;
 }
 
 function SourceLink({ lead }: { lead: Lead }) {
@@ -476,10 +476,11 @@ function NewLeadForm({ onSaved, writesEnabled }: { onSaved: () => void; writesEn
   if (!writesEnabled) {
     return <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}><button type="button" disabled style={{ ...secondaryButtonStyle, opacity: 0.58, cursor: "not-allowed" }}>Add lead</button><span style={smallMutedStyle}>Safe creation disabled until `TUESDAY_LEADS_WRITES_ENABLED=true` is set.</span></div>;
   }
-  if (!open) return <button type="button" onClick={() => setOpen(true)} style={secondaryButtonStyle}>Add lead</button>;
+  if (!open) return <button type="button" onClick={() => setOpen(true)} style={secondaryButtonStyle}>Add manual lead</button>;
   return (
     <form onSubmit={submitCreate} style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, display: "grid", gap: 10, marginBottom: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22 }}>Add lead</h2><Chip label="Manual record" tone="teal" /></div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22 }}>Add manual lead</h2><Chip label="Supabase write" tone="teal" /></div>
+      <p style={{ margin: -4, fontFamily: DT.sans, color: DT.textMuted, fontSize: 11, lineHeight: 1.35 }}>Requires Tuesday auth. Creates a record only; it does not message the customer.</p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(175px, 1fr))", gap: 8 }}>
         <Input name="customerName" label="Customer / company" required />
         <Input name="contactName" label="Contact" />
@@ -497,7 +498,7 @@ function NewLeadForm({ onSaved, writesEnabled }: { onSaved: () => void; writesEn
       <Input name="lastInteractionSummary" label="Last touch summary" />
       <Textarea name="notes" label="Notes" />
       {error && <div style={errorStyle}>{error}</div>}
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}><button type="button" onClick={() => setOpen(false)} style={secondaryButtonStyle}>Cancel</button><button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Creating…" : "Create lead"}</button></div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}><button type="button" onClick={() => setOpen(false)} style={secondaryButtonStyle}>Cancel</button><button type="submit" disabled={saving} style={primaryButtonStyle}>{saving ? "Creating…" : "Create manual lead"}</button></div>
     </form>
   );
 }
@@ -735,9 +736,9 @@ export default function LeadsClient({ result, writesEnabled }: { result: LeadsRe
       {result.rows.length === 0 ? <EmptyState error={result.error} /> : (
         <>
           {result.error && <div style={{ ...errorStyle, marginBottom: 12 }}>{result.error}</div>}
-          <div data-lead-result-copy="true" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, color: DT.textMuted, fontFamily: DT.sans, fontSize: 12 }}>
-            <span>{visibleRows.length} of {visible.length} matching leads shown · {result.rows.length} total</span>
-            <span>{filter === "do_today" ? `Default: priority list. Top ${isNarrow ? 4 : 8} are highlighted above.` : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : "Sorted by urgency, cashflow, follow-up date"}</span>
+          <div data-lead-result-copy="true" style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 10, color: DT.textMuted, fontFamily: DT.sans, fontSize: 12, flexWrap: "wrap" }}>
+            <span>{visibleRows.length} of {visible.length} matching · source: {result.source}{result.error ? " issue" : ""}</span>
+            <span>{filter === "do_today" ? `Default: priority list. Top ${isNarrow ? 3 : 8} are highlighted above.` : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : "Sorted by urgency, cashflow, follow-up date"}</span>
           </div>
           <LeadListHeader />
           <div style={{ display: "grid", gap: 8 }}>

@@ -2381,17 +2381,18 @@ function OrderRail({
             </select>
           </div>
           {newOrderCard}
-          <div style={{ marginTop: newOrderCard ? 8 : 0, display: "flex", gap: 4, flexWrap: "nowrap", paddingBottom: 2 }}>
+          <div style={{ marginTop: newOrderCard ? 8 : 0, display: "flex", gap: 4, flexWrap: "nowrap", overflowX: isNarrow ? "auto" : "visible", WebkitOverflowScrolling: isNarrow ? "touch" : undefined, paddingBottom: 2 }}>
             {filterOptions.map((option) => {
               const active = filter === option.id;
+              const mobileLabel = option.id === "materials" ? "Mat" : option.id === "costing" ? "Cost" : option.label;
               return (
                 <button
                   type="button"
                   key={option.id}
                   onClick={() => onFilterChange(option.id)}
-                  style={{ flex: "1 1 0", minWidth: 0, minHeight: isNarrow ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 5px" : "5px 5px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center", touchAction: "manipulation" }}
+                  style={{ flex: isNarrow ? "0 0 auto" : "1 1 0", minWidth: isNarrow ? 48 : 0, minHeight: isNarrow ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 9px" : "5px 5px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center", touchAction: "manipulation" }}
                 >
-                  {option.label}
+                  {isNarrow ? mobileLabel : option.label}
                 </button>
               );
             })}
@@ -8853,8 +8854,8 @@ function OrderJourneyView({
                 );
               })}
               {hiddenTaskCount > 0 && (
-                <button type="button" aria-expanded={mobileRowExpanded} onClick={() => setExpandedMobileRows((current) => { const next = new Set(current); next.add(row.id); return next; })} style={{ minHeight: 36, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "left", cursor: "pointer", touchAction: "manipulation", transition: "background 180ms ease, color 180ms ease" }}>
-                  + {hiddenTaskCount} more task{hiddenTaskCount === 1 ? "" : "s"}
+                <button type="button" aria-expanded={mobileRowExpanded} onClick={() => setExpandedMobileRows((current) => { const next = new Set(current); if (mobileRowExpanded) next.delete(row.id); else next.add(row.id); return next; })} style={{ minHeight: 36, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, padding: "5px 9px 6px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "left", cursor: "pointer", touchAction: "manipulation", transition: "background 180ms ease, color 180ms ease" }}>
+                  {mobileRowExpanded ? "Show less" : `Show ${hiddenTaskCount} more`}
                 </button>
               )}
             </div>
@@ -8976,7 +8977,7 @@ function OrderJourneyView({
         {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset" : "Reset to due-date order"}</button>}
         {isNarrow && <button type="button" onClick={() => onDayFilterChange(dayFilter === "today" ? "allWeek" : "today")} disabled={!todayKey} aria-pressed={dayFilter === "today"} aria-label={dayFilter === "today" ? "Show this week" : "Show today"} style={{ minHeight: 28, border: `1px solid ${dayFilter === "today" ? "rgba(12,124,122,0.28)" : DT.border}`, background: dayFilter === "today" ? DT.tealSoft : DT.cardBg, color: !todayKey ? DT.textFaint : dayFilter === "today" ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: todayKey ? "pointer" : "not-allowed", touchAction: "manipulation" }}>{dayFilter === "today" ? "This week" : "Today"}</button>}
         <button type="button" aria-label="Previous week" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "‹" : "Previous week"}</button>
-        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "5px 8px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "This" : "This week"}</button>
+        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "5px 8px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Week" : "This week"}</button>
         <button type="button" aria-label="Next week" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "›" : "Next week"}</button>
       </div>
     </div>

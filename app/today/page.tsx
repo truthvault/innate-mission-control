@@ -104,14 +104,14 @@ function Panel({ title, subtitle, actionHref, actionLabel, children }: { title: 
   );
 }
 
-function Row({ title, meta, tone = "grey" }: { title: string; meta: string; tone?: Tone }) {
+function Row({ title, meta, tone = "grey", pillLabel }: { title: string; meta: string; tone?: Tone; pillLabel?: string }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center", borderTop: `1px solid ${DT.border}`, paddingTop: 8 }}>
       <div style={{ minWidth: 0 }}>
         <strong style={{ display: "block", fontFamily: DT.sans, color: DT.textPrimary, fontSize: 13, lineHeight: 1.22, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</strong>
         <span style={{ display: "block", marginTop: 2, fontFamily: DT.sans, color: DT.textMuted, fontSize: 11, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{meta}</span>
       </div>
-      <StatusPill tone={tone}>{tone === "red" ? "Risk" : tone === "amber" ? "Watch" : tone === "green" ? "OK" : "Open"}</StatusPill>
+      <StatusPill tone={tone}>{pillLabel || (tone === "red" ? "Risk" : tone === "amber" ? "Watch" : tone === "green" ? "OK" : tone === "teal" ? "Ready" : "Open")}</StatusPill>
     </div>
   );
 }
@@ -147,7 +147,7 @@ export default async function TodayPage() {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <div>
               <div style={{ fontFamily: DT.sans, color: DT.textFaint, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em" }}>Daily control</div>
-              <h1 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 30, lineHeight: 1 }}>Guido: {guidoNeeded ? `${Math.min(guidoNeeded, 3)} thing${Math.min(guidoNeeded, 3) === 1 ? "" : "s"} to check` : "no obvious fire"}</h1>
+              <h1 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 30, lineHeight: 1 }}>Guido: {guidoNeeded ? `${guidoNeeded > 3 ? "3+" : guidoNeeded} thing${guidoNeeded === 1 ? "" : "s"} to check` : "no obvious fire"}</h1>
             </div>
             <StatusPill tone={sourceIssues.length ? "amber" : guidoNeeded ? "teal" : "green"}>{sourceIssues.length ? "Source check" : guidoNeeded ? "Action" : "Quiet"}</StatusPill>
           </div>

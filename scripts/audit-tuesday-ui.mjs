@@ -93,7 +93,7 @@ async function runInteractionSmoke(page) {
     await thisWeekButton.click();
   }
 
-  const moreButton = page.getByRole("button", { name: /more task/i }).first();
+  const moreButton = page.getByRole("button", { name: /show \d+ more|more task/i }).first();
   const hasMoreButton = await moreButton.count();
   let moreInlineOk = false;
   if (hasMoreButton) {
