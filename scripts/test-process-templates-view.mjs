@@ -13,7 +13,7 @@ const firstTemplate = processTemplateStore.templates?.[0] ?? {};
 
 assert.match(shell, /Processes/, 'Main production header should expose the process templates view');
 assert.match(shell, /\/production\/plan\?view=process-templates/, 'Process templates should be opened through the Tuesday plan route');
-assert.match(shell, /section === "leads" \|\| section === "calls" \|\| section === "quoting" \|\| section === "costings" \|\| section === "processTemplates" \|\| section === "stock"\) return "local"/, 'Process templates refresh should reload local template state without triggering a Monday plan refresh');
+assert.match(shell, /\["leads", "calls", "quoting", "costings", "processTemplates", "stock"[\s\S]*\.includes\(section\)\) return "local"/, 'Process templates refresh should reload local template state without triggering a Monday plan refresh');
 assert.match(shell, /section === "processTemplates" \? "Reload" : "Refresh"/, 'Process templates should use Reload copy instead of implying a live Monday refresh');
 assert.match(shell, /function navItemActive/, 'Plan and Processes nav items should not both appear active for the query-string route');
 assert.match(planPage, /initialUtilityView=\{query\.view === "process-templates" \? "processTemplates" : null\}/, 'Plan page should pass the process-template query into PlanClient');
@@ -46,7 +46,7 @@ assert.deepEqual(
   ],
   'Saved first process should keep the practical early PO and Westimber sequence'
 );
-assert.match(planClient, />Save</, 'Process templates should be editable and saveable');
+assert.match(planClient, />Save now</, 'Process templates should be editable and saveable');
 assert.match(planClient, /Add path row/, 'Production path rows should be editable as one combined row');
 assert.match(planClient, /type: "process-template-path-row"/, 'Production path rows should be draggable');
 assert.match(planClient, /function processTemplateTextareaStyle/, 'Long process-template fields should use wrapping textarea styling');
@@ -59,11 +59,14 @@ assert.match(planClient, /version === changeVersionRef\.current/, 'Autosave shou
 assert.match(planClient, /data-process-template-row="path"/, 'Production path rows should have compact responsive row hooks');
 assert.match(planClient, /Matching rules/, 'Detection rules should be labelled in plain workshop language');
 assert.match(planClient, /aria-label=\{`\$\{template\.title\} matching rule/, 'Matching rules should be wrapping editable text areas, not clipped single-line inputs');
-assert.match(planClient, /gridTemplateColumns: showEditor \? "minmax\(280px, 0\.46fr\) minmax\(620px, 1fr\)" : "1fr"/, 'Desktop template cards should use a simple rules column beside the production path');
+assert.match(planClient, /gridTemplateColumns: showEditor \? "minmax\(300px, 0\.38fr\) minmax\(700px, 1fr\)" : "1fr"/, 'Desktop template cards should reserve more room for the production path beside a compact rules column');
 assert.match(planClient, /processTemplateColumnStyle/, 'Template columns should have distinct visual zones');
 assert.match(planClient, /processTemplateActionGroupStyle/, 'Row action buttons should use a bounded grid instead of overflowing');
 assert.match(planClient, /One row links the scheduled task to the visible order-flow stage/, 'Combined path editor should explain the task-to-stage link');
 assert.match(planClient, /PROCESS_TEMPLATE_ISSUE_LABELS/, 'Issue states should use clear labels instead of raw internal names');
+assert.match(planClient, /pageTitle=\{initialUtilityView === "processTemplates" \? "Process templates" : "Production Plan"\}/, 'Process templates should not keep the Production Plan page heading active');
+assert.match(planClient, /PROCESS_TEMPLATE_PATH_GRID/, 'Production path columns should share one constrained grid instead of overflowing separate widths');
+assert.match(planClient, /Default template active/, 'Default-template state should be explained without implying broken persistence');
 assert.doesNotMatch(planClient, /key=\{`\$\{task\.title\}-\$\{index\}`\}/, 'Editable task rows must not use mutable task text as React keys');
 assert.doesNotMatch(planClient, /key=\{`\$\{step\.key\}-\$\{index\}`\}/, 'Editable flow rows must not use mutable step keys as React keys');
 assert.doesNotMatch(planClient, /key=\{`\$\{rule\}-\$\{ruleIndex\}`\}/, 'Editable detection rows must not use mutable rule text as React keys');

@@ -7771,21 +7771,23 @@ const PROCESS_TEMPLATE_ISSUE_HINTS: Record<ProcessTemplateIssueLevel, string> = 
 const PROCESS_TEMPLATE_OWNER_OPTIONS = ["Nick", "Dylan", "Guido", "Other"] as const;
 const PROCESS_TEMPLATE_WHO_OPTIONS = ["Workshop", "Guido", "Nick", "Dylan", "Customer follow-up", ""] as const;
 
+const PROCESS_TEMPLATE_PATH_GRID = "44px minmax(220px, 1.55fr) 78px 56px minmax(170px, 1.05fr) 86px 96px 84px";
+
 function processTemplateInputStyle(extra: CSSProperties = {}): CSSProperties {
   return {
     width: "100%",
     minWidth: 0,
     border: `1px solid ${DT.border}`,
-    borderRadius: 10,
+    borderRadius: 9,
     background: "rgba(255,255,255,0.88)",
     color: DT.textPrimary,
     fontFamily: DT.sans,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: 850,
-    minHeight: 40,
+    minHeight: 36,
     padding: "5px 7px",
     outline: "none",
-    lineHeight: 1.15,
+    lineHeight: 1.18,
     boxSizing: "border-box",
     ...extra,
   };
@@ -7794,11 +7796,11 @@ function processTemplateInputStyle(extra: CSSProperties = {}): CSSProperties {
 function processTemplateTextareaStyle(extra: CSSProperties = {}): CSSProperties {
   return {
     ...processTemplateInputStyle({
-      minHeight: 56,
-      padding: "8px 9px",
-      lineHeight: 1.28,
-      resize: "vertical",
-      overflow: "auto",
+      minHeight: 58,
+      padding: "7px 8px",
+      lineHeight: 1.3,
+      resize: "none",
+      overflow: "hidden",
       whiteSpace: "normal",
       overflowWrap: "anywhere",
     }),
@@ -7814,10 +7816,10 @@ function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" =
     background: danger ? "rgba(161,31,31,0.06)" : primary ? DT.tealSoft : "rgba(255,255,255,0.74)",
     color: danger ? "#a11f1f" : primary ? DT.teal : DT.textMuted,
     borderRadius: 999,
-    minHeight: 40,
-    padding: "8px 10px",
+    minHeight: 30,
+    padding: "6px 8px",
     fontFamily: DT.sans,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: 950,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -7829,7 +7831,7 @@ function processTemplateActionGroupStyle(): CSSProperties {
   return {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 4,
+    gap: 3,
     justifyContent: "stretch",
     minWidth: 0,
   };
@@ -7906,7 +7908,7 @@ function SortableProcessTemplatePathRow({
       ref={setNodeRef}
       key={row.id}
       data-process-template-row="path"
-      style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 9, padding: "5px 6px", background: isDragging ? "rgba(237,248,247,0.96)" : pathWait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
+      style={{ display: "grid", gridTemplateColumns: PROCESS_TEMPLATE_PATH_GRID, gap: 5, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.12)"}`, borderLeft: pathWait ? "4px solid rgba(190,137,24,0.48)" : "4px solid rgba(12,124,122,0.22)", borderRadius: 9, padding: "5px 6px", paddingRight: 8, background: isDragging ? "rgba(237,248,247,0.96)" : pathWait ? "rgba(255,246,199,0.40)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
     >
       <button
         type="button"
@@ -7920,7 +7922,7 @@ function SortableProcessTemplatePathRow({
         <span aria-hidden="true" style={{ color: DT.textMuted, fontSize: 7, lineHeight: 1, textTransform: "uppercase", letterSpacing: "0.04em" }}>Drag</span>
         <span>{index + 1}</span>
       </button>
-      <textarea aria-label={`Production path ${index + 1} task`} value={task?.title || ""} placeholder="Scheduled task" rows={2} onChange={(event) => onUpdateTask(index, { title: event.target.value })} style={processTemplateTextareaStyle()} />
+      <textarea aria-label={`Production path ${index + 1} task`} value={task?.title || ""} placeholder="Scheduled task" rows={3} onChange={(event) => onUpdateTask(index, { title: event.target.value })} style={processTemplateTextareaStyle({ fontSize: 11, fontWeight: 900 })} />
       <select aria-label={`Production path ${index + 1} task owner`} value={task?.owner || "Guido"} onChange={(event) => onUpdateTask(index, { owner: event.target.value as ProcessTemplatePreview["suggestedTasks"][number]["owner"] })} style={processTemplateInputStyle()}>
         {PROCESS_TEMPLATE_OWNER_OPTIONS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
       </select>
@@ -7934,8 +7936,12 @@ function SortableProcessTemplatePathRow({
         <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,246,199,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? "#9a6a14" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 950, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
         Supplier wait
       </label>
-      <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="Wait label" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
-      <div style={processTemplateActionGroupStyle()}>
+      {pathWait ? (
+        <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="e.g. ~2 weeks" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={{ ...processTemplateInputStyle({ color: DT.textMuted }), gridColumn: "7" }} />
+      ) : (
+        <div aria-hidden="true" style={{ gridColumn: "7", minHeight: 30, borderRadius: 999, border: "1px solid rgba(124,116,107,0.10)", background: "rgba(255,255,255,0.38)", color: DT.textFaint, display: "flex", alignItems: "center", justifyContent: "center", padding: "5px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 850 }}>No supplier wait</div>
+      )}
+      <div style={{ ...processTemplateActionGroupStyle(), gridColumn: "8" }}>
         <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
         <button type="button" onClick={() => onMove(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Dn</button>
         <button type="button" onClick={() => onDelete(index)} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete production path row ${index + 1}`} title="Delete">Del</button>
@@ -8013,17 +8019,16 @@ function ProcessTemplatePathEditor({
       {rowCount > 0 && (
         <div
           data-process-template-row="path-header"
-          style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "end", padding: "0 6px 2px", boxSizing: "border-box", fontFamily: DT.sans, fontSize: 8.5, lineHeight: 1.1, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}
+          style={{ display: "grid", gridTemplateColumns: PROCESS_TEMPLATE_PATH_GRID, gap: 5, alignItems: "end", padding: "0 8px 3px", boxSizing: "border-box", fontFamily: DT.sans, fontSize: 8.5, lineHeight: 1.1, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}
         >
           <span>Drag</span>
-          <span>Task to schedule</span>
-          <span>Who does it</span>
+          <span>Task</span>
+          <span>Owner</span>
           <span>Hours</span>
-          <span>Stage shown on order</span>
+          <span>Order stage</span>
           <span>Stage owner</span>
-          <span>Supplier wait?</span>
-          <span>Wait time</span>
-          <span>Move / delete</span>
+          <span>Wait</span>
+          <span>Actions</span>
         </div>
       )}
       {rowCount === 0 && (
@@ -8097,13 +8102,13 @@ function ProcessTemplateCard({
   const totalHours = processTemplateTotalHours(template);
   const waitCount = template.orderFlow.filter((step) => step.wait).length;
   const summaryLabel = `${rowCount} ${rowCount === 1 ? "step" : "steps"}`;
-  const titleRows = template.title.length > 26 ? 2 : 1;
+  const titleRows = template.title.length > 40 ? 3 : template.title.length > 24 ? 2 : 1;
   return (
     <article
       key={template.id}
       data-process-template-card="true"
       data-process-template-expanded={expanded ? "true" : "false"}
-      style={{ border: `1px solid ${expanded || !isNarrow ? DT.border : "rgba(12,124,122,0.18)"}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? 10 : 12, display: "grid", gridTemplateColumns: showEditor ? "minmax(280px, 0.46fr) minmax(620px, 1fr)" : "1fr", gap: isNarrow ? 8 : 16, alignItems: "start" }}
+      style={{ border: `1px solid ${expanded || !isNarrow ? DT.border : "rgba(12,124,122,0.18)"}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? 10 : 12, display: "grid", gridTemplateColumns: showEditor ? "minmax(300px, 0.38fr) minmax(700px, 1fr)" : "1fr", gap: isNarrow ? 8 : 14, alignItems: "start" }}
     >
       <div style={processTemplateColumnStyle("logic")}>
         <div style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? "1fr" : undefined, gap: 5, alignItems: "center", flexWrap: "wrap" }}>
@@ -8114,7 +8119,7 @@ function ProcessTemplateCard({
           ) : isNarrow ? (
             <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 18, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "9px 10px", resize: "vertical", minHeight: titleRows > 1 ? 76 : 54 })} />
           ) : (
-            <input aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 20, lineHeight: 1.02, letterSpacing: "-0.03em", fontWeight: 850, padding: "5px 7px", flex: "1 1 164px" })} />
+            <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 20, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "7px 8px", flex: "1 1 164px", minHeight: titleRows > 2 ? 78 : titleRows > 1 ? 58 : 44, resize: "none", overflow: "hidden", overflowWrap: "anywhere" })} />
           )}
           <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: isNarrow ? "100%" : 110, flex: isNarrow ? undefined : "0 0 110px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
             {PROCESS_TEMPLATE_ISSUE_OPTIONS.map((level) => <option key={level} value={level}>{PROCESS_TEMPLATE_ISSUE_LABELS[level]}</option>)}
@@ -8192,7 +8197,7 @@ function ProcessTemplatesView() {
         setTemplates(nextTemplates);
         setExpandedTemplateId((current) => current && nextTemplates.some((template) => template.id === current) ? current : null);
         setSource(body.source === "file" ? "file" : "defaults");
-        setSaveStatus(body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Using built-in defaults");
+        setSaveStatus(body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Default template active");
       })
       .catch((err) => {
         if (!active) return;
@@ -8256,8 +8261,17 @@ function ProcessTemplatesView() {
     <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <style>{`
         [data-process-template-row] input,
-        [data-process-template-row] select {
+        [data-process-template-row] select,
+        [data-process-template-row] textarea {
           min-width: 0;
+        }
+        [data-process-template-row] textarea,
+        [data-process-template-card] textarea {
+          scrollbar-width: none;
+        }
+        [data-process-template-row] textarea::-webkit-scrollbar,
+        [data-process-template-card] textarea::-webkit-scrollbar {
+          display: none;
         }
         @media (max-width: 980px) {
           [data-process-template-row="path-header"] {
@@ -8272,7 +8286,7 @@ function ProcessTemplatesView() {
           [data-process-template-row] > * {
             grid-column: 2 / -1 !important;
           }
-          [data-process-template-row] > span:first-child {
+          [data-process-template-row] > button:first-child {
             grid-column: 1 !important;
             grid-row: 1 !important;
           }
@@ -8294,8 +8308,8 @@ function ProcessTemplatesView() {
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 950 }}>{dirty ? "Autosave pending" : source === "loading" ? "Loading" : "Autosaves on edit"}</span>
           <span title={saveStatus} style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 900 }}>{saveStatus}</span>
-          <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save</button>
-          <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset</button>
+          <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save now</button>
+          <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset defaults</button>
         </div>
       </div>
       {templates.map((template, templateIndex) => (
@@ -10712,7 +10726,7 @@ export default function PlanClient({
   return (
     <MissionControlShell
       section={initialUtilityView === "processTemplates" ? "processTemplates" : "plan"}
-      pageTitle="Production Plan"
+      pageTitle={initialUtilityView === "processTemplates" ? "Process templates" : "Production Plan"}
       syncedAt={syncedAt}
       source={source}
       mondayError={mondayError}
