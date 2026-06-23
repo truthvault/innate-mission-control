@@ -122,12 +122,12 @@ export default async function TodayPage() {
     getOrdersWithFallback(),
     getPlanWithFallback(),
   ]);
-  const leadActions = leads.rows.filter(leadNeedsToday).sort((a, b) => (b.estimatedValue || 0) - (a.estimatedValue || 0)).slice(0, 3);
+  const leadActions = leads.rows.filter(leadNeedsToday).sort((a, b) => (b.estimatedValue || 0) - (a.estimatedValue || 0)).slice(0, 2);
   const activeOrders = ordersResult.items.filter(activeOrder);
   const riskyOrders = activeOrders
     .map((order) => ({ order, risk: orderRisk(order) }))
     .filter(({ risk }) => risk.tone !== "green")
-    .slice(0, 4);
+    .slice(0, 3);
   const weekRows = currentWeekPlanRows(plan.rows);
   const sourceIssues = [leads.error, ordersResult.mondayError, plan.mondayError].filter(Boolean) as string[];
   const guidoNeeded = leadActions.length + riskyOrders.filter(({ risk }) => risk.tone === "red").length + sourceIssues.length;
@@ -136,7 +136,7 @@ export default async function TodayPage() {
     <MissionControlShell
       section="today"
       pageTitle="Today"
-      pageSubtitle="America Mode control surface: one calm read on what needs Guido, what the workshop can keep doing, and which data cannot be trusted yet."
+      pageSubtitle="America Mode: what needs Guido, what Nick/Dylan can keep doing, and whether today’s data is trustworthy."
       syncedAt={new Date().toISOString()}
       source={sourceIssues.length ? "snapshot" : "supabase"}
       mondayError={sourceIssues[0]}
@@ -152,7 +152,7 @@ export default async function TodayPage() {
             <StatusPill tone={sourceIssues.length ? "amber" : guidoNeeded ? "teal" : "green"}>{sourceIssues.length ? "Source check" : guidoNeeded ? "Action" : "Quiet"}</StatusPill>
           </div>
           <p style={{ margin: 0, fontFamily: DT.sans, color: DT.textSecondary, fontSize: 13, lineHeight: 1.45 }}>
-            This is now source-backed from Leads, Orders, and Production Plan. It stays draft/control-only: no messages, records, invoices, or customer data are changed from here.
+            Source-backed control only. No messages, records, invoices, or customer data are changed here.
           </p>
         </section>
 
@@ -166,7 +166,7 @@ export default async function TodayPage() {
           </Panel>
 
           <Panel title="Nick / Dylan can keep moving" subtitle={`${taskCount(weekRows)} visible workshop task fragment${taskCount(weekRows) === 1 ? "" : "s"}`} actionHref="/production/plan?delight=off" actionLabel="Open schedule">
-            {weekRows.slice(0, 3).map((row) => <Row key={row.id} title={row.name} meta={`${row.weekGroupTitle} · ${row.appLinkedOrder?.name || row.linkedOrders[0]?.name || "No linked order"}`} tone={row.hasAppLinkedOrder ? "teal" : "amber"} />)}
+            {weekRows.slice(0, 2).map((row) => <Row key={row.id} title={row.name} meta={`${row.weekGroupTitle} · ${row.appLinkedOrder?.name || row.linkedOrders[0]?.name || "No linked order"}`} tone={row.hasAppLinkedOrder ? "teal" : "amber"} />)}
             {!weekRows.length && <Row title="No production rows loaded" meta="Production Plan source needs checking before relying on today." tone="amber" />}
           </Panel>
         </div>

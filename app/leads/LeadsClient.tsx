@@ -388,16 +388,16 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
   );
 }
 
-function DecisionQueue({ leads, limit = 8, onSelect }: { leads: Lead[]; limit?: number; onSelect: (lead: Lead) => void }) {
+function DecisionQueue({ leads, limit = 8, compact = false, onSelect }: { leads: Lead[]; limit?: number; compact?: boolean; onSelect: (lead: Lead) => void }) {
   const fullQueue = leads.filter(doToday).sort(sortByUrgency);
   const queue = fullQueue.slice(0, limit);
   if (queue.length === 0) return null;
   return (
-    <section style={{ background: "linear-gradient(135deg, rgba(248,241,228,0.98), rgba(255,252,246,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, marginBottom: 14 }}>
+    <section style={{ background: "linear-gradient(135deg, rgba(248,241,228,0.98), rgba(255,252,246,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "end", marginBottom: 10 }}>
         <div>
-          <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>Do Today</h2>
-          <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock Monday follow-ups.</p>
+          <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: compact ? 20 : 24 }}>Do Today</h2>
+          {!compact && <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock Monday follow-ups.</p>}
         </div>
         <Chip label={`Top ${queue.length} of ${fullQueue.length}`} tone="amber" />
       </div>
@@ -419,18 +419,18 @@ function DecisionQueue({ leads, limit = 8, onSelect }: { leads: Lead[]; limit?: 
   );
 }
 
-function CashFirstStrip({ leads, limit = 4, onSelect }: { leads: Lead[]; limit?: number; onSelect: (lead: Lead) => void }) {
+function CashFirstStrip({ leads, limit = 4, compact = false, onSelect }: { leads: Lead[]; limit?: number; compact?: boolean; onSelect: (lead: Lead) => void }) {
   const allCashLeads = cashFirstLeads(leads);
   const cashLeads = allCashLeads.slice(0, limit);
   const total = allCashLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
   if (cashLeads.length === 0) return null;
   return (
-    <section style={{ background: "linear-gradient(135deg, rgba(255,250,239,0.98), rgba(246,237,219,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: 14, marginBottom: 14 }}>
+    <section style={{ background: "linear-gradient(135deg, rgba(255,250,239,0.98), rgba(246,237,219,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", marginBottom: 10, flexWrap: "wrap" }}>
         <div>
           <div style={labelStyle}>Cash first</div>
-          <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 24 }}>Protect quoted/high-value work</h2>
-          <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Read-only: quotes and high-value leads only. No status changes here.</p>
+          <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: compact ? 19 : 24 }}>Protect cash</h2>
+          {!compact && <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Read-only: quotes and high-value leads only. No status changes here.</p>}
         </div>
         <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
           <span style={labelStyle}>Top cash value</span>
@@ -707,11 +707,8 @@ export default function LeadsClient({ result, writesEnabled }: { result: LeadsRe
       {isNarrow ? (
         <div data-lead-mobile-metrics="true" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
           <MobileMetricButton label="Overdue" value={overdue} active={filter === "overdue"} onClick={() => setFilter("overdue")} />
-          <MobileMetricButton label="Samples" value={sampleFollowUpRows.length} active={filter === "sample_followups"} onClick={() => setFilter("sample_followups")} />
-          <MobileMetricButton label="Quoted" value={money(quotedValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
           <MobileMetricButton label="Hot" value={hot} active={filter === "hot"} onClick={() => setFilter("hot")} />
-          <MobileMetricButton label="No step" value={missingNext} active={filter === "needs_next_step"} onClick={() => setFilter("needs_next_step")} />
-          <MobileMetricButton label="Active" value={activeRows.length} active={filter === "active"} onClick={() => setFilter("active")} />
+          <MobileMetricButton label="Quoted" value={money(quotedValue)} active={filter === "cashflow"} onClick={() => setFilter("cashflow")} />
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
@@ -725,8 +722,8 @@ export default function LeadsClient({ result, writesEnabled }: { result: LeadsRe
         </div>
       )}
 
-      <CashFirstStrip leads={activeRows} limit={isNarrow ? 2 : 4} onSelect={(lead) => setSelectedId(lead.id)} />
-      <DecisionQueue leads={activeRows} limit={isNarrow ? 4 : 8} onSelect={(lead) => setSelectedId(lead.id)} />
+      <CashFirstStrip leads={activeRows} limit={isNarrow ? 1 : 4} compact={isNarrow} onSelect={(lead) => setSelectedId(lead.id)} />
+      <DecisionQueue leads={activeRows} limit={isNarrow ? 3 : 8} compact={isNarrow} onSelect={(lead) => setSelectedId(lead.id)} />
 
       <div data-lead-filter-bar="true" style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(248,245,238,0.94)", backdropFilter: "blur(10px)" }}>
         <div data-lead-filter-scroll="true" style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>

@@ -8554,8 +8554,8 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
   const editLabel = task.appTask ? "Open task details" : "Edit task";
   const dragCursor = isDragging ? "grabbing" : "grab";
   if (compactMobile) {
-    const compactDoneSize = 18;
-    const compactEditSize = 22;
+    const compactDoneSize = 22;
+    const compactEditSize = 28;
     return (
       <div
         ref={setNodeRef}
