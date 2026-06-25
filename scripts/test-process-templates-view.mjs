@@ -13,7 +13,7 @@ const firstTemplate = processTemplateStore.templates?.[0] ?? {};
 
 assert.match(shell, /Processes/, 'Main production header should expose the process templates view');
 assert.match(shell, /\/production\/plan\?view=process-templates/, 'Process templates should be opened through the Tuesday plan route');
-assert.match(shell, /section === "leads" \|\| section === "calls" \|\| section === "quoting" \|\| section === "costings" \|\| section === "processTemplates" \|\| section === "stock"\) return "local"/, 'Process templates refresh should reload local template state without triggering a Monday plan refresh');
+assert.match(shell, /\["leads", "calls", "quoting", "costings", "processTemplates", "stock"[\s\S]*\.includes\(section\)\) return "local"/, 'Process templates refresh should reload local template state without triggering a Monday plan refresh');
 assert.match(shell, /section === "processTemplates" \? "Reload" : "Refresh"/, 'Process templates should use Reload copy instead of implying a live Monday refresh');
 assert.match(shell, /function navItemActive/, 'Plan and Processes nav items should not both appear active for the query-string route');
 assert.match(planPage, /initialUtilityView=\{query\.view === "process-templates" \? "processTemplates" : null\}/, 'Plan page should pass the process-template query into PlanClient');
@@ -64,6 +64,16 @@ assert.match(planClient, /processTemplateColumnStyle/, 'Template columns should 
 assert.match(planClient, /processTemplateActionGroupStyle/, 'Row action buttons should use a bounded grid instead of overflowing');
 assert.match(planClient, /One row links the scheduled task to the visible order-flow stage/, 'Combined path editor should explain the task-to-stage link');
 assert.match(planClient, /PROCESS_TEMPLATE_ISSUE_LABELS/, 'Issue states should use clear labels instead of raw internal names');
+assert.match(planClient, /Needs review/, 'Issue states should say Needs review rather than vague Review');
+assert.match(planClient, /Supplier \/ outside wait/, 'Supplier wait should be clarified as supplier/outside timing rather than workshop labour');
+assert.match(planClient, /outside waits/, 'Collapsed template cards should show supplier/outside wait counts');
+assert.match(planClient, /customer-label checks/, 'Collapsed template cards should cue customer-visible label checks');
+assert.match(planClient, /Customer-visible stage/, 'Order-flow stage labels should be framed as customer-visible labels needing review');
+assert.match(planClient, /Row actions/, 'Path editor action column should avoid loud Move / delete wording');
+assert.match(planClient, /Needs review \/ gap \/ check summary/, 'Process templates should show a small pre-Nick review summary');
+assert.match(planClient, /processTemplateReviewSummary/, 'Pre-Nick review summary should be derived from template data');
+assert.match(planClient, /\[data-process-template-row\] > button:first-child/, 'Mobile process-template rows should keep the drag handle in the narrow left rail');
+assert.doesNotMatch(planClient, /\[data-process-template-row\] > span:first-child/, 'Mobile process-template row rail should target the actual drag button, not a missing span');
 assert.doesNotMatch(planClient, /key=\{`\$\{task\.title\}-\$\{index\}`\}/, 'Editable task rows must not use mutable task text as React keys');
 assert.doesNotMatch(planClient, /key=\{`\$\{step\.key\}-\$\{index\}`\}/, 'Editable flow rows must not use mutable step keys as React keys');
 assert.doesNotMatch(planClient, /key=\{`\$\{rule\}-\$\{ruleIndex\}`\}/, 'Editable detection rows must not use mutable rule text as React keys');

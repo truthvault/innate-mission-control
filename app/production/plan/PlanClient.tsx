@@ -7760,12 +7760,12 @@ function processTemplateIssueStyle(level: ProcessTemplateIssueLevel): CSSPropert
 const PROCESS_TEMPLATE_ISSUE_OPTIONS: ProcessTemplateIssueLevel[] = ["aligned", "watch", "gap"];
 const PROCESS_TEMPLATE_ISSUE_LABELS: Record<ProcessTemplateIssueLevel, string> = {
   aligned: "Ready",
-  watch: "Review",
+  watch: "Needs review",
   gap: "Gap",
 };
 const PROCESS_TEMPLATE_ISSUE_HINTS: Record<ProcessTemplateIssueLevel, string> = {
   aligned: "Ready: the suggested tasks and order-detail flow are aligned enough to trust.",
-  watch: "Review: usable, but Guido should check details before trusting it fully.",
+  watch: "Needs review: usable, but Guido/Nick should check the details before trusting it fully.",
   gap: "Gap: missing route logic or workflow detail before this should be trusted.",
 };
 const PROCESS_TEMPLATE_OWNER_OPTIONS = ["Nick", "Dylan", "Guido", "Other"] as const;
@@ -7932,9 +7932,9 @@ function SortableProcessTemplatePathRow({
       <label style={{ position: "relative", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: DT.textMuted, fontSize: 9, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>
         <input type="checkbox" checked={pathWait} onChange={(event) => onUpdateStep(index, { wait: event.target.checked })} style={{ position: "absolute", opacity: 0, width: 1, height: 1, margin: 0, pointerEvents: "none" }} />
         <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,246,199,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? "#9a6a14" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 950, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
-        Supplier wait
+        Supplier / outside wait
       </label>
-      <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="Wait label" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
+      <input aria-label={`Production path ${index + 1} outside wait label`} value={step?.waitLabel || ""} placeholder="e.g. Westimber ~2 weeks" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
       <div style={processTemplateActionGroupStyle()}>
         <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
         <button type="button" onClick={() => onMove(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Dn</button>
@@ -7942,7 +7942,7 @@ function SortableProcessTemplatePathRow({
       </div>
       <textarea aria-label={`Production path ${index + 1} note`} value={task?.note || ""} placeholder="Task note" rows={2} onChange={(event) => onUpdateTask(index, { note: event.target.value })} style={{ ...processTemplateTextareaStyle({ color: DT.textMuted, minHeight: 54 }), gridColumn: "2 / span 4" }} />
       <div style={{ gridColumn: "6 / span 3", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850, lineHeight: 1.25, overflow: "visible", textOverflow: "clip", whiteSpace: "normal", overflowWrap: "anywhere" }}>
-        {task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Shows as ${step.label} in the order flow` : "Task and visible flow stage are aligned"}
+        {pathWait ? "Planning gate: outside supplier/customer timing, not workshop labour." : task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Customer-visible stage check: order shows “${step.label}” while workshop task is “${task.title}”.` : "Workshop task and customer-visible stage label are aligned"}
       </div>
     </div>
   );
@@ -8019,11 +8019,11 @@ function ProcessTemplatePathEditor({
           <span>Task to schedule</span>
           <span>Who does it</span>
           <span>Hours</span>
-          <span>Stage shown on order</span>
+          <span>Customer-visible stage</span>
           <span>Stage owner</span>
-          <span>Supplier wait?</span>
-          <span>Wait time</span>
-          <span>Move / delete</span>
+          <span>Outside wait?</span>
+          <span>Wait label</span>
+          <span>Row actions</span>
         </div>
       )}
       {rowCount === 0 && (
@@ -8067,6 +8067,25 @@ function processTemplateRowCount(template: ProcessTemplatePreview) {
 
 function processTemplateTotalHours(template: ProcessTemplatePreview) {
   return template.suggestedTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 0), 0);
+}
+
+function processTemplateVisibleLabelCheckCount(template: ProcessTemplatePreview) {
+  return Array.from({ length: Math.max(template.suggestedTasks.length, template.orderFlow.length) }).filter((_, index) => {
+    const taskTitle = template.suggestedTasks[index]?.title?.trim().toLowerCase() || "";
+    const visibleStage = template.orderFlow[index]?.label?.trim().toLowerCase() || "";
+    return Boolean(taskTitle && visibleStage && taskTitle !== visibleStage);
+  }).length;
+}
+
+function processTemplateReviewSummary(templates: ProcessTemplatePreview[]) {
+  return templates.reduce((summary, template) => {
+    summary.ready += template.issueLevel === "aligned" ? 1 : 0;
+    summary.needsReview += template.issueLevel === "watch" ? 1 : 0;
+    summary.gaps += template.issueLevel === "gap" ? 1 : 0;
+    summary.customerLabelChecks += processTemplateVisibleLabelCheckCount(template);
+    summary.outsideWaits += template.orderFlow.filter((step) => step.wait).length;
+    return summary;
+  }, { ready: 0, needsReview: 0, gaps: 0, customerLabelChecks: 0, outsideWaits: 0 });
 }
 
 function ProcessTemplateSummaryChip({ label }: { label: string }) {
@@ -8124,7 +8143,8 @@ function ProcessTemplateCard({
           <ProcessTemplateSummaryChip label={summaryLabel} />
           <ProcessTemplateSummaryChip label={`${totalHours.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}h`} />
           <ProcessTemplateSummaryChip label={`${template.detection.length} rules`} />
-          {waitCount ? <ProcessTemplateSummaryChip label={`${waitCount} waits`} /> : null}
+          {waitCount ? <ProcessTemplateSummaryChip label={`${waitCount} outside waits`} /> : null}
+          {processTemplateVisibleLabelCheckCount(template) ? <ProcessTemplateSummaryChip label={`${processTemplateVisibleLabelCheckCount(template)} customer-label checks`} /> : null}
           <ProcessTemplateSummaryChip label={PROCESS_TEMPLATE_ISSUE_LABELS[template.issueLevel]} />
         </div>
         {isNarrow ? (
@@ -8181,6 +8201,7 @@ function ProcessTemplatesView() {
   const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
   const isNarrow = useIsNarrow(760);
   const changeVersionRef = useRef(0);
+  const reviewSummary = useMemo(() => processTemplateReviewSummary(templates), [templates]);
   useEffect(() => {
     let active = true;
     fetch("/api/production/process-templates", { cache: "no-store" })
@@ -8272,7 +8293,7 @@ function ProcessTemplatesView() {
           [data-process-template-row] > * {
             grid-column: 2 / -1 !important;
           }
-          [data-process-template-row] > span:first-child {
+          [data-process-template-row] > button:first-child {
             grid-column: 1 !important;
             grid-row: 1 !important;
           }
@@ -8288,8 +8309,9 @@ function ProcessTemplatesView() {
       `}</style>
       <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.teal }}>Guido</div>
+          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.teal }}>Guido + Nick</div>
           <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, fontSize: 28, lineHeight: 1.02, letterSpacing: "-0.04em", color: DT.textPrimary }}>Process templates</h2>
+          <p style={{ margin: "5px 0 0", maxWidth: 620, fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: DT.textMuted, fontWeight: 750 }}>Pre-Nick review: check gaps, customer-visible stage labels, and supplier/outside wait gates before this becomes workshop truth.</p>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 950 }}>{dirty ? "Autosave pending" : source === "loading" ? "Loading" : "Autosaves on edit"}</span>
@@ -8297,6 +8319,14 @@ function ProcessTemplatesView() {
           <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save</button>
           <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset</button>
         </div>
+      </div>
+      <div data-process-template-review-summary="true" style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,253,249,0.86)", boxShadow: TUESDAY_THEME.shadowSoft, padding: "9px 11px", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontFamily: DT.sans }}>
+        <span style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint, marginRight: 2 }}>Needs review / gap / check summary</span>
+        <ProcessTemplateSummaryChip label={`${reviewSummary.ready} ready`} />
+        <ProcessTemplateSummaryChip label={`${reviewSummary.needsReview} needs review`} />
+        <ProcessTemplateSummaryChip label={`${reviewSummary.gaps} gaps`} />
+        <ProcessTemplateSummaryChip label={`${reviewSummary.customerLabelChecks} customer-label checks`} />
+        <ProcessTemplateSummaryChip label={`${reviewSummary.outsideWaits} supplier/outside waits`} />
       </div>
       {templates.map((template, templateIndex) => (
         <ProcessTemplateCard
