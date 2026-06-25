@@ -7797,8 +7797,8 @@ function processTemplateTextareaStyle(extra: CSSProperties = {}): CSSProperties 
       minHeight: 56,
       padding: "8px 9px",
       lineHeight: 1.28,
-      resize: "vertical",
-      overflow: "auto",
+      resize: "none",
+      overflow: "hidden",
       whiteSpace: "normal",
       overflowWrap: "anywhere",
     }),
@@ -7811,11 +7811,11 @@ function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" =
   const primary = tone === "primary";
   return {
     border: `1px solid ${danger ? "rgba(161,31,31,0.22)" : primary ? "rgba(12,124,122,0.28)" : DT.border}`,
-    background: danger ? "rgba(161,31,31,0.06)" : primary ? DT.tealSoft : "rgba(255,255,255,0.74)",
-    color: danger ? "#a11f1f" : primary ? DT.teal : DT.textMuted,
+    background: danger ? "rgba(161,31,31,0.035)" : primary ? DT.tealSoft : "rgba(255,255,255,0.74)",
+    color: danger ? "#8f2f28" : primary ? DT.teal : DT.textMuted,
     borderRadius: 999,
     minHeight: 40,
-    padding: "8px 10px",
+    padding: "9px 12px",
     fontFamily: DT.sans,
     fontSize: 10,
     fontWeight: 950,
@@ -7829,7 +7829,7 @@ function processTemplateActionGroupStyle(): CSSProperties {
   return {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: 4,
+    gap: 6,
     justifyContent: "stretch",
     minWidth: 0,
   };
@@ -7906,7 +7906,7 @@ function SortableProcessTemplatePathRow({
       ref={setNodeRef}
       key={row.id}
       data-process-template-row="path"
-      style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 9, padding: "5px 6px", background: isDragging ? "rgba(237,248,247,0.96)" : pathWait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
+      style={{ display: "grid", gridTemplateColumns: "58px minmax(170px, 1.18fr) minmax(96px, 0.5fr) 68px minmax(168px, 1fr) minmax(104px, 0.52fr) 118px minmax(104px, 0.52fr) 150px", gap: 7, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 11, padding: "7px 8px", background: isDragging ? "rgba(237,248,247,0.96)" : pathWait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
     >
       <button
         type="button"
@@ -7932,13 +7932,13 @@ function SortableProcessTemplatePathRow({
       <label style={{ position: "relative", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: DT.textMuted, fontSize: 9, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>
         <input type="checkbox" checked={pathWait} onChange={(event) => onUpdateStep(index, { wait: event.target.checked })} style={{ position: "absolute", opacity: 0, width: 1, height: 1, margin: 0, pointerEvents: "none" }} />
         <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,246,199,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? "#9a6a14" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 950, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
-        Supplier wait
+        <span>Supplier wait</span>
       </label>
       <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="Wait label" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
       <div style={processTemplateActionGroupStyle()}>
         <button type="button" onClick={() => onMove(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
-        <button type="button" onClick={() => onMove(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Dn</button>
-        <button type="button" onClick={() => onDelete(index)} style={processTemplateTinyButtonStyle("danger")} aria-label={`Delete production path row ${index + 1}`} title="Delete">Del</button>
+        <button type="button" onClick={() => onMove(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Down</button>
+        <button type="button" onClick={() => onDelete(index)} style={processTemplateTinyButtonStyle("danger")} aria-label={`Remove production path row ${index + 1}`} title="Remove row">Remove</button>
       </div>
       <textarea aria-label={`Production path ${index + 1} note`} value={task?.note || ""} placeholder="Task note" rows={2} onChange={(event) => onUpdateTask(index, { note: event.target.value })} style={{ ...processTemplateTextareaStyle({ color: DT.textMuted, minHeight: 54 }), gridColumn: "2 / span 4" }} />
       <div style={{ gridColumn: "6 / span 3", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850, lineHeight: 1.25, overflow: "visible", textOverflow: "clip", whiteSpace: "normal", overflowWrap: "anywhere" }}>
@@ -8077,86 +8077,243 @@ function ProcessTemplateSummaryChip({ label }: { label: string }) {
   );
 }
 
+function ProcessTemplateReviewPath({
+  template,
+  templateIndex,
+  onEditTemplate,
+  updateTemplate,
+}: {
+  template: ProcessTemplatePreview;
+  templateIndex: number;
+  onEditTemplate: () => void;
+  updateTemplate: (index: number, updater: (template: ProcessTemplatePreview) => ProcessTemplatePreview) => void;
+}) {
+  const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
+  const rowCount = processTemplateRowCount(template);
+  const clampStepIndex = (index: number | null, nextRowCount: number) => {
+    if (index === null) return null;
+    if (nextRowCount <= 0) return null;
+    return Math.min(index, nextRowCount - 1);
+  };
+  const updateTask = (index: number, patch: Partial<ProcessTemplatePreview["suggestedTasks"][number]>) => {
+    updateTemplate(templateIndex, (item) => {
+      const nextTasks = [...item.suggestedTasks];
+      const fallbackStep = item.orderFlow[index];
+      const currentTask = nextTasks[index] ?? { title: fallbackStep?.label || "New task", owner: "Guido", estimatedHours: 0.5 };
+      nextTasks[index] = { ...currentTask, ...patch };
+      return { ...item, suggestedTasks: nextTasks };
+    });
+  };
+  const updateStep = (index: number, patch: Partial<ProductionStep>) => {
+    updateTemplate(templateIndex, (item) => {
+      const nextSteps = [...item.orderFlow];
+      const fallbackTask = item.suggestedTasks[index];
+      const currentStep = nextSteps[index] ?? { key: processTemplateStepKey(fallbackTask?.title || `Step ${index + 1}`, index), label: fallbackTask?.title || "New flow step", who: fallbackTask?.owner === "Guido" ? "Guido" : "Workshop", wait: false };
+      nextSteps[index] = { ...currentStep, ...patch };
+      return { ...item, orderFlow: nextSteps };
+    });
+  };
+  const moveStep = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= rowCount) return;
+    updateTemplate(templateIndex, (item) => {
+      const rows = Array.from({ length: Math.max(item.suggestedTasks.length, item.orderFlow.length) }, (_, rowIndex) => ({
+        task: item.suggestedTasks[rowIndex],
+        step: item.orderFlow[rowIndex],
+      }));
+      const nextRows = arrayMove(rows, index, nextIndex);
+      return {
+        ...item,
+        suggestedTasks: nextRows.flatMap((row) => row.task ? [row.task] : []),
+        orderFlow: nextRows.flatMap((row) => row.step ? [row.step] : []),
+      };
+    });
+    setEditingStepIndex(nextIndex);
+  };
+  const removeStep = (index: number) => {
+    updateTemplate(templateIndex, (item) => {
+      const nextTasks = item.suggestedTasks.filter((_, taskIndex) => taskIndex !== index);
+      const nextSteps = item.orderFlow.filter((_, stepIndex) => stepIndex !== index);
+      const nextCount = Math.max(nextTasks.length, nextSteps.length);
+      setEditingStepIndex((current) => current === index ? null : clampStepIndex(current, nextCount));
+      return { ...item, suggestedTasks: nextTasks, orderFlow: nextSteps };
+    });
+  };
+  return (
+    <div style={{ ...processTemplateColumnStyle("tasks"), padding: "12px 12px 14px", background: "rgba(237,248,247,0.34)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
+          <div style={{ marginTop: 2, fontSize: 11, fontWeight: 850, color: DT.textMuted }}>Review mode — click one step to adjust it in place.</div>
+        </div>
+        <button type="button" onClick={onEditTemplate} style={processTemplateTinyButtonStyle()}>Edit template details</button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+        {Array.from({ length: rowCount }, (_, index) => {
+          const task = template.suggestedTasks[index];
+          const step = template.orderFlow[index];
+          const owner = task?.owner || step?.who || "No owner";
+          const ownerLabel = String(owner || "No owner");
+          const hours = Number(task?.estimatedHours || 0);
+          const missing = !task?.title || !step?.label || ownerLabel === "No owner";
+          const pathWait = Boolean(step?.wait);
+          const isEditingStep = editingStepIndex === index;
+          return (
+            <div
+              key={`${template.id}-review-row-${index}`}
+              data-process-template-step-editor={isEditingStep ? "open" : "closed"}
+              style={{ border: `1px solid ${isEditingStep ? "rgba(12,124,122,0.34)" : missing ? "rgba(161,31,31,0.18)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.14)"}`, borderLeft: `4px solid ${isEditingStep ? DT.teal : pathWait ? "rgba(190,137,24,0.45)" : "rgba(12,124,122,0.24)"}`, background: isEditingStep ? "rgba(237,248,247,0.62)" : "rgba(255,255,255,0.82)", borderRadius: 13, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 10px 24px rgba(37,30,20,0.08)" : undefined }}
+            >
+              <button
+                type="button"
+                onClick={() => setEditingStepIndex((current) => current === index ? null : index)}
+                aria-expanded={isEditingStep}
+                style={{ width: "100%", textAlign: "left", border: 0, background: "transparent", borderRadius: 13, padding: isEditingStep ? 0 : "10px 11px", display: "grid", gridTemplateColumns: "34px minmax(0, 1fr) auto", gap: 10, alignItems: "center", cursor: "pointer", fontFamily: DT.sans }}
+              >
+                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: pathWait ? "rgba(255,246,199,0.82)" : DT.tealSoft, color: pathWait ? "#9a6a14" : DT.teal, fontSize: 11, fontWeight: 950 }}>{index + 1}</span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: "block", color: DT.textPrimary, fontSize: 13, fontWeight: 950, lineHeight: 1.2 }}>{task?.title || step?.label || "Untitled step"}</span>
+                  <span style={{ display: "block", color: DT.textMuted, fontSize: 11, fontWeight: 850, lineHeight: 1.35, marginTop: 3 }}>
+                    {ownerLabel} · {hours.toLocaleString("en-NZ", { maximumFractionDigits: 2 })}h · Customer sees: {step?.label || "No stage"}
+                  </span>
+                  {!isEditingStep && task?.note && <span style={{ display: "block", color: DT.textMuted, fontSize: 10, lineHeight: 1.35, marginTop: 5 }}>{task.note}</span>}
+                </span>
+                <span style={{ display: "flex", gap: 5, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
+                  {pathWait && <span style={{ border: "1px solid rgba(190,137,24,0.24)", background: "rgba(255,246,199,0.82)", color: "#9a6a14", borderRadius: 999, padding: "4px 7px", fontSize: 9, fontWeight: 950 }}>Supplier wait</span>}
+                  {missing && <span style={{ border: "1px solid rgba(161,31,31,0.18)", background: "rgba(161,31,31,0.05)", color: "#8f2f28", borderRadius: 999, padding: "4px 7px", fontSize: 9, fontWeight: 950 }}>Check</span>}
+                  <span style={{ color: DT.teal, fontSize: 10, fontWeight: 950 }}>{isEditingStep ? "Editing" : "Edit"}</span>
+                </span>
+              </button>
+              {isEditingStep && (
+                <div data-process-template-step-fields="true" style={{ marginTop: 10, display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(112px, 0.55fr) 84px minmax(0, 1.1fr) minmax(120px, 0.62fr)", gap: 7, alignItems: "start" }}>
+                  <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", border: "1px solid rgba(12,124,122,0.14)", background: "rgba(255,255,255,0.64)", borderRadius: 12, padding: "7px 8px" }}>
+                    <span style={{ color: DT.textMuted, fontSize: 10, fontWeight: 900 }}>Editing step {index + 1} only</span>
+                    <span data-process-template-step-actions="true" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      <button type="button" onClick={() => moveStep(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
+                      <button type="button" onClick={() => moveStep(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Down</button>
+                      <button type="button" onClick={() => removeStep(index)} style={{ ...processTemplateTinyButtonStyle("danger"), marginLeft: 8 }} aria-label={`Delete production path row ${index + 1}`} title="Delete step">Delete</button>
+                      <button type="button" onClick={() => setEditingStepIndex(null)} style={processTemplateTinyButtonStyle("primary")}>Done</button>
+                    </span>
+                  </div>
+                  <textarea aria-label={`Production path ${index + 1} task`} value={task?.title || ""} placeholder="Scheduled task" rows={2} onChange={(event) => updateTask(index, { title: event.target.value })} style={processTemplateTextareaStyle()} />
+                  <select aria-label={`Production path ${index + 1} task owner`} value={task?.owner || "Guido"} onChange={(event) => updateTask(index, { owner: event.target.value as ProcessTemplatePreview["suggestedTasks"][number]["owner"] })} style={processTemplateInputStyle()}>
+                    {PROCESS_TEMPLATE_OWNER_OPTIONS.map((ownerOption) => <option key={ownerOption} value={ownerOption}>{ownerOption}</option>)}
+                  </select>
+                  <input aria-label={`Production path ${index + 1} hours`} type="number" min={0} step={0.25} value={task?.estimatedHours ?? 0} onChange={(event) => updateTask(index, { estimatedHours: Number(event.target.value) })} style={processTemplateInputStyle()} />
+                  <textarea aria-label={`Production path ${index + 1} flow stage`} value={step?.label || ""} placeholder="Visible flow stage" rows={2} onChange={(event) => updateStep(index, { label: event.target.value, key: processTemplateStepKey(event.target.value, index) })} style={processTemplateTextareaStyle({ background: "rgba(255,253,249,0.94)" })} />
+                  <select aria-label={`Production path ${index + 1} flow owner`} value={step?.who || ""} onChange={(event) => updateStep(index, { who: event.target.value || null })} style={processTemplateInputStyle()}>
+                    {PROCESS_TEMPLATE_WHO_OPTIONS.map((who) => <option key={who || "none"} value={who}>{who || "No owner"}</option>)}
+                  </select>
+                  <textarea aria-label={`Production path ${index + 1} note`} value={task?.note || ""} placeholder="Task note" rows={2} onChange={(event) => updateTask(index, { note: event.target.value })} style={{ ...processTemplateTextareaStyle({ color: DT.textMuted, minHeight: 54 }), gridColumn: "1 / span 3" }} />
+                  <label style={{ minHeight: 40, display: "flex", alignItems: "center", gap: 7, color: DT.textMuted, fontSize: 10, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>
+                    <input type="checkbox" checked={pathWait} onChange={(event) => updateStep(index, { wait: event.target.checked })} />
+                    <span>Supplier wait</span>
+                  </label>
+                  <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder={pathWait ? "Wait label" : "Only if supplier wait"} disabled={!pathWait} onChange={(event) => updateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: pathWait ? DT.textMuted : DT.textFaint, opacity: pathWait ? 1 : 0.58, background: pathWait ? "rgba(255,255,255,0.88)" : "rgba(245,243,238,0.64)" })} />
+                  <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${DT.border}`, paddingTop: 9, marginTop: 2 }}>
+                    <span style={{ color: DT.textMuted, fontSize: 10, fontWeight: 850 }}>{task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Shows as ${step.label} in the order flow` : "Task and visible flow stage are aligned"}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ProcessTemplateCard({
   template,
   templateIndex,
   isNarrow,
-  expanded,
-  onExpand,
+  editing,
+  onEdit,
+  onDoneEditing,
   updateTemplate,
 }: {
   template: ProcessTemplatePreview;
   templateIndex: number;
   isNarrow: boolean;
-  expanded: boolean;
-  onExpand: () => void;
+  editing: boolean;
+  onEdit: () => void;
+  onDoneEditing: () => void;
   updateTemplate: (index: number, updater: (template: ProcessTemplatePreview) => ProcessTemplatePreview) => void;
 }) {
-  const showEditor = !isNarrow || expanded;
+  const showEditor = editing;
   const rowCount = processTemplateRowCount(template);
   const totalHours = processTemplateTotalHours(template);
   const waitCount = template.orderFlow.filter((step) => step.wait).length;
   const summaryLabel = `${rowCount} ${rowCount === 1 ? "step" : "steps"}`;
   const titleRows = template.title.length > 26 ? 2 : 1;
+  const issueLabel = PROCESS_TEMPLATE_ISSUE_LABELS[template.issueLevel];
   return (
     <article
       key={template.id}
       data-process-template-card="true"
-      data-process-template-expanded={expanded ? "true" : "false"}
-      style={{ border: `1px solid ${expanded || !isNarrow ? DT.border : "rgba(12,124,122,0.18)"}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? 10 : 12, display: "grid", gridTemplateColumns: showEditor ? "minmax(280px, 0.46fr) minmax(620px, 1fr)" : "1fr", gap: isNarrow ? 8 : 16, alignItems: "start" }}
+      data-process-template-expanded={showEditor ? "true" : "false"}
+      data-process-template-mode={showEditor ? "edit" : "review"}
+      style={{ border: `1px solid ${showEditor ? DT.border : "rgba(12,124,122,0.16)"}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: isNarrow ? 10 : 14, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 8 : 14, alignItems: "start" }}
     >
       <div style={processTemplateColumnStyle("logic")}>
-        <div style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? "1fr" : undefined, gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-          {isNarrow && !showEditor ? (
-            <div title={template.title} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.88)", color: DT.textPrimary, fontFamily: DT.serif, fontSize: 18, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "11px 12px", overflowWrap: "anywhere" }}>
-              {template.title}
-            </div>
-          ) : isNarrow ? (
-            <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 18, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "9px 10px", resize: "vertical", minHeight: titleRows > 1 ? 76 : 54 })} />
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0, flex: "1 1 280px" }}>
+            {showEditor ? (
+              <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: isNarrow ? 18 : 20, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "8px 10px", resize: "none", overflow: "hidden", minHeight: titleRows > 1 ? 66 : 48 })} />
+            ) : (
+              <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 21 : 26, lineHeight: 1.02, letterSpacing: "-0.04em", color: DT.textPrimary }}>{template.title}</h3>
+            )}
+            {!showEditor && <p style={{ margin: "5px 0 0", fontSize: 12, lineHeight: 1.35, color: DT.textMuted, fontWeight: 750 }}>{template.issueLabel}</p>}
+          </div>
+          {showEditor ? (
+            <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: isNarrow ? "100%" : 132, flex: isNarrow ? undefined : "0 0 132px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
+              {PROCESS_TEMPLATE_ISSUE_OPTIONS.map((level) => <option key={level} value={level}>{PROCESS_TEMPLATE_ISSUE_LABELS[level]}</option>)}
+            </select>
           ) : (
-            <input aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: 20, lineHeight: 1.02, letterSpacing: "-0.03em", fontWeight: 850, padding: "5px 7px", flex: "1 1 164px" })} />
+            <span title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} style={{ ...processTemplateIssueStyle(template.issueLevel), borderRadius: 999, padding: "7px 10px", fontSize: 10, fontWeight: 950, whiteSpace: "nowrap" }}>{issueLabel === "Ready" ? "Ready to use" : issueLabel}</span>
           )}
-          <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: isNarrow ? "100%" : 110, flex: isNarrow ? undefined : "0 0 110px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
-            {PROCESS_TEMPLATE_ISSUE_OPTIONS.map((level) => <option key={level} value={level}>{PROCESS_TEMPLATE_ISSUE_LABELS[level]}</option>)}
-          </select>
         </div>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 7 }}>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 8 }}>
           <ProcessTemplateSummaryChip label={summaryLabel} />
           <ProcessTemplateSummaryChip label={`${totalHours.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}h`} />
           <ProcessTemplateSummaryChip label={`${template.detection.length} rules`} />
           {waitCount ? <ProcessTemplateSummaryChip label={`${waitCount} waits`} /> : null}
-          <ProcessTemplateSummaryChip label={PROCESS_TEMPLATE_ISSUE_LABELS[template.issueLevel]} />
+          {!showEditor && <ProcessTemplateSummaryChip label="Review mode" />}
         </div>
-        {isNarrow ? (
-          <textarea aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} rows={2} style={processTemplateInputStyle({ marginTop: 5, fontSize: 10, lineHeight: 1.25, minHeight: 58, resize: "vertical" })} />
-        ) : (
-          <input aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} style={processTemplateInputStyle({ marginTop: 5, fontSize: 10 })} />
-        )}
         {showEditor ? (
           <>
-            <textarea aria-label={`${template.title} description`} value={template.subtitle} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, subtitle: event.target.value }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ margin: "5px 0 8px", minHeight: isNarrow ? 74 : 44, resize: "vertical", color: DT.textMuted, lineHeight: 1.25, overflow: "auto" })} />
+            <textarea aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} rows={2} style={processTemplateInputStyle({ marginTop: 7, fontSize: 10, lineHeight: 1.25, minHeight: 48, resize: "none", overflow: "hidden" })} />
+            <textarea aria-label={`${template.title} description`} value={template.subtitle} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, subtitle: event.target.value }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ margin: "5px 0 8px", minHeight: isNarrow ? 74 : 44, resize: "none", color: DT.textMuted, lineHeight: 1.25, overflow: "hidden" })} />
             <div title="Rules Tuesday uses to decide when this process template applies." style={{ marginBottom: 5, fontSize: 9, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {template.detection.map((rule, ruleIndex) => (
-                <div key={`detection-row-${ruleIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 48px", gap: 6, alignItems: "start" }}>
-                  <textarea aria-label={`${template.title} matching rule ${ruleIndex + 1}`} value={rule} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.map((current, index) => index === ruleIndex ? event.target.value : current) }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ background: "rgba(245,243,238,0.65)", color: DT.textSecondary, fontSize: 10, minHeight: isNarrow ? 74 : 44, lineHeight: 1.22, resize: "vertical", overflow: "auto" })} />
-                  <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.filter((_, index) => index !== ruleIndex) }))} style={processTemplateTinyButtonStyle("danger")}>Del</button>
+                <div key={`detection-row-${ruleIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 86px", gap: 6, alignItems: "start" }}>
+                  <textarea aria-label={`${template.title} matching rule ${ruleIndex + 1}`} value={rule} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.map((current, index) => index === ruleIndex ? event.target.value : current) }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ background: "rgba(245,243,238,0.65)", color: DT.textSecondary, fontSize: 10, minHeight: isNarrow ? 74 : 44, lineHeight: 1.22, resize: "none", overflow: "hidden" })} />
+                  <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: item.detection.filter((_, index) => index !== ruleIndex) }))} style={processTemplateTinyButtonStyle("danger")}>Remove</button>
                 </div>
               ))}
               <button type="button" onClick={() => updateTemplate(templateIndex, (item) => ({ ...item, detection: [...item.detection, "New rule"] }))} style={processTemplateTinyButtonStyle("primary")}>Add rule</button>
             </div>
           </>
         ) : (
-          <p style={{ margin: "7px 0 0", fontFamily: DT.sans, color: DT.textMuted, fontSize: 11, lineHeight: 1.35 }}>{template.subtitle}</p>
+          <>
+            <p style={{ margin: "8px 0 0", fontFamily: DT.sans, color: DT.textMuted, fontSize: 12, lineHeight: 1.4 }}>{template.subtitle}</p>
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 9, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
+              <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {template.detection.map((rule, ruleIndex) => (
+                  <span key={`${template.id}-rule-${ruleIndex}`} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textSecondary, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontWeight: 900 }}>{rule}</span>
+                ))}
+              </div>
+            </div>
+          </>
         )}
-        {isNarrow && (
-          <button type="button" onClick={onExpand} aria-expanded={expanded} style={{ ...processTemplateTinyButtonStyle(expanded ? "neutral" : "primary"), width: "100%", marginTop: 8 }}>
-            {expanded ? "Editor open" : "Edit path and rules"}
-          </button>
+        {showEditor && (
+          <button type="button" onClick={onDoneEditing} style={{ ...processTemplateTinyButtonStyle(), width: "100%", marginTop: 8 }}>Done reviewing</button>
         )}
       </div>
-      {showEditor && (
-        <div style={{ ...processTemplateColumnStyle("tasks"), overflowX: "auto" }}>
+      {showEditor ? (
+        <div style={{ ...processTemplateColumnStyle("tasks"), overflowX: "auto", paddingBottom: 12 }}>
           <div style={{ marginBottom: 7, display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
             <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
             <div style={{ fontSize: 9, fontWeight: 850, color: DT.textMuted }}>One row links the scheduled task to the visible order-flow stage.</div>
@@ -8168,6 +8325,8 @@ function ProcessTemplateCard({
             onStepsChange={(orderFlow) => updateTemplate(templateIndex, (item) => ({ ...item, orderFlow }))}
           />
         </div>
+      ) : (
+        <ProcessTemplateReviewPath template={template} templateIndex={templateIndex} onEditTemplate={onEdit} updateTemplate={updateTemplate} />
       )}
     </article>
   );
@@ -8178,7 +8337,7 @@ function ProcessTemplatesView() {
   const [dirty, setDirty] = useState(false);
   const [source, setSource] = useState<"loading" | "file" | "defaults" | "error">("loading");
   const [saveStatus, setSaveStatus] = useState<string>("Loading saved templates...");
-  const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const isNarrow = useIsNarrow(760);
   const changeVersionRef = useRef(0);
   useEffect(() => {
@@ -8190,7 +8349,7 @@ function ProcessTemplatesView() {
         if (!active) return;
         const nextTemplates: ProcessTemplatePreview[] = Array.isArray(body.templates) ? body.templates as ProcessTemplatePreview[] : DEFAULT_PROCESS_TEMPLATE_PREVIEWS;
         setTemplates(nextTemplates);
-        setExpandedTemplateId((current) => current && nextTemplates.some((template) => template.id === current) ? current : null);
+        setEditingTemplateId((current) => current && nextTemplates.some((template) => template.id === current) ? current : null);
         setSource(body.source === "file" ? "file" : "defaults");
         setSaveStatus(body.updatedAt ? `Saved ${new Date(body.updatedAt).toLocaleString("en-NZ")}` : "Using built-in defaults");
       })
@@ -8226,7 +8385,7 @@ function ProcessTemplatesView() {
       setDirty(false);
       setSource("file");
       setSaveStatus(savedAt);
-      setExpandedTemplateId(null);
+      setEditingTemplateId(null);
       return;
     }
     if (options.mode === "manual" || options.version === changeVersionRef.current) {
@@ -8252,14 +8411,40 @@ function ProcessTemplatesView() {
     }, 900);
     return () => window.clearTimeout(id);
   }, [dirty, persistTemplates, source, templates]);
+  const isEditingTemplates = Boolean(editingTemplateId);
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <style>{`
         [data-process-template-row] input,
-        [data-process-template-row] select {
+        [data-process-template-row] select,
+        [data-process-template-row] textarea {
           min-width: 0;
         }
-        @media (max-width: 980px) {
+        [data-process-template-row] {
+        min-width: 0;
+        }
+        [data-process-template-card] textarea {
+          scrollbar-width: none;
+        }
+        [data-process-template-card] textarea::-webkit-resizer {
+          display: none;
+        }
+        @media (max-width: 1600px) {
+          [data-process-template-card] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 1180px) {
+          [data-process-template-step-fields="true"] {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+          }
+          [data-process-template-step-fields="true"] > textarea,
+          [data-process-template-step-fields="true"] > div {
+            grid-column: 1 / -1 !important;
+          }
+          [data-process-template-step-actions="true"] {
+            justify-content: flex-start !important;
+          }
           [data-process-template-row="path-header"] {
             display: none !important;
           }
@@ -8267,12 +8452,13 @@ function ProcessTemplatesView() {
             grid-template-columns: 1fr !important;
           }
           [data-process-template-row] {
-            grid-template-columns: 26px minmax(0, 1fr) !important;
+            grid-template-columns: 30px minmax(0, 1fr) !important;
+            min-width: 0 !important;
           }
           [data-process-template-row] > * {
             grid-column: 2 / -1 !important;
           }
-          [data-process-template-row] > span:first-child {
+          [data-process-template-row] > button:first-child {
             grid-column: 1 !important;
             grid-row: 1 !important;
           }
@@ -8280,22 +8466,51 @@ function ProcessTemplatesView() {
             justify-content: flex-start !important;
           }
         }
+        @media (max-width: 640px) {
+          [data-process-template-step-editor] > button {
+            grid-template-columns: 30px minmax(0, 1fr) !important;
+          }
+          [data-process-template-step-editor] > button > span:last-child {
+            grid-column: 2 / -1 !important;
+            justify-content: flex-start !important;
+          }
+          [data-process-template-step-fields="true"] {
+            grid-template-columns: minmax(0, 1fr) !important;
+          }
+          [data-process-template-step-fields="true"] > * {
+            grid-column: 1 / -1 !important;
+          }
+          [data-process-template-step-actions="true"] {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            width: 100% !important;
+          }
+          [data-process-template-step-actions="true"] > button {
+            width: 100% !important;
+            margin-left: 0 !important;
+          }
+        }
         @media (min-width: 981px) and (max-width: 1320px) {
           [data-process-template-card] {
             grid-template-columns: 1fr !important;
           }
         }
+        @media (min-width: 1321px) {
+          [data-process-template-row] {
+            min-width: 0;
+          }
+        }
       `}</style>
       <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, boxShadow: DT.shadow, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.teal }}>Guido</div>
+          <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", color: DT.teal }}>Guido · Production Plan setup</div>
           <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, fontSize: 28, lineHeight: 1.02, letterSpacing: "-0.04em", color: DT.textPrimary }}>Process templates</h2>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
-          <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 950 }}>{dirty ? "Autosave pending" : source === "loading" ? "Loading" : "Autosaves on edit"}</span>
-          <span title={saveStatus} style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 900 }}>{saveStatus}</span>
-          <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save</button>
-          <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset</button>
+          <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 950 }}>{dirty ? "Autosave pending" : source === "loading" ? "Loading" : isEditingTemplates ? "Autosave on" : "Review mode"}</span>
+          <span title={saveStatus} style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 10, fontWeight: 900 }}>{dirty ? "Saving after edit" : source === "loading" ? "Loading templates" : "All changes saved"}</span>
+          {isEditingTemplates && <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save now</button>}
+          {isEditingTemplates && <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset defaults</button>}
         </div>
       </div>
       {templates.map((template, templateIndex) => (
@@ -8304,8 +8519,9 @@ function ProcessTemplatesView() {
           template={template}
           templateIndex={templateIndex}
           isNarrow={isNarrow}
-          expanded={!isNarrow || expandedTemplateId === template.id}
-          onExpand={() => setExpandedTemplateId(template.id)}
+          editing={editingTemplateId === template.id}
+          onEdit={() => setEditingTemplateId(template.id)}
+          onDoneEditing={() => setEditingTemplateId(null)}
           updateTemplate={updateTemplate}
         />
       ))}
@@ -8315,7 +8531,7 @@ function ProcessTemplatesView() {
           const newTemplateId = `template-${templates.length + 1}`;
           changeVersionRef.current += 1;
           setTemplates((current) => [...current, { id: newTemplateId, title: "New template", subtitle: "Describe when this process applies.", detection: ["New detection rule"], suggestedTasks: [{ title: "Order Loaded", owner: "Guido", estimatedHours: 1 }], orderFlow: [], issueLevel: "watch", issueLabel: "Needs review" }]);
-          setExpandedTemplateId(newTemplateId);
+          setEditingTemplateId(newTemplateId);
           setDirty(true);
           setSaveStatus("Unsaved changes - autosave pending");
         }}
@@ -10712,7 +10928,7 @@ export default function PlanClient({
   return (
     <MissionControlShell
       section={initialUtilityView === "processTemplates" ? "processTemplates" : "plan"}
-      pageTitle="Production Plan"
+      pageTitle={initialUtilityView === "processTemplates" ? "Processes" : "Production Plan"}
       syncedAt={syncedAt}
       source={source}
       mondayError={mondayError}
@@ -10776,7 +10992,7 @@ export default function PlanClient({
             initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}
           />
         )}
-        {delightEnabled && <DelightUnicorn />}
+        {delightEnabled && initialUtilityView !== "processTemplates" && <DelightUnicorn />}
     </MissionControlShell>
   );
 }
