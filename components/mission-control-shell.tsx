@@ -76,7 +76,7 @@ function SyncBadge({ syncedAt, source, mondayError, isNarrow = false }: { synced
       title={mondayError ? `Sync error: ${mondayError}` : `Synced at ${syncedAt}`}
       style={{
         fontSize: isNarrow ? 9 : 10,
-        color: stale ? "#d97706" : "rgba(210,174,109,0.92)",
+        color: stale ? "#fbbf24" : "rgba(255,255,255,0.64)",
         fontFamily: DT.sans,
         lineHeight: isNarrow ? 1.05 : 1.3,
         whiteSpace: isNarrow ? "nowrap" : "nowrap",
@@ -141,14 +141,14 @@ function TuesdayMark({ compact = false }: { compact?: boolean }) {
 }
 
 function TuesdayBrand({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
+  void syncedAt;
+  void source;
+  void mondayError;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: isNarrow ? 6 : 11, width: "100%", maxWidth: isNarrow ? undefined : 300, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 1 300px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: isNarrow ? 7 : 10, width: "100%", maxWidth: isNarrow ? undefined : 220, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 1 220px" }}>
       <TuesdayMark compact={isNarrow} />
-      <div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
-          <div style={{ fontSize: isNarrow ? 16 : 23, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
-        </div>
-        <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
+        <div style={{ fontSize: isNarrow ? 17 : 21, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
       </div>
     </div>
   );
@@ -195,22 +195,22 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
         aria-label={compact ? `${actionLabel} Tuesday` : undefined}
         title={compact ? err || (refreshed ? refreshedLabel : `${actionLabel} Tuesday`) : undefined}
         style={{
-          minWidth: compact ? 56 : undefined,
+          minWidth: compact ? 42 : undefined,
           minHeight: compact ? 32 : undefined,
-          padding: compact ? "0 9px" : "6px 12px",
+          padding: compact ? "0 9px" : "7px 11px",
           borderRadius: 999,
-          background: DT.gold,
-          color: DT.headerBg,
-          border: "none",
-          fontWeight: 700,
+          background: compact ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.07)",
+          color: "rgba(255,255,255,0.84)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          fontWeight: 760,
           fontSize: compact ? 10 : 11,
           cursor: isPending ? "wait" : "pointer",
           fontFamily: DT.sans,
-          letterSpacing: "0.02em",
+          letterSpacing: "0.01em",
           opacity: isPending ? 0.6 : 1,
         }}
       >
-        {compact ? (isPending ? "..." : actionLabel) : isPending ? `${actionLabel}ing...` : actionLabel}
+        {compact ? (isPending ? "..." : "↻") : isPending ? `${actionLabel}ing...` : actionLabel}
       </button>
     </div>
   );
@@ -219,14 +219,14 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
 function MobileManagementMenu({ section, pathname }: { section: MissionControlSection; pathname: string | null }) {
   return (
     <details style={{ position: "relative", justifySelf: "end", zIndex: 1200 }}>
-      <summary style={{ listStyle: "none", border: "1px solid rgba(210,174,109,0.24)", background: "rgba(255,253,249,0.08)", color: "rgba(255,255,255,0.90)", borderRadius: 999, minHeight: 32, padding: "0 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 950, fontFamily: DT.sans, cursor: "pointer", whiteSpace: "nowrap" }}>
+      <summary style={{ listStyle: "none", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.90)", borderRadius: 999, minHeight: 32, padding: "0 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 850, fontFamily: DT.sans, cursor: "pointer", whiteSpace: "nowrap" }}>
         Menu
       </summary>
-      <div style={{ position: "absolute", top: 36, right: 0, minWidth: 188, padding: 7, border: "1px solid rgba(210,174,109,0.22)", borderRadius: 14, background: DT.headerBg2, boxShadow: "0 16px 36px rgba(0,0,0,0.28)", display: "flex", flexDirection: "column", gap: 5, zIndex: 1201 }}>
+      <div style={{ position: "absolute", top: 36, right: 0, minWidth: 188, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 16, background: "rgba(33,31,29,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 5, zIndex: 1201, backdropFilter: "blur(18px)" }}>
         {ALL_NAV.map((item) => {
           const active = navItemActive(item, section, pathname);
           return (
-            <Link key={item.section} href={item.href} style={{ color: active ? DT.headerBg : "rgba(255,255,255,0.86)", background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.07)", border: active ? "1px solid rgba(210,174,109,0.34)" : "1px solid rgba(210,174,109,0.12)", borderRadius: 10, minHeight: 40, padding: "0 11px", display: "flex", alignItems: "center", fontSize: 12, textDecoration: "none", fontFamily: DT.sans, fontWeight: 900 }}>
+            <Link key={item.section} href={item.href} style={{ color: active ? "#fff" : "rgba(255,255,255,0.84)", background: active ? "rgba(255,255,255,0.14)" : "transparent", border: active ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent", borderRadius: 10, minHeight: 40, padding: "0 11px", display: "flex", alignItems: "center", fontSize: 12, textDecoration: "none", fontFamily: DT.sans, fontWeight: active ? 900 : 760 }}>
               {item.label}
             </Link>
           );
@@ -242,16 +242,16 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
     <details style={{ position: "relative", zIndex: 1200 }}>
       <summary style={{
         listStyle: "none",
-        color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
-        background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
-        border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
-        boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
+        color: active ? "#fff" : "rgba(255,255,255,0.78)",
+        background: active ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.055)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
         borderRadius: 999,
-        padding: "6px 12px",
-        minWidth: 74,
+        padding: "7px 12px",
+        minWidth: 72,
         fontSize: 11,
         fontFamily: DT.sans,
-        fontWeight: 700,
+        fontWeight: 780,
         letterSpacing: "0.01em",
         textAlign: "center",
         cursor: "pointer",
@@ -259,14 +259,14 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
       }}>
         Guido ▾
       </summary>
-      <div style={{ position: "absolute", top: 34, left: "50%", transform: "translateX(-50%)", minWidth: 190, padding: 6, border: "1px solid rgba(210,174,109,0.22)", borderRadius: 14, background: DT.headerBg2, boxShadow: "0 16px 36px rgba(0,0,0,0.28)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201 }}>
+      <div style={{ position: "absolute", top: 38, right: 0, minWidth: 210, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 16, background: "rgba(33,31,29,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201, backdropFilter: "blur(18px)" }}>
         {GUIDO_NAV.map((item, index) => {
           const itemActive = navItemActive(item, section, pathname);
           const showGroup = item.group && (index === 0 || GUIDO_NAV[index - 1]?.group !== item.group);
           return (
             <div key={item.section} style={{ display: "grid", gap: 4 }}>
-              {showGroup && <div style={{ padding: "5px 8px 1px", color: "rgba(255,255,255,0.46)", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{item.group}</div>}
-              <Link href={item.href} style={{ color: itemActive ? DT.headerBg : "rgba(255,255,255,0.84)", background: itemActive ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.07)", border: itemActive ? "1px solid rgba(210,174,109,0.34)" : "1px solid rgba(210,174,109,0.12)", borderRadius: 10, padding: "8px 10px", fontSize: 11, textDecoration: "none", fontFamily: DT.sans, fontWeight: 850 }}>
+              {showGroup && <div style={{ padding: "5px 8px 1px", color: "rgba(255,255,255,0.42)", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{item.group}</div>}
+              <Link href={item.href} style={{ color: itemActive ? "#fff" : "rgba(255,255,255,0.84)", background: itemActive ? "rgba(255,255,255,0.14)" : "transparent", border: itemActive ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent", borderRadius: 10, padding: "8px 10px", fontSize: 11, textDecoration: "none", fontFamily: DT.sans, fontWeight: itemActive ? 900 : 760 }}>
                 {item.label}
               </Link>
             </div>
@@ -326,7 +326,7 @@ export function MissionControlShell({
           }
         `}</style>
       <header style={{ position: "sticky", top: 0, zIndex: 1000 }}>
-        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 58%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "3px 6px" : "10px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(220px, 300px) minmax(0, 1fr) auto", alignItems: "center", gap: isNarrow ? 5 : 16, boxShadow: "0 12px 30px rgba(44,37,32,0.20)", overflow: "visible" }}>
+        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 62%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "5px 8px" : "9px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(180px, 220px) minmax(0, 1fr) minmax(260px, auto)", alignItems: "center", gap: isNarrow ? 6 : 18, boxShadow: "0 10px 28px rgba(44,37,32,0.18)", overflow: "visible" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           {compactMobile && (
             <div className="mc-mobile-only" style={{ alignItems: "center", gap: 7 }}>
@@ -334,7 +334,7 @@ export function MissionControlShell({
               <MobileManagementMenu section={section} pathname={pathname} />
             </div>
           )}
-          {compactMobile ? null : <nav className="mc-mobile-hide" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, flexWrap: "nowrap", overflowX: "visible", paddingBottom: 0, WebkitOverflowScrolling: "touch" }} aria-label="Mission Control sections">
+          {compactMobile ? null : <nav className="mc-mobile-hide" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", justifySelf: "center", gap: 3, flexWrap: "nowrap", overflowX: "visible", padding: 3, border: "1px solid rgba(255,255,255,0.10)", borderRadius: 999, background: "rgba(255,255,255,0.045)", WebkitOverflowScrolling: "touch" }} aria-label="Mission Control sections">
             {NAV.map((item) => {
               const active = navItemActive(item, section, pathname);
               return (
@@ -342,17 +342,17 @@ export function MissionControlShell({
                   key={item.section}
                   href={item.href}
                   style={{
-                    color: active ? DT.headerBg : "rgba(255,255,255,0.74)",
-                    background: active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.055)",
-                    border: active ? "1px solid rgba(210,174,109,0.36)" : "1px solid rgba(210,174,109,0.12)",
-                    boxShadow: active ? "0 0 0 1px rgba(255,255,255,0.08), 0 6px 18px rgba(0,0,0,0.12)" : "none",
+                    color: active ? "#fff" : "rgba(255,255,255,0.70)",
+                    background: active ? "rgba(255,255,255,0.15)" : "transparent",
+                    border: active ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent",
+                    boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
                     borderRadius: 999,
-                    padding: "6px 12px",
-                    minWidth: item.section === "dispatch" ? 92 : item.section === "plan" ? 124 : item.section === "processTemplates" ? 92 : 74,
+                    padding: "7px 12px",
+                    minWidth: item.section === "plan" ? 118 : item.section === "processTemplates" ? 88 : 72,
                     fontSize: 11,
                     textDecoration: "none",
                     fontFamily: DT.sans,
-                    fontWeight: 700,
+                    fontWeight: active ? 850 : 720,
                     letterSpacing: "0.01em",
                     textAlign: "center",
                   }}
@@ -361,11 +361,16 @@ export function MissionControlShell({
                 </Link>
               );
             })}
-            <GuidoMenu section={section} pathname={pathname} />
           </nav>}
-          {!compactMobile && <div className="mc-mobile-hide" style={{ justifySelf: "end" }}><RefreshButton section={section} /></div>}
+          {!compactMobile && (
+            <div className="mc-mobile-hide" style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+              <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} />
+              <RefreshButton section={section} />
+              <GuidoMenu section={section} pathname={pathname} />
+            </div>
+          )}
         </div>
-        <div style={{ height: isNarrow ? 1 : 3, background: `linear-gradient(90deg, ${DT.clay} 0%, ${DT.gold} 38%, ${DT.sage} 72%, ${DT.teal} 100%)` }} />
+        <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
       </header>
       <main className={section === "plan" ? "mc-plan-mobile-main" : undefined} style={{ maxWidth, margin: "0 auto", padding: isNarrow ? compactPlanMobile ? "8px 8px 24px" : "14px 12px 28px" : "18px 20px 22px" }}>
         <div className={section === "plan" ? "mc-plan-mobile-title-wrap" : undefined} style={{ marginBottom: compactPlanMobile ? 8 : 14 }}>
