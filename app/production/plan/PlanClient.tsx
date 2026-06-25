@@ -24,7 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
-import { Chip, DT } from "@/components/mission-control-ui";
+import { Chip, DT, TuesdayPageHeader } from "@/components/mission-control-ui";
 import type { OrderCostingContext, OrderCostingMatch } from "@/lib/costings/fetch-order-costing-context";
 import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -122,24 +122,24 @@ const PERSON_LABELS: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_SHORT: Record<Person, string> = { nick: "Nick", dylan: "Dylan" };
 const PERSON_VISUALS: Record<Person, { stripe: string; stripeMuted: string; text: string; laneBg: string; laneBorder: string; taskBg: string; taskBorder: string; taskSoft: string }> = {
   nick: {
-    stripe: "#8b1e1e",
-    stripeMuted: "#c66f6f",
-    text: "#8b1e1e",
-    laneBg: "rgba(139,30,30,0.075)",
-    laneBorder: "rgba(139,30,30,0.28)",
-    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(139,30,30,0.09))",
-    taskBorder: "rgba(139,30,30,0.22)",
-    taskSoft: "rgba(139,30,30,0.12)",
+    stripe: DT.teal,
+    stripeMuted: "rgba(12,124,122,0.52)",
+    text: DT.teal,
+    laneBg: "rgba(12,124,122,0.095)",
+    laneBorder: "rgba(12,124,122,0.30)",
+    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.99) 0%, rgba(12,124,122,0.14) 100%)",
+    taskBorder: "rgba(12,124,122,0.34)",
+    taskSoft: "rgba(12,124,122,0.14)",
   },
   dylan: {
-    stripe: "#1f1f1f",
-    stripeMuted: "#77716a",
-    text: "#1f1f1f",
-    laneBg: "rgba(31,31,31,0.055)",
-    laneBorder: "rgba(31,31,31,0.24)",
-    taskBg: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(31,31,31,0.075))",
-    taskBorder: "rgba(31,31,31,0.18)",
-    taskSoft: "rgba(31,31,31,0.10)",
+    stripe: DT.sage,
+    stripeMuted: "rgba(110,138,106,0.54)",
+    text: DT.sage,
+    laneBg: "rgba(110,138,106,0.10)",
+    laneBorder: "rgba(110,138,106,0.30)",
+    taskBg: "linear-gradient(135deg, rgba(255,253,249,0.99) 0%, rgba(110,138,106,0.145) 100%)",
+    taskBorder: "rgba(110,138,106,0.34)",
+    taskSoft: "rgba(110,138,106,0.14)",
   },
 };
 const REVIEW_GLOW = {
@@ -1436,7 +1436,7 @@ function OrderHealthStrip({
     { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
     { label: "Blocked", mobileLabel: "Blocked", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
     { label: "Needs Costing", mobileLabel: "Cost", value: needsCosting, color: needsCosting ? "#b45309" : "#15803d", filter: "costing" },
-    { label: "Due This Week", mobileLabel: "This week", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
+    { label: "Due This Week", mobileLabel: "Due", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
     { label: "Due Next Week", mobileLabel: "Next", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
   const cards = isNarrow ? allCards.filter((card) => ["all", "watch", "blocked", "thisWeek"].includes(card.filter)) : allCards;
@@ -1492,6 +1492,12 @@ function dueLabel(order: UiOrder) {
   if (diff === 0) return "Due today";
   if (diff === 1) return "Due tomorrow";
   return `${diff}d until due`;
+}
+
+function orderDueSummary(order: UiOrder) {
+  const date = formatShortDate(order.shipDate);
+  const label = dueLabel(order);
+  return date === label ? label : `${date} · ${label}`;
 }
 
 function orderItemLabel(order: UiOrder) {
@@ -3582,7 +3588,7 @@ function OrderRailDetail({
 	        </div>
 	        <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 9.5, color: trustStyle.color, fontWeight: 850, lineHeight: 1.25 }}>{trust.detail} · {trust.source}</div>
 	        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-	          <MiniFact label="Due" value={`${formatShortDate(order.shipDate)} · ${dueLabel(order)}`} />
+	          <MiniFact label="Due" value={orderDueSummary(order)} />
 	          <MiniFact label="Item" value={orderItemLabel(order)} />
 	          <MiniFact label="Tasks" value={`${openJobTasks.length + openPlanTasks.length} open · ${doneJobTasks.length + donePlanTasks.length} done`} />
 	          <MiniFact label="QC / dispatch" value={`${qcDone}/${qcItems.length} · ${dispatch.label}`} />
@@ -5871,7 +5877,7 @@ function buildOrderJourneyRows({
       id,
       order,
       name: order?.customer ?? taskCustomerDisplayName(task),
-      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      dueLabel: order ? orderDueSummary(order) : null,
       statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : connection.label,
       health: order ? orderHealth(order) : internal ? "internal" : "unlinked",
       hasTasksThisWeek: true,
@@ -5903,7 +5909,7 @@ function buildOrderJourneyRows({
       id,
       order,
       name: order?.customer ?? task.customer ?? "Tuesday order",
-      dueLabel: order ? `${formatShortDate(order.shipDate)} · ${dueLabel(order)}` : null,
+      dueLabel: order ? orderDueSummary(order) : null,
       statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : task.source === "intake" ? "Approved intake tasks" : "Tuesday tasks",
       health: order ? orderHealth(order) : "onTrack",
       hasTasksThisWeek: true,
@@ -5945,7 +5951,7 @@ function buildOrderJourneyRows({
       id,
       order,
       name: order.customer,
-      dueLabel: `${formatShortDate(order.shipDate)} · ${dueLabel(order)}`,
+      dueLabel: orderDueSummary(order),
       statusLabel: `${orderItemLabel(order)} · ${orderStatusLabel(order)}`,
       health: orderHealth(order),
       hasTasksThisWeek: false,
@@ -7752,9 +7758,9 @@ function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlan
 }
 
 function processTemplateIssueStyle(level: ProcessTemplateIssueLevel): CSSProperties {
-  if (level === "aligned") return { borderColor: "rgba(52,199,89,0.18)", background: "rgba(52,199,89,0.08)", color: "#248a3d" };
-  if (level === "gap") return { borderColor: "rgba(255,59,48,0.18)", background: "rgba(255,59,48,0.06)", color: "#b42318" };
-  return { borderColor: "rgba(255,149,0,0.22)", background: "rgba(255,149,0,0.09)", color: "#9a5a00" };
+  if (level === "aligned") return { borderColor: "rgba(110,138,106,0.24)", background: "rgba(110,138,106,0.10)", color: DT.sage };
+  if (level === "gap") return { borderColor: "rgba(154,59,47,0.18)", background: "rgba(154,59,47,0.08)", color: DT.clay };
+  return { borderColor: "rgba(200,169,110,0.28)", background: "rgba(200,169,110,0.13)", color: "#8a5b1f" };
 }
 
 const PROCESS_TEMPLATE_ISSUE_OPTIONS: ProcessTemplateIssueLevel[] = ["aligned", "watch", "gap"];
@@ -7810,9 +7816,9 @@ function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" =
   const danger = tone === "danger";
   const primary = tone === "primary";
   return {
-    border: `1px solid ${danger ? "rgba(255,59,48,0.20)" : primary ? "rgba(0,122,255,0.18)" : "rgba(60,60,67,0.14)"}`,
-    background: danger ? "rgba(255,59,48,0.045)" : primary ? "#007aff" : "rgba(255,255,255,0.72)",
-    color: danger ? "#b42318" : primary ? "#ffffff" : "#3a3a3c",
+    border: `1px solid ${danger ? "rgba(154,59,47,0.22)" : primary ? "rgba(12,124,122,0.24)" : DT.border}`,
+    background: danger ? "rgba(154,59,47,0.07)" : primary ? DT.teal : "rgba(255,255,255,0.74)",
+    color: danger ? DT.clay : primary ? "#ffffff" : DT.textSecondary,
     borderRadius: 999,
     minHeight: 40,
     padding: "9px 14px",
@@ -7822,7 +7828,7 @@ function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" =
     cursor: "pointer",
     whiteSpace: "nowrap",
     lineHeight: 1.1,
-    boxShadow: primary ? "0 7px 16px rgba(0,122,255,0.18)" : undefined,
+    boxShadow: primary ? "0 8px 18px rgba(12,124,122,0.16)" : undefined,
   };
 }
 
@@ -7844,14 +7850,14 @@ function processTemplateColumnStyle(tone: "logic" | "tasks" | "flow"): CSSProper
       stripe: "rgba(60,60,67,0.18)",
     },
     tasks: {
-      background: "rgba(255,255,255,0.70)",
-      border: "rgba(60,60,67,0.12)",
-      stripe: "rgba(0,122,255,0.34)",
+      background: "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(12,124,122,0.045))",
+      border: "rgba(12,124,122,0.14)",
+      stripe: "rgba(12,124,122,0.38)",
     },
     flow: {
-      background: "rgba(255,255,255,0.70)",
-      border: "rgba(60,60,67,0.12)",
-      stripe: "rgba(255,149,0,0.30)",
+      background: "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(200,169,110,0.055))",
+      border: "rgba(200,169,110,0.16)",
+      stripe: "rgba(200,169,110,0.42)",
     },
   }[tone];
   return {
@@ -8072,7 +8078,7 @@ function processTemplateTotalHours(template: ProcessTemplatePreview) {
 
 function ProcessTemplateSummaryChip({ label }: { label: string }) {
   return (
-    <span style={{ border: 0, background: "rgba(118,118,128,0.08)", color: "#636366", borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 800, lineHeight: 1 }}>
+    <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.76)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 850, lineHeight: 1 }}>
       {label}
     </span>
   );
@@ -8141,13 +8147,24 @@ function ProcessTemplateReviewPath({
     });
   };
   return (
-    <div style={{ ...processTemplateColumnStyle("tasks"), padding: "14px", background: "rgba(255,255,255,0.64)" }}>
+    <div style={{ ...processTemplateColumnStyle("tasks"), padding: "14px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 850, letterSpacing: "0.09em", textTransform: "uppercase", color: "#8e8e93" }}>Production path</div>
-          <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: "#636366" }}>Review mode · click one step to adjust it.</div>
+          <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
+          <div style={{ marginTop: 3, fontSize: 12, fontWeight: 750, color: DT.textMuted }}>Review mode · tap/click one step to adjust it.</div>
         </div>
-        <button type="button" onClick={onEditTemplate} style={processTemplateTinyButtonStyle("primary")}>Edit template details</button>
+        <button
+          type="button"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onEditTemplate();
+          }}
+          onClick={onEditTemplate}
+          style={processTemplateTinyButtonStyle("primary")}
+        >
+          Edit template details
+        </button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
         {Array.from({ length: rowCount }, (_, index) => {
@@ -8163,37 +8180,59 @@ function ProcessTemplateReviewPath({
             <div
               key={`${template.id}-review-row-${index}`}
               data-process-template-step-editor={isEditingStep ? "open" : "closed"}
-              style={{ border: `1px solid ${isEditingStep ? "rgba(0,122,255,0.24)" : missing ? "rgba(255,59,48,0.16)" : pathWait ? "rgba(255,149,0,0.18)" : "rgba(60,60,67,0.10)"}`, background: isEditingStep ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.74)", borderRadius: 16, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 18px 40px rgba(0,0,0,0.08)" : "0 1px 0 rgba(0,0,0,0.035)" }}
+              style={{ border: `1px solid ${isEditingStep ? "rgba(12,124,122,0.30)" : missing ? "rgba(154,59,47,0.16)" : pathWait ? "rgba(200,169,110,0.24)" : "rgba(12,124,122,0.12)"}`, background: isEditingStep ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.06))" : "rgba(255,255,255,0.78)", borderRadius: 16, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 16px 34px rgba(12,124,122,0.10), 0 1px 0 rgba(255,255,255,0.72) inset" : "0 1px 0 rgba(255,255,255,0.68) inset, 0 2px 8px rgba(37,30,20,0.035)" }}
             >
               <button
                 type="button"
-                onClick={() => setEditingStepIndex((current) => current === index ? null : index)}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setEditingStepIndex((current) => current === index ? null : index);
+                }}
+                onClick={(event) => {
+                  if (event.detail !== 0) return;
+                  setEditingStepIndex((current) => current === index ? null : index);
+                }}
                 aria-expanded={isEditingStep}
                 style={{ width: "100%", textAlign: "left", border: 0, background: "transparent", borderRadius: 16, padding: isEditingStep ? 0 : "12px 12px", display: "grid", gridTemplateColumns: "34px minmax(0, 1fr) auto", gap: 10, alignItems: "center", cursor: "pointer", fontFamily: DT.sans }}
               >
-                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isEditingStep ? "#007aff" : pathWait ? "rgba(255,149,0,0.12)" : "rgba(118,118,128,0.10)", color: isEditingStep ? "#ffffff" : pathWait ? "#9a5a00" : "#636366", fontSize: 11, fontWeight: 850 }}>{index + 1}</span>
+                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isEditingStep ? DT.teal : pathWait ? "rgba(200,169,110,0.15)" : "rgba(12,124,122,0.08)", color: isEditingStep ? "#ffffff" : pathWait ? "#8a5b1f" : DT.teal, fontSize: 11, fontWeight: 900 }}>{index + 1}</span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: "block", color: "#1d1d1f", fontSize: 15, fontWeight: 850, lineHeight: 1.22, letterSpacing: "-0.01em" }}>{task?.title || step?.label || "Untitled step"}</span>
-                  <span style={{ display: "block", color: "#636366", fontSize: 12, fontWeight: 700, lineHeight: 1.35, marginTop: 4 }}>
+                  <span style={{ display: "block", color: DT.textPrimary, fontSize: 15, fontWeight: 900, lineHeight: 1.22, letterSpacing: "-0.01em" }}>{task?.title || step?.label || "Untitled step"}</span>
+                  <span style={{ display: "block", color: DT.textMuted, fontSize: 12, fontWeight: 750, lineHeight: 1.35, marginTop: 4 }}>
                     {ownerLabel} · {hours.toLocaleString("en-NZ", { maximumFractionDigits: 2 })}h · Customer sees: {step?.label || "No stage"}
                   </span>
-                  {!isEditingStep && task?.note && <span style={{ display: "block", color: "#6e6e73", fontSize: 12, lineHeight: 1.42, marginTop: 7, fontWeight: 500 }}>{task.note}</span>}
+                  {!isEditingStep && task?.note && <span style={{ display: "block", color: DT.textMuted, fontSize: 12, lineHeight: 1.42, marginTop: 7, fontWeight: 650 }}>{task.note}</span>}
                 </span>
                 <span style={{ display: "flex", gap: 5, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
-                  {pathWait && <span style={{ border: "1px solid rgba(255,149,0,0.18)", background: "rgba(255,149,0,0.09)", color: "#9a5a00", borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 800 }}>Supplier wait</span>}
-                  {missing && <span style={{ border: "1px solid rgba(255,59,48,0.16)", background: "rgba(255,59,48,0.06)", color: "#b42318", borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 800 }}>Check</span>}
-                  <span style={{ color: "#007aff", fontSize: 11, fontWeight: 850 }}>{isEditingStep ? "Editing" : "Edit"}</span>
+                  {pathWait && <span style={{ border: "1px solid rgba(200,169,110,0.24)", background: "rgba(200,169,110,0.13)", color: "#8a5b1f", borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 850 }}>Supplier wait</span>}
+                  {missing && <span style={{ border: "1px solid rgba(154,59,47,0.16)", background: "rgba(154,59,47,0.08)", color: DT.clay, borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 850 }}>Check</span>}
+                  <span style={{ color: DT.teal, fontSize: 11, fontWeight: 900 }}>{isEditingStep ? "Editing" : "Edit"}</span>
                 </span>
               </button>
               {isEditingStep && (
                 <div data-process-template-step-fields="true" style={{ marginTop: 10, display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(112px, 0.55fr) 84px minmax(0, 1.1fr) minmax(120px, 0.62fr)", gap: 7, alignItems: "start" }}>
-                  <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", border: "1px solid rgba(60,60,67,0.12)", background: "rgba(242,242,247,0.62)", borderRadius: 14, padding: "8px 9px" }}>
-                    <span style={{ color: "#636366", fontSize: 11, fontWeight: 800 }}>Editing step {index + 1} only</span>
+                  <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.72)", borderRadius: 14, padding: "8px 9px" }}>
+                    <span style={{ color: DT.textMuted, fontSize: 11, fontWeight: 850 }}>Editing step {index + 1} only</span>
                     <span data-process-template-step-actions="true" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
                       <button type="button" onClick={() => moveStep(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
                       <button type="button" onClick={() => moveStep(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Down</button>
                       <button type="button" onClick={() => removeStep(index)} style={{ ...processTemplateTinyButtonStyle("danger"), marginLeft: 8 }} aria-label={`Delete production path row ${index + 1}`} title="Delete step">Delete</button>
-                      <button type="button" onClick={() => setEditingStepIndex(null)} style={processTemplateTinyButtonStyle("primary")}>Done</button>
+                      <button
+                        type="button"
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setEditingStepIndex(null);
+                        }}
+                        onClick={(event) => {
+                          if (event.detail !== 0) return;
+                          setEditingStepIndex(null);
+                        }}
+                        style={processTemplateTinyButtonStyle("primary")}
+                      >
+                        Done
+                      </button>
                     </span>
                   </div>
                   <textarea aria-label={`Production path ${index + 1} task`} value={task?.title || ""} placeholder="Scheduled task" rows={2} onChange={(event) => updateTask(index, { title: event.target.value })} style={processTemplateTextareaStyle()} />
@@ -8254,7 +8293,7 @@ function ProcessTemplateCard({
       data-process-template-card="true"
       data-process-template-expanded={showEditor ? "true" : "false"}
       data-process-template-mode={showEditor ? "edit" : "review"}
-      style={{ border: "1px solid rgba(60,60,67,0.12)", borderRadius: 22, background: "rgba(255,255,255,0.82)", boxShadow: "0 18px 45px rgba(0,0,0,0.07)", padding: isNarrow ? 12 : 18, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 10 : 16, alignItems: "start" }}
+      style={{ border: `1px solid ${DT.border}`, borderRadius: 22, background: "linear-gradient(135deg, rgba(255,255,255,0.91), rgba(255,253,249,0.82))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 16px 38px rgba(37,30,20,0.075)", padding: isNarrow ? 12 : 18, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 10 : 16, alignItems: "start" }}
     >
       <div style={processTemplateColumnStyle("logic")}>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
@@ -8262,9 +8301,9 @@ function ProcessTemplateCard({
             {showEditor ? (
               <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: isNarrow ? 18 : 20, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "8px 10px", resize: "none", overflow: "hidden", minHeight: titleRows > 1 ? 66 : 48 })} />
             ) : (
-              <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 29, lineHeight: 1.02, letterSpacing: "-0.045em", color: "#1d1d1f" }}>{template.title}</h3>
+              <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 29, lineHeight: 1.02, letterSpacing: "-0.045em", color: DT.textPrimary }}>{template.title}</h3>
             )}
-            {!showEditor && <p style={{ margin: "7px 0 0", fontSize: 13, lineHeight: 1.4, color: "#6e6e73", fontWeight: 650 }}>{template.issueLabel}</p>}
+            {!showEditor && <p style={{ margin: "7px 0 0", fontSize: 13, lineHeight: 1.4, color: DT.textMuted, fontWeight: 700 }}>{template.issueLabel}</p>}
           </div>
           {showEditor ? (
             <select aria-label={`${template.title} readiness`} title={PROCESS_TEMPLATE_ISSUE_HINTS[template.issueLevel]} value={template.issueLevel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLevel: event.target.value as ProcessTemplateIssueLevel }))} style={{ ...processTemplateInputStyle({ width: isNarrow ? "100%" : 132, flex: isNarrow ? undefined : "0 0 132px" }), ...processTemplateIssueStyle(template.issueLevel) }}>
@@ -8298,12 +8337,12 @@ function ProcessTemplateCard({
           </>
         ) : (
           <>
-            <p style={{ margin: "10px 0 0", fontFamily: DT.sans, color: "#6e6e73", fontSize: 13, lineHeight: 1.48, fontWeight: 500 }}>{template.subtitle}</p>
+            <p style={{ margin: "10px 0 0", fontFamily: DT.sans, color: DT.textMuted, fontSize: 13, lineHeight: 1.48, fontWeight: 650 }}>{template.subtitle}</p>
             <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 850, letterSpacing: "0.09em", textTransform: "uppercase", color: "#8e8e93" }}>Matching rules</div>
+              <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
               <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {template.detection.map((rule, ruleIndex) => (
-                  <span key={`${template.id}-rule-${ruleIndex}`} style={{ border: 0, background: "rgba(118,118,128,0.08)", color: "#515154", borderRadius: 999, padding: "6px 9px", fontSize: 11, fontWeight: 750 }}>{rule}</span>
+                  <span key={`${template.id}-rule-${ruleIndex}`} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.74)", color: DT.textSecondary, borderRadius: 999, padding: "6px 9px", fontSize: 11, fontWeight: 800 }}>{rule}</span>
                 ))}
               </div>
             </div>
@@ -8349,10 +8388,10 @@ function ProcessTemplateNavigator({
       aria-label="Process template categories"
       data-process-template-navigator="true"
       style={{
-        border: "1px solid rgba(60,60,67,0.12)",
+        border: `1px solid ${DT.border}`,
         borderRadius: 22,
-        background: "rgba(255,255,255,0.72)",
-        boxShadow: "0 12px 30px rgba(0,0,0,0.045)",
+        background: "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,253,249,0.70))",
+        boxShadow: DT.shadow,
         padding: isNarrow ? 8 : 10,
         display: isNarrow ? "flex" : "grid",
         gridTemplateColumns: isNarrow ? undefined : "1fr",
@@ -8363,8 +8402,8 @@ function ProcessTemplateNavigator({
     >
       {!isNarrow && (
         <div style={{ padding: "4px 6px 8px" }}>
-          <div style={{ fontSize: 10, fontWeight: 850, letterSpacing: "0.09em", textTransform: "uppercase", color: "#8e8e93" }}>Templates</div>
-          <div style={{ marginTop: 3, fontSize: 12, fontWeight: 650, color: "#6e6e73", lineHeight: 1.35 }}>Choose one category to review.</div>
+          <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: DT.textFaint }}>Templates</div>
+          <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: DT.textMuted, lineHeight: 1.35 }}>Choose one category to review.</div>
         </div>
       )}
       {templates.map((template) => {
@@ -8382,20 +8421,20 @@ function ProcessTemplateNavigator({
             style={{
               minWidth: isNarrow ? 190 : 0,
               width: isNarrow ? undefined : "100%",
-              border: `1px solid ${active ? "rgba(0,122,255,0.26)" : "rgba(60,60,67,0.10)"}`,
-              background: active ? "rgba(0,122,255,0.08)" : "rgba(255,255,255,0.62)",
-              color: active ? "#007aff" : "#1d1d1f",
+              border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`,
+              background: active ? "linear-gradient(135deg, rgba(255,253,249,0.96), rgba(12,124,122,0.11))" : "rgba(255,255,255,0.66)",
+              color: active ? DT.teal : DT.textPrimary,
               borderRadius: 16,
               padding: "10px 11px",
               textAlign: "left",
               cursor: "pointer",
               fontFamily: DT.sans,
-              boxShadow: active ? "0 8px 18px rgba(0,122,255,0.10)" : "0 1px 0 rgba(0,0,0,0.025)",
+              boxShadow: active ? "0 9px 20px rgba(12,124,122,0.10), 0 1px 0 rgba(255,255,255,0.72) inset" : "0 1px 0 rgba(255,255,255,0.68) inset",
               touchAction: "manipulation",
             }}
           >
             <span style={{ display: "block", fontSize: 13, fontWeight: 850, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "nowrap" : "normal" }}>{template.title}</span>
-            <span style={{ display: "block", marginTop: 5, color: active ? "rgba(0,122,255,0.78)" : "#6e6e73", fontSize: 11, fontWeight: 700, lineHeight: 1.25 }}>
+            <span style={{ display: "block", marginTop: 5, color: active ? DT.teal : DT.textMuted, fontSize: 11, fontWeight: 750, lineHeight: 1.25 }}>
               {rowCount} {rowCount === 1 ? "step" : "steps"} · {totalHours.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}h{waitCount ? ` · ${waitCount} waits` : ""}
             </span>
           </button>
@@ -8408,8 +8447,8 @@ function ProcessTemplateNavigator({
 function ProcessTemplatesView() {
   const [templates, setTemplates] = useState<ProcessTemplatePreview[]>(DEFAULT_PROCESS_TEMPLATE_PREVIEWS);
   const [dirty, setDirty] = useState(false);
-  const [source, setSource] = useState<"loading" | "file" | "defaults" | "error">("loading");
-  const [saveStatus, setSaveStatus] = useState<string>("Loading saved templates...");
+  const [source, setSource] = useState<"loading" | "file" | "defaults" | "error">("defaults");
+  const [saveStatus, setSaveStatus] = useState<string>("Using built-in defaults while checking saved templates");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(DEFAULT_PROCESS_TEMPLATE_PREVIEWS[0]?.id ?? null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const isNarrow = useIsNarrow(760);
@@ -8491,6 +8530,27 @@ function ProcessTemplatesView() {
   const selectedTemplateIndex = templates.findIndex((template) => template.id === selectedTemplateId);
   const selectedTemplate = selectedTemplateIndex >= 0 ? templates[selectedTemplateIndex] : templates[0];
   const selectedIndex = selectedTemplateIndex >= 0 ? selectedTemplateIndex : 0;
+  const loadingWithoutTemplates = source === "loading" && templates.length === 0;
+  const processStatusLabel = dirty
+    ? "Autosave pending"
+    : loadingWithoutTemplates
+      ? "Loading"
+      : source === "error"
+        ? "Source issue"
+        : isEditingTemplates
+          ? "Autosave on"
+          : "Review mode";
+  const processStatusDetail = dirty
+    ? "Saving after edit"
+    : loadingWithoutTemplates
+      ? "Loading templates"
+      : source === "error"
+        ? "Template source needs checking"
+        : isEditingTemplates
+          ? "Editing safely"
+          : source === "defaults"
+            ? "Using built-in defaults"
+            : "All changes saved";
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <style>{`
@@ -8580,13 +8640,13 @@ function ProcessTemplatesView() {
           }
         }
       `}</style>
-      <div style={{ border: "1px solid rgba(60,60,67,0.12)", borderRadius: 22, background: "rgba(255,255,255,0.82)", boxShadow: "0 14px 36px rgba(0,0,0,0.06)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ border: `1px solid ${DT.border}`, borderRadius: 22, background: "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(255,253,249,0.78))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 12px 30px rgba(37,30,20,0.06)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <div>
-          <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 30, lineHeight: 1.02, letterSpacing: "-0.045em", color: "#1d1d1f" }}>Process templates</h2>
+          <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 30, lineHeight: 1.02, letterSpacing: "-0.045em", color: DT.textPrimary }}>Process templates</h2>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
-          <span style={{ border: 0, background: isEditingTemplates ? "rgba(0,122,255,0.10)" : "rgba(118,118,128,0.08)", color: isEditingTemplates ? "#007aff" : "#3a3a3c", borderRadius: 999, padding: "6px 9px", fontSize: 11, fontWeight: 850 }}>{dirty ? "Autosave pending" : source === "loading" ? "Loading" : isEditingTemplates ? "Autosave on" : "Review mode"}</span>
-          <span title={saveStatus} style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: 0, background: "transparent", color: "#6e6e73", borderRadius: 999, padding: "6px 4px", fontSize: 11, fontWeight: 700 }}>{dirty ? "Saving after edit" : source === "loading" ? "Loading templates" : "All changes saved"}</span>
+          <span style={{ border: `1px solid ${isEditingTemplates ? "rgba(12,124,122,0.24)" : source === "error" ? "rgba(154,59,47,0.20)" : DT.border}`, background: isEditingTemplates ? DT.tealSoft : source === "error" ? "rgba(154,59,47,0.08)" : "rgba(255,253,249,0.74)", color: isEditingTemplates ? DT.teal : source === "error" ? DT.clay : DT.textSecondary, borderRadius: 999, padding: "6px 9px", fontSize: 11, fontWeight: 900 }}>{processStatusLabel}</span>
+          <span title={saveStatus} style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: 0, background: "transparent", color: source === "error" ? DT.clay : DT.textMuted, borderRadius: 999, padding: "6px 4px", fontSize: 11, fontWeight: 750 }}>{processStatusDetail}</span>
           {isEditingTemplates && <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save now</button>}
           {isEditingTemplates && <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset defaults</button>}
         </div>
@@ -8613,7 +8673,7 @@ function ProcessTemplatesView() {
             updateTemplate={updateTemplate}
           />
         ) : (
-          <div style={{ border: "1px dashed rgba(60,60,67,0.18)", borderRadius: 18, background: "rgba(255,255,255,0.70)", padding: 18, color: "#6e6e73", fontSize: 13, fontWeight: 750 }}>No process templates found.</div>
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 18, background: "rgba(255,255,255,0.70)", padding: 18, color: DT.textMuted, fontSize: 13, fontWeight: 750 }}>No process templates found.</div>
         )}
       </div>
       <button
@@ -8876,7 +8936,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
         data-order-row-drag-surface="order-row-drag-surface"
         data-order-row-task-compact="true"
         title="Drag this task to another day or person"
-        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 7, background: orderRowTaskBg, padding: "3px 4px", minHeight: 28, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 7, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 7px rgba(37,30,20,0.045)", padding: "3px 4px", minHeight: 28, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
       >
         <div style={{ display: "grid", gridTemplateColumns: "18px auto minmax(0, 1fr) auto 22px", gap: 5, alignItems: "center", minWidth: 0 }}>
           <button
@@ -8943,7 +9003,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
       data-order-row-drag-surface="order-row-drag-surface"
       data-order-row-task-compact={compactMobile ? "true" : "false"}
       title="Drag this task to another day or person"
-      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: compactMobile ? 10 : 9, background: orderRowTaskBg, boxShadow: taskDone && !compactMobile ? DONE_TASK_VISUAL.shadow : undefined, padding: compactMobile ? 6 : 6, minHeight: compactMobile ? 56 : 52, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: compactMobile ? 10 : 9, background: orderRowTaskBg, boxShadow: taskDone && !compactMobile ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 8px rgba(37,30,20,0.05)", padding: compactMobile ? 6 : 6, minHeight: compactMobile ? 56 : 52, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0, 1fr) auto", gap: compactMobile ? 6 : 7, alignItems: compactMobile ? "center" : "start" }}>
         <button
@@ -9091,9 +9151,9 @@ function OrderJourneyView({
     const rowStyle = {
       borderWidth: "1px 1px 1px 4px",
       borderStyle: "solid",
-      borderColor: `${selected ? "rgba(12,124,122,0.20)" : DT.border} ${selected ? "rgba(12,124,122,0.20)" : DT.border} ${selected ? "rgba(12,124,122,0.20)" : DT.border} ${healthMeta.color}`,
-      background: selected ? "rgba(12,124,122,0.04)" : "rgba(255,255,255,0.86)",
-      boxShadow: selected ? "0 8px 22px rgba(12,124,122,0.08)" : DT.shadow,
+      borderColor: `${selected ? "rgba(12,124,122,0.22)" : "rgba(0,0,0,0.065)"} ${selected ? "rgba(12,124,122,0.22)" : "rgba(0,0,0,0.065)"} ${selected ? "rgba(12,124,122,0.22)" : "rgba(0,0,0,0.065)"} ${healthMeta.color}`,
+      background: selected ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.075))" : "linear-gradient(135deg, rgba(255,255,255,0.99), rgba(255,253,249,0.88) 56%, rgba(245,241,232,0.58))",
+      boxShadow: selected ? "0 12px 28px rgba(12,124,122,0.12), 0 1px 0 rgba(255,255,255,0.78) inset" : "0 1px 0 rgba(255,255,255,0.78) inset, 0 10px 26px rgba(37,30,20,0.07)",
       borderRadius: DT.radius,
       overflow: "hidden",
     };
@@ -9174,7 +9234,7 @@ function OrderJourneyView({
     return (
       <article key={row.id} data-order-journey-row-card="true" data-order-journey-row-compact="false" style={rowStyle}>
         <div data-order-row-week-grid="order-row-week-grid" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "220px repeat(5, minmax(104px, 1fr))", gap: 0 }}>
-          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "rgba(255,253,249,0.72)" }}>
+          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "linear-gradient(135deg, rgba(255,253,249,0.86), rgba(247,243,235,0.70))" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
               {row.order ? (
 	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 40 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 750, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
@@ -9233,7 +9293,7 @@ function OrderJourneyView({
             const mobileDayVisible = shouldShowDayOnMobile(day);
             const dayHours = dayTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
             return (
-              <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible={mobileDayVisible} style={{ minHeight: 0, padding: isNarrow ? 8 : 6, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.24)", display: "flex", flexDirection: "column" }}>
+              <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible={mobileDayVisible} style={{ minHeight: 0, padding: isNarrow ? 8 : 6, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "linear-gradient(135deg, rgba(255,255,255,0.70), rgba(247,243,235,0.40))" : "rgba(255,253,249,0.34)", display: "flex", flexDirection: "column" }}>
                 <div data-order-row-mobile-day-header="true" style={{ display: isNarrow ? "flex" : "none", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
                   <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
                   <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>
@@ -11020,17 +11080,26 @@ export default function PlanClient({
   return (
     <MissionControlShell
       section={initialUtilityView === "processTemplates" ? "processTemplates" : "plan"}
-      pageTitle={initialUtilityView === "processTemplates" ? "Processes" : "Production Plan"}
+      pageTitle=""
       syncedAt={syncedAt}
       source={source}
       mondayError={mondayError}
       pageTitleAccessory={undefined}
       maxWidth={1500}
     >
+        <TuesdayPageHeader
+          eyebrow={initialUtilityView === "processTemplates" ? "Setup" : "Production Plan"}
+          title={initialUtilityView === "processTemplates" ? "Processes" : "Orders"}
+          subtitle={initialUtilityView === "processTemplates"
+            ? "Reusable workshop paths that create consistent order flow."
+            : "Live workshop work, grouped by what needs attention now."}
+          compact={false}
+        />
         {qaFixtureMode && (
           <div
             data-qa-plan-fixture="true"
             style={{
+              marginTop: 12,
               marginBottom: 12,
               border: "1px solid rgba(190,137,24,0.26)",
               background: "rgba(255,246,199,0.72)",
@@ -11046,11 +11115,13 @@ export default function PlanClient({
           </div>
         )}
         {initialUtilityView === "processTemplates" ? (
-          <ProcessTemplatesView />
+          <div style={{ marginTop: 12 }}>
+            <ProcessTemplatesView />
+          </div>
         ) : rows.length === 0 ? (
           <section
             style={{
-              margin: "0 auto",
+              margin: "12px auto 0",
               maxWidth: 780,
               padding: "42px 24px",
               textAlign: "center",
@@ -11070,19 +11141,21 @@ export default function PlanClient({
             {mondayError && <p style={{ margin: "14px auto 0", maxWidth: 640, border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, background: "rgba(180,107,70,0.08)", color: "#8f3f24", padding: 10, fontWeight: 850 }}>Production source issue: {mondayError}</p>}
           </section>
         ) : (
-          <MonthView
-            weeks={activeWeeks}
-            newOrder={newOrder}
-            orders={orders}
-            orderCostings={orderCostings}
-            delightEnabled={delightEnabled}
-            railFilter={railFilter}
-            onRailFilterChange={setRailFilter}
-            qaFixtureMode={qaFixtureMode}
-            initialPlanTaskLinkState={initialPlanTaskLinkState}
-            initialPlanTaskLinksStorage={initialPlanTaskLinksStorage}
-            initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}
-          />
+          <div style={{ marginTop: 12 }}>
+            <MonthView
+              weeks={activeWeeks}
+              newOrder={newOrder}
+              orders={orders}
+              orderCostings={orderCostings}
+              delightEnabled={delightEnabled}
+              railFilter={railFilter}
+              onRailFilterChange={setRailFilter}
+              qaFixtureMode={qaFixtureMode}
+              initialPlanTaskLinkState={initialPlanTaskLinkState}
+              initialPlanTaskLinksStorage={initialPlanTaskLinksStorage}
+              initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}
+            />
+          </div>
         )}
         {delightEnabled && initialUtilityView !== "processTemplates" && <DelightUnicorn />}
     </MissionControlShell>

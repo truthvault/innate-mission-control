@@ -10,7 +10,7 @@ export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "sam
 type NavItem = { section: MissionControlSection; label: string; href: string; group?: "Control" | "Sales" | "Ops" | "Drafts" };
 
 const NAV: NavItem[] = [
-  { section: "plan", label: "Production Plan", href: "/production/plan" },
+  { section: "plan", label: "Orders", href: "/production/plan" },
   { section: "stock", label: "Stock", href: "/production/stock" },
   { section: "samples", label: "Samples", href: "/production/samples" },
   { section: "processTemplates", label: "Processes", href: "/production/plan?view=process-templates" },
@@ -91,7 +91,7 @@ function SyncBadge({ syncedAt, source, mondayError, isNarrow = false }: { synced
 }
 
 function useIsNarrow(breakpoint = 760) {
-  const [isNarrow, setIsNarrow] = useState(true);
+  const [isNarrow, setIsNarrow] = useState(() => (typeof window === "undefined" ? false : window.innerWidth < breakpoint));
   useEffect(() => {
     const update = () => setIsNarrow(window.innerWidth < breakpoint);
     update();
@@ -141,14 +141,14 @@ function TuesdayMark({ compact = false }: { compact?: boolean }) {
 }
 
 function TuesdayBrand({ syncedAt, source, mondayError, isNarrow = false }: { syncedAt: string; source: string; mondayError?: string; isNarrow?: boolean }) {
-  void syncedAt;
-  void source;
-  void mondayError;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: isNarrow ? 7 : 10, width: "100%", maxWidth: isNarrow ? undefined : 220, minWidth: 0, flex: isNarrow ? "1 1 auto" : "0 1 220px" }}>
       <TuesdayMark compact={isNarrow} />
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
-        <div style={{ fontSize: isNarrow ? 17 : 21, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
+          <div style={{ fontSize: isNarrow ? 17 : 21, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
+        </div>
+        {!isNarrow && <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} />}
       </div>
     </div>
   );
@@ -303,7 +303,7 @@ export function MissionControlShell({
   const compactMobile = isNarrow;
   const compactPlanMobile = compactMobile && section === "plan";
   return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(79,95,168,0.08), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
+    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(12,124,122,0.075), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
       <style>{`
           .mc-mobile-only { display: none; }
           @media (max-width: 759px) {
@@ -326,7 +326,7 @@ export function MissionControlShell({
           }
         `}</style>
       <header style={{ position: "sticky", top: 0, zIndex: 1000 }}>
-        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, ${DT.headerBg} 0%, ${DT.headerBg2} 62%, ${DT.headerBg3} 100%)`, padding: isNarrow ? "5px 8px" : "9px 22px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(180px, 220px) minmax(0, 1fr) minmax(260px, auto)", alignItems: "center", gap: isNarrow ? 6 : 18, boxShadow: "0 10px 28px rgba(44,37,32,0.18)", overflow: "visible" }}>
+        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, #181716 0%, #24211d 58%, #151312 100%)`, padding: isNarrow ? "5px 8px" : "9px 18px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(176px, 220px) minmax(360px, 1fr) auto", alignItems: "center", gap: isNarrow ? 6 : 14, boxShadow: "0 10px 28px rgba(44,37,32,0.18)", overflow: "visible" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           {compactMobile && (
             <div className="mc-mobile-only" style={{ alignItems: "center", gap: 7 }}>
@@ -334,7 +334,7 @@ export function MissionControlShell({
               <MobileManagementMenu section={section} pathname={pathname} />
             </div>
           )}
-          {compactMobile ? null : <nav className="mc-mobile-hide" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", justifySelf: "center", gap: 3, flexWrap: "nowrap", overflowX: "visible", padding: 3, border: "1px solid rgba(255,255,255,0.10)", borderRadius: 999, background: "rgba(255,255,255,0.045)", WebkitOverflowScrolling: "touch" }} aria-label="Mission Control sections">
+          {compactMobile ? null : <nav className="mc-mobile-hide" style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-start", justifySelf: "start", gap: 5, flexWrap: "nowrap", overflowX: "visible", padding: 4, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 999, background: "rgba(255,255,255,0.075)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 1px 10px rgba(0,0,0,0.10)", WebkitOverflowScrolling: "touch" }} aria-label="Mission Control boards">
             {NAV.map((item) => {
               const active = navItemActive(item, section, pathname);
               return (
@@ -342,17 +342,17 @@ export function MissionControlShell({
                   key={item.section}
                   href={item.href}
                   style={{
-                    color: active ? "#fff" : "rgba(255,255,255,0.70)",
-                    background: active ? "rgba(255,255,255,0.15)" : "transparent",
-                    border: active ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent",
-                    boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
+                    color: active ? "#1d1a16" : "rgba(255,250,240,0.88)",
+                    background: active ? "linear-gradient(135deg, #fffaf0 0%, rgba(210,174,109,0.92) 100%)" : "linear-gradient(135deg, rgba(255,250,240,0.095), rgba(210,174,109,0.055))",
+                    border: active ? "1px solid rgba(255,255,255,0.42)" : "1px solid rgba(255,250,240,0.13)",
+                    boxShadow: active ? "0 1px 0 rgba(255,255,255,0.35), 0 6px 18px rgba(0,0,0,0.16)" : "0 1px 0 rgba(255,255,255,0.05) inset",
                     borderRadius: 999,
-                    padding: "7px 12px",
-                    minWidth: item.section === "plan" ? 118 : item.section === "processTemplates" ? 88 : 72,
-                    fontSize: 11,
+                    padding: "7px 13px",
+                    minWidth: item.section === "processTemplates" ? 96 : 78,
+                    fontSize: 12,
                     textDecoration: "none",
                     fontFamily: DT.sans,
-                    fontWeight: active ? 850 : 720,
+                    fontWeight: active ? 900 : 790,
                     letterSpacing: "0.01em",
                     textAlign: "center",
                   }}
@@ -364,7 +364,6 @@ export function MissionControlShell({
           </nav>}
           {!compactMobile && (
             <div className="mc-mobile-hide" style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-              <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} />
               <RefreshButton section={section} />
               <GuidoMenu section={section} pathname={pathname} />
             </div>

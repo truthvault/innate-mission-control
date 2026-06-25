@@ -68,3 +68,48 @@ export function KpiCard({ label, value, tone = "neutral" }: { label: string; val
     </div>
   );
 }
+
+export function TuesdayPageHeader({
+  eyebrow,
+  title,
+  subtitle,
+  accessory,
+  compact = false,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  accessory?: ReactNode;
+  compact?: boolean;
+}) {
+  return (
+    <section
+      aria-label={`${title} page summary`}
+      style={{
+        border: `1px solid ${DT.border}`,
+        borderRadius: compact ? 16 : 20,
+        background: "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,253,249,0.90) 56%, rgba(246,241,232,0.82) 100%)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.80) inset, 0 16px 38px rgba(37,30,20,0.075)",
+        padding: compact ? "12px 13px" : "16px 18px",
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "space-between",
+        gap: 14,
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ minWidth: 0, flex: "1 1 420px" }}>
+        <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.11em", textTransform: "uppercase", color: DT.textFaint }}>
+          {eyebrow}
+        </div>
+        <h1 style={{ margin: "3px 0 0", fontFamily: DT.serif, fontSize: compact ? 26 : 32, lineHeight: 1.03, letterSpacing: "-0.045em", color: DT.textPrimary }}>
+          {title}
+        </h1>
+        <p style={{ margin: "7px 0 0", maxWidth: 760, fontFamily: DT.sans, fontSize: compact ? 12 : 13, lineHeight: 1.42, color: DT.textSecondary, fontWeight: 650 }}>
+          {subtitle}
+        </p>
+      </div>
+      {accessory && <div style={{ flex: "0 1 auto", minWidth: 0 }}>{accessory}</div>}
+    </section>
+  );
+}
