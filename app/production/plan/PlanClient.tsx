@@ -1078,22 +1078,50 @@ type OrderWorkflowState = {
   updatedAt: string;
 };
 
+const TUESDAY_TIME_ZONE = "Pacific/Auckland";
+const TUESDAY_WEEKDAY_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+function nzDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-NZ", { timeZone: TUESDAY_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value || "";
+  const weekday = TUESDAY_WEEKDAY_INDEX[part("weekday")] ?? 0;
+  return { year: Number(part("year")), month: Number(part("month")), day: Number(part("day")), weekday };
+}
+
+function dateKeyFromParts(parts: { year: number; month: number; day: number }) {
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function dateSerial(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 864e5);
+}
+
+function dateKeyFromSerial(serial: number) {
+  return new Date(serial * 864e5).toISOString().slice(0, 10);
+}
+
+function dateAtNoonUtc(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+}
+
+function todayNzDateKey(date = new Date()) {
+  return dateKeyFromParts(nzDateParts(date));
+}
+
 function weekBoundaries() {
-  const now = new Date();
-  const day = now.getDay();
-  const monOffset = day === 0 ? -6 : 1 - day;
-  const thisMon = new Date(now);
-  thisMon.setHours(0, 0, 0, 0);
-  thisMon.setDate(thisMon.getDate() + monOffset);
-  const nextMon = new Date(thisMon);
-  nextMon.setDate(nextMon.getDate() + 7);
-  const twoMon = new Date(thisMon);
-  twoMon.setDate(twoMon.getDate() + 14);
-  return { thisMon, nextMon, twoMon };
+  const todayParts = nzDateParts();
+  const todaySerial = dateSerial(dateKeyFromParts(todayParts));
+  const monOffset = todayParts.weekday === 0 ? -6 : 1 - todayParts.weekday;
+  const thisMonKey = dateKeyFromSerial(todaySerial + monOffset);
+  const nextMonKey = dateKeyFromSerial(todaySerial + monOffset + 7);
+  const twoMonKey = dateKeyFromSerial(todaySerial + monOffset + 14);
+  return { thisMon: dateAtNoonUtc(thisMonKey), nextMon: dateAtNoonUtc(nextMonKey), twoMon: dateAtNoonUtc(twoMonKey) };
 }
 
 function currentDayKey(date = new Date()): DayKey | null {
-  const day = date.getDay();
+  const day = nzDateParts(date).weekday;
   if (day < 1 || day > 5) return null;
   return DAYS[day - 1] ?? null;
 }
@@ -1101,7 +1129,7 @@ function currentDayKey(date = new Date()): DayKey | null {
 function dateOnlyAtNoon(date: string | null | undefined) {
   if (!date) return null;
   const datePart = date.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? new Date(`${datePart}T12:00:00`) : new Date(date);
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? dateAtNoonUtc(datePart) : new Date(date);
 }
 
 function orderDueThisWeek(order: UiOrder) {
@@ -1119,11 +1147,9 @@ function orderDueNextWeek(order: UiOrder) {
 }
 
 function orderDaysUntil(date: string | null) {
-  const due = dateOnlyAtNoon(date);
-  if (!due) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((due.getTime() - today.getTime()) / 864e5);
+  const datePart = date?.slice(0, 10);
+  if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
+  return dateSerial(datePart) - dateSerial(todayNzDateKey());
 }
 
 function orderProgressPct(order: UiOrder, stepIndex = order.currentStep, qcFraction = 0, openTaskCount?: number, releaseComplete?: boolean) {
@@ -1468,12 +1494,12 @@ const HEALTH_META: Record<OrderHealthLevel, { label: string; color: string; bg: 
 
 function formatShortDate(date: string | null) {
   if (!date) return "No due date";
-  return new Date(date).toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
+  return dateOnlyAtNoon(date)?.toLocaleDateString("en-NZ", { day: "numeric", month: "short", timeZone: TUESDAY_TIME_ZONE }) ?? "No due date";
 }
 
 function formatTaskDateLabel(date: string | null | undefined) {
   if (!date) return "No date";
-  return new Date(`${date}T12:00:00`).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short" });
+  return dateAtNoonUtc(date.slice(0, 10)).toLocaleDateString("en-NZ", { weekday: "short", day: "numeric", month: "short", timeZone: TUESDAY_TIME_ZONE });
 }
 
 function formatRailDueDate(order: UiOrder) {
