@@ -139,9 +139,8 @@ function timestampParts(date = new Date()) {
   return { date: datePart, compact: `${datePart.replace(/-/g, "")}T${timePart}` };
 }
 
-function loadLocalEnv() {
-  const envPath = path.join(repoRoot, ".env.local");
-  if (!fs.existsSync(envPath)) return;
+function loadEnvFile(envPath) {
+  if (!envPath || !fs.existsSync(envPath)) return;
   const text = fs.readFileSync(envPath, "utf8");
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -152,6 +151,18 @@ function loadLocalEnv() {
     if (process.env[key]) continue;
     process.env[key] = rawValue.replace(/^["']|["']$/g, "");
   }
+}
+
+function loadLocalEnv() {
+  const homeEnv = process.env.HOME ? path.join(process.env.HOME, "innate-mission-control", ".env.local") : "";
+  const candidates = [
+    process.env.TUESDAY_ENV_FILE,
+    process.env.MISSION_CONTROL_ENV_FILE,
+    path.join(repoRoot, ".env.local"),
+    path.join(process.cwd(), ".env.local"),
+    homeEnv,
+  ];
+  for (const envPath of [...new Set(candidates.filter(Boolean))]) loadEnvFile(envPath);
 }
 
 function signedAuthCookie() {
@@ -165,6 +176,20 @@ function signedAuthCookie() {
   const payload = `v1.${expiresAt}`;
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
+}
+
+function authCookieRecord(cookie, url) {
+  const parsed = new URL(url);
+  const [pair] = String(cookie).split(";", 1);
+  const separator = pair.indexOf("=");
+  return {
+    name: separator > 0 ? pair.slice(0, separator) : "innate-auth",
+    value: separator > 0 ? pair.slice(separator + 1) : pair,
+    url: `${parsed.protocol}//${parsed.host}`,
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: parsed.protocol === "https:",
+  };
 }
 
 function selectedViewports(profile) {
@@ -396,8 +421,7 @@ async function auditViewport(browser, routeInput, url, viewport, outDir, args, a
     isMobile: viewport.isMobile,
   });
   if (authCookie) {
-    const parsed = new URL(url);
-    await context.addCookies([{ name: "innate-auth", value: authCookie, domain: parsed.hostname, path: "/", httpOnly: true, sameSite: "Lax" }]);
+    await context.addCookies([authCookieRecord(authCookie, url)]);
   }
   const page = await context.newPage();
   page.setDefaultTimeout(args.timeout);

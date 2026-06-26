@@ -2,10 +2,15 @@
 
 import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-function loadLocalEnv() {
-  if (!fs.existsSync(".env.local")) return;
-  const text = fs.readFileSync(".env.local", "utf8");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
+
+function loadEnvFile(envPath) {
+  if (!envPath || !fs.existsSync(envPath)) return;
+  const text = fs.readFileSync(envPath, "utf8");
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
@@ -13,9 +18,22 @@ function loadLocalEnv() {
     const key = trimmed.slice(0, index).trim();
     const rawValue = trimmed.slice(index + 1).trim();
     if (process.env[key]) continue;
-    process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
+    process.env[key] = rawValue.replace(/^["']|["']$/g, "");
   }
 }
+
+function loadLocalEnv() {
+  const homeEnv = process.env.HOME ? path.join(process.env.HOME, "innate-mission-control", ".env.local") : "";
+  const candidates = [
+    process.env.TUESDAY_ENV_FILE,
+    process.env.MISSION_CONTROL_ENV_FILE,
+    path.join(repoRoot, ".env.local"),
+    path.join(process.cwd(), ".env.local"),
+    homeEnv,
+  ];
+  for (const envPath of [...new Set(candidates.filter(Boolean))]) loadEnvFile(envPath);
+}
+
 
 loadLocalEnv();
 
@@ -24,7 +42,7 @@ const baseUrl = (process.env.SMOKE_BASE_URL || "http://localhost:3000").replace(
 function signedAuthCookie() {
   if (process.env.SMOKE_AUTH_COOKIE) return process.env.SMOKE_AUTH_COOKIE;
   const secret = process.env.AUTH_SESSION_SECRET || process.env.SITE_PASSWORD;
-  if (!secret) return "innate-auth=authenticated";
+  if (!secret) return "";
   const expiresAt = Date.now() + 60 * 60 * 24 * 30 * 1000;
   const payload = `v1.${expiresAt}`;
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
@@ -32,6 +50,7 @@ function signedAuthCookie() {
 }
 
 const authCookie = signedAuthCookie();
+if (!authCookie) throw new Error("Missing AUTH_SESSION_SECRET or SITE_PASSWORD, so Tuesday smoke cannot prove authenticated pages.");
 
 const checks = [
   {

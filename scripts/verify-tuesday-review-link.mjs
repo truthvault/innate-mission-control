@@ -1,16 +1,20 @@
 #!/usr/bin/env node
 import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import process from "node:process";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
 const DEFAULT_PATH = "/production/plan";
 const BASE_EXPECTED_TEXT = ["Tuesday", "Production Plan"];
 
-function loadLocalEnv() {
-  if (!fs.existsSync(".env.local")) return;
-  const text = fs.readFileSync(".env.local", "utf8");
+function loadEnvFile(envPath) {
+  if (!envPath || !fs.existsSync(envPath)) return;
+  const text = fs.readFileSync(envPath, "utf8");
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
@@ -18,8 +22,20 @@ function loadLocalEnv() {
     const key = trimmed.slice(0, index).trim();
     const rawValue = trimmed.slice(index + 1).trim();
     if (process.env[key]) continue;
-    process.env[key] = rawValue.replace(/^['"]|['"]$/g, "");
+    process.env[key] = rawValue.replace(/^["']|["']$/g, "");
   }
+}
+
+function loadLocalEnv() {
+  const homeEnv = process.env.HOME ? path.join(process.env.HOME, "innate-mission-control", ".env.local") : "";
+  const candidates = [
+    process.env.TUESDAY_ENV_FILE,
+    process.env.MISSION_CONTROL_ENV_FILE,
+    path.join(repoRoot, ".env.local"),
+    path.join(process.cwd(), ".env.local"),
+    homeEnv,
+  ];
+  for (const envPath of [...new Set(candidates.filter(Boolean))]) loadEnvFile(envPath);
 }
 
 function parseArgs(argv) {
@@ -160,7 +176,6 @@ function cookieRecord(cookie, url) {
     name: pair.slice(0, separator),
     value: pair.slice(separator + 1),
     url: `${url.protocol}//${url.host}`,
-    path: "/",
     httpOnly: true,
     sameSite: "Lax",
     secure: url.protocol === "https:",
@@ -176,6 +191,11 @@ function expectedText(options) {
   return [...BASE_EXPECTED_TEXT, ...envExpectMany, envExpect, ...options.expect].filter(Boolean);
 }
 
+function missingExpectedText(text, expected) {
+  const normalizedText = String(text || "").toLocaleLowerCase();
+  return expected.filter((needle) => !normalizedText.includes(String(needle).toLocaleLowerCase()));
+}
+
 async function fetchCheck(url, cookie, expected) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -187,7 +207,7 @@ async function fetchCheck(url, cookie, expected) {
       signal: controller.signal,
     });
     const text = await response.text();
-    const missing = expected.filter((needle) => !text.includes(needle));
+    const missing = missingExpectedText(text, expected);
     return {
       ok: response.status >= 200 && response.status < 300 && missing.length === 0,
       status: response.status,
@@ -214,7 +234,7 @@ async function viewportCheck(browser, url, cookie, expected, options, profile) {
     const bodyText = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
     const finalUrl = page.url();
     const final = new URL(finalUrl);
-    const missingText = expected.filter((needle) => !bodyText.includes(needle));
+    const missingText = missingExpectedText(bodyText, expected);
 
     const metrics = await page.evaluate(() => {
       const isVisible = (element) => {

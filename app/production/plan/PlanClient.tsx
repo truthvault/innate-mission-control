@@ -2831,7 +2831,6 @@ function IntakeTaskDraftRow({
   index,
   isNarrow,
   dateOptions,
-  taskTemplateTitles,
   onPatch,
   onChooseOwner,
   onChooseDate,
@@ -2841,7 +2840,6 @@ function IntakeTaskDraftRow({
   index: number;
   isNarrow: boolean;
   dateOptions: SuggestedDateOption[];
-  taskTemplateTitles: string[];
   onPatch: (id: string, patch: Partial<OrderIntakeTaskDraft>) => void;
   onChooseOwner: (id: string, owner: OrderIntakeOwner) => void;
   onChooseDate: (id: string, dateIso: string) => void;
@@ -2852,14 +2850,13 @@ function IntakeTaskDraftRow({
     data: { type: "intake-task" },
   });
   const dateKnown = dateOptions.some((option) => option.dateIso === task.scheduledDate);
-  const templateListId = useId();
   return (
     <div
       ref={setNodeRef}
       title={task.detail || task.title}
       style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 9, background: isDragging ? "rgba(237,248,247,0.94)" : "rgba(251,250,247,0.82)", padding: 5, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : undefined, opacity: isDragging ? 0.82 : 1 }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "28px 34px minmax(0, 1fr) 74px" : "28px 42px minmax(132px, 0.72fr) minmax(240px, 1.45fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "28px 34px minmax(0, 1fr) 74px" : "28px 42px minmax(320px, 1fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
         <button
           type="button"
           ref={setActivatorNodeRef}
@@ -2873,23 +2870,11 @@ function IntakeTaskDraftRow({
         <span style={{ border: `1px solid rgba(12,124,122,0.16)`, background: "rgba(237,248,247,0.78)", color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
         <input
           type="text"
-          list={templateListId}
-          value={task.title}
-          onChange={(event) => onPatch(task.id, { title: event.target.value })}
-          aria-label={`Task ${index + 1} editable template`}
-          title="Type a task name or pick a template suggestion."
-          placeholder="Type or pick task"
-          style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}
-        />
-        <datalist id={templateListId}>
-          {taskTemplateTitles.map((title) => <option key={title} value={title} />)}
-        </datalist>
-        <input
-          type="text"
           value={task.title}
           onChange={(event) => onPatch(task.id, { title: event.target.value })}
           aria-label={`Task ${index + 1} text`}
-          placeholder="Task text"
+          title="Edit this task name directly."
+          placeholder="Task name"
           style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}
         />
         <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
@@ -2953,12 +2938,6 @@ function OrderIntakeReviewModal({
   const reviewSignal = signalStyle(reviewTone);
   const headerStatusLabel = paymentLifecycleLabel || item.stateLabel;
   const totalDraftHours = tasks.reduce((sum, task) => sum + Number(task.estimatedHours || 0), 0);
-  const taskTemplateTitles = useMemo(() => {
-    const titles = [...item.suggestedTasks, ...item.draftTasks]
-      .map((task) => task.title.trim())
-      .filter(Boolean);
-    return Array.from(new Set(titles));
-  }, [item.suggestedTasks, item.draftTasks]);
   const approvalChecks = [
     { label: "Ready", value: dueDisplay, tone: expectedReadyDate ? "good" : "warn" },
     { label: "Tasks", value: `${tasks.length} steps`, tone: tasks.length > 0 ? "good" : "warn" },
@@ -3181,7 +3160,6 @@ function OrderIntakeReviewModal({
                         index={index}
                         isNarrow={isNarrow}
                         dateOptions={dateOptions}
-                        taskTemplateTitles={taskTemplateTitles}
                         onPatch={patchTask}
                         onChooseOwner={chooseOwner}
                         onChooseDate={chooseTaskDate}

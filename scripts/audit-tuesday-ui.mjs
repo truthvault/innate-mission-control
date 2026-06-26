@@ -2,15 +2,19 @@
 import process from "node:process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
 const PROFILE = process.argv.find((arg) => arg.startsWith("--profile="))?.split("=")[1] || "desktop";
 const BASE_URL = (process.env.TUESDAY_BASE_URL || process.env.MISSION_CONTROL_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
 const AUTH_COOKIE = process.env.TUESDAY_AUTH_COOKIE || process.env.INNATE_AUTH_COOKIE || signedAuthCookie();
 
-function loadLocalEnv() {
-  if (!fs.existsSync(".env.local")) return;
-  const text = fs.readFileSync(".env.local", "utf8");
+function loadEnvFile(envPath) {
+  if (!envPath || !fs.existsSync(envPath)) return;
+  const text = fs.readFileSync(envPath, "utf8");
   for (const line of text.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
@@ -22,6 +26,18 @@ function loadLocalEnv() {
   }
 }
 
+function loadLocalEnv() {
+  const homeEnv = process.env.HOME ? path.join(process.env.HOME, "innate-mission-control", ".env.local") : "";
+  const candidates = [
+    process.env.TUESDAY_ENV_FILE,
+    process.env.MISSION_CONTROL_ENV_FILE,
+    path.join(repoRoot, ".env.local"),
+    path.join(process.cwd(), ".env.local"),
+    homeEnv,
+  ];
+  for (const envPath of [...new Set(candidates.filter(Boolean))]) loadEnvFile(envPath);
+}
+
 function signedAuthCookie() {
   loadLocalEnv();
   const secret = process.env.AUTH_SESSION_SECRET || process.env.SITE_PASSWORD;
@@ -30,6 +46,20 @@ function signedAuthCookie() {
   const payload = `v1.${expiresAt}`;
   const signature = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${signature}`;
+}
+
+function authCookieRecord(cookie, url) {
+  const parsed = new URL(url);
+  const [pair] = String(cookie).split(";", 1);
+  const separator = pair.indexOf("=");
+  return {
+    name: separator > 0 ? pair.slice(0, separator) : "innate-auth",
+    value: separator > 0 ? pair.slice(separator + 1) : pair,
+    url: `${parsed.protocol}//${parsed.host}`,
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: parsed.protocol === "https:",
+  };
 }
 
 const VIEWPORTS = {
@@ -140,8 +170,7 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, isMobile: viewport.isMobile });
   if (AUTH_COOKIE) {
-    const url = new URL(BASE_URL);
-    await context.addCookies([{ name: "innate-auth", value: AUTH_COOKIE, domain: url.hostname, path: "/", httpOnly: true, sameSite: "Lax" }]);
+    await context.addCookies([authCookieRecord(AUTH_COOKIE, BASE_URL)]);
   }
   const page = await context.newPage();
   const consoleErrors = [];
