@@ -2852,6 +2852,7 @@ function IntakeTaskDraftRow({
     data: { type: "intake-task" },
   });
   const dateKnown = dateOptions.some((option) => option.dateIso === task.scheduledDate);
+  const templateListId = useId();
   return (
     <div
       ref={setNodeRef}
@@ -2870,18 +2871,19 @@ function IntakeTaskDraftRow({
           =
         </button>
         <span style={{ border: `1px solid rgba(12,124,122,0.16)`, background: "rgba(237,248,247,0.78)", color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
-        <select
-          value={taskTemplateTitles.includes(task.title) ? task.title : "__custom__"}
-          onChange={(event) => {
-            if (event.target.value !== "__custom__") onPatch(task.id, { title: event.target.value });
-          }}
-          aria-label={`Task ${index + 1} template`}
-          title="Pick a templated task, then adjust the text if needed."
-          style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: "#fff" }}
-        >
-          <option value="__custom__">Custom task</option>
-          {taskTemplateTitles.map((title) => <option key={title} value={title}>{title}</option>)}
-        </select>
+        <input
+          type="text"
+          list={templateListId}
+          value={task.title}
+          onChange={(event) => onPatch(task.id, { title: event.target.value })}
+          aria-label={`Task ${index + 1} editable template`}
+          title="Type a task name or pick a template suggestion."
+          placeholder="Type or pick task"
+          style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}
+        />
+        <datalist id={templateListId}>
+          {taskTemplateTitles.map((title) => <option key={title} value={title} />)}
+        </datalist>
         <input
           type="text"
           value={task.title}
