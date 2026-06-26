@@ -15,6 +15,7 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 
 ## Current routers and lane briefs
 
+- `page-contracts.md` — route/view purpose contracts for Tuesday UI/design work. Load this before redesigning a page, tab, or route.
 - `leads.md`
 - `quoting.md` — quote spine, pricing policy approval, Hermes draft-only quote workflow, supplier freshness gates
 - `purchase-orders.md`
@@ -24,6 +25,8 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 - `foundations.md`
 - `inbox.md`
 - `costings.md` or `supabase-costings-schema-2026-06-18.sql` for source-backed supplier/material/product costing data.
+- `../../docs/current/tuesday-agent-design-standard.md` — active design standard for Tuesday/Mission Control UI work.
+- `../../docs/current/tuesday-visual-audit-protocol.md` — active desktop/tablet/mobile proof protocol and scanner route.
 
 ## Active operating handovers / current prep
 
@@ -57,7 +60,9 @@ Hermes should:
 2. append/dedupe into the relevant lane,
 3. give a short receipt,
 4. consult Website where useful,
-5. avoid build/external actions until explicit approval.
+5. avoid build/external actions until explicit approval,
+6. before calling UI/design work ready, prove the exact route and review source, then check desktop/tablet/mobile using the active Tuesday visual audit protocol,
+7. before changing UI/design for a route or tab, load `page-contracts.md`; if no matching contract exists, add a short contract first instead of guessing the screen's purpose.
 
 ## Global guardrails
 - Internal Tuesday / Mission Control planning only unless Guido explicitly approves otherwise.

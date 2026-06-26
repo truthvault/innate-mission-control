@@ -20,11 +20,15 @@ Replicate the useful parts of the Monday purchase orders board inside Tuesday so
   - notes = either `stock` or the customer/order it is for,
   - clickable Xero invoice/bill link so workshop can check exact supplier details while receipting goods.
 - For PO rows with attached Xero-generated PO PDFs/updates, read the PDF/reference before classifying the row; legacy Monday notes may only contain rough material shorthand.
+- Tuesday should generate monthly suggested POs from stock/min-max evidence.
+- Nick approves monthly suggested POs.
+- Tuesday should only create actual POs after Nick approval; suggestions are draft/proposed until then.
 
 ## Core jobs-to-be-done
 - See outstanding purchase orders.
 - Track materials/items ordered, supplier, ordered date, order status, received date, invoice/admin approval, and stock/customer allocation.
 - Give Nick/workshop a clickable Xero invoice/bill link for exact receipting detail.
+- Generate a monthly suggested PO queue for Nick approval before any PO is created.
 - Spot blockers for production.
 - Draft supplier follow-up emails without sending automatically.
 
@@ -42,19 +46,28 @@ Replicate the useful parts of the Monday purchase orders board inside Tuesday so
 - Status/group
 - Cost/estimate
 - Monday item link/id
+- Suggestion source/evidence: low stock, min/max, production shortage, monthly reorder review
+- Approval status and approver
 
 ## Source of truth
 - Monday purchase orders board initially.
+- Tuesday stock ledger/min-max evidence should drive suggested monthly POs once stocktake is live.
 - Xero may be supporting read-only context for invoices/bills, not an automatic write target.
+- Future Xero stock/item tidy-sync is a later workstream: supplier details, descriptions, product codes, and prices should eventually stay aligned between Tuesday and Xero, but first stocktake/PO work should not write to Xero.
 
 ## Actions/buttons to consider
 - Open Monday item
+- Review monthly suggested PO
+- Approve suggested PO for creation
+- Reject/defer suggested PO with reason
 - Draft supplier follow-up
 - Mark arrival/check-in draft
 - Filter overdue arrivals
 - Filter by supplier/job/status
 
 ## Status model draft
+- suggested / needs Nick approval
+- approved to create
 - to order
 - ordered
 - awaiting confirmation
