@@ -983,7 +983,7 @@ type OrderIntakeTaskDraft = {
 };
 type OrderIntakeLineItem = { description: string; quantity: number | null; unitAmount: number | null; lineAmount: number | null };
 type OrderIntakePaymentEvidence = { id: string; sourceSystem: string; paymentDate: string | null; amount: number; payerName: string | null; reference: string | null; matchStatus: string; matchConfidence: number | null; matchReasons: string[] };
-type OrderIntakeFinancialDocument = { id: string; role: string; invoiceNumber: string | null; invoiceUrl: string | null; status: string | null; issuedAt: string | null; dueAt: string | null; total: number | null; amountPaid: number | null; amountDue: number | null };
+type OrderIntakeFinancialDocument = { id: string; role: string; invoiceNumber: string | null; invoiceUrl: string | null; status: string | null; issuedAt: string | null; dueAt: string | null; total: number | null; amountPaid: number | null; amountDue: number | null; leadTimeWeeks: number | null; leadTimeSource: string | null };
 type OrderPaymentLifecycle = {
   orderId: string;
   primaryInvoiceNumber: string | null;
@@ -1619,6 +1619,43 @@ function recordNumber(source: Record<string, unknown>, keys: string[]) {
   return null;
 }
 
+function promisedLeadTimeWeeksFromText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+  const patterns = [
+    /(?:lead\s*time|ready|completion|production|dispatch|delivery)[^.!?\n]{0,90}?(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:weeks?|wks?)\b/i,
+    /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:weeks?|wks?)\b[^.!?\n]{0,90}?(?:lead\s*time|from\s+(?:deposit|payment|paid)|ready|completion|production|dispatch|delivery)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (!match) continue;
+    const first = Number(match[1]);
+    const second = match[2] ? Number(match[2]) : null;
+    const weeks = Number.isFinite(second ?? NaN) ? Math.max(first, second as number) : first;
+    if (Number.isFinite(weeks) && weeks > 0 && weeks <= 52) return Math.round(weeks * 2) / 2;
+  }
+  return null;
+}
+
+function sourceSummaryText(source: Record<string, unknown>) {
+  return Object.values(source)
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join("\n");
+}
+
+function promisedLeadTimeForIntake(item: OrderIntakeItem, depositDoc: OrderIntakeFinancialDocument | null) {
+  const explicitWeeks = recordNumber(item.sourceSummary, ["promised_weeks", "lead_time_weeks", "estimated_weeks", "production_weeks", "weeks_promised"]);
+  if (explicitWeeks) return { weeks: explicitWeeks, source: recordString(item.sourceSummary, ["lead_time_source", "promised_weeks_source", "weeks_promised_source"]) || "Captured promised lead time." };
+  if (depositDoc?.leadTimeWeeks) return { weeks: depositDoc.leadTimeWeeks, source: depositDoc.leadTimeSource ? `Xero invoice text: ${depositDoc.leadTimeSource}` : "Xero invoice text." };
+  const text = [
+    sourceSummaryText(item.sourceSummary),
+    item.productSummary || "",
+    ...item.lineItems.map((line) => line.description),
+  ].join("\n");
+  const parsed = promisedLeadTimeWeeksFromText(text);
+  return parsed ? { weeks: parsed, source: "Xero invoice text." } : { weeks: null, source: null };
+}
+
 function isoDateOnly(value: string | null | undefined) {
   if (!value) return null;
   const datePart = value.slice(0, 10);
@@ -1642,7 +1679,7 @@ function dayDiff(startIso: string | null, endIso: string | null) {
 function matchedPaymentDateForIntake(item: OrderIntakeItem, invoiceNumber: string | null | undefined, amount: number | null | undefined) {
   const invoiceText = normalizeOrderText(invoiceNumber);
   return item.payments
-    .filter((payment) => payment.matchStatus === "matched" && Number(payment.matchConfidence ?? 0) >= 0.98)
+    .filter((payment) => (payment.matchStatus === "matched" && Number(payment.matchConfidence ?? 0) >= 0.98) || isPendingAkahuPayment(payment))
     .find((payment) => {
       if (invoiceText && normalizeOrderText(payment.reference).includes(invoiceText)) return true;
       return typeof amount === "number" && Math.abs(Number(payment.amount) - amount) < 0.02;
@@ -1650,28 +1687,28 @@ function matchedPaymentDateForIntake(item: OrderIntakeItem, invoiceNumber: strin
 }
 
 function expectedReadyInfoForIntake(item: OrderIntakeItem) {
-  const explicitDate = recordString(item.sourceSummary, ["customer_ready_date", "expected_ready_date", "promised_ready_date", "ready_date", "due_date"]);
-  if (explicitDate) {
-    return {
-      date: explicitDate,
-      label: "Due date",
-      source: recordString(item.sourceSummary, ["customer_ready_source", "expected_ready_source", "promised_ready_source", "due_date_source"]) || "Explicit customer-ready date",
-    };
-  }
+  const explicitDate = recordString(item.sourceSummary, ["customer_ready_date", "expected_ready_date", "promised_ready_date", "ready_date"]);
 
   const docs = item.financialDocuments || [];
   const depositDoc = docs.find((doc) => normalizeOrderText(doc.role) === "deposit") || docs.find((doc) => normalizeOrderText(doc.invoiceNumber) === normalizeOrderText(item.invoiceNumber)) || docs[0] || null;
   const balanceDoc = docs.find((doc) => normalizeOrderText(doc.role) === "balance") || null;
   const depositInvoiceDate = isoDateOnly(depositDoc?.issuedAt || item.invoiceDate);
   const balanceDueDate = isoDateOnly(balanceDoc?.dueAt || item.paymentLifecycle?.balanceDueAt);
-  const explicitWeeks = recordNumber(item.sourceSummary, ["promised_weeks", "lead_time_weeks", "estimated_weeks", "production_weeks", "weeks_promised"]);
-  const inferredWeeks = explicitWeeks || (() => {
+  const promisedLeadTime = promisedLeadTimeForIntake(item, depositDoc);
+  const inferredWeeks = promisedLeadTime.weeks || (() => {
     const days = dayDiff(depositInvoiceDate, balanceDueDate);
     return days ? Math.max(1, Math.round(days / 7)) : null;
   })();
   const standardWeeks = !inferredWeeks && normalizeOrderText(item.itemCategory).includes("table") ? 6 : null;
   const weeks = inferredWeeks || standardWeeks;
   if (!weeks || !depositInvoiceDate) {
+    if (explicitDate) {
+      return {
+        date: explicitDate,
+        label: "Due date",
+        source: recordString(item.sourceSummary, ["customer_ready_source", "expected_ready_source", "promised_ready_source"]) || "Explicit customer-ready date.",
+      };
+    }
     return {
       date: balanceDueDate || item.invoiceDueDate,
       label: balanceDueDate || item.invoiceDueDate ? "Estimated due date" : "Due date needed",
@@ -1687,8 +1724,8 @@ function expectedReadyInfoForIntake(item: OrderIntakeItem) {
     date: addCalendarWeeks(anchorDate, weeks),
     label: depositPaidAt ? "Due date" : "Estimated due date",
     source: depositPaidAt
-      ? `${weeks} weeks from deposit paid date (${formatShortDate(depositPaidAt)}).`
-      : `${weeks} weeks from deposit invoice date; will recalculate from deposit payment date once paid.`,
+      ? `${weeks} weeks from invoice paid date (${formatShortDate(depositPaidAt)}). ${promisedLeadTime.source || "Promised lead time."}`
+      : `${weeks} weeks from invoice date; will recalculate from payment date once paid. ${promisedLeadTime.source || "Promised lead time."}`,
   };
 }
 
@@ -2691,10 +2728,6 @@ function normalizeStandardTableIntakeTasks(item: OrderIntakeItem, rawTasks: Orde
   return processTasks.map((task, index) => processTaskToIntakeDraft(item, task, existingByTitle.get(normalizedTaskTitle(task.title)), index));
 }
 
-function numberedTaskRowOptionLabel(title: string, optionIndex: number, selectedTitle: string, taskIndex: number) {
-  return title === selectedTitle ? `${taskIndex + 1}. ${title}` : numberedJobTaskOptionLabel(title, optionIndex);
-}
-
 function intakeStateSort(state: OrderIntakeReviewState) {
   if (state === "paid_needs_review") return 0;
   if (state === "needs_review") return 1;
@@ -2904,7 +2937,6 @@ function IntakeTaskDraftRow({
     data: { type: "intake-task" },
   });
   const dateKnown = dateOptions.some((option) => option.dateIso === task.scheduledDate);
-  const taskTitleOptions = Array.from(new Set([...JOB_TASK_PRESETS, task.title].filter(Boolean))) as string[];
   return (
     <div
       ref={setNodeRef}
@@ -2923,9 +2955,14 @@ function IntakeTaskDraftRow({
           =
         </button>
         <span style={{ border: `1px solid rgba(12,124,122,0.16)`, background: "rgba(237,248,247,0.78)", color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
-        <select value={task.title} onChange={(event) => onPatch(task.id, { title: event.target.value })} aria-label={`Task ${index + 1} title`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
-          {taskTitleOptions.map((title, optionIndex) => <option key={`${task.id}:${title}`} value={title}>{numberedTaskRowOptionLabel(title, optionIndex, task.title, index)}</option>)}
-        </select>
+        <input
+          type="text"
+          value={task.title}
+          onChange={(event) => onPatch(task.id, { title: event.target.value })}
+          aria-label={`Task ${index + 1} text`}
+          placeholder="Task text"
+          style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}
+        />
         <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
           {(["Nick", "Dylan", "Guido"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
         </select>
@@ -3096,7 +3133,7 @@ function OrderIntakeReviewModal({
 	            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
 	          </div>
 	        </header>
-	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(240px, 0.78fr) minmax(240px, 0.78fr) minmax(0, 1.62fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
+	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(250px, 0.82fr) minmax(220px, 0.68fr) minmax(0, 2fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
 	          {isNarrow && (
 	            <nav aria-label="Order review sections" style={{ position: "sticky", top: 0, zIndex: 2, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, padding: "0 0 2px", background: "rgba(251,250,247,0.94)", backdropFilter: "blur(10px)" }}>
 	              {[
@@ -3117,17 +3154,17 @@ function OrderIntakeReviewModal({
 	                ))}
 	              </div>
             </section>
-          </aside>
-
-	          <aside id="intake-payments" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
             <section style={{ border: `1px solid ${expectedReadyDate ? "rgba(12,124,122,0.20)" : "rgba(154,91,18,0.22)"}`, borderRadius: 10, background: expectedReadyDate ? "rgba(237,248,247,0.70)" : "rgba(250,204,21,0.10)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: expectedReadyDate ? DT.teal : "#9a5b12", fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{expectedReady.label}</div>
-                <InfoDot title="Customer-ready date. Before deposit payment, Tuesday estimates this from the deposit invoice date plus the promised lead time. Once deposit payment is confirmed, it recalculates from the deposit paid date." />
+                <InfoDot title="Customer-ready date. Tuesday calculates this from the promised lead time in the invoice text, anchored to the invoice paid date once payment is visible." />
               </div>
               <div style={{ marginTop: 5, fontFamily: DT.serif, fontSize: 22, lineHeight: 1, color: DT.textPrimary, fontWeight: 650 }}>{dueDisplay}</div>
               <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{expectedReady.source}</div>
             </section>
+          </aside>
+
+	          <aside id="intake-payments" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
             <section style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payments</div>

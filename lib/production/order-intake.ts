@@ -57,6 +57,8 @@ export type IntakeFinancialDocument = {
   total: number | null;
   amountPaid: number | null;
   amountDue: number | null;
+  leadTimeWeeks: number | null;
+  leadTimeSource: string | null;
 };
 
 export type ProductionOrderTask = {
@@ -145,6 +147,7 @@ type FinancialDocumentRow = {
   lifecycle_stage?: string | null;
   sent_channel?: string | null;
   line_items: IntakeLineItem[] | null;
+  raw_xero?: unknown;
 };
 type PaymentRow = {
   id: string;
@@ -301,6 +304,45 @@ function productSummary(invoice: XeroInvoiceSummary) {
   const items = lineItems(invoice);
   if (items.length === 0) return `Order from ${invoice.invoiceNumber || "Xero invoice"}`;
   return items.map((line) => line.description.split("\n")[0]).join(" + ").slice(0, 240);
+}
+
+function promisedLeadTimeWeeksFromText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+  const patterns = [
+    /(?:lead\s*time|ready|completion|production|dispatch|delivery)[^.!?\n]{0,90}?(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:weeks?|wks?)\b/i,
+    /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(?:weeks?|wks?)\b[^.!?\n]{0,90}?(?:lead\s*time|from\s+(?:deposit|payment|paid)|ready|completion|production|dispatch|delivery)/i,
+  ];
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern);
+    if (!match) continue;
+    const first = Number(match[1]);
+    const second = match[2] ? Number(match[2]) : null;
+    const weeks = Number.isFinite(second ?? NaN) ? Math.max(first, second as number) : first;
+    if (Number.isFinite(weeks) && weeks > 0 && weeks <= 52) return Math.round(weeks * 2) / 2;
+  }
+  return null;
+}
+
+function collectStrings(value: unknown, depth = 0): string[] {
+  if (depth > 3 || value == null) return [];
+  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
+  if (typeof value === "number" || typeof value === "boolean") return [];
+  if (Array.isArray(value)) return value.flatMap((item) => collectStrings(item, depth + 1));
+  if (typeof value === "object") return Object.values(value as Record<string, unknown>).flatMap((item) => collectStrings(item, depth + 1));
+  return [];
+}
+
+function financialDocumentLeadTime(document: FinancialDocumentRow): { weeks: number | null; source: string | null } {
+  const candidates = [
+    ...collectStrings(document.raw_xero),
+    ...(document.line_items || []).flatMap((line) => [line.description]),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const weeks = promisedLeadTimeWeeksFromText(candidate);
+    if (weeks) return { weeks, source: candidate.slice(0, 180) };
+  }
+  return { weeks: null, source: null };
 }
 
 function dayKeyForDate(date: Date): DayKey {
@@ -534,18 +576,23 @@ function chooseDisplayDocument(order: SupabaseOrder, documents: FinancialDocumen
 function intakeFinancialDocuments(order: SupabaseOrder, documents: FinancialDocumentRow[], lifecycle: OrderPaymentLifecycle | null, sourceSummary: Record<string, unknown> | null): IntakeFinancialDocument[] {
   return documents
     .filter((item) => item.order_id === order.id)
-    .map((item) => ({
-      id: item.id,
-      role: documentRole(item, lifecycle, sourceSummary),
-      invoiceNumber: item.xero_invoice_number,
-      invoiceUrl: item.xero_invoice_url,
-      status: item.status,
-      issuedAt: item.issued_at,
-      dueAt: item.due_at,
-      total: item.total,
-      amountPaid: item.amount_paid,
-      amountDue: item.amount_due,
-    }))
+    .map((item) => {
+      const leadTime = financialDocumentLeadTime(item);
+      return {
+        id: item.id,
+        role: documentRole(item, lifecycle, sourceSummary),
+        invoiceNumber: item.xero_invoice_number,
+        invoiceUrl: item.xero_invoice_url,
+        status: item.status,
+        issuedAt: item.issued_at,
+        dueAt: item.due_at,
+        total: item.total,
+        amountPaid: item.amount_paid,
+        amountDue: item.amount_due,
+        leadTimeWeeks: leadTime.weeks,
+        leadTimeSource: leadTime.source,
+      };
+    })
     .sort((left, right) => {
       const roleRank = (role: string) => role === "deposit" ? 0 : role === "primary" ? 1 : role === "balance" ? 2 : 3;
       return roleRank(left.role) - roleRank(right.role) || String(left.issuedAt || "").localeCompare(String(right.issuedAt || ""));
@@ -864,13 +911,14 @@ async function upsertReview(order: SupabaseOrder, invoice: XeroInvoiceSummary, s
   const suggested = !shouldRegenerate && previousSuggested.length > 0 ? previousSuggested : generated;
   const draft = previousDraft.length > 0 && (!shouldRegenerate || !previousDraftWasJustSuggested) ? previousDraft : suggested;
   const nextState: IntakeReviewState = previous?.review_state === "approved" ? "approved" : state;
+  const promisedLeadTimeWeeks = promisedLeadTimeWeeksFromText(invoiceSearchText(invoice));
   const reviews = await supabaseRequest<IntakeReviewRow[]>("order_intake_reviews?on_conflict=order_id", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=representation" },
     body: JSON.stringify([{
       order_id: order.id,
       review_state: nextState,
-      source_summary: { source: "xero_authorised_invoice", payment_gate: "akahu_exact_match", invoice_number: order.xero_invoice_number, payment_count: payments.length, suggestion_signature: signature, item_category: inferCategory(invoice) },
+      source_summary: { source: "xero_authorised_invoice", payment_gate: "akahu_exact_match", invoice_number: order.xero_invoice_number, payment_count: payments.length, suggestion_signature: signature, item_category: inferCategory(invoice), ...(promisedLeadTimeWeeks ? { lead_time_weeks: promisedLeadTimeWeeks, lead_time_source: "Xero invoice text" } : {}) },
       suggested_tasks: suggested,
       draft_tasks: draft,
       last_reconciled_at: new Date().toISOString(),
