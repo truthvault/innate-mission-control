@@ -24,7 +24,8 @@ const DEFAULT_ROUTES = [
 ];
 
 const ROUTE_EXPECTATIONS = {
-  "/production/plan": ["Tuesday", "Production Plan"],
+  "/production/plan": ["Tuesday", "Orders"],
+  "/production/plan?view=process-templates": ["Tuesday", "Processes"],
   "/production/stock": ["Tuesday", "Stock"],
   "/production/samples": ["Tuesday", "Samples"],
   "/production/dispatch": ["Tuesday", "Dispatch"],
@@ -193,8 +194,11 @@ function normalizeUrl(input, baseUrl, cacheKey) {
 }
 
 function routeKey(input) {
+  if (String(input).includes("view=process-templates")) return "/production/plan?view=process-templates";
   try {
-    return new URL(input).pathname;
+    const parsed = new URL(input);
+    if (parsed.searchParams.get("view") === "process-templates") return "/production/plan?view=process-templates";
+    return parsed.pathname;
   } catch {
     return input.split("?")[0] || input;
   }
@@ -203,7 +207,8 @@ function routeKey(input) {
 function slugForUrl(url) {
   const parsed = new URL(url);
   const pathPart = parsed.pathname === "/" ? "home" : parsed.pathname.replace(/^\/+/, "");
-  return pathPart.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "route";
+  const viewPart = parsed.searchParams.get("view") ? `-${parsed.searchParams.get("view")}` : "";
+  return `${pathPart}${viewPart}`.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "route";
 }
 
 function mdEscape(value) {
