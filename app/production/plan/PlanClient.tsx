@@ -2581,82 +2581,6 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
   );
 }
 
-function NewOrderRailCard({
-  order,
-  showingInMonth,
-  approved,
-  onOpen,
-  onOpenOrder,
-  onToggleMonthTasks,
-  onApprove,
-  fullListOpen,
-}: {
-  order: NewOrderPlanCandidate | null;
-  showingInMonth: boolean;
-  approved: boolean;
-  onOpen: () => void;
-  onOpenOrder: () => void;
-  onToggleMonthTasks: () => void;
-  onApprove: () => void;
-  fullListOpen: boolean;
-}) {
-  if (!order) return null;
-  const reviewActive = showingInMonth || approved;
-  const activeAccent = newOrderPalette.clayAccentDark;
-  const actionButtonStyle = {
-    border: `1px solid ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder}`,
-    background: reviewActive ? "rgba(255,255,255,0.84)" : "rgba(255,255,255,0.68)",
-    color: activeAccent,
-    borderRadius: 999,
-    minHeight: 40,
-    padding: "8px 8px",
-    fontFamily: DT.sans,
-    fontSize: 10,
-    fontWeight: 950,
-    cursor: "pointer",
-    touchAction: "manipulation",
-  };
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpenOrder}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpenOrder();
-        }
-      }}
-      style={{ marginBottom: 8, minHeight: 96, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${reviewActive ? newOrderPalette.clayBorderStrong : newOrderPalette.clayBorder} ${newOrderPalette.clayStripe}`, background: newOrderPalette.clayPanel, borderRadius: 10, padding: "9px 10px", boxShadow: reviewActive ? "0 8px 18px rgba(85,113,95,0.10)" : "0 1px 4px rgba(154,82,49,0.06)", cursor: "pointer", outline: "none" }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: newOrderPalette.clayAccent }}>New order</div>
-          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{order.customer}</div>
-          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{order.product || "Order"} · Ordered {formatOrderedDate(order.orderedDate)}</div>
-        </div>
-        {reviewActive && <span style={{ flex: "0 0 auto", border: `1px solid ${newOrderPalette.clayBorderStrong}`, color: activeAccent, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "3px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{approved ? "Approved" : "Tasks shown"}</span>}
-      </div>
-      <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-        <button type="button" onClick={(event) => { event.stopPropagation(); onToggleMonthTasks(); }} style={actionButtonStyle}>
-          {showingInMonth ? "Hide tasks" : "Show tasks"}
-        </button>
-        <button type="button" onClick={(event) => { event.stopPropagation(); onOpen(); }} style={actionButtonStyle}>
-          {fullListOpen ? "Close full task list" : "Open full task list"}
-        </button>
-      </div>
-      <button
-        type="button"
-        onClick={(event) => { event.stopPropagation(); onApprove(); }}
-        style={{ marginTop: 6, width: "100%", minHeight: 40, border: `1px solid ${newOrderPalette.clayBorderStrong}`, background: approved ? "rgba(255,255,255,0.68)" : newOrderPalette.clayAccent, color: approved ? activeAccent : "#fff", borderRadius: 999, padding: "8px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer", boxShadow: reviewActive && !approved ? "0 8px 18px rgba(85,113,95,0.12)" : undefined, touchAction: "manipulation" }}
-      >
-        {approved ? "Draft approved" : "Approve draft plan"}
-      </button>
-    </div>
-  );
-}
-
-
 const INTAKE_STATE_META: Record<OrderIntakeReviewState, { color: string; bg: string; border: string }> = {
   awaiting_payment: { color: DT.textMuted, bg: "rgba(232,230,224,0.42)", border: "rgba(0,0,0,0.08)" },
   paid_needs_review: { color: DT.teal, bg: "rgba(12,124,122,0.08)", border: "rgba(12,124,122,0.22)" },
@@ -2746,12 +2670,14 @@ function OrderIntakeRailCard({
   items,
   status,
   busy,
+  loaded,
   onRefresh,
   onOpen,
 }: {
   items: OrderIntakeItem[];
   status: string;
   busy: boolean;
+  loaded: boolean;
   onRefresh: () => void;
   onOpen: (orderId: string) => void;
 }) {
@@ -2764,7 +2690,7 @@ function OrderIntakeRailCard({
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.teal, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
-          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{actionableCount}</div>
+          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{loaded ? actionableCount : "Checking"}</div>
         </div>
         <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
           {busy ? "Checking" : "Refresh"}
@@ -2772,7 +2698,9 @@ function OrderIntakeRailCard({
       </div>
       {status && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>{status}</div>}
       <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 7 }}>
-        {pendingItems.length === 0 ? (
+        {!loaded ? (
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>Checking pending intake orders...</div>
+        ) : pendingItems.length === 0 ? (
           <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>No pending intake orders loaded.</div>
         ) : pendingItems.slice(0, 7).map((item) => {
           const meta = INTAKE_STATE_META[item.reviewState];
@@ -9568,7 +9496,8 @@ function MonthViewState({
   const [showHistory, setShowHistory] = useState(false);
   const [orderIntakeItems, setOrderIntakeItems] = useState<OrderIntakeItem[]>([]);
   const [orderIntakeStatus, setOrderIntakeStatus] = useState("");
-  const [orderIntakeBusy, setOrderIntakeBusy] = useState(false);
+  const [orderIntakeLoaded, setOrderIntakeLoaded] = useState(false);
+  const [orderIntakeBusy, setOrderIntakeBusy] = useState(true);
   const [openIntakeOrderId, setOpenIntakeOrderId] = useState<string | null>(null);
   const [orderWorkflowsById, setOrderWorkflowsById] = useState<Record<string, OrderWorkflowState>>({});
   const [completionRequest, setCompletionRequest] = useState<TuesdayCompletionRequest | null>(null);
@@ -9670,6 +9599,9 @@ function MonthViewState({
       setOrderIntakeStatus("");
     } catch (error) {
       setOrderIntakeStatus(error instanceof Error ? error.message : "Order intake unavailable");
+    } finally {
+      setOrderIntakeLoaded(true);
+      setOrderIntakeBusy(false);
     }
   }, []);
   useEffect(() => {
@@ -9729,7 +9661,6 @@ function MonthViewState({
   }), [activeOrderIntakeItems, activeTuesdayOrders]);
   const visibleAppTasks = useMemo(() => [...workflowAppTasks, ...approvedIntakeAppTasks], [workflowAppTasks, approvedIntakeAppTasks]);
   const openIntakeItem = useMemo(() => activeOrderIntakeItems.find((item) => item.orderId === openIntakeOrderId) ?? null, [openIntakeOrderId, activeOrderIntakeItems]);
-  const newOrderCoveredByIntake = useMemo(() => Boolean(newOrder && activeOrderIntakeItems.some((item) => intakeItemMatchesNewOrder(item, newOrder))), [newOrder, activeOrderIntakeItems]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
   const activeAppTask = activeAppTaskId ? visibleAppTasks.find((task) => task.id === activeAppTaskId) ?? null : null;
   const weekTitleById = useMemo(() => new Map(visibleProductionWeeks.map((week) => [week.id, displayWeekTitle(week.title)])), [visibleProductionWeeks]);
@@ -10709,14 +10640,6 @@ function MonthViewState({
     setShowTasksInMonth(true);
   }
 
-  function toggleNewOrderPanel() {
-    setShowNewOrder((current) => {
-      const next = !current;
-      if (next) setShowTasksInMonth(true);
-      return next;
-    });
-  }
-
   function hideNewOrderPanel() {
     setShowNewOrder(false);
   }
@@ -10725,15 +10648,6 @@ function MonthViewState({
     setShowTasksInMonth(true);
     setApprovedSteps(true);
     setShowNewOrder(false);
-  }
-
-  function toggleNewOrderTasksInSchedule() {
-    if (showTasksInMonth || approvedSteps) {
-      setShowTasksInMonth(false);
-      setApprovedSteps(false);
-      return;
-    }
-    setShowTasksInMonth(true);
   }
 
   async function refreshOrderIntakeList() {
@@ -10846,29 +10760,14 @@ function MonthViewState({
   ) : null;
 
   const railNewOrderCard = (
-    <>
-      <OrderIntakeRailCard
-        items={activeOrderIntakeItems}
-        status={orderIntakeStatus}
-        busy={orderIntakeBusy}
-        onRefresh={refreshOrderIntakeList}
-        onOpen={openIntakeReview}
-      />
-      {!newOrderCoveredByIntake && (
-        <NewOrderRailCard
-          order={newOrder}
-          showingInMonth={showTasksInMonth || approvedSteps}
-          approved={approvedSteps}
-          onOpen={toggleNewOrderPanel}
-          onOpenOrder={() => {
-            if (newOrder) openOrderOverview(newOrder.id);
-          }}
-          onToggleMonthTasks={toggleNewOrderTasksInSchedule}
-          onApprove={approveNewOrderTasks}
-          fullListOpen={showNewOrder}
-        />
-      )}
-    </>
+    <OrderIntakeRailCard
+      items={activeOrderIntakeItems}
+      status={orderIntakeStatus}
+      busy={orderIntakeBusy}
+      loaded={orderIntakeLoaded}
+      onRefresh={refreshOrderIntakeList}
+      onOpen={openIntakeReview}
+    />
   );
 
   const weekSections = visibleProductionWeeks.map((week, index) => (
