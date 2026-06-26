@@ -1668,14 +1668,6 @@ function addCalendarWeeks(dateIso: string, weeks: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function dayDiff(startIso: string | null, endIso: string | null) {
-  if (!startIso || !endIso) return null;
-  const start = new Date(`${startIso}T12:00:00`).getTime();
-  const end = new Date(`${endIso}T12:00:00`).getTime();
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
-  return Math.round((end - start) / 864e5);
-}
-
 function matchedPaymentDateForIntake(item: OrderIntakeItem, invoiceNumber: string | null | undefined, amount: number | null | undefined) {
   const invoiceText = normalizeOrderText(invoiceNumber);
   return item.payments
@@ -1691,16 +1683,9 @@ function expectedReadyInfoForIntake(item: OrderIntakeItem) {
 
   const docs = item.financialDocuments || [];
   const depositDoc = docs.find((doc) => normalizeOrderText(doc.role) === "deposit") || docs.find((doc) => normalizeOrderText(doc.invoiceNumber) === normalizeOrderText(item.invoiceNumber)) || docs[0] || null;
-  const balanceDoc = docs.find((doc) => normalizeOrderText(doc.role) === "balance") || null;
   const depositInvoiceDate = isoDateOnly(depositDoc?.issuedAt || item.invoiceDate);
-  const balanceDueDate = isoDateOnly(balanceDoc?.dueAt || item.paymentLifecycle?.balanceDueAt);
   const promisedLeadTime = promisedLeadTimeForIntake(item, depositDoc);
-  const inferredWeeks = promisedLeadTime.weeks || (() => {
-    const days = dayDiff(depositInvoiceDate, balanceDueDate);
-    return days ? Math.max(1, Math.round(days / 7)) : null;
-  })();
-  const standardWeeks = !inferredWeeks && normalizeOrderText(item.itemCategory).includes("table") ? 6 : null;
-  const weeks = inferredWeeks || standardWeeks;
+  const weeks = promisedLeadTime.weeks;
   if (!weeks || !depositInvoiceDate) {
     if (explicitDate) {
       return {
@@ -1710,9 +1695,9 @@ function expectedReadyInfoForIntake(item: OrderIntakeItem) {
       };
     }
     return {
-      date: balanceDueDate || item.invoiceDueDate,
-      label: balanceDueDate || item.invoiceDueDate ? "Estimated due date" : "Due date needed",
-      source: balanceDueDate ? "Using balance invoice due date until promised weeks are captured." : "Needs promised lead time from invoice/email.",
+      date: null,
+      label: "Due date needed",
+      source: "Needs promised lead time from the Xero invoice message, then Tuesday will count those weeks from the invoice paid date.",
     };
   }
 
@@ -2918,6 +2903,7 @@ function IntakeTaskDraftRow({
   index,
   isNarrow,
   dateOptions,
+  taskTemplateTitles,
   onPatch,
   onChooseOwner,
   onChooseDate,
@@ -2927,6 +2913,7 @@ function IntakeTaskDraftRow({
   index: number;
   isNarrow: boolean;
   dateOptions: SuggestedDateOption[];
+  taskTemplateTitles: string[];
   onPatch: (id: string, patch: Partial<OrderIntakeTaskDraft>) => void;
   onChooseOwner: (id: string, owner: OrderIntakeOwner) => void;
   onChooseDate: (id: string, dateIso: string) => void;
@@ -2943,7 +2930,7 @@ function IntakeTaskDraftRow({
       title={task.detail || task.title}
       style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 9, background: isDragging ? "rgba(237,248,247,0.94)" : "rgba(251,250,247,0.82)", padding: 5, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : undefined, opacity: isDragging ? 0.82 : 1 }}
     >
-      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "28px 34px minmax(0, 1fr) 74px" : "28px 42px minmax(220px, 1fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "28px 34px minmax(0, 1fr) 74px" : "28px 42px minmax(132px, 0.72fr) minmax(240px, 1.45fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
         <button
           type="button"
           ref={setActivatorNodeRef}
@@ -2955,6 +2942,18 @@ function IntakeTaskDraftRow({
           =
         </button>
         <span style={{ border: `1px solid rgba(12,124,122,0.16)`, background: "rgba(237,248,247,0.78)", color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
+        <select
+          value={taskTemplateTitles.includes(task.title) ? task.title : "__custom__"}
+          onChange={(event) => {
+            if (event.target.value !== "__custom__") onPatch(task.id, { title: event.target.value });
+          }}
+          aria-label={`Task ${index + 1} template`}
+          title="Pick a templated task, then adjust the text if needed."
+          style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: "#fff" }}
+        >
+          <option value="__custom__">Custom task</option>
+          {taskTemplateTitles.map((title) => <option key={title} value={title}>{title}</option>)}
+        </select>
         <input
           type="text"
           value={task.title}
@@ -3024,6 +3023,12 @@ function OrderIntakeReviewModal({
   const reviewSignal = signalStyle(reviewTone);
   const headerStatusLabel = paymentLifecycleLabel || item.stateLabel;
   const totalDraftHours = tasks.reduce((sum, task) => sum + Number(task.estimatedHours || 0), 0);
+  const taskTemplateTitles = useMemo(() => {
+    const titles = [...item.suggestedTasks, ...item.draftTasks]
+      .map((task) => task.title.trim())
+      .filter(Boolean);
+    return Array.from(new Set(titles));
+  }, [item.suggestedTasks, item.draftTasks]);
   const approvalChecks = [
     { label: "Ready", value: dueDisplay, tone: expectedReadyDate ? "good" : "warn" },
     { label: "Tasks", value: `${tasks.length} steps`, tone: tasks.length > 0 ? "good" : "warn" },
@@ -3133,7 +3138,7 @@ function OrderIntakeReviewModal({
 	            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
 	          </div>
 	        </header>
-	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(250px, 0.82fr) minmax(220px, 0.68fr) minmax(0, 2fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
+	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(280px, 0.64fr) minmax(0, 2.36fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
 	          {isNarrow && (
 	            <nav aria-label="Order review sections" style={{ position: "sticky", top: 0, zIndex: 2, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, padding: "0 0 2px", background: "rgba(251,250,247,0.94)", backdropFilter: "blur(10px)" }}>
 	              {[
@@ -3162,10 +3167,7 @@ function OrderIntakeReviewModal({
               <div style={{ marginTop: 5, fontFamily: DT.serif, fontSize: 22, lineHeight: 1, color: DT.textPrimary, fontWeight: 650 }}>{dueDisplay}</div>
               <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{expectedReady.source}</div>
             </section>
-          </aside>
-
-	          <aside id="intake-payments" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
-            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
+            <section id="intake-payments" style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payments</div>
                 <InfoDot title="Deposit and balance invoice status from Xero/Supabase payment evidence. Yellow means money is still waiting or settling; green means paid." />
@@ -3249,6 +3251,7 @@ function OrderIntakeReviewModal({
                         index={index}
                         isNarrow={isNarrow}
                         dateOptions={dateOptions}
+                        taskTemplateTitles={taskTemplateTitles}
                         onPatch={patchTask}
                         onChooseOwner={chooseOwner}
                         onChooseDate={chooseTaskDate}
