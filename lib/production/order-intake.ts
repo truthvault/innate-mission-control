@@ -261,6 +261,17 @@ function invoiceSearchText(invoice: XeroInvoiceSummary) {
   ].filter(Boolean).join("\n");
 }
 
+function isShopifySettledSupplyText(text: string) {
+  const normalized = text.toLowerCase();
+  return /ecobeans|bean\s*bag|beanbag|bag fill|filling/.test(normalized)
+    && /shopify/.test(normalized)
+    && /paid|credit|credited|refund|refunded/.test(normalized);
+}
+
+function isShopifySettledSupplyInvoice(invoice: XeroInvoiceSummary) {
+  return isShopifySettledSupplyText(invoiceSearchText(invoice));
+}
+
 function isBalanceInvoice(invoice: XeroInvoiceSummary) {
   const text = invoiceSearchText(invoice).toLowerCase();
   return /\bbalance\b/.test(text) && (
@@ -599,6 +610,19 @@ function intakeFinancialDocuments(order: SupabaseOrder, documents: FinancialDocu
     });
 }
 
+function isShopifySettledSupplyOrder(order: SupabaseOrder, document: FinancialDocumentRow | null, sourceSummary: Record<string, unknown> | null) {
+  return isShopifySettledSupplyText([
+    order.customer_name,
+    order.product_summary,
+    order.item_category,
+    order.xero_invoice_number,
+    document?.xero_invoice_number,
+    document?.contact_name,
+    ...(document?.line_items || []).flatMap((line) => [line.description]),
+    JSON.stringify(sourceSummary || {}),
+  ].filter(Boolean).join("\n"));
+}
+
 async function lifecycleRowsByOrder(orderIds: string[]) {
   try {
     return await listPaymentLifecycleByOrderIds(orderIds);
@@ -624,6 +648,7 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
     const lifecycle = lifecycles.find((item) => item.orderId === order.id) || null;
     const sourceSummary = review.source_summary || {};
     const document = chooseDisplayDocument(order, documents, lifecycle, sourceSummary);
+    if (isShopifySettledSupplyOrder(order, document, sourceSummary)) return [];
     const reviewTasks = cleanTasks(review.suggested_tasks);
     const draftTasks = cleanTasks(review.draft_tasks);
     const paymentEvidence = payments.filter((item) => item.order_id === order.id).map((payment) => ({
@@ -937,6 +962,10 @@ export async function reconcileOrderIntake(): Promise<ReconcileResult> {
   let createdOrUpdated = 0;
   for (const invoice of result.invoices) {
     if (!isCustomerOrderInvoice(invoice)) {
+      ignored += 1;
+      continue;
+    }
+    if (isShopifySettledSupplyInvoice(invoice)) {
       ignored += 1;
       continue;
     }
