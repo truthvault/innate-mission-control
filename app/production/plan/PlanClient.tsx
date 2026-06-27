@@ -1334,10 +1334,6 @@ function isCompleteOrder(order: UiOrder) {
   return ["Collected", "Finished", "Shipped"].includes(order.status);
 }
 
-function activeProductionOrders(orders: UiOrder[]) {
-  return orders.filter((order) => !isCompleteOrder(order));
-}
-
 function orderHealth(order: UiOrder): OrderHealthLevel {
   const diff = orderDaysUntil(order.shipDate);
   const pct = orderProgressPct(order);
@@ -1437,19 +1433,26 @@ function costingHasVerifiedSource(costing: OrderCostingMatch | undefined) {
   return costing?.status === "verified_attached" || costing?.status === "verified_needs_review";
 }
 
+function activeProductionOrders(orders: UiOrder[]) {
+  return orders.filter((order) => !isCompleteOrder(order));
+}
+
 function OrderHealthStrip({
   orders,
   orderCostings,
   activeFilter,
   onFilterChange,
+  variant = "rail",
 }: {
   orders: UiOrder[];
   orderCostings?: OrderCostingContext;
   activeFilter: RailFilter;
   onFilterChange: (filter: RailFilter) => void;
+  variant?: "rail" | "header";
 }) {
   const isNarrow = useIsNarrow(760);
-  const active = orders.filter((order) => !isCompleteOrder(order));
+  const headerMode = variant === "header" && !isNarrow;
+  const active = activeProductionOrders(orders);
   const { thisMon, nextMon, twoMon } = weekBoundaries();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -1480,7 +1483,7 @@ function OrderHealthStrip({
   ];
   const cards = isNarrow ? allCards.filter((card) => ["all", "watch", "blocked", "thisWeek"].includes(card.filter)) : allCards;
   return (
-    <div data-mobile-health-strip="one-row-health" style={{ display: isNarrow ? "grid" : "flex", gridTemplateColumns: isNarrow ? `repeat(${cards.length}, minmax(0, 1fr))` : undefined, alignItems: "stretch", justifyContent: isNarrow ? "stretch" : "flex-end", gap: isNarrow ? 4 : 6, flexWrap: isNarrow ? undefined : "wrap", overflowX: "visible", paddingBottom: 0, width: "100%" }}>
+    <div data-mobile-health-strip="one-row-health" data-order-health-strip={variant} style={{ display: isNarrow || headerMode ? "grid" : "flex", gridTemplateColumns: isNarrow ? `repeat(${cards.length}, minmax(0, 1fr))` : headerMode ? `repeat(${cards.length}, minmax(74px, 1fr))` : undefined, alignItems: "stretch", justifyContent: isNarrow ? "stretch" : "flex-end", gap: isNarrow ? 4 : headerMode ? 5 : 6, flexWrap: isNarrow || headerMode ? undefined : "wrap", overflowX: "visible", paddingBottom: 0, width: headerMode ? "min(710px, 100%)" : "100%" }}>
       {cards.map((card) => {
         const selected = activeFilter === card.filter;
         return (
@@ -1489,10 +1492,10 @@ function OrderHealthStrip({
           key={card.label}
           aria-pressed={selected}
           onClick={() => onFilterChange(selected ? "all" : card.filter)}
-          style={{ flex: isNarrow ? undefined : "1 1 88px", minWidth: 0, minHeight: isNarrow ? 30 : undefined, padding: isNarrow ? "5px 4px" : "7px 9px", background: selected ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: 999, border: `1px solid ${selected ? "rgba(12,124,122,0.28)" : DT.border}`, boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.06)" : "0 1px 4px rgba(0,0,0,0.025)", cursor: "pointer", textAlign: "center", overflow: "hidden", touchAction: "manipulation", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 3 : 0, flexDirection: isNarrow ? "row" : "column" }}
+          style={{ flex: isNarrow || headerMode ? undefined : "1 1 88px", minWidth: 0, minHeight: isNarrow ? 30 : headerMode ? 46 : undefined, padding: isNarrow ? "5px 4px" : headerMode ? "7px 8px" : "7px 9px", background: selected ? DT.tealSoft : headerMode ? "rgba(255,255,255,0.62)" : "rgba(255,255,255,0.72)", borderRadius: headerMode ? 12 : 999, border: `1px solid ${selected ? "rgba(12,124,122,0.28)" : DT.border}`, boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.06)" : headerMode ? "0 1px 0 rgba(255,255,255,0.84) inset" : "0 1px 4px rgba(0,0,0,0.025)", cursor: "pointer", textAlign: "center", overflow: "hidden", touchAction: "manipulation", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 3 : headerMode ? 2 : 0, flexDirection: isNarrow ? "row" : "column" }}
         >
-          <span style={{ fontSize: isNarrow ? 9.5 : 8, fontWeight: 900, textTransform: isNarrow ? "none" : "uppercase", letterSpacing: isNarrow ? 0 : "0.06em", color: selected ? DT.teal : DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{isNarrow ? card.mobileLabel : card.label}</span>
-          <span style={{ fontSize: isNarrow ? 11 : 18, fontWeight: 900, color: card.color, fontFamily: isNarrow ? DT.sans : DT.serif, marginTop: isNarrow ? 0 : 1, lineHeight: 1 }}>{card.value}</span>
+          <span style={{ fontSize: isNarrow ? 9.5 : headerMode ? 7.5 : 8, fontWeight: 900, textTransform: isNarrow ? "none" : "uppercase", letterSpacing: isNarrow ? 0 : headerMode ? "0.045em" : "0.06em", color: selected ? DT.teal : DT.textFaint, fontFamily: DT.sans, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{isNarrow ? card.mobileLabel : card.label}</span>
+          <span style={{ fontSize: isNarrow ? 11 : headerMode ? 17 : 18, fontWeight: 900, color: card.color, fontFamily: isNarrow ? DT.sans : DT.serif, marginTop: isNarrow ? 0 : 1, lineHeight: 1 }}>{card.value}</span>
         </button>
       );})}
     </div>
@@ -2418,14 +2421,6 @@ function OrderRail({
       return sort === "latest" ? bTime - aTime : aTime - bTime;
     });
   }, [activeOrders, filter, orderCostings?.matches, query, sort]);
-  const filterOptions: Array<{ id: RailFilter; label: string }> = [
-    { id: "all", label: "All" },
-    { id: "blocked", label: "Blocked" },
-    { id: "thisWeek", label: "This week" },
-    { id: "materials", label: "Materials" },
-    { id: "costing", label: "Costing" },
-    { id: "noDate", label: "No date" },
-  ];
   const railWidth = 318;
   return (
     <aside
@@ -2462,25 +2457,24 @@ function OrderRail({
           }
         }
       `}</style>
-      <div style={{ position: "relative", padding: "12px 12px 10px", borderBottom: `1px solid ${DT.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans }}>Orders</div>
-          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1 }}>{assignmentTask ? "Assign task" : selectedOrder ? "Job command" : `${filteredOrders.length} active`}</div>
+      {(assignmentTask || selectedOrder) && (
+        <div style={{ position: "relative", padding: "12px 12px 10px", borderBottom: `1px solid ${DT.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+            <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint, fontFamily: DT.sans }}>{assignmentTask ? "Assign task" : "Job command"}</div>
+            <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1 }}>{assignmentTask ? "Assign task" : "Job command"}</div>
+          </div>
+          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={onClear}
+              aria-label="Back to orders list"
+              style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "9px 14px", fontSize: 12, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", boxShadow: "0 4px 12px rgba(12,124,122,0.08)" }}
+            >
+              ← Back
+            </button>
+          </div>
         </div>
-        <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flexWrap: "wrap" }}>
-          <CompletedTuesdayOrdersCard items={completedItems} onRestore={onRestoreCompletedOrder} />
-          {(selectedOrder || assignmentTask) && (
-	            <button
-	              type="button"
-	              onClick={onClear}
-	              aria-label="Back to orders list"
-	              style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "9px 14px", fontSize: 12, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", boxShadow: "0 4px 12px rgba(12,124,122,0.08)" }}
-	            >
-	              ← Back
-	            </button>
-          )}
-        </div>
-      </div>
+      )}
       {assignmentTask ? (
         <TaskAssignmentPanel key={`assign-${assignmentTask.id}`} task={assignmentTask} orders={activeOrders} status={assignmentStatus} onAssign={onAssignTask} onRemove={onRemoveTaskLink} canRemoveLink={canRemoveAssignmentLink} tasksForOrder={tasksForOrder} />
       ) : selectedOrder ? (
@@ -2499,7 +2493,10 @@ function OrderRail({
         />
       ) : (
         <div key="list" style={{ maxHeight: undefined, overflowY: "visible", padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-          <div style={{ display: "grid", gridTemplateColumns: compactRail ? "1fr" : "1fr auto", gap: 6 }}>
+          {newOrderCard}
+          {newOrderCard && <ApprovedOrdersDivider />}
+          <ApprovedOrdersSectionHeader count={activeOrders.length} />
+          <div style={{ marginTop: 9, display: "grid", gridTemplateColumns: compactRail ? "1fr" : "1fr auto", gap: 6 }}>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -2517,22 +2514,8 @@ function OrderRail({
               <option value="customer">Customer A-Z</option>
             </select>
           </div>
-          {newOrderCard}
-          <div style={{ marginTop: newOrderCard ? 8 : 0, display: "flex", gap: 4, flexWrap: "nowrap", overflowX: compactRail ? "auto" : "visible", WebkitOverflowScrolling: compactRail ? "touch" : undefined, paddingBottom: 2 }}>
-            {filterOptions.map((option) => {
-              const active = filter === option.id;
-              const mobileLabel = option.id === "materials" ? "Mat" : option.id === "costing" ? "Cost" : option.label;
-              return (
-                <button
-                  type="button"
-                  key={option.id}
-                  onClick={() => onFilterChange(option.id)}
-                  style={{ flex: compactRail ? "0 0 auto" : "1 1 0", minWidth: compactRail ? 48 : 0, minHeight: compactRail ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: compactRail ? "8px 9px" : "5px 5px", fontFamily: DT.sans, fontSize: compactRail ? 9.5 : 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center", touchAction: "manipulation" }}
-                >
-                  {compactRail ? mobileLabel : option.label}
-                </button>
-              );
-            })}
+          <div style={{ marginTop: 8 }}>
+            <ProductionPulseRow orders={activeOrders} orderCostings={orderCostings} activeFilter={filter} onFilterChange={onFilterChange} />
           </div>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflowX: "visible", WebkitOverflowScrolling: "touch" }}>
             {filteredOrders.map((order) => (
@@ -2541,6 +2524,7 @@ function OrderRail({
             {filteredOrders.length === 0 && (
               <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35, padding: "8px 2px" }}>No active orders match that view.</div>
             )}
+            <CompletedTuesdayOrdersCard items={completedItems} onRestore={onRestoreCompletedOrder} />
           </div>
         </div>
       )}
@@ -2775,7 +2759,7 @@ function OrderIntakeRailCard({
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{loaded ? actionableCount : "Loading"}</div>
         </div>
         {loaded && (
-          <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
+          <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid ${busy ? DT.border : "rgba(12,124,122,0.18)"}`, background: busy ? "rgba(232,230,224,0.42)" : "rgba(255,255,255,0.82)", color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
             {busy ? "Checking" : "Refresh"}
           </button>
         )}
@@ -2797,7 +2781,7 @@ function OrderIntakeRailCard({
                   <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.invoiceNumber || "No invoice"} · {formatXeroMoney(item.total)}</div>
                   {lifecycleLabel && <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, color: paymentStageTone(item.paymentLifecycle?.paymentStage) === "warn" ? "#9a5b12" : DT.teal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lifecycleLabel}</div>}
                 </div>
-                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: meta.bg, color: meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
+                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: item.reviewState === "paid_needs_review" ? DT.teal : meta.bg, color: item.reviewState === "paid_needs_review" ? "#fff" : meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
               </div>
             </button>
           );
@@ -2937,7 +2921,7 @@ function IntakeTaskDraftRow({
     <div
       ref={setNodeRef}
       title={task.detail || task.title}
-      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 9, background: isDragging ? "rgba(237,248,247,0.94)" : "rgba(251,250,247,0.82)", padding: 5, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : undefined, opacity: isDragging ? 0.82 : 1 }}
+      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.34)" : "rgba(12,124,122,0.14)"}`, borderRadius: 10, background: isDragging ? "rgba(237,248,247,0.94)" : "rgba(255,255,255,0.92)", padding: 6, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : "0 2px 8px rgba(37,30,20,0.035)", opacity: isDragging ? 0.82 : 1 }}
     >
       <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "28px 34px minmax(0, 1fr) 74px" : "28px 42px minmax(320px, 1fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
         <button
@@ -2950,7 +2934,7 @@ function IntakeTaskDraftRow({
         >
           =
         </button>
-        <span style={{ border: `1px solid rgba(12,124,122,0.16)`, background: "rgba(237,248,247,0.78)", color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
+        <span style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
         <input
           type="text"
           value={task.title}
@@ -2958,7 +2942,7 @@ function IntakeTaskDraftRow({
           aria-label={`Task ${index + 1} text`}
           title="Edit this task name directly."
           placeholder="Task name"
-          style={{ minWidth: 0, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}
+          style={{ minWidth: 0, width: "100%", border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 8, padding: "7px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, background: "#fff", boxShadow: "inset 3px 0 0 rgba(12,124,122,0.18)" }}
         />
         <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
           {(["Nick", "Dylan", "Guido"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
@@ -2968,7 +2952,7 @@ function IntakeTaskDraftRow({
           {dateOptions.map((option) => <option key={`${task.id}:${option.dateIso}`} value={option.dateIso}>{option.dateLabel}</option>)}
         </select>
         <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => onPatch(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }} />
-        <button type="button" onClick={() => onDelete(task.id)} style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "5px 7px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer" }}>Delete</button>
+        <button type="button" onClick={() => onDelete(task.id)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 999, padding: "5px 7px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, cursor: "pointer" }}>Delete</button>
       </div>
     </div>
   );
@@ -3116,7 +3100,7 @@ function OrderIntakeReviewModal({
             </div>
           </div>
           <div style={{ flex: "0 0 auto", display: "flex", gap: 7, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
-	            <button type="button" onClick={onMarkComplete} disabled={busy} title="Move this pending order out of active Tuesday review if it has already been handled elsewhere." style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 11px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Complete / hide</button>
+	            <button type="button" onClick={onMarkComplete} disabled={busy} title="Move this pending order out of active Tuesday review if it has already been handled elsewhere." style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 999, padding: "7px 11px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Complete / hide</button>
 	            <button type="button" onClick={onClose} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
 	          </div>
 	        </header>
@@ -3195,7 +3179,7 @@ function OrderIntakeReviewModal({
             </section>
           </aside>
 
-	          <section id="intake-plan" style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.84)", padding: 10, minWidth: 0, minHeight: isNarrow ? undefined : 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: isNarrow ? "visible" : "hidden" }}>
+	          <section id="intake-plan" style={{ border: `1px solid rgba(12,124,122,0.22)`, borderRadius: 12, background: "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(237,248,247,0.58))", padding: 10, minWidth: 0, minHeight: isNarrow ? undefined : 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: isNarrow ? "visible" : "hidden", boxShadow: "0 12px 30px rgba(12,124,122,0.07)" }}>
 	            <div style={{ display: "flex", flexDirection: isNarrow ? "column" : "row", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 12 }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production plan</div>
@@ -3206,9 +3190,9 @@ function OrderIntakeReviewModal({
                 </div>
               </div>
 	              <div style={{ flex: "0 0 auto", display: "flex", gap: 6, alignItems: "center", justifyContent: isNarrow ? "stretch" : "flex-end", flexWrap: "wrap" }}>
-	                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>-1 workday</button>
-	                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>+1 workday</button>
-	                <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Add task</button>
+	                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>-1 workday</button>
+	                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>+1 workday</button>
+	                <button type="button" onClick={addTask} style={{ border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.84)", color: DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Add task</button>
               </div>
             </div>
             <div style={{ marginTop: 8, border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, borderRadius: 10, padding: "7px 9px" }}>
@@ -3254,8 +3238,8 @@ function OrderIntakeReviewModal({
                 )}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" onClick={saveDraft} disabled={busy} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
-                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.28)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,230,224,0.55)", color: canApprove && approvalConfirmed ? "#fff" : DT.textMuted, borderRadius: 999, padding: "8px 13px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed" }}>Add to schedule</button>
+                <button type="button" onClick={saveDraft} disabled={busy} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.86)", color: DT.textMuted, borderRadius: 999, padding: "8px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
+                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.30)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,230,224,0.55)", color: canApprove && approvalConfirmed ? "#fff" : DT.textMuted, borderRadius: 999, padding: "8px 14px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed", boxShadow: canApprove && approvalConfirmed ? "0 8px 18px rgba(12,124,122,0.14)" : undefined }}>Add to schedule</button>
               </div>
             </footer>
           </section>
@@ -9466,7 +9450,7 @@ function OrderJourneyView({
                         {laneTasks.map((task) => (
                           <div key={task.id} style={{ display: "contents" }}>
                             {showDropSlot(task.id, false) && dropSlot(`${task.id}:before`)}
-                            <OrderJourneyTaskCard task={task} selected={selected} onTaskSelect={onTaskSelect} onTaskOpen={onTaskOpen} onTaskEdit={onTaskEdit} onTaskDoneToggle={onTaskDoneToggle} />
+                            <OrderJourneyTaskCard key={`order-row-task-card-${task.id}`} task={task} selected={selected} onTaskSelect={onTaskSelect} onTaskOpen={onTaskOpen} onTaskEdit={onTaskEdit} onTaskDoneToggle={onTaskDoneToggle} />
                             {showDropSlot(task.id, true) && dropSlot(`${task.id}:after`)}
                           </div>
                         ))}
@@ -11254,6 +11238,14 @@ export default function PlanClient({
   );
   const plannedNames = useMemo(() => new Set(rows.map((row) => row.name)), [rows]);
   const newOrder = useMemo(() => selectNewOrderForPlanning(orders, plannedOrderIds, plannedNames), [orders, plannedOrderIds, plannedNames]);
+  const headerActiveOrders = useMemo(
+    () => orders.filter((order) => initialPlanTaskLinkState?.orderOverrides?.[String(order.id)]?.status !== "completed"),
+    [orders, initialPlanTaskLinkState]
+  );
+  const isHeaderNarrow = useIsNarrow(760);
+  const headerAccessory = initialUtilityView === "processTemplates" || isHeaderNarrow || ENABLE_PRODUCTION_PULSE_ROW
+    ? undefined
+    : <OrderHealthStrip orders={headerActiveOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={setRailFilter} variant="header" />;
 
   return (
     <MissionControlShell
@@ -11270,6 +11262,7 @@ export default function PlanClient({
             eyebrow="Setup"
             title="Processes"
             subtitle="Reusable workshop paths that create consistent order flow."
+            accessory={headerAccessory}
             compact={false}
           />
         )}
