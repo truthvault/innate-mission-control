@@ -1022,6 +1022,7 @@ type OrderIntakeItem = {
   customerName: string;
   orderStatus: string;
   paidOnDate: string | null;
+  orderDueDate: string | null;
   productSummary: string | null;
   itemCategory: string | null;
   invoiceNumber: string | null;
@@ -1680,6 +1681,7 @@ function matchedPaymentDateForIntake(item: OrderIntakeItem, invoiceNumber: strin
 
 function expectedReadyInfoForIntake(item: OrderIntakeItem) {
   const explicitDate = recordString(item.sourceSummary, ["customer_ready_date", "expected_ready_date", "promised_ready_date", "ready_date"]);
+  const orderDueDate = isoDateOnly(item.orderDueDate);
 
   const docs = item.financialDocuments || [];
   const depositDoc = docs.find((doc) => normalizeOrderText(doc.role) === "deposit") || docs.find((doc) => normalizeOrderText(doc.invoiceNumber) === normalizeOrderText(item.invoiceNumber)) || docs[0] || null;
@@ -1687,6 +1689,13 @@ function expectedReadyInfoForIntake(item: OrderIntakeItem) {
   const promisedLeadTime = promisedLeadTimeForIntake(item, depositDoc);
   const weeks = promisedLeadTime.weeks;
   if (!weeks || !depositInvoiceDate) {
+    if (orderDueDate) {
+      return {
+        date: orderDueDate,
+        label: "Due date",
+        source: "Using the saved Tuesday order due date.",
+      };
+    }
     if (explicitDate) {
       return {
         date: explicitDate,
@@ -2931,8 +2940,6 @@ function OrderIntakeReviewModal({
     : pendingPayments.length > 0
       ? WORKSHOP_PROCESS_RULES.trust.bankVisiblePaidLabel
       : item.paidOnDate ? formatShortDate(item.paidOnDate) : "Not confirmed by Akahu";
-  const primaryLineItem = item.lineItems[0] ?? null;
-  const primaryOrderDetails = primaryLineItem ? parseIntakeInvoiceLine(primaryLineItem.description) : null;
   const expectedReady = expectedReadyInfoForIntake(item);
   const expectedReadyDate = expectedReady.date;
   const dueDisplay = formatShortDate(expectedReadyDate);
@@ -2947,6 +2954,7 @@ function OrderIntakeReviewModal({
     { label: "Tasks", value: `${tasks.length} steps`, tone: tasks.length > 0 ? "good" : "warn" },
     { label: "Hours", value: `${totalDraftHours}h`, tone: totalDraftHours > 0 ? "good" : "warn" },
   ];
+  const { documents: invoiceDocuments, status: invoiceDocumentStatus } = useOrderCustomerMirrorLookup({ orderId: item.orderId, invoiceNumber: item.invoiceNumber });
 
   function patchTask(id: string, patch: Partial<OrderIntakeTaskDraft>) {
     setTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch } : task));
@@ -3036,15 +3044,6 @@ function OrderIntakeReviewModal({
 	              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 28, lineHeight: 1.0, color: DT.textPrimary, overflowWrap: "anywhere" }}>{item.customerName}</h2>
               <span title={item.stateDetail} style={{ border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, color: reviewSignal.color, borderRadius: 999, padding: "5px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{headerStatusLabel}</span>
             </div>
-            <div style={{ marginTop: 8, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontFamily: DT.sans }}>
-              {[["Order", primaryOrderDetails?.title || item.itemCategory || "Order"], ["Ready", dueDisplay], ["Value", formatXeroMoney(item.total)]].map(([label, value]) => (
-                <div key={label} style={{ display: "inline-flex", gap: 5, alignItems: "baseline", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 999, padding: "4px 8px", maxWidth: "100%" }}>
-                  <span style={{ fontSize: 8.5, fontWeight: 950, letterSpacing: "0.06em", textTransform: "uppercase", color: DT.textFaint, whiteSpace: "nowrap" }}>{label}</span>
-                  <span style={{ fontSize: 11.5, lineHeight: 1.1, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isNarrow ? 160 : 260 }}>{value}</span>
-                </div>
-              ))}
-              <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850, whiteSpace: "nowrap" }}>{item.invoiceNumber || "No invoice number"} · {item.itemCategory || "Order"}</span>
-            </div>
           </div>
           <div style={{ flex: "0 0 auto", display: "flex", gap: 7, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
 	            <button type="button" onClick={onMarkComplete} disabled={busy} title="Move this pending order out of active Tuesday review if it has already been handled elsewhere." style={{ border: "1px solid rgba(153,27,27,0.18)", background: "rgba(153,27,27,0.06)", color: "#991b1b", borderRadius: 999, padding: "7px 11px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 950, cursor: busy ? "wait" : "pointer" }}>Complete / hide</button>
@@ -3061,7 +3060,7 @@ function OrderIntakeReviewModal({
 	              ].map(([label, href]) => <a key={label} href={href} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.84)", color: DT.textMuted, borderRadius: 999, padding: "7px 6px", textAlign: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>{label}</a>)}
 	            </nav>
 	          )}
-	          <aside id="intake-order-details" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2 }}>
+	          <aside id="intake-order-details" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2, paddingBottom: isNarrow ? 12 : 18 }}>
             <section style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 10, background: "rgba(237,248,247,0.72)", padding: 8 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Order details</div>
 	              <div style={{ marginTop: 6, display: "grid", gap: 5 }}>
@@ -3072,6 +3071,7 @@ function OrderIntakeReviewModal({
 	                ))}
 	              </div>
             </section>
+            <InvoiceReferenceLinks xeroUrl={item.xeroUrl} documents={invoiceDocuments} status={invoiceDocumentStatus} />
             <section style={{ border: `1px solid ${expectedReadyDate ? "rgba(12,124,122,0.20)" : "rgba(154,91,18,0.22)"}`, borderRadius: 10, background: expectedReadyDate ? "rgba(237,248,247,0.70)" : "rgba(250,204,21,0.10)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 10, color: expectedReadyDate ? DT.teal : "#9a5b12", fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{expectedReady.label}</div>
@@ -3115,14 +3115,13 @@ function OrderIntakeReviewModal({
             <section style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
               <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice facts</div>
               <div style={{ marginTop: 5, display: "grid", gap: 4 }}>
-                {[['Status', item.invoiceStatus || 'Unknown'], ['Invoice date', formatShortDate(item.invoiceDate)], ['Xero due', formatShortDate(item.invoiceDueDate)]].map(([label, value]) => (
+                {[["Status", item.invoiceStatus || "Unknown"], ["Invoice date", formatShortDate(item.invoiceDate)], ["Xero due", formatShortDate(item.invoiceDueDate)]].map(([label, value]) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontFamily: DT.sans, fontSize: 10 }}>
                     <span style={{ color: DT.textMuted, fontWeight: 850 }}>{label}</span>
                     <span style={{ color: DT.textPrimary, fontWeight: 950, textAlign: "right" }}>{value}</span>
                   </div>
                 ))}
               </div>
-              {item.xeroUrl && <a href={item.xeroUrl} target="_blank" rel="noreferrer" style={{ marginTop: 7, display: "inline-flex", border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textDecoration: "none" }}>Open Xero</a>}
             </section>
           </aside>
 
@@ -3840,15 +3839,25 @@ function RepairNotesPanel({
   );
 }
 
-function useOrderCustomerMirror(order: UiOrder) {
+function useOrderCustomerMirrorLookup(args: { orderId?: string | null; mondayOrderId?: string | number | null; invoiceNumber?: string | null }) {
   const [mirror, setMirror] = useState<OrderCustomerMirror | null>(null);
   const [documents, setDocuments] = useState<OrderDocument[]>([]);
   const [status, setStatus] = useState("Loading customer mirror...");
+  const orderId = args.orderId ?? "";
+  const mondayOrderId = args.mondayOrderId ? String(args.mondayOrderId) : "";
+  const invoiceNumber = args.invoiceNumber ?? "";
 
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams({ mondayOrderId: String(order.id) });
-    if (order.xeroInvoiceNumber) params.set("invoiceNumber", order.xeroInvoiceNumber);
+    const params = new URLSearchParams();
+    if (orderId) params.set("orderId", orderId);
+    if (mondayOrderId) params.set("mondayOrderId", mondayOrderId);
+    if (invoiceNumber) params.set("invoiceNumber", invoiceNumber);
+    if (!params.toString()) {
+      return () => {
+        cancelled = true;
+      };
+    }
     fetch(`/api/production/order-customer-mirror?${params.toString()}`, { cache: "no-store" })
       .then(async (response) => {
         const data = await response.json().catch(() => ({})) as OrderCustomerMirrorApiResponse;
@@ -3865,9 +3874,13 @@ function useOrderCustomerMirror(order: UiOrder) {
     return () => {
       cancelled = true;
     };
-  }, [order.id, order.xeroInvoiceNumber]);
+  }, [orderId, mondayOrderId, invoiceNumber]);
 
   return { mirror, documents, status };
+}
+
+function useOrderCustomerMirror(order: UiOrder) {
+  return useOrderCustomerMirrorLookup({ mondayOrderId: order.id, invoiceNumber: order.xeroInvoiceNumber });
 }
 
 function documentKindLabel(kind: OrderDocument["kind"]) {
@@ -3883,6 +3896,42 @@ function formatBytes(value: number | null) {
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function InvoiceReferenceLinks({ xeroUrl, documents, status }: { xeroUrl: string | null; documents: OrderDocument[]; status?: string }) {
+  const visibleDocuments = [...documents].sort((a, b) => {
+    if (a.kind === "xero_invoice_pdf" && b.kind !== "xero_invoice_pdf") return -1;
+    if (b.kind === "xero_invoice_pdf" && a.kind !== "xero_invoice_pdf") return 1;
+    return a.label.localeCompare(b.label);
+  });
+  const hasLinks = Boolean(xeroUrl) || visibleDocuments.length > 0;
+  return (
+    <section data-invoice-reference-links="true" style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 10, background: "rgba(237,248,247,0.54)", padding: 8 }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice links</div>
+        {visibleDocuments.length > 0 && <span style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 900 }}>{visibleDocuments.length} file{visibleDocuments.length === 1 ? "" : "s"}</span>}
+      </div>
+      <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
+        {xeroUrl && (
+          <a href={xeroUrl} target="_blank" rel="noreferrer" style={{ maxWidth: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid rgba(12,124,122,0.24)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Open Xero invoice</a>
+        )}
+        {visibleDocuments.map((document) => (
+          <a
+            key={document.id}
+            href={document.openUrl}
+            target="_blank"
+            rel="noreferrer"
+            title={`${document.filename}${document.sha256 ? ` · sha256 ${document.sha256}` : ""}`}
+            style={{ maxWidth: "100%", display: "inline-flex", alignItems: "center", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 999, padding: "6px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+          >
+            {documentKindLabel(document.kind)} · {document.label}{document.byteSize ? ` · ${formatBytes(document.byteSize)}` : ""}
+          </a>
+        ))}
+        {!hasLinks && <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>No Xero invoice link or invoice files attached yet.</span>}
+      </div>
+      {status && visibleDocuments.length === 0 && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, lineHeight: 1.3, fontWeight: 800 }}>{status}</div>}
+    </section>
+  );
 }
 
 function CustomerMirrorPanel({ order }: { order: UiOrder }) {
@@ -9285,17 +9334,17 @@ function OrderJourneyView({
                     const isDropTarget = Boolean(activeTaskId && dropPreview?.weekId === week.id && dropPreview.day === day && dropPreview.person === person && (!dropPreview.rowId || dropPreview.rowId === row.id));
                     const mobileLaneVisible = Boolean(activeTaskId || laneTasks.length > 0);
                     const showDropSlot = (itemId?: string, insertAfter = false) => Boolean(isDropTarget && dropPreview?.overId === itemId && Boolean(dropPreview?.insertAfter) === insertAfter);
-                    const dropSlot = <div aria-hidden="true" style={{ height: 7, borderRadius: 999, background: "rgba(12,124,122,0.36)", boxShadow: "0 0 0 3px rgba(12,124,122,0.08)", margin: "1px 2px" }} />;
+                    const dropSlot = (key: string) => <div key={key} aria-hidden="true" style={{ height: 7, borderRadius: 999, background: "rgba(12,124,122,0.36)", boxShadow: "0 0 0 3px rgba(12,124,122,0.08)", margin: "1px 2px" }} />;
                     return (
                       <OrderJourneyDropLane key={laneId} id={laneId} day={day} person={person} dateIso={dateOption?.dateIso} dateLabel={dateOption?.dateLabel} items={laneTasks.map((task) => task.id)} isDropTarget={isDropTarget} dragActive={Boolean(activeTaskId)} mobileVisible={mobileLaneVisible}>
                         {laneTasks.map((task) => (
                           <div key={task.id} style={{ display: "contents" }}>
-                            {showDropSlot(task.id, false) && dropSlot}
+                            {showDropSlot(task.id, false) && dropSlot(`${task.id}:before`)}
                             <OrderJourneyTaskCard task={task} selected={selected} onTaskSelect={onTaskSelect} onTaskOpen={onTaskOpen} onTaskEdit={onTaskEdit} onTaskDoneToggle={onTaskDoneToggle} />
-                            {showDropSlot(task.id, true) && dropSlot}
+                            {showDropSlot(task.id, true) && dropSlot(`${task.id}:after`)}
                           </div>
                         ))}
-                        {isDropTarget && !dropPreview?.overId && dropSlot}
+                        {isDropTarget && !dropPreview?.overId && dropSlot(`${laneId}:empty`)}
                         {laneTasks.length === 0 && (
 	                          <div data-empty-order-day-cell="empty-order-day-cell" data-order-row-empty-drop-target="order-row-empty-drop-target" style={{ minHeight: activeTaskId ? 24 : 0, border: activeTaskId ? `1px dashed rgba(12,124,122,0.28)` : 0, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", color: activeTaskId ? DT.teal : "transparent", fontFamily: DT.sans, fontSize: 9, fontWeight: 850, fontStyle: "italic", background: activeTaskId ? "rgba(12,124,122,0.045)" : "transparent" }}>
 	                            {activeTaskId ? "Drop task" : ""}

@@ -82,6 +82,7 @@ export type OrderIntakeItem = {
   customerName: string;
   orderStatus: string;
   paidOnDate: string | null;
+  orderDueDate: string | null;
   productSummary: string | null;
   itemCategory: string | null;
   invoiceNumber: string | null;
@@ -113,12 +114,13 @@ type SupabaseOrder = {
   customer_name: string;
   status: string;
   paid_on_date: string | null;
+  due_date: string | null;
   product_summary: string | null;
   item_category: string | null;
   xero_invoice_number: string | null;
 };
 
-const ORDER_SELECT = "id,customer_name,status,paid_on_date,product_summary,item_category,xero_invoice_number";
+const ORDER_SELECT = "id,customer_name,status,paid_on_date,due_date,product_summary,item_category,xero_invoice_number";
 type IntakeReviewRow = {
   id: string;
   order_id: string;
@@ -671,6 +673,7 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
       customerName: order.customer_name,
       orderStatus: order.status,
       paidOnDate: order.paid_on_date,
+      orderDueDate: order.due_date,
       productSummary: order.product_summary,
       itemCategory: order.item_category,
       invoiceNumber: document?.xero_invoice_number || order.xero_invoice_number,
