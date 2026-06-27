@@ -74,7 +74,7 @@ const checks = [
   {
     path: "/production/plan",
     label: "plan",
-    expect: ["Production Plan", "Tuesday"],
+    expect: ["Approved schedule", "Tuesday"],
     auth: true,
   },
   {
