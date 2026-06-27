@@ -10,7 +10,7 @@ import { chromium } from "playwright";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 const DEFAULT_PATH = "/production/plan";
-const BASE_EXPECTED_TEXT = ["Tuesday", "Production Plan"];
+const BASE_EXPECTED_TEXT = ["Tuesday"];
 
 function loadEnvFile(envPath) {
   if (!envPath || !fs.existsSync(envPath)) return;

@@ -76,9 +76,9 @@ export function TuesdayPageHeader({
   accessory,
   compact = false,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   accessory?: ReactNode;
   compact?: boolean;
 }) {
@@ -99,15 +99,19 @@ export function TuesdayPageHeader({
       }}
     >
       <div style={{ minWidth: 0, flex: "1 1 420px" }}>
-        <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.11em", textTransform: "uppercase", color: DT.textFaint }}>
-          {eyebrow}
-        </div>
+        {eyebrow && (
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.11em", textTransform: "uppercase", color: DT.textFaint }}>
+            {eyebrow}
+          </div>
+        )}
         <h1 style={{ margin: "3px 0 0", fontFamily: DT.serif, fontSize: compact ? 26 : 32, lineHeight: 1.03, letterSpacing: "-0.045em", color: DT.textPrimary }}>
           {title}
         </h1>
-        <p style={{ margin: "7px 0 0", maxWidth: 760, fontFamily: DT.sans, fontSize: compact ? 12 : 13, lineHeight: 1.42, color: DT.textSecondary, fontWeight: 650 }}>
-          {subtitle}
-        </p>
+        {subtitle && (
+          <p style={{ margin: "7px 0 0", maxWidth: 760, fontFamily: DT.sans, fontSize: compact ? 12 : 13, lineHeight: 1.42, color: DT.textSecondary, fontWeight: 650 }}>
+            {subtitle}
+          </p>
+        )}
       </div>
       {accessory && <div style={{ flex: "0 1 auto", minWidth: 0 }}>{accessory}</div>}
     </section>
