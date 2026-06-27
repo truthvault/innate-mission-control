@@ -68,13 +68,13 @@ const checks = [
   {
     path: "/production",
     label: "production default",
-    expect: ["Production Plan", "Tuesday"],
+    expect: ["Orders", "Tuesday"],
     auth: true,
   },
   {
     path: "/production/plan",
     label: "plan",
-    expect: ["Production Plan", "Tuesday"],
+    expect: ["Orders", "Schedule", "Tuesday"],
     auth: true,
   },
   {

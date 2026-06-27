@@ -24,7 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MissionControlShell } from "@/components/mission-control-shell";
-import { Chip, DT, TuesdayPageHeader } from "@/components/mission-control-ui";
+import { Chip, DT, TuesdayPageHeader, chipColors } from "@/components/mission-control-ui";
 import type { OrderCostingContext, OrderCostingMatch } from "@/lib/costings/fetch-order-costing-context";
 import { useRealtimeRefresh } from "@/lib/supabase/use-realtime-refresh";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -157,7 +157,15 @@ const CAPACITY_STYLES = {
   over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
 
+const PRODUCTION_PANEL_STYLE = {
+  background: "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,253,249,0.88))",
+  border: `1px solid ${DT.border}`,
+  borderRadius: DT.radius,
+  boxShadow: "0 1px 0 rgba(255,255,255,0.82) inset, 0 8px 22px rgba(37,30,20,0.055)",
+} as const;
+
 const DELIGHT_CANVAS_DURATION_MS = 3000;
+const ENABLE_PRODUCTION_PULSE_ROW = true;
 type DelightOrigin = { x: number; y: number; cardRect?: DOMRect };
 
 type DelightParticle = { angle: number; distance: number; speed: number; size: number; hue: number; spin: number };
@@ -1326,6 +1334,10 @@ function isCompleteOrder(order: UiOrder) {
   return ["Collected", "Finished", "Shipped"].includes(order.status);
 }
 
+function activeProductionOrders(orders: UiOrder[]) {
+  return orders.filter((order) => !isCompleteOrder(order));
+}
+
 function orderHealth(order: UiOrder): OrderHealthLevel {
   const diff = orderDaysUntil(order.shipDate);
   const pct = orderProgressPct(order);
@@ -1484,6 +1496,69 @@ function OrderHealthStrip({
         </button>
       );})}
     </div>
+  );
+}
+
+function ApprovedOrdersDivider() {
+  return (
+    <div data-approved-orders-divider="true" style={{ margin: "12px 0 9px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)", alignItems: "center", gap: 8 }}>
+      <span aria-hidden="true" style={{ height: 1, background: "linear-gradient(90deg, rgba(214,207,193,0), rgba(214,207,193,0.92))" }} />
+      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Approved schedule</span>
+      <span aria-hidden="true" style={{ height: 1, background: "linear-gradient(90deg, rgba(214,207,193,0.92), rgba(214,207,193,0))" }} />
+    </div>
+  );
+}
+
+function ApprovedOrdersSectionHeader({ count }: { count: number }) {
+  return (
+    <div data-approved-orders-section-header="true" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, padding: "1px 1px 0" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Orders</div>
+        <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{count} active</div>
+      </div>
+    </div>
+  );
+}
+
+function ProductionPulseRow({
+  orders,
+  orderCostings,
+  activeFilter,
+  onFilterChange,
+}: {
+  orders: UiOrder[];
+  orderCostings?: OrderCostingContext;
+  activeFilter: RailFilter;
+  onFilterChange: (filter: RailFilter) => void;
+}) {
+  const active = activeProductionOrders(orders);
+  const blocked = active.filter((order) => orderHealth(order) === "blocked").length;
+  const needsReview = active.filter((order) => orderHealth(order) !== "onTrack" || !costingIsFullyApproved(orderCostings?.matches[order.id])).length;
+  const items: Array<{ label: string; value: string; tone: "neutral" | "teal" | "amber" | "red"; filter: RailFilter }> = [
+    { label: "Today", value: `${active.length} active`, tone: "neutral", filter: "all" },
+    { label: "Blocked", value: String(blocked), tone: blocked ? "red" : "teal", filter: "blocked" },
+    { label: "Needs review", value: String(needsReview), tone: needsReview ? "amber" : "teal", filter: "watch" },
+  ];
+
+  return (
+    <section aria-label="Production pulse" data-production-pulse-row="true" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 0.74fr) minmax(0, 1.14fr)", alignItems: "stretch", gap: 4, minWidth: 0, width: "100%" }}>
+      {items.map((item) => {
+        const colours = chipColors(item.tone);
+        const selected = activeFilter === item.filter;
+        return (
+          <button
+            key={item.label}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onFilterChange(selected ? "all" : item.filter)}
+            style={{ minWidth: 0, minHeight: 32, border: `1px solid ${selected ? "rgba(12,124,122,0.30)" : colours.border}`, background: selected ? DT.tealSoft : colours.bg, color: colours.color, borderRadius: 999, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, fontWeight: 850, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.07)" : undefined, cursor: "pointer", touchAction: "manipulation" }}
+          >
+            <span style={{ minWidth: 0, color: selected ? DT.teal : DT.textFaint, fontSize: 7.8, fontWeight: 950, letterSpacing: "0.025em", textTransform: "uppercase", overflow: "hidden", textOverflow: "clip" }}>{item.label}</span>
+            <span style={{ flex: "0 0 auto", color: colours.color, fontWeight: 950 }}>{item.value}</span>
+          </button>
+        );
+      })}
+    </section>
   );
 }
 
@@ -2365,10 +2440,7 @@ function OrderRail({
         maxHeight: undefined,
         overflow: "visible",
         transition: "box-shadow 1000ms ease, border-color 1000ms ease",
-        background: "rgba(255,255,255,0.84)",
-        border: "1px solid " + DT.border,
-        borderRadius: DT.radius,
-        boxShadow: DT.shadow,
+        ...PRODUCTION_PANEL_STYLE,
         backdropFilter: "blur(12px)",
       }}
     >
@@ -2431,14 +2503,14 @@ function OrderRail({
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search orders"
-              style={{ width: "100%", minHeight: compactRail ? 40 : undefined, boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
+              placeholder="Search approved orders"
+              style={{ width: "100%", minHeight: compactRail ? 40 : undefined, boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: "rgba(255,255,255,0.88)", outline: "none" }}
             />
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as RailSort)}
-              aria-label="Sort orders"
-              style={{ width: compactRail ? "100%" : 112, minHeight: compactRail ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: DT.cardBg, outline: "none" }}
+              aria-label="Sort approved orders"
+              style={{ width: compactRail ? "100%" : 112, minHeight: compactRail ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: "rgba(255,255,255,0.88)", outline: "none" }}
             >
               <option value="soonest">Due soonest</option>
               <option value="latest">Due latest</option>
@@ -2554,23 +2626,23 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
         minWidth: 0,
         minHeight: isNarrow ? 82 : undefined,
         textAlign: "left",
-        borderWidth: "1px 1px 1px 4px",
+        borderWidth: "1px 1px 1px 3px",
         borderStyle: "solid",
         borderColor: `${DT.border} ${DT.border} ${DT.border} ${health.color}`,
         background: DT.cardBg,
-        borderRadius: 10,
+        borderRadius: 9,
         padding: "10px 10px 9px",
         cursor: "pointer",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.025)",
+        boxShadow: "0 1px 0 rgba(255,255,255,0.72) inset",
         transition: "transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.transform = "translateX(-2px)";
-        event.currentTarget.style.boxShadow = "0 8px 18px rgba(0,0,0,0.06)";
+        event.currentTarget.style.transform = "translateX(-1px)";
+        event.currentTarget.style.boxShadow = "0 8px 18px rgba(37,30,20,0.06)";
       }}
       onMouseLeave={(event) => {
         event.currentTarget.style.transform = "translateX(0)";
-        event.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.025)";
+        event.currentTarget.style.boxShadow = "0 1px 0 rgba(255,255,255,0.72) inset";
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -2694,13 +2766,12 @@ function OrderIntakeRailCard({
 }) {
   const sorted = [...items].sort((a, b) => intakeStateSort(a.reviewState) - intakeStateSort(b.reviewState) || a.customerName.localeCompare(b.customerName));
   const pendingItems = sorted.filter((item) => item.reviewState !== "approved");
-  const approvedCount = sorted.length - pendingItems.length;
   const actionableCount = pendingItems.length;
   return (
-    <section data-pending-new-orders-rail="true" style={{ marginBottom: 10, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.88)", boxShadow: DT.shadow, padding: 10 }}>
+    <section data-pending-new-orders-rail="true" style={{ ...PRODUCTION_PANEL_STYLE, marginBottom: 10, borderRadius: 12, padding: 10 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.teal, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{loaded ? actionableCount : "Loading"}</div>
         </div>
         {loaded && (
@@ -2719,7 +2790,7 @@ function OrderIntakeRailCard({
           const meta = INTAKE_STATE_META[item.reviewState];
           const lifecycleLabel = intakePaymentStageBadge(item.paymentLifecycle);
           return (
-            <button key={item.orderId} type="button" onClick={() => onOpen(item.orderId)} style={{ textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${meta.border} ${meta.border} ${meta.border} ${meta.color}`, background: "rgba(255,255,255,0.82)", borderRadius: 10, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.025)" }}>
+            <button key={item.orderId} type="button" onClick={() => onOpen(item.orderId)} style={{ textAlign: "left", borderWidth: "1px 1px 1px 3px", borderStyle: "solid", borderColor: `${meta.border} ${meta.border} ${meta.border} ${meta.color}`, background: item.reviewState === "paid_needs_review" ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(237,248,247,0.58))" : "rgba(255,255,255,0.82)", borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 0 rgba(255,255,255,0.72) inset" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.customerName}</div>
@@ -2731,7 +2802,6 @@ function OrderIntakeRailCard({
             </button>
           );
         })}
-        {approvedCount > 0 && <div style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 850, textAlign: "center" }}>{approvedCount} approved intake order{approvedCount === 1 ? "" : "s"} already on the schedule</div>}
       </div>
     </section>
   );
@@ -5510,7 +5580,9 @@ function displayWeekTitle(title: string): string {
   if (days) {
     const start = Number(days[1]);
     const end = Number(days[2]);
-    if (end - start === 3) {
+    const legacyThursdayRange = end - start === 3;
+    const legacyCrossMonthShortRange = end <= start;
+    if (legacyThursdayRange || legacyCrossMonthShortRange) {
       const mi = monthIndex(month);
       if (mi >= 0) {
         const friday = new Date(new Date().getFullYear(), mi, start + 4);
@@ -5687,6 +5759,13 @@ function suggestedDateOptionForWeekDay(week: PlanWeek, day: DayKey): SuggestedDa
     day,
     weekId: week.id,
     weekTitle: displayWeekTitle(week.title),
+  };
+}
+
+function scheduleDayLabelParts(day: DayKey, option?: SuggestedDateOption | null) {
+  return {
+    day: DAY_LABELS[day],
+    date: option?.dateLabel.replace(/^\w+,\s*/, "") ?? DAY_LABELS[day],
   };
 }
 
@@ -7280,6 +7359,10 @@ function MobileScheduleAgenda({
   onSuggestedStepOpen,
   suggestedStepCustomer,
   personFilter = "all",
+  weekIndex,
+  weekCount,
+  onPreviousWeek,
+  onNextWeek,
 }: {
   week: PlanWeek;
   tasks?: BoardPlanTask[];
@@ -7305,6 +7388,10 @@ function MobileScheduleAgenda({
   onSuggestedStepOpen?: () => void;
   suggestedStepCustomer?: string;
   personFilter?: PersonFilter;
+  weekIndex: number;
+  weekCount: number;
+  onPreviousWeek?: () => void;
+  onNextWeek?: () => void;
 }) {
   const visiblePeople = personFilter === "all" ? PEOPLE : [personFilter];
   const todayKey = currentDayKey();
@@ -7373,19 +7460,14 @@ function MobileScheduleAgenda({
     </button>
   );
   return (
-    <section data-mobile-schedule-agenda="true" style={{ border: `1px solid ${isCurrentWeek ? "rgba(12,124,122,0.34)" : DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.78)", boxShadow: isCurrentWeek ? "0 0 0 3px rgba(12,124,122,0.08)" : DT.shadow, padding: 6, display: "grid", gap: 6 }}>
+    <section data-mobile-schedule-agenda="true" style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, padding: 6, display: "grid", gap: 6 }}>
+      <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 950, color: DT.textPrimary, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayWeekTitle(week.title)}</div>
-          {isCurrentWeek && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.teal, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current week</div>}
-        </div>
+        {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.teal, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current week</div> : <span />}
         {showDraftControls && isDraftChanged && <button type="button" onClick={onResetDraftLayout} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 9, fontFamily: DT.sans, fontWeight: 900 }}>Revert</button>}
       </div>
-      <nav aria-label="Schedule days" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-        {visibleDays.map((day) => <a key={day.day} href={`#schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.28)" : DT.border}`, background: day.isToday ? DT.tealSoft : "rgba(255,255,255,0.78)", color: day.isToday ? DT.teal : DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textDecoration: "none" }}>{day.isToday ? "Today" : DAY_LABELS[day.day].slice(0, 3)}</a>)}
-      </nav>
       {visibleDays.length === 0 ? <div style={{ padding: 12, color: DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 850 }}>No scheduled tasks for this week.</div> : visibleDays.map((day) => (
-        <section key={day.day} id={`schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.22)" : DT.border}`, borderRadius: 12, background: day.isToday ? "rgba(237,248,247,0.54)" : "rgba(255,255,255,0.62)", padding: 6, display: "grid", gap: 6 }}>
+        <section key={day.day} id={`schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.20)" : DT.border}`, borderRadius: 11, background: day.isToday ? "rgba(237,248,247,0.42)" : "rgba(255,255,255,0.58)", padding: 6, display: "grid", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
             <h3 style={{ margin: 0, color: day.isToday ? DT.teal : DT.textPrimary, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, lineHeight: 1 }}>{day.isToday ? "Today · " : ""}{day.dateOption?.dateLabel ?? DAY_LABELS[day.day]}</h3>
             <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(day.totalHours)}</span>
@@ -7444,6 +7526,10 @@ function MonthWeekSection({
   personFilter = "all",
   weekHeaderControl,
   forcePlanningLanes = false,
+  weekIndex,
+  weekCount,
+  onPreviousWeek,
+  onNextWeek,
 }: {
   week: PlanWeek;
   tasks?: BoardPlanTask[];
@@ -7475,6 +7561,10 @@ function MonthWeekSection({
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
   forcePlanningLanes?: boolean;
+  weekIndex: number;
+  weekCount: number;
+  onPreviousWeek?: () => void;
+  onNextWeek?: () => void;
 }) {
   const weekAppTasks = useMemo(() => appTasks.filter((task) => appTaskFallsInWeek(task, week)), [appTasks, week]);
   const isNarrow = useIsNarrow();
@@ -7515,17 +7605,19 @@ function MonthWeekSection({
         onSuggestedStepOpen={onSuggestedStepOpen}
         suggestedStepCustomer={suggestedStepCustomer}
         personFilter={personFilter}
+        weekIndex={weekIndex}
+        weekCount={weekCount}
+        onPreviousWeek={onPreviousWeek}
+        onNextWeek={onNextWeek}
       />
     );
   }
 
   return (
-    <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ background: DT.cardBg, border: `${isCurrentWeek ? 3 : 1}px solid ${isCurrentWeek ? "rgba(12,124,122,0.58)" : DT.border}`, borderRadius: DT.radius, boxShadow: isCurrentWeek ? "0 0 0 4px rgba(12,124,122,0.10), 0 8px 28px rgba(34,32,26,0.09)" : DT.shadow, overflow: "hidden", minWidth: 0 }}>
-        <div style={{ padding: "10px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: weekHeaderControl ? "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(110,138,106,0.055))" : undefined }}>
-          <div style={{ minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20, lineHeight: 1 }}>{displayWeekTitle(week.title)}</h2>
-            {isCurrentWeek && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div>}
-          </div>
+    <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, overflow: "hidden", minWidth: 0 }}>
+        <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow={isNarrow} />
+        {(isCurrentWeek || weekHeaderControl || (showDraftControls && isDraftChanged) || !hasVisibleTasks) && <div style={{ padding: "7px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: "rgba(255,255,255,0.38)" }}>
+          {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div> : <span />}
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
             {weekHeaderControl}
             {showDraftControls && isDraftChanged && <Chip label="Move saving..." tone="amber" />}
@@ -7540,17 +7632,14 @@ function MonthWeekSection({
             )}
             {!hasVisibleTasks && <Chip label="No day assignments" tone="grey" />}
           </div>
-        </div>
+        </div>}
         <div style={{ display: isNarrow ? "flex" : "grid", gridTemplateColumns: isNarrow ? undefined : `repeat(${visibleDays.length}, minmax(0, 1fr))`, overflowX: isNarrow ? "auto" : "hidden", WebkitOverflowScrolling: isNarrow ? "touch" : undefined, minWidth: 0 }}>
           {visibleDays.map((day) => {
             const isTodayColumn = isCurrentWeek && todayKey === day;
             const dateOption = suggestedDateOptionForWeekDay(week, day);
             return (
-              <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: showPlanningLanes ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.08), rgba(255,255,255,0))" : undefined }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, marginBottom: showPlanningLanes ? 7 : 0 }}>
-                  <span style={{ fontSize: 10, fontWeight: 900, color: isTodayColumn ? DT.teal : DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: DT.sans }}>{dateOption?.dateLabel ?? DAY_LABELS[day]}</span>
-                  {isTodayColumn && <span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Today</span>}
-                </div>
+              <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: showPlanningLanes ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.065), rgba(255,255,255,0))" : "rgba(255,255,255,0.18)" }}>
+                {isTodayColumn && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: showPlanningLanes ? 7 : 0 }}><span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Today</span></div>}
                 {showPlanningLanes && (
                   <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     {visiblePeople.map((person) => {
@@ -7690,6 +7779,7 @@ function MonthView({
   railFilter,
   onRailFilterChange,
   qaFixtureMode = false,
+  initialPlanViewMode = "orderRows",
   initialPlanTaskLinkState,
   initialPlanTaskLinksStorage = "blob",
   initialPlanTaskLinksDisabledReason,
@@ -7702,6 +7792,7 @@ function MonthView({
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
   qaFixtureMode?: boolean;
+  initialPlanViewMode?: ProductionPlanMode;
   initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
   initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
   initialPlanTaskLinksDisabledReason?: string;
@@ -7717,6 +7808,7 @@ function MonthView({
       railFilter={railFilter}
       onRailFilterChange={onRailFilterChange}
       qaFixtureMode={qaFixtureMode}
+      initialPlanViewMode={initialPlanViewMode}
       initialPlanTaskLinkState={initialPlanTaskLinkState}
       initialPlanTaskLinksStorage={initialPlanTaskLinksStorage}
       initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}
@@ -7760,26 +7852,6 @@ function WorkshopFocusBar({
         );
       })}
       {!isNarrow && historyControl}
-    </div>
-  );
-}
-
-function ProductionPlanModeToggle({ mode, onModeChange }: { mode: ProductionPlanMode; onModeChange: (mode: ProductionPlanMode) => void }) {
-  const isNarrow = useIsNarrow(760);
-  const options: Array<{ id: ProductionPlanMode; label: string; hint: string }> = [
-    { id: "orderRows", label: "Orders", hint: "Order task view" },
-    { id: "schedule", label: "Schedule board", hint: "Day / person capacity" },
-  ];
-  return (
-    <div data-mobile-production-actions="workshop-primary-actions" aria-label="Production plan view" style={{ display: "flex", gap: 3, padding: isNarrow ? 2 : 3, border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.76)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)", width: isNarrow ? "100%" : undefined }}>
-      {options.map((option) => {
-        const active = mode === option.id;
-        return (
-          <button key={option.id} type="button" aria-pressed={active} onClick={() => onModeChange(option.id)} title={option.hint} style={{ border: 0, borderRadius: 999, minHeight: isNarrow ? 30 : undefined, padding: isNarrow ? "5px 8px" : "7px 10px", background: active ? DT.tealSoft : "transparent", color: active ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 11 : 11, fontWeight: 950, cursor: "pointer", flex: isNarrow ? "1 1 0" : undefined, touchAction: "manipulation" }}>
-            {option.id === "schedule" ? <><span className="plan-schedule-mobile-label">Schedule</span><span className="plan-schedule-desktop-label">{option.label}</span></> : option.label}
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -8774,12 +8846,73 @@ const ORDER_JOURNEY_MOBILE_CSS = `
   }
 `;
 
-function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow }: { rows: OrderJourneyRow[]; week: PlanWeek; dayFilter: OrderDayFilter; onDayFilterChange: (filter: OrderDayFilter) => void; isNarrow: boolean }) {
-  const todayKey = currentDayKey();
+function ScheduleWeekBar({
+  week,
+  weekLabel,
+  weekIndex,
+  weekCount,
+  onPreviousWeek,
+  onNextWeek,
+  isNarrow,
+}: {
+  week: PlanWeek;
+  weekLabel: string;
+  weekIndex: number;
+  weekCount: number;
+  onPreviousWeek?: () => void;
+  onNextWeek?: () => void;
+  isNarrow: boolean;
+}) {
+  const navButton = (label: "Previous" | "Next", onClick: (() => void) | undefined, disabled: boolean) => (
+    <button
+      type="button"
+      aria-label={`${label} week`}
+      disabled={disabled || !onClick}
+      onClick={onClick}
+      style={{ width: isNarrow ? 32 : 28, height: isNarrow ? 32 : 28, border: `1px solid ${DT.border}`, borderRadius: 999, background: disabled || !onClick ? "rgba(0,0,0,0.025)" : "rgba(255,255,255,0.78)", color: disabled || !onClick ? DT.textFaint : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 16 : 14, fontWeight: 950, lineHeight: 1, padding: 0, cursor: disabled || !onClick ? "not-allowed" : "pointer", touchAction: "manipulation" }}
+    >
+      {label === "Previous" ? "‹" : "›"}
+    </button>
+  );
+  const dayCell = (day: DayKey) => {
+    const option = suggestedDateOptionForWeekDay(week, day);
+    const dayLabel = scheduleDayLabelParts(day, option);
+    return (
+      <div key={day} style={{ minWidth: 0, borderLeft: !isNarrow && day !== "monday" ? `1px solid ${DT.border}` : undefined, borderTop: isNarrow ? `1px solid ${DT.border}` : undefined, background: "rgba(247,249,248,0.62)", padding: isNarrow ? "7px 4px 6px" : "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3, overflow: "hidden" }}>
+        <span style={{ fontFamily: DT.sans, fontSize: isNarrow ? 8.5 : 9.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: isNarrow ? "0.02em" : "0.08em", color: DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
+        <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, letterSpacing: isNarrow ? 0 : "0.04em", color: DT.textFaint, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
+      </div>
+    );
+  };
+  if (isNarrow) {
+    return (
+      <div data-schedule-week-bar="true" style={{ display: "grid", gridTemplateColumns: "32px minmax(0, 1fr) 32px", alignItems: "center", gap: 6, border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.72)", boxShadow: "0 1px 4px rgba(0,0,0,0.025)", overflow: "hidden", padding: 4 }}>
+        {navButton("Previous", onPreviousWeek, weekIndex <= 0)}
+        <span style={{ minWidth: 0, textAlign: "center", fontFamily: DT.serif, fontSize: 16, fontWeight: 760, color: DT.textPrimary, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</span>
+        {navButton("Next", onNextWeek, weekIndex >= weekCount - 1)}
+        <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 0, border: `1px solid ${DT.border}`, borderRadius: 10, overflow: "hidden" }}>
+          {DAYS.map(dayCell)}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div data-schedule-week-bar="true" style={{ display: "grid", gridTemplateColumns: "220px repeat(5, minmax(104px, 1fr))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,255,255,0.84)", boxShadow: DT.shadow, overflow: "hidden" }}>
+      <div style={{ padding: 7, display: "grid", gridTemplateColumns: "28px minmax(0, 1fr) 28px", gap: 5, alignItems: "center", borderRight: `1px solid ${DT.border}` }}>
+        {navButton("Previous", onPreviousWeek, weekIndex <= 0)}
+        <span style={{ minWidth: 0, textAlign: "center", fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{weekLabel}</span>
+        {navButton("Next", onNextWeek, weekIndex >= weekCount - 1)}
+      </div>
+      {DAYS.map(dayCell)}
+    </div>
+  );
+}
+
+function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFilter, onDayFilterChange, onPreviousWeek, onNextWeek, isNarrow }: { rows: OrderJourneyRow[]; week: PlanWeek; weekLabel: string; weekIndex: number; weekCount: number; dayFilter: OrderDayFilter; onDayFilterChange: (filter: OrderDayFilter) => void; onPreviousWeek: () => void; onNextWeek: () => void; isNarrow: boolean }) {
   const tasksForDay = (day: DayKey) => rows.flatMap((row) => row.tasks).filter((task) => task.day === day);
   const hoursFor = (tasks: OrderJourneyTask[], person?: Person) => tasks.filter((task) => !person || task.person === person).reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
-  const compactControl = (label: string, active: boolean, onClick: () => void, disabled = false, disabledReason = "") => (
-    <button type="button" aria-pressed={active} aria-label={`${label} order schedule filter${disabledReason ? ` - ${disabledReason}` : ""}`} disabled={disabled} onClick={onClick} style={{ minHeight: isNarrow ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.28)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 10px" : "5px 9px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 10, fontWeight: 950, cursor: disabled ? "not-allowed" : "pointer", lineHeight: 1.05, whiteSpace: "nowrap", touchAction: "manipulation" }}>{label}</button>
+  const weekNavButton = (label: string, onClick: () => void, disabled: boolean) => (
+    <button type="button" aria-label={`${label} week`} disabled={disabled} onClick={onClick} style={{ width: isNarrow ? 32 : 28, height: isNarrow ? 32 : 28, border: `1px solid ${DT.border}`, borderRadius: 999, background: disabled ? "rgba(0,0,0,0.025)" : "rgba(255,255,255,0.78)", color: disabled ? DT.textFaint : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 16 : 14, fontWeight: 950, lineHeight: 1, padding: 0, cursor: disabled ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{label === "Previous" ? "‹" : "›"}</button>
   );
   const dayGauge = (day: DayKey) => {
     const tasks = tasksForDay(day);
@@ -8796,31 +8929,29 @@ function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow
   const daySummaries = DAYS.map((day) => ({ day, ...dayGauge(day) }));
   const busiestDay = daySummaries.reduce((best, current) => current.totalHours > best.totalHours ? current : best, daySummaries[0]);
   const mobileCapacitySummary = busiestDay && busiestDay.totalHours > 0
-    ? `${DAY_LABELS[busiestDay.day].slice(0, 3)} busiest · ${formatTaskHours(busiestDay.totalHours)}`
+    ? `${scheduleDayLabelParts(busiestDay.day, suggestedDateOptionForWeekDay(week, busiestDay.day)).day} ${scheduleDayLabelParts(busiestDay.day, suggestedDateOptionForWeekDay(week, busiestDay.day)).date} busiest · ${formatTaskHours(busiestDay.totalHours)}`
     : "No scheduled hours yet";
   return (
     <>
-      <details data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-mobile-capacity-strip="temperature-pill-row" data-order-capacity-strip-mobile="true" aria-hidden={!isNarrow} style={{ display: "none", border: `1px solid ${DT.border}`, borderRadius: 999, background: "rgba(255,255,255,0.72)", boxShadow: "0 1px 4px rgba(0,0,0,0.025)", overflow: "hidden" }}>
-        <summary style={{ listStyle: "none", minHeight: 30, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "4px 9px", cursor: "pointer", fontFamily: DT.sans }}>
-          <span style={{ fontSize: 9.5, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>Capacity</span>
-          <span style={{ minWidth: 0, flex: "1 1 auto", textAlign: "right", fontSize: 9.5, fontWeight: 850, color: DT.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mobileCapacitySummary}</span>
+      <details data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-mobile-capacity-strip="temperature-pill-row" data-order-capacity-strip-mobile="true" aria-hidden={!isNarrow} style={{ display: "none", border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.72)", boxShadow: "0 1px 4px rgba(0,0,0,0.025)", overflow: "hidden" }}>
+        <summary style={{ listStyle: "none", minHeight: 34, display: "grid", gridTemplateColumns: "32px minmax(0, 1fr) 32px auto", alignItems: "center", gap: 6, padding: "4px 7px", cursor: "pointer", fontFamily: DT.sans }}>
+          {weekNavButton("Previous", onPreviousWeek, weekIndex <= 0)}
+          <span style={{ minWidth: 0, textAlign: "center", fontSize: 12, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</span>
+          {weekNavButton("Next", onNextWeek, weekIndex >= weekCount - 1)}
           <span aria-hidden="true" style={{ fontSize: 10, fontWeight: 950, color: DT.teal }}>View</span>
         </summary>
         <div style={{ display: "grid", gap: 4, padding: "0 4px 4px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-        {compactControl("Week", dayFilter === "allWeek", () => onDayFilterChange("allWeek"))}
-        {compactControl("Today", dayFilter === "today", () => onDayFilterChange("today"), !todayKey, "today is not a workshop weekday")}
-        </div>
+        <div style={{ minWidth: 0, textAlign: "center", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 850, color: DT.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mobileCapacitySummary}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 4 }}>
         {DAYS.map((day) => {
           const option = suggestedDateOptionForWeekDay(week, day);
           const active = dayFilter === day;
           const gauge = dayGauge(day);
-          const shortDate = option ? new Date(`${option.dateIso}T12:00:00`).toLocaleDateString("en-NZ", { day: "numeric", month: "short" }) : DAY_LABELS[day].slice(0, 3);
+          const dayLabel = scheduleDayLabelParts(day, option);
           return (
             <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, minHeight: 48, border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 10, background: active ? DT.tealSoft : gauge.bg, padding: "7px 4px 6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3, cursor: "pointer", overflow: "hidden", boxShadow: active ? "0 0 0 2px rgba(12,124,122,0.08)" : "none", touchAction: "manipulation" }}>
-              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.02em", color: active ? DT.teal : DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{DAY_LABELS[day]}</span>
-              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: active ? DT.teal : DT.textFaint, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{shortDate}</span>
+              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.02em", color: active ? DT.teal : DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{dayLabel.day}</span>
+              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: active ? DT.teal : DT.textFaint, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{dayLabel.date}</span>
               <span aria-hidden="true" style={{ height: 5, width: "100%", borderRadius: 999, background: "rgba(255,255,255,0.70)", overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
                 <span style={{ display: "block", width: `${gauge.fillWidth}%`, height: "100%", borderRadius: 999, background: gauge.color, transition: "width 160ms ease" }} />
               </span>
@@ -8831,18 +8962,22 @@ function OrderCapacityStrip({ rows, week, dayFilter, onDayFilterChange, isNarrow
       </div>
       </details>
       <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-order-capacity-strip-desktop="true" aria-hidden={isNarrow} style={{ display: "grid", gridTemplateColumns: "220px repeat(5, minmax(104px, 1fr))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,255,255,0.84)", boxShadow: DT.shadow, overflow: "hidden" }}>
-      <div style={{ padding: 7, display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", borderRight: `1px solid ${DT.border}` }}>
-        <span style={{ width: "100%", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Allocated capacity</span>
-        {compactControl("Whole week", dayFilter === "allWeek", () => onDayFilterChange("allWeek"))}
-        {compactControl("Today only", dayFilter === "today", () => onDayFilterChange("today"), !todayKey, "today is not a workshop weekday")}
+      <div style={{ padding: 7, display: "grid", gridTemplateColumns: "28px minmax(0, 1fr) 28px", gap: 5, alignItems: "center", borderRight: `1px solid ${DT.border}` }}>
+        {weekNavButton("Previous", onPreviousWeek, weekIndex <= 0)}
+        <span style={{ minWidth: 0, textAlign: "center", fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{weekLabel}</span>
+        {weekNavButton("Next", onNextWeek, weekIndex >= weekCount - 1)}
       </div>
       {DAYS.map((day) => {
         const option = suggestedDateOptionForWeekDay(week, day);
         const active = dayFilter === day;
         const gauge = dayGauge(day);
+        const dayLabel = scheduleDayLabelParts(day, option);
         return (
-          <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, border: 0, borderLeft: day === "monday" ? "none" : `1px solid ${DT.border}`, background: active ? DT.tealSoft : "rgba(247,249,248,0.62)", padding: "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 6, cursor: "pointer", overflow: "hidden" }}>
-            <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: active ? DT.teal : DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{option ? option.dateLabel.replace(/^\w+,\s*/, "") : DAY_LABELS[day]}</span>
+          <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, border: 0, borderLeft: day === "monday" ? "none" : `1px solid ${DT.border}`, background: active ? DT.tealSoft : "rgba(247,249,248,0.62)", padding: "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4, cursor: "pointer", overflow: "hidden" }}>
+            <span style={{ display: "grid", gap: 1, minWidth: 0, fontFamily: DT.sans, textTransform: "uppercase", lineHeight: 1 }}>
+              <span style={{ fontSize: 9.5, fontWeight: 950, letterSpacing: "0.08em", color: active ? DT.teal : DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
+              <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.04em", color: active ? DT.teal : DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
+            </span>
             <span aria-hidden="true" style={{ height: 7, width: "100%", borderRadius: 999, background: gauge.bg, overflow: "hidden", boxShadow: active ? "0 0 0 1px rgba(12,124,122,0.18)" : "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
               <span style={{ display: "block", width: `${gauge.fillWidth}%`, height: "100%", borderRadius: 999, background: gauge.color, transition: "width 160ms ease" }} />
             </span>
@@ -9097,14 +9232,11 @@ function OrderJourneyView({
   selectedOrder,
   personFilter,
   dayFilter,
-  manualRowOrderActive,
   activeTaskId,
   dropPreview,
   onDayFilterChange,
   onMoveRow,
-  onResetRowOrder,
   onPreviousWeek,
-  onThisWeek,
   onNextWeek,
   onTaskEdit,
   onTaskSelect,
@@ -9119,14 +9251,11 @@ function OrderJourneyView({
   selectedOrder: UiOrder | null;
   personFilter: PersonFilter;
   dayFilter: OrderDayFilter;
-  manualRowOrderActive: boolean;
   activeTaskId: string | null;
   dropPreview: BoardDropPreview | null;
   onDayFilterChange: (filter: OrderDayFilter) => void;
   onMoveRow: (sourceRowId: string, targetRowId: string) => void;
-  onResetRowOrder: () => void;
   onPreviousWeek: () => void;
-  onThisWeek: () => void;
   onNextWeek: () => void;
   onTaskEdit: (task: OrderJourneyTask) => void;
   onTaskSelect: (task: OrderJourneyTask) => void;
@@ -9269,10 +9398,7 @@ function OrderJourneyView({
 	                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 16, lineHeight: 1.04, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
 	              )}
               {canMoveRow && (
-                <div data-order-row-drag-handle="order-row-drag-handle" data-order-row-priority-controls="order-row-priority-controls" title="Priority: move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
-                  <span aria-hidden="true" style={{ padding: "0 6px", height: isNarrow ? 40 : 23, display: "inline-flex", alignItems: "center", borderRight: `1px solid ${DT.border}`, color: DT.textFaint, fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1 }}>
-                    Priority
-                  </span>
+                <div data-order-row-drag-handle="order-row-drag-handle" data-order-row-priority-controls="order-row-priority-controls" title="Move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
                   <button
                     type="button"
                     title="Move this order earlier"
@@ -9362,34 +9488,16 @@ function OrderJourneyView({
     );
   };
 
-  const header = (
-    <div style={{ border: `1px solid ${DT.border}`, borderRadius: isNarrow ? 999 : DT.radius, background: isNarrow ? "rgba(255,255,255,0.72)" : DT.cardBg, boxShadow: isNarrow ? "0 1px 4px rgba(0,0,0,0.025)" : DT.shadow, padding: isNarrow ? "3px 4px 3px 8px" : "8px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: isNarrow ? 4 : 8, flexWrap: isNarrow ? "nowrap" : "wrap" }}>
-      <div style={{ minWidth: 0, display: "flex", alignItems: "baseline", gap: 5 }}>
-        <div style={{ fontFamily: DT.sans, fontSize: isNarrow ? 9 : 9, fontWeight: 950, color: DT.teal, textTransform: isNarrow ? "none" : "uppercase", letterSpacing: isNarrow ? 0 : "0.08em", flex: "0 0 auto" }}>{isNarrow ? "This week" : "Orders"}</div>
-        <div style={{ fontFamily: isNarrow ? DT.sans : DT.serif, color: DT.textPrimary, fontSize: isNarrow ? 11 : 20, fontWeight: isNarrow ? 900 : 400, lineHeight: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</div>
-      </div>
-      <div style={{ display: "flex", gap: isNarrow ? 2 : 6, alignItems: "center", justifyContent: isNarrow ? "space-between" : "flex-end", flex: isNarrow ? "1 1 100%" : "1 1 auto", minWidth: 0, maxWidth: "100%", flexWrap: "wrap" }}>
-        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset" : "Reset to due-date order"}</button>}
-        {isNarrow && <button type="button" onClick={() => onDayFilterChange(dayFilter === "today" ? "allWeek" : "today")} disabled={!todayKey} aria-pressed={dayFilter === "today"} aria-label={dayFilter === "today" ? "Show this week" : "Show today"} style={{ minHeight: 28, border: `1px solid ${dayFilter === "today" ? "rgba(12,124,122,0.28)" : DT.border}`, background: dayFilter === "today" ? DT.tealSoft : DT.cardBg, color: !todayKey ? DT.textFaint : dayFilter === "today" ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: todayKey ? "pointer" : "not-allowed", touchAction: "manipulation" }}>{dayFilter === "today" ? "This week" : "Today"}</button>}
-        <button type="button" aria-label="Previous week" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "‹" : "Previous week"}</button>
-        <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "5px 8px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Week" : "This week"}</button>
-        <button type="button" aria-label="Next week" onClick={onNextWeek} disabled={weekIndex >= weekCount - 1} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex >= weekCount - 1 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex >= weekCount - 1 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex >= weekCount - 1 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "›" : "Next week"}</button>
-      </div>
-    </div>
-  );
-
   if (rows.length === 0) {
-    return <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>{header}<OrderCapacityStrip rows={rows} week={week} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} isNarrow={isNarrow} /><div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this week.</div></section>;
+    return <section style={{ display: "flex", flexDirection: "column", gap: 8 }}><OrderCapacityStrip rows={rows} week={week} weekLabel={weekLabel} weekIndex={weekIndex} weekCount={weekCount} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow={isNarrow} /><div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No active order tasks in this week.</div></section>;
   }
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: isNarrow ? 5 : 8 }}>
-      {header}
-      <OrderCapacityStrip rows={rows} week={week} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} isNarrow={isNarrow} />
+      <OrderCapacityStrip rows={rows} week={week} weekLabel={weekLabel} weekIndex={weekIndex} weekCount={weekCount} dayFilter={dayFilter} onDayFilterChange={onDayFilterChange} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow={isNarrow} />
       {activeRows.length === 0 && needsRows.length === 0 && <div style={{ border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: DT.cardBg, padding: 22, fontFamily: DT.sans, color: DT.textMuted }}>No order tasks match this filter.</div>}
       {activeRowsWithTasks.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {renderSectionLabel("Tasks this week", activeRowsWithTasks.length, "scheduled work visible below")}
           {activeRowsWithTasks.map(renderRow)}
         </div>
       )}
@@ -9479,6 +9587,7 @@ function MonthViewState({
   railFilter,
   onRailFilterChange,
   qaFixtureMode = false,
+  initialPlanViewMode = "orderRows",
   initialPlanTaskLinkState,
   initialPlanTaskLinksStorage = "blob",
   initialPlanTaskLinksDisabledReason,
@@ -9491,6 +9600,7 @@ function MonthViewState({
   railFilter: RailFilter;
   onRailFilterChange: (filter: RailFilter) => void;
   qaFixtureMode?: boolean;
+  initialPlanViewMode?: ProductionPlanMode;
   initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
   initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
   initialPlanTaskLinksDisabledReason?: string;
@@ -9500,8 +9610,9 @@ function MonthViewState({
   const [planTaskEdits, setPlanTaskEdits] = useState<PlanTaskEdits>(() => initialPlanTaskLinkState?.taskEdits ?? {});
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
-  const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>("orderRows");
+  const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>(initialPlanViewMode);
   const [orderRowsWeekIndex, setOrderRowsWeekIndex] = useState(0);
+  const [scheduleWeekIndex, setScheduleWeekIndex] = useState(0);
   const [orderDayFilter, setOrderDayFilter] = useState<OrderDayFilter>("allWeek");
   const [orderRowOrders, setOrderRowOrders] = useState<PlanRowOrders>(() => initialPlanTaskLinkState?.orderRowOrders ?? {});
   const [delightBurst, setDelightBurst] = useState<{ id: number; origin: DelightOrigin } | null>(null);
@@ -10040,16 +10151,6 @@ function MonthViewState({
     weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
   }) : [], [orderRowsWeek, boardTasks, visibleAppTasks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, resolveOrderConnectionForPlanTask, weekTitleById]);
   const orderJourneyRows = useMemo(() => applyOrderJourneyRowOrder(orderJourneyRowsBase, orderRowsWeekKey ? orderRowOrders[orderRowsWeekKey] : undefined), [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
-  const orderRowsManualOrderActive = useMemo(() => {
-    if (!orderRowsWeekKey) return false;
-    const saved = orderRowOrders[orderRowsWeekKey] ?? [];
-    if (!saved.length) return false;
-    const activeIds = activeOrderJourneyRowIds(orderJourneyRowsBase);
-    const activeIdSet = new Set(activeIds);
-    const normalizedSaved = [...saved.filter((id) => activeIdSet.has(id)), ...activeIds.filter((id) => !saved.includes(id))];
-    return normalizedSaved.join("|") !== activeIds.join("|");
-  }, [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
-
   function persistOrderJourneyRowOrder(weekKey: string, rowIds: string[] | null) {
     if (!weekKey) return;
     const previous = orderRowOrders;
@@ -10097,10 +10198,6 @@ function MonthViewState({
     persistOrderJourneyRowOrder(orderRowsWeekKey, next);
   }
 
-  function resetOrderJourneyRowOrder() {
-    if (!orderRowsWeekKey) return;
-    persistOrderJourneyRowOrder(orderRowsWeekKey, null);
-  }
   function executeMarkOrderCompleteInTuesday(order: UiOrder, completion: CompletionDecision) {
     const note = completion.note || `Marked complete in Tuesday. Source Monday status at time of edit: ${orderStatusLabel(order)}.`;
     const previousOrderOverrides = orderOverrides;
@@ -10781,7 +10878,6 @@ function MonthViewState({
 
   const workshopHeaderControl = (
     <div data-mobile-workshop-header-controls="true" style={{ display: isRailNarrow ? "grid" : "flex", gridTemplateColumns: isRailNarrow ? "1fr" : undefined, gap: isRailNarrow ? 6 : 8, flexWrap: "wrap", alignItems: "center", justifyContent: isRailNarrow ? "stretch" : "flex-start", width: isRailNarrow ? "100%" : undefined, minWidth: 0 }}>
-      <ProductionPlanModeToggle mode={planViewMode} onModeChange={setPlanViewMode} />
       {liveSyncWarning}
       <WorkshopFocusBar personFilter={personFilter} onPersonFilterChange={setPersonFilter} todayCounts={todayCounts} historyControl={historyControl} />
     </div>
@@ -10812,7 +10908,10 @@ function MonthViewState({
     />
   );
 
-  const weekSections = visibleProductionWeeks.map((week, index) => (
+  const scheduleWeekCount = visibleProductionWeeks.length;
+  const safeScheduleWeekIndex = Math.min(scheduleWeekIndex, Math.max(0, scheduleWeekCount - 1));
+  const scheduleWeek = visibleProductionWeeks[safeScheduleWeekIndex];
+  const weekSections = scheduleWeek ? [scheduleWeek].map((week, index) => (
     <MonthWeekSection
       key={week.id}
       week={week}
@@ -10843,9 +10942,13 @@ function MonthViewState({
       onSuggestedStepOpen={openNewOrderOverview}
       suggestedStepCustomer={newOrder?.customer}
       weekHeaderControl={undefined}
+      weekIndex={safeScheduleWeekIndex}
+      weekCount={scheduleWeekCount}
+      onPreviousWeek={() => setScheduleWeekIndex((current) => Math.max(0, current - 1))}
+      onNextWeek={() => setScheduleWeekIndex((current) => Math.min(scheduleWeekCount - 1, current + 1))}
       forcePlanningLanes
     />
-  ));
+  )) : [];
 
   const historySections = showHistory ? (
     <section style={{ border: "1px solid " + DT.border, borderRadius: DT.radius, background: "rgba(255,253,249,0.72)", boxShadow: DT.shadow, padding: 10, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -10869,6 +10972,8 @@ function MonthViewState({
           onAppTaskSelect={selectOrderForAppTask}
           onAppTaskOpen={openAppTask}
           onAppTaskDoneToggle={(task, done, origin) => updateAppTask(task, { done }, origin)}
+          weekIndex={0}
+          weekCount={1}
         />
       ))}
     </section>
@@ -10900,8 +11005,11 @@ function MonthViewState({
       <div style={{ display: "flex", flexDirection: "column", gap: isRailNarrow ? 8 : 14, minWidth: 0 }}>
         <style>{ORDER_JOURNEY_MOBILE_CSS}</style>
         {workshopHeaderControl}
-        {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
         {isRailNarrow && railNewOrderCard}
+        {isRailNarrow && <ApprovedOrdersDivider />}
+        {isRailNarrow && <ApprovedOrdersSectionHeader count={activeTuesdayOrders.filter((order) => !isCompleteOrder(order)).length} />}
+        {isRailNarrow && ENABLE_PRODUCTION_PULSE_ROW && <ProductionPulseRow orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
+        {isRailNarrow && !ENABLE_PRODUCTION_PULSE_ROW && <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
         {planViewMode === "schedule" ? (
           <>
             {newOrderPanel}
@@ -10923,14 +11031,11 @@ function MonthViewState({
               selectedOrder={selectedOrder}
               personFilter={personFilter}
               dayFilter={orderDayFilter}
-              manualRowOrderActive={orderRowsManualOrderActive}
               activeTaskId={activeTaskId ?? activeAppTaskId}
               dropPreview={dropPreview}
               onDayFilterChange={setOrderDayFilter}
               onMoveRow={moveOrderJourneyRow}
-              onResetRowOrder={resetOrderJourneyRowOrder}
               onPreviousWeek={() => setOrderRowsWeekIndex((current) => Math.max(0, current - 1))}
-              onThisWeek={() => setOrderRowsWeekIndex(0)}
               onNextWeek={() => setOrderRowsWeekIndex((current) => Math.min(visibleProductionWeeks.length - 1, current + 1))}
               onTaskEdit={setEditingTask}
               onTaskSelect={(task) => task.appTask ? selectOrderForAppTask(task.appTask) : selectOrderForPlanTask({ ...task, weekTitle: task.weekTitle })}
@@ -10960,6 +11065,70 @@ function MonthViewState({
       </div>
       <DragOverlay dropAnimation={null}>{activeTask ? <PlanTaskDragCard task={activeTask} /> : activeAppTask ? <AppTaskDragCard task={activeAppTask} /> : null}</DragOverlay>
     </DndContext>
+  );
+
+  const ordersHeader = (
+    <section
+      aria-label="Production view switch"
+      data-production-view-switch="true"
+      style={{
+        border: PRODUCTION_PANEL_STYLE.border,
+        borderRadius: 16,
+        background: planViewMode === "orderRows"
+          ? "linear-gradient(105deg, rgba(255,255,255,0.98) 0%, rgba(255,253,249,0.92) 49%, rgba(237,248,247,0.58) 100%)"
+          : "linear-gradient(105deg, rgba(237,248,247,0.58) 0%, rgba(255,253,249,0.92) 51%, rgba(255,255,255,0.98) 100%)",
+        boxShadow: PRODUCTION_PANEL_STYLE.boxShadow,
+        padding: isRailNarrow ? 4 : 5,
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+        gap: 6,
+        minWidth: 0,
+        overflow: "hidden",
+      }}
+    >
+      {([
+        { id: "orderRows" as ProductionPlanMode, label: "Orders", hint: "Approved order list" },
+        { id: "schedule" as ProductionPlanMode, label: "Schedule", hint: "Week view board" },
+      ]).map((option) => {
+        const active = planViewMode === option.id;
+        return (
+          <a
+            key={option.id}
+            href={option.id === "schedule" ? "/production/plan?mode=schedule" : "/production/plan"}
+            role="button"
+            aria-pressed={active}
+            data-production-view-option={option.id}
+            onClick={() => setPlanViewMode(option.id)}
+            style={{
+              minWidth: 0,
+              minHeight: isRailNarrow ? 54 : 62,
+              border: `1px solid ${active ? "rgba(12,124,122,0.30)" : "rgba(0,0,0,0.07)"}`,
+              borderRadius: 11,
+              background: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.56)",
+              color: active ? DT.textPrimary : DT.textMuted,
+              textDecoration: "none",
+              boxShadow: active ? "0 1px 0 rgba(255,255,255,0.82) inset, 0 8px 18px rgba(37,30,20,0.07)" : "0 1px 0 rgba(255,255,255,0.72) inset",
+              cursor: "pointer",
+              touchAction: "manipulation",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              justifyContent: "center",
+              gap: 4,
+              padding: isRailNarrow ? "9px 11px" : "11px 15px",
+              textAlign: "left",
+            }}
+          >
+            <span style={{ fontFamily: DT.serif, fontSize: isRailNarrow ? 24 : 30, lineHeight: 0.98, letterSpacing: "-0.045em", color: active ? DT.textPrimary : DT.textSecondary }}>
+              {option.label}
+            </span>
+            <span style={{ fontFamily: DT.sans, fontSize: isRailNarrow ? 9.5 : 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: active ? DT.teal : DT.textFaint }}>
+              {active ? "Current view" : `Open ${option.id === "schedule" ? "week board" : "orders list"} →`}
+            </span>
+          </a>
+        );
+      })}
+    </section>
   );
 
   const orderRail = (
@@ -11007,13 +11176,12 @@ function MonthViewState({
     return <TuesdayPlanStateLoading isNarrow={isRailNarrow} />;
   }
 
-  const desktopHealthStrip = !isRailNarrow ? (
-    <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />
-  ) : null;
+  const desktopHealthStrip = null;
 
   if (isRailNarrow) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {ordersHeader}
         {planningBoard}
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {intakeReviewModal}
@@ -11035,8 +11203,8 @@ function MonthViewState({
           alignItems: "start",
         }}
       >
-        {orderRail}
-        {planningBoard}
+        <div style={{ minWidth: 0 }}>{orderRail}</div>
+        <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>{ordersHeader}{planningBoard}</div>
         {delightEnabled && delightBurst ? <DelightDoneBurst key={delightBurst.id} origin={delightBurst.origin} /> : null}
         {intakeReviewModal}
         {openOrder && <OrderOverviewOverlay key={`overlay-${openOrder.id}`} order={openOrder} planTasks={openOrderTasks} onMarkComplete={markOrderCompleteInTuesday} onPlanTaskEdit={setEditingTask} onPlanTaskDoneToggle={toggleBoardTaskDone} onWorkflowTaskDoneToggle={handleWorkflowTaskDoneToggle} onRemoveTaskLink={removePlanTaskLink} onClose={closeOrderOverview} onWorkflowChange={keepOverlayWorkflow} />}
@@ -11056,6 +11224,7 @@ export type PlanClientProps = {
   delightEnabled?: boolean;
   qaFixtureMode?: boolean;
   initialUtilityView?: "processTemplates" | null;
+  initialPlanViewMode?: ProductionPlanMode;
   initialPlanTaskLinkState?: PlanTaskLinkStatePayload;
   initialPlanTaskLinksStorage?: PlanTaskLinksStorage;
   initialPlanTaskLinksDisabledReason?: string;
@@ -11071,6 +11240,7 @@ export default function PlanClient({
   delightEnabled = false,
   qaFixtureMode = false,
   initialUtilityView = null,
+  initialPlanViewMode = "orderRows",
   initialPlanTaskLinkState,
   initialPlanTaskLinksStorage = "blob",
   initialPlanTaskLinksDisabledReason,
@@ -11095,14 +11265,14 @@ export default function PlanClient({
       pageTitleAccessory={undefined}
       maxWidth={1500}
     >
-        <TuesdayPageHeader
-          eyebrow={initialUtilityView === "processTemplates" ? "Setup" : "Production Plan"}
-          title={initialUtilityView === "processTemplates" ? "Processes" : "Orders"}
-          subtitle={initialUtilityView === "processTemplates"
-            ? "Reusable workshop paths that create consistent order flow."
-            : "Live workshop work, grouped by what needs attention now."}
-          compact={false}
-        />
+        {initialUtilityView === "processTemplates" && (
+          <TuesdayPageHeader
+            eyebrow="Setup"
+            title="Processes"
+            subtitle="Reusable workshop paths that create consistent order flow."
+            compact={false}
+          />
+        )}
         {qaFixtureMode && (
           <div
             data-qa-plan-fixture="true"
@@ -11159,6 +11329,7 @@ export default function PlanClient({
               railFilter={railFilter}
               onRailFilterChange={setRailFilter}
               qaFixtureMode={qaFixtureMode}
+              initialPlanViewMode={initialPlanViewMode}
               initialPlanTaskLinkState={initialPlanTaskLinkState}
               initialPlanTaskLinksStorage={initialPlanTaskLinksStorage}
               initialPlanTaskLinksDisabledReason={initialPlanTaskLinksDisabledReason}

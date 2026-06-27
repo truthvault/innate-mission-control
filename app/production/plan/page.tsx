@@ -26,6 +26,7 @@ export default async function PlanPage({
 }) {
   const query = await searchParams;
   const useFixture = query.fixture === "qa" && productionPlanFixtureAllowed();
+  const initialPlanViewMode = query.mode === "schedule" ? "schedule" : "orderRows";
   if (useFixture) {
     const fixture = productionPlanFixtureData();
     return (
@@ -37,6 +38,7 @@ export default async function PlanPage({
         mondayError="QA fixture mode: local browser-test data only"
         delightEnabled={query.delight !== "off"}
         initialUtilityView={query.view === "process-templates" ? "processTemplates" : null}
+        initialPlanViewMode={initialPlanViewMode}
         qaFixtureMode
       />
     );
@@ -56,6 +58,7 @@ export default async function PlanPage({
       mondayError={result.mondayError}
       delightEnabled={query.delight !== "off"}
       initialUtilityView={query.view === "process-templates" ? "processTemplates" : null}
+      initialPlanViewMode={initialPlanViewMode}
       initialPlanTaskLinkState={planTaskLinks.state}
       initialPlanTaskLinksStorage={planTaskLinks.storage}
       initialPlanTaskLinksDisabledReason={planTaskLinks.disabledReason}
