@@ -9328,7 +9328,7 @@ function OrderJourneyView({
         <div style={{ fontFamily: isNarrow ? DT.sans : DT.serif, color: DT.textPrimary, fontSize: isNarrow ? 11 : 20, fontWeight: isNarrow ? 900 : 400, lineHeight: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</div>
       </div>
       <div style={{ display: "flex", gap: isNarrow ? 2 : 6, alignItems: "center", justifyContent: isNarrow ? "space-between" : "flex-end", flex: isNarrow ? "1 1 100%" : "1 1 auto", minWidth: 0, maxWidth: "100%", flexWrap: "wrap" }}>
-        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset" : "Reset to due-date order"}</button>}
+        {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset" : "Reset to due-date order"}</button>}
         {isNarrow && <button type="button" onClick={() => onDayFilterChange(dayFilter === "today" ? "allWeek" : "today")} disabled={!todayKey} aria-pressed={dayFilter === "today"} aria-label={dayFilter === "today" ? "Show this week" : "Show today"} style={{ minHeight: 28, border: `1px solid ${dayFilter === "today" ? "rgba(12,124,122,0.28)" : DT.border}`, background: dayFilter === "today" ? DT.tealSoft : DT.cardBg, color: !todayKey ? DT.textFaint : dayFilter === "today" ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: todayKey ? "pointer" : "not-allowed", touchAction: "manipulation" }}>{dayFilter === "today" ? "This week" : "Today"}</button>}
         <button type="button" aria-label="Previous week" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "‹" : "Previous week"}</button>
         <button type="button" onClick={onThisWeek} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: isNarrow ? "5px 8px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Week" : "This week"}</button>
@@ -9999,6 +9999,15 @@ function MonthViewState({
     weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
   }) : [], [orderRowsWeek, boardTasks, visibleAppTasks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, resolveOrderConnectionForPlanTask, weekTitleById]);
   const orderJourneyRows = useMemo(() => applyOrderJourneyRowOrder(orderJourneyRowsBase, orderRowsWeekKey ? orderRowOrders[orderRowsWeekKey] : undefined), [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
+  const orderRowsManualOrderActive = useMemo(() => {
+    if (!orderRowsWeekKey) return false;
+    const saved = orderRowOrders[orderRowsWeekKey] ?? [];
+    if (!saved.length) return false;
+    const activeIds = activeOrderJourneyRowIds(orderJourneyRowsBase);
+    const activeIdSet = new Set(activeIds);
+    const normalizedSaved = [...saved.filter((id) => activeIdSet.has(id)), ...activeIds.filter((id) => !saved.includes(id))];
+    return normalizedSaved.join("|") !== activeIds.join("|");
+  }, [orderJourneyRowsBase, orderRowOrders, orderRowsWeekKey]);
 
   function persistOrderJourneyRowOrder(weekKey: string, rowIds: string[] | null) {
     if (!weekKey) return;
@@ -10873,7 +10882,7 @@ function MonthViewState({
               selectedOrder={selectedOrder}
               personFilter={personFilter}
               dayFilter={orderDayFilter}
-              manualRowOrderActive={Boolean(orderRowsWeekKey && orderRowOrders[orderRowsWeekKey]?.length)}
+              manualRowOrderActive={orderRowsManualOrderActive}
               activeTaskId={activeTaskId ?? activeAppTaskId}
               dropPreview={dropPreview}
               onDayFilterChange={setOrderDayFilter}
