@@ -2305,6 +2305,8 @@ function OrderRail({
   newOrderCard?: ReactNode;
   tasksForOrder: (order: UiOrder) => WorkshopTask[];
 }) {
+  const isPhoneRail = useIsNarrow(760);
+  const compactRail = isNarrow || isPhoneRail;
   const activeOrders = useMemo(() => orders.filter((order) => !isCompleteOrder(order)), [orders]);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<RailSort>("soonest");
@@ -2349,8 +2351,8 @@ function OrderRail({
         alignSelf: "start",
         position: "static",
         top: undefined,
-        width: isNarrow ? "100%" : railWidth,
-        minWidth: isNarrow ? undefined : railWidth,
+        width: compactRail ? "100%" : railWidth,
+        minWidth: compactRail ? 0 : railWidth,
         maxHeight: undefined,
         overflow: "visible",
         transition: "box-shadow 1000ms ease, border-color 1000ms ease",
@@ -2416,18 +2418,18 @@ function OrderRail({
         />
       ) : (
         <div key="list" style={{ maxHeight: undefined, overflowY: "visible", padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-          <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "1fr auto", gap: 6 }}>
+          <div style={{ display: "grid", gridTemplateColumns: compactRail ? "1fr" : "1fr auto", gap: 6 }}>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search orders"
-              style={{ width: "100%", minHeight: isNarrow ? 40 : undefined, boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
+              style={{ width: "100%", minHeight: compactRail ? 40 : undefined, boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
             />
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as RailSort)}
               aria-label="Sort orders"
-              style={{ width: isNarrow ? "100%" : 112, minHeight: isNarrow ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: DT.cardBg, outline: "none" }}
+              style={{ width: compactRail ? "100%" : 112, minHeight: compactRail ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: DT.cardBg, outline: "none" }}
             >
               <option value="soonest">Due soonest</option>
               <option value="latest">Due latest</option>
@@ -2435,7 +2437,7 @@ function OrderRail({
             </select>
           </div>
           {newOrderCard}
-          <div style={{ marginTop: newOrderCard ? 8 : 0, display: "flex", gap: 4, flexWrap: "nowrap", overflowX: isNarrow ? "auto" : "visible", WebkitOverflowScrolling: isNarrow ? "touch" : undefined, paddingBottom: 2 }}>
+          <div style={{ marginTop: newOrderCard ? 8 : 0, display: "flex", gap: 4, flexWrap: "nowrap", overflowX: compactRail ? "auto" : "visible", WebkitOverflowScrolling: compactRail ? "touch" : undefined, paddingBottom: 2 }}>
             {filterOptions.map((option) => {
               const active = filter === option.id;
               const mobileLabel = option.id === "materials" ? "Mat" : option.id === "costing" ? "Cost" : option.label;
@@ -2444,9 +2446,9 @@ function OrderRail({
                   type="button"
                   key={option.id}
                   onClick={() => onFilterChange(option.id)}
-                  style={{ flex: isNarrow ? "0 0 auto" : "1 1 0", minWidth: isNarrow ? 48 : 0, minHeight: isNarrow ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: isNarrow ? "8px 9px" : "5px 5px", fontFamily: DT.sans, fontSize: isNarrow ? 9.5 : 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center", touchAction: "manipulation" }}
+                  style={{ flex: compactRail ? "0 0 auto" : "1 1 0", minWidth: compactRail ? 48 : 0, minHeight: compactRail ? 40 : undefined, border: `1px solid ${active ? "rgba(12,124,122,0.32)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: 999, padding: compactRail ? "8px 9px" : "5px 5px", fontFamily: DT.sans, fontSize: compactRail ? 9.5 : 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", textAlign: "center", touchAction: "manipulation" }}
                 >
-                  {isNarrow ? mobileLabel : option.label}
+                  {compactRail ? mobileLabel : option.label}
                 </button>
               );
             })}
@@ -2686,15 +2688,17 @@ function OrderIntakeRailCard({
   const approvedCount = sorted.length - pendingItems.length;
   const actionableCount = pendingItems.length;
   return (
-    <section style={{ marginBottom: 10, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.88)", boxShadow: DT.shadow, padding: 10 }}>
+    <section data-pending-new-orders-rail="true" style={{ marginBottom: 10, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.88)", boxShadow: DT.shadow, padding: 10 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.teal, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
-          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{loaded ? actionableCount : "Checking"}</div>
+          <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{loaded ? actionableCount : "Loading"}</div>
         </div>
-        <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
-          {busy ? "Checking" : "Refresh"}
-        </button>
+        {loaded && (
+          <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: busy ? "rgba(232,230,224,0.42)" : DT.tealSoft, color: busy ? DT.textMuted : DT.teal, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
+            {busy ? "Checking" : "Refresh"}
+          </button>
+        )}
       </div>
       {status && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>{status}</div>}
       <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 7 }}>
@@ -5399,12 +5403,20 @@ function feedbackStorageKey(scope: string, id: string | number) {
 }
 
 function useIsNarrow(breakpoint = 760) {
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(() => (typeof window === "undefined" ? false : window.innerWidth < breakpoint));
   useEffect(() => {
     const update = () => setIsNarrow(window.innerWidth < breakpoint);
     update();
+    const frame = window.requestAnimationFrame(update);
+    const timer = window.setTimeout(update, 250);
     window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+    };
   }, [breakpoint]);
   return isNarrow;
 }
@@ -9315,7 +9327,7 @@ function OrderJourneyView({
         <div style={{ fontFamily: DT.sans, fontSize: isNarrow ? 9 : 9, fontWeight: 950, color: DT.teal, textTransform: isNarrow ? "none" : "uppercase", letterSpacing: isNarrow ? 0 : "0.08em", flex: "0 0 auto" }}>{isNarrow ? "This week" : "Orders"}</div>
         <div style={{ fontFamily: isNarrow ? DT.sans : DT.serif, color: DT.textPrimary, fontSize: isNarrow ? 11 : 20, fontWeight: isNarrow ? 900 : 400, lineHeight: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</div>
       </div>
-      <div style={{ display: "flex", gap: isNarrow ? 2 : 6, alignItems: "center", flex: "0 0 auto" }}>
+      <div style={{ display: "flex", gap: isNarrow ? 2 : 6, alignItems: "center", justifyContent: isNarrow ? "space-between" : "flex-end", flex: isNarrow ? "1 1 100%" : "1 1 auto", minWidth: 0, maxWidth: "100%", flexWrap: "wrap" }}>
         {manualRowOrderActive && <button type="button" onClick={onResetRowOrder} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid rgba(146,42,35,0.16)`, background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 9 : 11, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>{isNarrow ? "Reset" : "Reset to due-date order"}</button>}
         {isNarrow && <button type="button" onClick={() => onDayFilterChange(dayFilter === "today" ? "allWeek" : "today")} disabled={!todayKey} aria-pressed={dayFilter === "today"} aria-label={dayFilter === "today" ? "Show this week" : "Show today"} style={{ minHeight: 28, border: `1px solid ${dayFilter === "today" ? "rgba(12,124,122,0.28)" : DT.border}`, background: dayFilter === "today" ? DT.tealSoft : DT.cardBg, color: !todayKey ? DT.textFaint : dayFilter === "today" ? DT.teal : DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: todayKey ? "pointer" : "not-allowed", touchAction: "manipulation" }}>{dayFilter === "today" ? "This week" : "Today"}</button>}
         <button type="button" aria-label="Previous week" onClick={onPreviousWeek} disabled={weekIndex <= 0} style={{ minHeight: isNarrow ? 28 : undefined, border: `1px solid ${DT.border}`, background: weekIndex <= 0 ? "rgba(0,0,0,0.03)" : DT.cardBg, color: weekIndex <= 0 ? DT.textFaint : DT.textMuted, borderRadius: 999, padding: isNarrow ? "5px 7px" : "7px 10px", fontFamily: DT.sans, fontSize: isNarrow ? 10 : 11, fontWeight: 950, cursor: weekIndex <= 0 ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{isNarrow ? "‹" : "Previous week"}</button>
@@ -10839,6 +10851,7 @@ function MonthViewState({
         <style>{ORDER_JOURNEY_MOBILE_CSS}</style>
         {workshopHeaderControl}
         {isRailNarrow && <OrderHealthStrip orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
+        {isRailNarrow && railNewOrderCard}
         {planViewMode === "schedule" ? (
           <>
             {newOrderPanel}

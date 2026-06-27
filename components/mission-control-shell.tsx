@@ -309,7 +309,10 @@ export function MissionControlShell({
           @media (max-width: 759px) {
             .mc-mobile-only { display: flex; }
             .mc-mobile-hide { display: none !important; }
-            .mc-mobile-grid { grid-template-columns: minmax(0, 1fr) auto !important; padding: 3px 6px !important; }
+            .mc-mobile-grid { grid-template-columns: minmax(0, 1fr) auto !important; padding: 3px calc(10px + env(safe-area-inset-right, 0px)) 3px calc(6px + env(safe-area-inset-left, 0px)) !important; }
+            .mc-mobile-only { justify-content: flex-end; min-width: 0; }
+            .mc-mobile-only summary { max-width: 58px; overflow: hidden; text-overflow: ellipsis; }
+            [data-order-rail="neutral-command-panel"] { width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; }
             .mc-plan-mobile-main { padding: 5px 6px 22px !important; }
             .mc-plan-mobile-title-wrap { margin-bottom: 5px !important; }
             .production-plan-layout-grid { display: flex !important; flex-direction: column !important; gap: 6px !important; }
