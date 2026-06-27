@@ -5403,20 +5403,12 @@ function feedbackStorageKey(scope: string, id: string | number) {
 }
 
 function useIsNarrow(breakpoint = 760) {
-  const [isNarrow, setIsNarrow] = useState(() => (typeof window === "undefined" ? false : window.innerWidth < breakpoint));
+  const [isNarrow, setIsNarrow] = useState(false);
   useEffect(() => {
     const update = () => setIsNarrow(window.innerWidth < breakpoint);
     update();
-    const frame = window.requestAnimationFrame(update);
-    const timer = window.setTimeout(update, 250);
     window.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("resize", update);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearTimeout(timer);
-      window.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("resize", update);
-    };
+    return () => window.removeEventListener("resize", update);
   }, [breakpoint]);
   return isNarrow;
 }
