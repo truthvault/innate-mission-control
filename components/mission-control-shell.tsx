@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState, useTransition } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
 export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates" | "freight" | "configurator" | "today";
@@ -44,6 +44,11 @@ function scopeFor(section: MissionControlSection): string {
   if (section === "samples") return "samples";
   if (section === "test") return "orders";
   return "orders";
+}
+
+function autoRefreshEnabledFor(section: MissionControlSection) {
+  const scope = scopeFor(section);
+  return scope === "plan" || scope === "orders" || scope === "samples";
 }
 
 function navItemActive(
@@ -159,15 +164,27 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
   const [isPending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [refreshed, setRefreshed] = useState(false);
+  const clearRefreshedTimer = useRef<number | null>(null);
+  const autoRefreshInFlight = useRef(false);
+  const autoRefreshEnabled = autoRefreshEnabledFor(section);
 
-  const onClick = async () => {
+  const markRefreshed = useCallback(() => {
+    setRefreshed(true);
+    if (clearRefreshedTimer.current) window.clearTimeout(clearRefreshedTimer.current);
+    clearRefreshedTimer.current = window.setTimeout(() => setRefreshed(false), 5000);
+  }, []);
+
+  const runRefresh = useCallback(async ({ automatic = false } = {}) => {
+    if (automatic) {
+      if (!autoRefreshEnabled || autoRefreshInFlight.current || document.visibilityState !== "visible") return;
+      autoRefreshInFlight.current = true;
+    }
     setErr(null);
-    setRefreshed(false);
+    if (!automatic) setRefreshed(false);
     try {
       const scope = scopeFor(section);
       if (scope === "local") {
-        setRefreshed(true);
-        window.setTimeout(() => setRefreshed(false), 5000);
+        if (!automatic) markRefreshed();
         startTransition(() => router.refresh());
         return;
       }
@@ -175,12 +192,38 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
       const res = await fetch(url, { method: "POST", credentials: "include" });
       const body = await res.json();
       if (!body.ok) throw new Error(body.error || "Refresh failed");
-      setRefreshed(true);
-      window.setTimeout(() => setRefreshed(false), 5000);
+      markRefreshed();
       startTransition(() => router.refresh());
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      if (automatic) autoRefreshInFlight.current = false;
     }
+  }, [autoRefreshEnabled, markRefreshed, router, section, startTransition]);
+
+  useEffect(() => {
+    return () => {
+      if (clearRefreshedTimer.current) window.clearTimeout(clearRefreshedTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled) return;
+    const intervalId = window.setInterval(() => {
+      void runRefresh({ automatic: true });
+    }, 180_000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void runRefresh({ automatic: true });
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [autoRefreshEnabled, runRefresh]);
+
+  const onClick = () => {
+    void runRefresh();
   };
   const actionLabel = section === "processTemplates" ? "Reload" : "Refresh";
   const refreshedLabel = section === "processTemplates" ? "Reloaded just now" : "Refreshed just now";

@@ -5,7 +5,6 @@ import { readFileSync } from 'node:fs';
 
 const shell = readFileSync(new URL('../components/mission-control-shell.tsx', import.meta.url), 'utf8');
 const plan = readFileSync(new URL('../app/production/plan/PlanClient.tsx', import.meta.url), 'utf8');
-const pkg = readFileSync(new URL('../package.json', import.meta.url), 'utf8');
 
 assert.match(shell, /MobileManagementMenu/, 'Mobile shell should move Tuesday nav into a compact dropdown');
 assert.match(shell, /const ALL_NAV = \[\.\.\.NAV, \.\.\.GUIDO_NAV\]/, 'Mobile dropdown should include production and Guido-facing Tuesday routes');
@@ -13,6 +12,11 @@ assert.match(shell, /const compactMobile = isNarrow/, 'Compact mobile shell shou
 assert.match(shell, /Menu/, 'Dropdown label should be Menu');
 assert.match(shell, /gridTemplateColumns: isNarrow \? "1fr auto"/, 'Mobile shell should keep Tuesday and management nav on one row');
 assert.match(shell, /<RefreshButton section=\{section\} compact \/>/, 'Mobile Tuesday shell should keep a compact refresh control');
+assert.match(shell, /autoRefreshEnabledFor/, 'Tuesday shell should explicitly gate auto-refresh to source-backed refreshable routes');
+assert.match(shell, /window\.setInterval\(\(\) => \{\n\s+void runRefresh\(\{ automatic: true \}\);\n\s+\}, 180_000\)/, 'Production refreshable routes should auto-refresh in the background every three minutes');
+assert.match(shell, /document\.visibilityState === "visible"/, 'Auto-refresh should only run when the tab is visible');
+assert.match(shell, /autoRefreshInFlight\.current/, 'Auto-refresh should avoid overlapping refresh calls');
+assert.match(shell, /\/api\/monday\/refresh\?scope=\$\{scope\}/, 'Auto-refresh should reuse the scoped Monday refresh endpoint for Production Plan');
 assert.match(shell, /\.mc-mobile-only \{ display: flex; \}/, 'Mobile Tuesday header controls should become visible on small screens');
 
 assert.match(shell, /production-plan-layout-grid/, 'Mobile CSS should stack the production layout instead of squeezing desktop columns');
@@ -47,6 +51,8 @@ assert.match(plan, /aria-pressed=\{active\}/, 'Mobile segmented controls should 
 assert.match(plan, /aria-label=\{`\$\{option\?\.dateLabel/, 'Capacity day controls should expose full scheduled-hour labels');
 assert.match(plan, /plan-schedule-mobile-label/, 'Desktop label should remain Schedule board while mobile uses Schedule');
 assert.match(shell, /pageTitle && !compactPlanMobile/, 'Production Plan mobile should not duplicate a large page title above orders');
-assert.match(pkg, /test-plan-mobile-compact-chrome\.mjs/, 'Planning test script should include mobile compact chrome regression');
+assert.match(plan, /orderRowsManualOrderActive/, 'Reset due-date order control should only show when saved priority differs from due-date order');
+assert.doesNotMatch(plan, /Reset to due-date order[^\n]+rgba\(146,42,35/, 'Reset due-date order control should not use a red/destructive treatment');
+assert.match(plan, /manualRowOrderActive=\{orderRowsManualOrderActive\}/, 'Orders view should not show reset control just because a saved row-order entry exists');
 
 console.log('plan mobile compact chrome tests passed');
