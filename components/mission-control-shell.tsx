@@ -96,7 +96,7 @@ function SyncBadge({ syncedAt, source, mondayError, isNarrow = false }: { synced
 }
 
 function useIsNarrow(breakpoint = 760) {
-  const [isNarrow, setIsNarrow] = useState(true);
+  const [isNarrow, setIsNarrow] = useState(false);
   useEffect(() => {
     const update = () => setIsNarrow(window.innerWidth < breakpoint);
     update();

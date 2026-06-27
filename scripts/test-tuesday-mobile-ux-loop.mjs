@@ -55,7 +55,9 @@ mustMatch(audit, /rowAffordanceCount/, "Interactions audit should verify visible
 mustMatch(audit, /rendered an unexpectedly small body/, "Tuesday UI audit should fail if it only sees login chrome");
 mustMatch(audit, /rendered login\/auth chrome/, "Tuesday UI audit should fail on protected-route auth false positives");
 
-// Shell should also be mobile-first to avoid desktop header flashes.
-mustMatch(shell, /function useIsNarrow\(breakpoint = 760\) \{\n  const \[isNarrow, setIsNarrow\] = useState\(true\)/, "Mission Control shell should default to mobile-first narrow state");
+// Shell should hydrate from a viewport-neutral desktop state, then switch to mobile in effect.
+// CSS mobile rules still hide desktop chrome before hydration; this prevents production React hydration #418 on live tablet/mobile.
+mustMatch(shell, /function useIsNarrow\(breakpoint = 760\) \{\n  const \[isNarrow, setIsNarrow\] = useState\(false\)/, "Mission Control shell should start hydration-stable before applying the mobile viewport state");
+mustMatch(shell, /\.mc-mobile-hide \{ display: none !important; \}/, "Mobile CSS should hide desktop chrome before the viewport effect runs");
 
 console.log("Tuesday mobile UX loop checks passed");
