@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, type CSSProperties, type DragEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { startTransition, type CSSProperties, type DragEvent, type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   closestCorners,
   pointerWithin,
@@ -1067,6 +1067,18 @@ type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdi
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type CompletedTuesdayItem = { id: string; kind: "order" | "intake" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type ProductionPlanMode = "schedule" | "orderRows";
+
+function planViewModeFromUrl(url: string): ProductionPlanMode {
+  try {
+    return new URL(url, "http://tuesday.local").searchParams.get("mode") === "schedule" ? "schedule" : "orderRows";
+  } catch {
+    return "orderRows";
+  }
+}
+
+function planViewModeHref(mode: ProductionPlanMode) {
+  return mode === "schedule" ? "/production/plan?mode=schedule" : "/production/plan";
+}
 type PersonFilter = "all" | Person;
 type OrderDayFilter = "allWeek" | "today" | DayKey;
 type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate" | "costing";
@@ -7445,7 +7457,7 @@ function MobileScheduleAgenda({
   );
   return (
     <section data-mobile-schedule-agenda="true" style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, padding: 6, display: "grid", gap: 6 }}>
-      <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow />
+      <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} tasks={tasks} appTasks={appTasks} suggestedSteps={suggestedSteps} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
         {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.teal, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current week</div> : <span />}
         {showDraftControls && isDraftChanged && <button type="button" onClick={onResetDraftLayout} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 9, fontFamily: DT.sans, fontWeight: 900 }}>Revert</button>}
@@ -7509,6 +7521,7 @@ function MonthWeekSection({
   suggestedStepCustomer,
   personFilter = "all",
   weekHeaderControl,
+  capacityRows,
   forcePlanningLanes = false,
   weekIndex,
   weekCount,
@@ -7544,6 +7557,7 @@ function MonthWeekSection({
   suggestedStepCustomer?: string;
   personFilter?: PersonFilter;
   weekHeaderControl?: ReactNode;
+  capacityRows?: OrderJourneyRow[];
   forcePlanningLanes?: boolean;
   weekIndex: number;
   weekCount: number;
@@ -7598,8 +7612,13 @@ function MonthWeekSection({
   }
 
   return (
-    <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, overflow: "hidden", minWidth: 0 }}>
-        <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow={isNarrow} />
+    <section data-schedule-week-section="true" style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+      {capacityRows ? (
+        <OrderCapacityStrip rows={capacityRows} week={week} weekLabel={displayWeekTitle(week.title)} weekIndex={weekIndex} weekCount={weekCount} dayFilter="allWeek" onDayFilterChange={() => undefined} onPreviousWeek={onPreviousWeek ?? (() => undefined)} onNextWeek={onNextWeek ?? (() => undefined)} isNarrow={isNarrow} scheduleWeekBar />
+      ) : (
+        <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} tasks={tasks} appTasks={weekAppTasks} suggestedSteps={suggestedSteps} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow={isNarrow} />
+      )}
+      <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, overflow: "hidden", minWidth: 0 }}>
         {(isCurrentWeek || weekHeaderControl || (showDraftControls && isDraftChanged) || !hasVisibleTasks) && <div style={{ padding: "7px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: "rgba(255,255,255,0.38)" }}>
           {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div> : <span />}
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
@@ -7745,10 +7764,11 @@ function MonthWeekSection({
                     })}
                   </div>
                 )}
-              </div>
-            );
-          })}
-        </div>
+	              </div>
+	            );
+	          })}
+	        </div>
+      </section>
     </section>
   );
 }
@@ -8830,9 +8850,31 @@ const ORDER_JOURNEY_MOBILE_CSS = `
   }
 `;
 
+type WeekCapacityGauge = {
+  totalHours: number;
+  nickHours: number;
+  dylanHours: number;
+  capacityHours: number;
+  fillWidth: number;
+  color: string;
+  bg: string;
+};
+
+function weekCapacityGauge(totalHours: number, nickHours = 0, dylanHours = 0): WeekCapacityGauge {
+  const capacityHours = PEOPLE.length * 7;
+  const ratio = Math.min(1, totalHours / capacityHours);
+  const fillWidth = totalHours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
+  const color = totalHours > capacityHours ? "#9b2f22" : ratio >= 0.82 ? "#9a6a14" : ratio >= 0.45 ? "#6f7d38" : ratio > 0 ? DT.sage : "rgba(124,116,107,0.26)";
+  const bg = totalHours > capacityHours ? "rgba(155,47,34,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
+  return { totalHours, nickHours, dylanHours, capacityHours, fillWidth, color, bg };
+}
+
 function ScheduleWeekBar({
   week,
   weekLabel,
+  tasks = [],
+  appTasks = [],
+  suggestedSteps = [],
   weekIndex,
   weekCount,
   onPreviousWeek,
@@ -8841,6 +8883,9 @@ function ScheduleWeekBar({
 }: {
   week: PlanWeek;
   weekLabel: string;
+  tasks?: BoardPlanTask[];
+  appTasks?: AppPlanTask[];
+  suggestedSteps?: SuggestedOrderPlanStep[];
   weekIndex: number;
   weekCount: number;
   onPreviousWeek?: () => void;
@@ -8858,14 +8903,60 @@ function ScheduleWeekBar({
       {label === "Previous" ? "‹" : "›"}
     </button>
   );
+  const weekAppTasks = appTasks.filter((task) => appTaskFallsInWeek(task, week));
+  const scheduleHoursFor = (day: DayKey, person?: Person) => {
+    const boardHours = tasks
+      .filter((task) => task.weekId === week.id && task.day === day && !task.done && (!person || task.person === person))
+      .reduce((sum, task) => sum + cleanTaskEstimatedHours(task.estimatedHours), 0);
+    const appHours = weekAppTasks
+      .filter((task) => task.day === day && !task.done && (!person || task.person === person))
+      .reduce((sum, task) => sum + cleanTaskEstimatedHours(task.estimatedHours), 0);
+    const draftHours = suggestedSteps
+      .filter((step) => step.day === day && suggestedStepFallsInWeek(step, week) && (!person || step.person === person))
+      .reduce((sum, step) => sum + cleanTaskEstimatedHours(step.estimatedHours), 0);
+    return boardHours + appHours + draftHours;
+  };
+  const dayGauge = (day: DayKey) => {
+    const totalHours = scheduleHoursFor(day);
+    return weekCapacityGauge(totalHours, scheduleHoursFor(day, "nick"), scheduleHoursFor(day, "dylan"));
+  };
   const dayCell = (day: DayKey) => {
     const option = suggestedDateOptionForWeekDay(week, day);
     const dayLabel = scheduleDayLabelParts(day, option);
+    const gauge = dayGauge(day);
+    const label = `${option?.dateLabel ?? DAY_LABELS[day]} schedule capacity: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`;
+    const title = `${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`;
+    const cellContent = (
+      <>
+        <span style={{ display: "grid", gap: 1, minWidth: 0, fontFamily: DT.sans, textTransform: "uppercase", lineHeight: 1 }}>
+          <span style={{ fontSize: isNarrow ? 8.5 : 9.5, fontWeight: 950, letterSpacing: isNarrow ? "0.02em" : "0.08em", color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
+          <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: isNarrow ? 0 : "0.04em", color: DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
+        </span>
+        <span aria-hidden="true" style={{ height: isNarrow ? 5 : 7, width: "100%", borderRadius: 999, background: gauge.bg, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
+          <span style={{ display: "block", width: `${gauge.fillWidth}%`, height: "100%", borderRadius: 999, background: gauge.color, transition: "width 160ms ease" }} />
+        </span>
+      </>
+    );
+    const cellStyle: CSSProperties = { minWidth: 0, borderLeft: !isNarrow && day !== "monday" ? `1px solid ${DT.border}` : undefined, borderTop: isNarrow ? `1px solid ${DT.border}` : undefined, background: "rgba(247,249,248,0.62)", padding: isNarrow ? "7px 4px 6px" : "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: isNarrow ? 3 : 4, overflow: "hidden" };
+    if (isNarrow) {
+      return (
+        <div key={day} aria-label={label} title={title} style={cellStyle}>
+          {cellContent}
+        </div>
+      );
+    }
     return (
-      <div key={day} style={{ minWidth: 0, borderLeft: !isNarrow && day !== "monday" ? `1px solid ${DT.border}` : undefined, borderTop: isNarrow ? `1px solid ${DT.border}` : undefined, background: "rgba(247,249,248,0.62)", padding: isNarrow ? "7px 4px 6px" : "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3, overflow: "hidden" }}>
-        <span style={{ fontFamily: DT.sans, fontSize: isNarrow ? 8.5 : 9.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: isNarrow ? "0.02em" : "0.08em", color: DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
-        <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, letterSpacing: isNarrow ? 0 : "0.04em", color: DT.textFaint, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
-      </div>
+      <button
+        key={day}
+        type="button"
+        tabIndex={-1}
+        aria-disabled="true"
+        aria-label={label}
+        title={title}
+        style={{ ...cellStyle, borderTop: undefined, borderRight: 0, borderBottom: 0, borderLeft: day === "monday" ? 0 : `1px solid ${DT.border}`, color: "inherit", cursor: "default", font: "inherit", textAlign: "center" }}
+      >
+        {cellContent}
+      </button>
     );
   };
   if (isNarrow) {
@@ -8892,7 +8983,7 @@ function ScheduleWeekBar({
   );
 }
 
-function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFilter, onDayFilterChange, onPreviousWeek, onNextWeek, isNarrow }: { rows: OrderJourneyRow[]; week: PlanWeek; weekLabel: string; weekIndex: number; weekCount: number; dayFilter: OrderDayFilter; onDayFilterChange: (filter: OrderDayFilter) => void; onPreviousWeek: () => void; onNextWeek: () => void; isNarrow: boolean }) {
+function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFilter, onDayFilterChange, onPreviousWeek, onNextWeek, isNarrow, scheduleWeekBar = false }: { rows: OrderJourneyRow[]; week: PlanWeek; weekLabel: string; weekIndex: number; weekCount: number; dayFilter: OrderDayFilter; onDayFilterChange: (filter: OrderDayFilter) => void; onPreviousWeek: () => void; onNextWeek: () => void; isNarrow: boolean; scheduleWeekBar?: boolean }) {
   const tasksForDay = (day: DayKey) => rows.flatMap((row) => row.tasks).filter((task) => task.day === day);
   const hoursFor = (tasks: OrderJourneyTask[], person?: Person) => tasks.filter((task) => !person || task.person === person).reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
   const weekNavButton = (label: string, onClick: () => void, disabled: boolean) => (
@@ -8903,12 +8994,7 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
     const totalHours = hoursFor(tasks);
     const nickHours = hoursFor(tasks, "nick");
     const dylanHours = hoursFor(tasks, "dylan");
-    const capacityHours = PEOPLE.length * 7;
-    const ratio = Math.min(1, totalHours / capacityHours);
-    const fillWidth = totalHours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
-    const color = totalHours > capacityHours ? "#9b2f22" : ratio >= 0.82 ? "#9a6a14" : ratio >= 0.45 ? "#6f7d38" : ratio > 0 ? DT.sage : "rgba(124,116,107,0.26)";
-    const bg = totalHours > capacityHours ? "rgba(155,47,34,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
-    return { totalHours, nickHours, dylanHours, capacityHours, fillWidth, color, bg };
+    return weekCapacityGauge(totalHours, nickHours, dylanHours);
   };
   const daySummaries = DAYS.map((day) => ({ day, ...dayGauge(day) }));
   const busiestDay = daySummaries.reduce((best, current) => current.totalHours > best.totalHours ? current : best, daySummaries[0]);
@@ -8945,7 +9031,7 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
       </div>
       </div>
       </details>
-      <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-order-capacity-strip-desktop="true" aria-hidden={isNarrow} style={{ display: "grid", gridTemplateColumns: "220px repeat(5, minmax(104px, 1fr))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,255,255,0.84)", boxShadow: DT.shadow, overflow: "hidden" }}>
+      <div data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-order-capacity-strip-desktop="true" data-schedule-week-bar={scheduleWeekBar ? "true" : undefined} aria-hidden={isNarrow} style={{ display: "grid", gridTemplateColumns: "220px repeat(5, minmax(104px, 1fr))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, background: "rgba(255,255,255,0.84)", boxShadow: DT.shadow, overflow: "hidden" }}>
       <div style={{ padding: 7, display: "grid", gridTemplateColumns: "28px minmax(0, 1fr) 28px", gap: 5, alignItems: "center", borderRight: `1px solid ${DT.border}` }}>
         {weekNavButton("Previous", onPreviousWeek, weekIndex <= 0)}
         <span style={{ minWidth: 0, textAlign: "center", fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{weekLabel}</span>
@@ -9595,6 +9681,29 @@ function MonthViewState({
   const sourceBoardTasks = useMemo(() => sourceTasksForBoardWeeks(visibleProductionWeeks, planTaskEdits), [visibleProductionWeeks, planTaskEdits]);
   const [personFilter, setPersonFilter] = useState<PersonFilter>("all");
   const [planViewMode, setPlanViewMode] = useState<ProductionPlanMode>(initialPlanViewMode);
+  const syncPlanViewUrl = useCallback((mode: ProductionPlanMode) => {
+    if (typeof window === "undefined") return;
+    const nextHref = planViewModeHref(mode);
+    const currentHref = `${window.location.pathname}${window.location.search}`;
+    if (currentHref === nextHref) return;
+    const currentState = typeof window.history.state === "object" && window.history.state !== null ? window.history.state : {};
+    const nativePushState = Object.getPrototypeOf(window.history).pushState as History["pushState"];
+    nativePushState.call(window.history, { ...currentState, planViewMode: mode }, "", nextHref);
+  }, []);
+  const switchPlanViewMode = useCallback((mode: ProductionPlanMode) => {
+    setPlanViewMode(mode);
+    syncPlanViewUrl(mode);
+  }, [syncPlanViewUrl]);
+  const handlePlanViewModeClick = useCallback((event: ReactMouseEvent<HTMLAnchorElement>, mode: ProductionPlanMode) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    switchPlanViewMode(mode);
+  }, [switchPlanViewMode]);
+  useEffect(() => {
+    const handlePopState = () => setPlanViewMode(planViewModeFromUrl(window.location.href));
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [orderRowsWeekIndex, setOrderRowsWeekIndex] = useState(0);
   const [scheduleWeekIndex, setScheduleWeekIndex] = useState(0);
   const [orderDayFilter, setOrderDayFilter] = useState<OrderDayFilter>("allWeek");
@@ -10895,6 +11004,16 @@ function MonthViewState({
   const scheduleWeekCount = visibleProductionWeeks.length;
   const safeScheduleWeekIndex = Math.min(scheduleWeekIndex, Math.max(0, scheduleWeekCount - 1));
   const scheduleWeek = visibleProductionWeeks[safeScheduleWeekIndex];
+  const scheduleCapacityRows = useMemo(() => scheduleWeek ? buildOrderJourneyRows({
+    tasks: boardTasks.filter((task) => task.weekId === scheduleWeek.id),
+    appTasks: visibleAppTasks.filter((task) => appTaskFallsInWeek(task, scheduleWeek)),
+    weeks: [scheduleWeek],
+    orders: activeTuesdayOrders,
+    planTaskLinks,
+    resolveOrderId: resolveOrderIdForPlanTask,
+    resolveOrderConnection: resolveOrderConnectionForPlanTask,
+    weekTitleForTask: (task) => weekTitleById.get(task.weekId) ?? task.weekId,
+  }) : [], [scheduleWeek, boardTasks, visibleAppTasks, activeTuesdayOrders, planTaskLinks, resolveOrderIdForPlanTask, resolveOrderConnectionForPlanTask, weekTitleById]);
   const weekSections = scheduleWeek ? [scheduleWeek].map((week, index) => (
     <MonthWeekSection
       key={week.id}
@@ -10912,6 +11031,7 @@ function MonthViewState({
       showDraftControls={index === 0}
       onResetDraftLayout={resetBoardDraftLayout}
       personFilter={personFilter}
+      capacityRows={scheduleCapacityRows}
       resolveTaskOrderId={resolveOrderIdForPlanTask}
       resolveTaskOrderConnection={resolveOrderConnectionForPlanTask}
       onTaskSelect={(task) => selectOrderForPlanTask({ ...task, weekTitle: displayWeekTitle(week.title) })}
@@ -11078,11 +11198,11 @@ function MonthViewState({
         return (
           <a
             key={option.id}
-            href={option.id === "schedule" ? "/production/plan?mode=schedule" : "/production/plan"}
+            href={planViewModeHref(option.id)}
             role="button"
             aria-pressed={active}
             data-production-view-option={option.id}
-            onClick={() => setPlanViewMode(option.id)}
+            onClick={(event) => handlePlanViewModeClick(event, option.id)}
             style={{
               minWidth: 0,
               minHeight: isRailNarrow ? 54 : 62,
