@@ -978,6 +978,7 @@ type AppPlanTask = {
 type AppTaskPatch = { done?: boolean; scheduledDate?: string; day?: DayKey; person?: Person; estimatedHours?: number };
 type OrderIntakeReviewState = "awaiting_payment" | "paid_needs_review" | "needs_review" | "approved";
 type OrderIntakeOwner = "Nick" | "Dylan" | "Guido" | "Other";
+type OrderIntakeSaveOptions = { quiet?: boolean };
 type OrderIntakeTaskDraft = {
   id: string;
   title: string;
@@ -2716,6 +2717,20 @@ function normalizeStandardTableIntakeTasks(item: OrderIntakeItem, rawTasks: Orde
   return processTasks.map((task, index) => processTaskToIntakeDraft(item, task, existingByTitle.get(normalizedTaskTitle(task.title)), index));
 }
 
+function orderIntakeTaskDraftSignature(tasks: OrderIntakeTaskDraft[]) {
+  return JSON.stringify(tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    detail: task.detail,
+    owner: task.owner,
+    person: task.person,
+    scheduledDate: task.scheduledDate,
+    day: task.day,
+    estimatedHours: task.estimatedHours,
+    sortOrder: task.sortOrder,
+  })));
+}
+
 function intakeStateSort(state: OrderIntakeReviewState) {
   if (state === "paid_needs_review") return 0;
   if (state === "needs_review") return 1;
@@ -2984,12 +2999,20 @@ function OrderIntakeReviewModal({
   busy: boolean;
   onClose: () => void;
   onMarkComplete: () => void;
-  onSave: (tasks: OrderIntakeTaskDraft[]) => Promise<void>;
+  onSave: (tasks: OrderIntakeTaskDraft[], options?: OrderIntakeSaveOptions) => Promise<void>;
   onApprove: (tasks: OrderIntakeTaskDraft[]) => Promise<void>;
 }) {
   const [tasks, setTasks] = useState<OrderIntakeTaskDraft[]>(() => normalizeStandardTableIntakeTasks(item, item.draftTasks.length ? item.draftTasks : item.suggestedTasks));
   const [modalStatus, setModalStatus] = useState("");
   const [approvalConfirmed, setApprovalConfirmed] = useState(false);
+  const onSaveRef = useRef(onSave);
+  const mountedRef = useRef(true);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveQueuedTasksRef = useRef<OrderIntakeTaskDraft[] | null>(null);
+  const autosaveQueuedSignatureRef = useRef("");
+  const autosaveRunningRef = useRef(false);
+  const draftSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const lastSavedSignatureRef = useRef(orderIntakeTaskDraftSignature(tasks));
   const isNarrow = useIsNarrow(860);
   const taskSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -3022,8 +3045,91 @@ function OrderIntakeReviewModal({
   ];
   const { documents: invoiceDocuments, status: invoiceDocumentStatus } = useOrderCustomerMirrorLookup({ orderId: item.orderId, invoiceNumber: item.invoiceNumber });
 
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  const enqueueDraftSave = useCallback((nextTasks: OrderIntakeTaskDraft[], options: OrderIntakeSaveOptions = {}) => {
+    const nextSignature = orderIntakeTaskDraftSignature(nextTasks);
+    const savePromise = draftSaveChainRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        await onSaveRef.current(nextTasks, options);
+        return nextSignature;
+      });
+    draftSaveChainRef.current = savePromise.then(() => undefined, () => undefined);
+    return savePromise;
+  }, []);
+
+  const runQueuedAutosave = useCallback(async () => {
+    if (autosaveRunningRef.current) return;
+    const nextTasks = autosaveQueuedTasksRef.current;
+    const nextSignature = autosaveQueuedSignatureRef.current;
+    if (!nextTasks || !nextSignature || nextSignature === lastSavedSignatureRef.current) {
+      autosaveQueuedTasksRef.current = null;
+      autosaveQueuedSignatureRef.current = "";
+      return;
+    }
+    autosaveRunningRef.current = true;
+    autosaveQueuedTasksRef.current = null;
+    autosaveQueuedSignatureRef.current = "";
+    if (mountedRef.current) setModalStatus("Saving draft...");
+    try {
+      const savedSignature = await enqueueDraftSave(nextTasks, { quiet: true });
+      lastSavedSignatureRef.current = savedSignature;
+      if (mountedRef.current) setModalStatus("Draft saved");
+    } catch (error) {
+      autosaveQueuedTasksRef.current = nextTasks;
+      autosaveQueuedSignatureRef.current = nextSignature;
+      if (mountedRef.current) setModalStatus(error instanceof Error ? error.message : "Draft save failed");
+    } finally {
+      autosaveRunningRef.current = false;
+      if (mountedRef.current && autosaveQueuedTasksRef.current && autosaveQueuedSignatureRef.current !== lastSavedSignatureRef.current) {
+        if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = setTimeout(() => {
+          autosaveTimerRef.current = null;
+          void runQueuedAutosave();
+        }, 0);
+      }
+    }
+  }, [enqueueDraftSave]);
+
+  const queueAutosave = useCallback((nextTasks: OrderIntakeTaskDraft[]) => {
+    const nextSignature = orderIntakeTaskDraftSignature(nextTasks);
+    if (nextSignature === lastSavedSignatureRef.current) return;
+    autosaveQueuedTasksRef.current = nextTasks;
+    autosaveQueuedSignatureRef.current = nextSignature;
+    setModalStatus("Saving draft...");
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      void runQueuedAutosave();
+    }, 850);
+  }, [runQueuedAutosave]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      const pendingTasks = autosaveQueuedTasksRef.current;
+      const pendingSignature = autosaveQueuedSignatureRef.current;
+      if (pendingTasks && pendingSignature && pendingSignature !== lastSavedSignatureRef.current) {
+        void enqueueDraftSave(pendingTasks, { quiet: true }).catch(() => undefined);
+      }
+    };
+  }, [enqueueDraftSave]);
+
+  function updateTasks(updater: OrderIntakeTaskDraft[] | ((current: OrderIntakeTaskDraft[]) => OrderIntakeTaskDraft[])) {
+    setTasks((current) => {
+      const next = typeof updater === "function" ? updater(current) : updater;
+      queueAutosave(next);
+      return next;
+    });
+  }
+
   function patchTask(id: string, patch: Partial<OrderIntakeTaskDraft>) {
-    setTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch } : task));
+    updateTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch } : task));
   }
 
   function chooseTaskDate(id: string, dateIso: string) {
@@ -3039,7 +3145,7 @@ function OrderIntakeReviewModal({
   function addTask() {
     const firstOption = dateOptions[0];
     const dateIso = firstOption?.dateIso ?? new Date().toISOString().slice(0, 10);
-    setTasks((current) => [...current, {
+    updateTasks((current) => [...current, {
       id: `manual-${Date.now()}`,
       title: "Material + spec check",
       detail: "",
@@ -3053,7 +3159,7 @@ function OrderIntakeReviewModal({
   }
 
   function moveAllTasksByWorkingDay(direction: -1 | 1) {
-    setTasks((current) => current.map((task) => {
+    updateTasks((current) => current.map((task) => {
       const currentIndex = dateOptions.findIndex((option) => option.dateIso === task.scheduledDate);
       const nextOption = currentIndex >= 0 ? dateOptions[currentIndex + direction] : null;
       const scheduledDate = nextOption?.dateIso ?? shiftIsoByWorkingDays(task.scheduledDate, direction);
@@ -3062,14 +3168,14 @@ function OrderIntakeReviewModal({
   }
 
   function deleteTask(id: string) {
-    setTasks((current) => current.filter((candidate) => candidate.id !== id).map((task, index) => ({ ...task, sortOrder: (index + 1) * 10 })));
+    updateTasks((current) => current.filter((candidate) => candidate.id !== id).map((task, index) => ({ ...task, sortOrder: (index + 1) * 10 })));
   }
 
   function handleIntakeTaskDragEnd(event: DragEndEvent) {
     const activeId = String(event.active.id);
     const overId = event.over ? String(event.over.id) : "";
     if (!overId || activeId === overId) return;
-    setTasks((current) => {
+    updateTasks((current) => {
       const from = current.findIndex((task) => task.id === activeId);
       const to = current.findIndex((task) => task.id === overId);
       if (from < 0 || to < 0) return current;
@@ -3078,9 +3184,14 @@ function OrderIntakeReviewModal({
   }
 
   async function saveDraft() {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveQueuedTasksRef.current = null;
+    autosaveQueuedSignatureRef.current = "";
+    const draftSignature = orderIntakeTaskDraftSignature(tasks);
     setModalStatus("Saving draft...");
     try {
-      await onSave(tasks);
+      await enqueueDraftSave(tasks);
+      lastSavedSignatureRef.current = draftSignature;
       setModalStatus("Draft saved");
     } catch (error) {
       setModalStatus(error instanceof Error ? error.message : "Draft save failed");
@@ -10896,8 +11007,8 @@ function MonthViewState({
     }
   }
 
-  async function saveIntakeDraft(orderId: string, tasks: OrderIntakeTaskDraft[]) {
-    setOrderIntakeBusy(true);
+  async function saveIntakeDraft(orderId: string, tasks: OrderIntakeTaskDraft[], options: OrderIntakeSaveOptions = {}) {
+    if (!options.quiet) setOrderIntakeBusy(true);
     try {
       const response = await fetch(`/api/production/order-intake/${orderId}/draft`, {
         method: "POST",
@@ -10906,10 +11017,14 @@ function MonthViewState({
       });
       const data = await response.json().catch(() => ({})) as OrderIntakeApiResponse;
       if (!response.ok || data.ok === false) throw new Error(data.error || "Draft save failed");
-      await loadOrderIntake(true);
-      setOrderIntakeStatus("Draft saved");
+      if (options.quiet) {
+        setOrderIntakeItems((current) => current.map((item) => item.orderId === orderId ? { ...item, draftTasks: tasks } : item));
+      } else {
+        await loadOrderIntake(true);
+        setOrderIntakeStatus("Draft saved");
+      }
     } finally {
-      setOrderIntakeBusy(false);
+      if (!options.quiet) setOrderIntakeBusy(false);
     }
   }
 
@@ -11105,7 +11220,7 @@ function MonthViewState({
       busy={orderIntakeBusy}
       onClose={() => setOpenIntakeOrderId(null)}
       onMarkComplete={() => markIntakeOrderCompleteInTuesday(openIntakeItem)}
-      onSave={(tasks) => saveIntakeDraft(openIntakeItem.orderId, tasks)}
+      onSave={(tasks, options) => saveIntakeDraft(openIntakeItem.orderId, tasks, options)}
       onApprove={(tasks) => approveIntakeOrder(openIntakeItem.orderId, tasks)}
     />
   ) : null;
