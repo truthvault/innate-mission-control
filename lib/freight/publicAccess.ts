@@ -60,15 +60,17 @@ export function assertFreightPublicAccess(request: Request, url = new URL(reques
   const expectedToken = configuredPublicToken();
   const suppliedToken = requestToken(request, url);
   const tokenOk = expectedToken ? timingSafeEqualText(suppliedToken, expectedToken) : false;
+  const storefrontOk = isAllowedStorefrontRequest(request);
 
   if (expectedToken) {
+    if (!storefrontOk) throw new Error("Origin or referer is not allowed for freight requests");
     if (!tokenOk) throw new Error("Freight request token is missing or invalid");
     return;
   }
 
   // Backwards-compatible fallback for preview/local work before the website theme
   // carries the public token. Production should set FREIGHT_PUBLIC_ACCESS_TOKEN.
-  if (!isAllowedStorefrontRequest(request)) {
+  if (!storefrontOk) {
     throw new Error("Origin or referer is not allowed for freight requests");
   }
 }
