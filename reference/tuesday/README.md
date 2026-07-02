@@ -30,6 +30,8 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 
 ## Active operating handovers / current prep
 
+- `tuesday-simplification-plan-of-plan-2026-07.md` — planning guardrail for the Tuesday simplification master plan. Load before any simplification planning/build so work stays in Pass 1/2/3 and does not sprawl into an unapproved rebuild.
+- `tuesday-simplification-master-plan-2026-07.md` — Pass 1 master skeleton for simplifying Tuesday around stable Supabase read models, collectors/reconciliation, Daily Control, Nick board, Leads, action safety, and verification gates. Draft only until Guido reviews.
 - `projects-tasks-workboard-handover-2026-05-20.md` — handover/spec for a Supabase-backed Workboard tab seeded from the Stephen meeting
 - `tuesday-readiness-audit-2026-05-24.md` — current percent-readiness audit for Innate lighthouse + external Workshop OS productisation
 - `tuesday-agent-handover-2026-05-24.md` — current operating handover for the Tuesday profile/worker
