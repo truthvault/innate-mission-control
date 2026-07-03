@@ -162,7 +162,8 @@ async function sb(pathAndQuery, init = {}) {
     },
   });
   if (!res.ok) throw new Error(`Supabase ${res.status}: ${(await res.text()).slice(0, 300)}`);
-  return res.status === 204 ? null : res.json();
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 // ---------- main ----------
@@ -184,10 +185,16 @@ console.log(`Supabase: ${sbOrders.length} orders, ${sbTasks.length} production t
 // --- orders diff ---
 const byMondayId = new Map(sbOrders.filter((o) => o.monday_order_item_id).map((o) => [String(o.monday_order_item_id), o]));
 const byInvoice = new Map(sbOrders.filter((o) => o.xero_invoice_number).map((o) => [o.xero_invoice_number.toUpperCase(), o]));
+const byOrderCode = new Map(sbOrders.filter((o) => o.order_code).map((o) => [String(o.order_code).toUpperCase(), o]));
 
 for (const item of mondayOrders) {
   const invoice = invoiceNumberFromOrderItem(item);
-  const matched = byMondayId.get(String(item.id)) || (invoice ? byInvoice.get(invoice.toUpperCase()) : null) || null;
+  const matched =
+    byMondayId.get(String(item.id)) ||
+    (invoice ? byInvoice.get(invoice.toUpperCase()) : null) ||
+    (invoice ? byOrderCode.get(invoice.toUpperCase()) : null) ||
+    byOrderCode.get(`MON-${item.id}`) ||
+    null;
   const mondayStatus = colText(item, OC.status);
   const proposal = {
     mondayItemId: item.id,
@@ -314,7 +321,135 @@ fs.writeFileSync(mdPath, md);
 console.log(`\nReport: ${mdPath}`);
 console.log(JSON.stringify(report.summary, null, 2));
 
+// ---------- APPLY (additive policy, approved by Guido 2026-07-04) ----------
+// 1. INSERT orders that exist only in Monday (historic backfill).
+// 2. On matched orders: fill ONLY null/empty fields; backfill monday_order_item_id.
+// 3. Production progress (top/legs stage, est hours) merges into spec JSON —
+//    these keys are Monday-owned, so they may overwrite the same keys only.
+// 4. INSERT plan cells as production_order_tasks (status planned), keyed by
+//    source_task_id so re-runs are idempotent.
+// 5. NEVER overwrite delivery/status/notes/dates that already have a value.
 if (APPLY) {
-  console.error("\nAPPLY mode is intentionally not implemented yet — Phase 1 requires Guido to review the dry-run report first.");
-  process.exit(2);
+  const applied = { ordersInserted: 0, ordersUpdated: 0, tasksInserted: 0, errors: [] };
+
+  const monthNum = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  function weekMondayDate(groupTitle) {
+    const m = /([A-Za-z]+)[\s-]+(\d{1,2})/.exec(groupTitle || "");
+    if (!m) return null;
+    const month = monthNum[m[1].toLowerCase().slice(0, 3)];
+    if (!month) return null;
+    const d = new Date(Date.UTC(2026, month - 1, Number(m[2])));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const STALE_BEFORE = Date.now() - 21 * 86400000;
+  const dayOffset = { monday: 0, tuesday: 1, wednesday: 2, thursday: 3, friday: 4 };
+
+  for (const o of report.orders) {
+    const item = mondayOrders.find((i) => String(i.id) === String(o.mondayItemId));
+    if (!item) continue;
+    try {
+      if (o.action === "insert") {
+        const deliveryText = colText(item, OC.deliveryLocation);
+        const row = {
+          order_code: o.invoice || `MON-${item.id}`,
+          customer_name: item.name,
+          status: STATUS_TO_SB[o.mondayStatus] || "complete",
+          item_category: colText(item, OC.item),
+          order_date: colText(item, OC.ordered),
+          due_date: deadlineEnd(item),
+          finished_date: colText(item, OC.finished),
+          delivery: deliveryText ? { summary: deliveryText } : {},
+          total_incl_gst: colText(item, OC.value) ? Number(colText(item, OC.value)) : null,
+          xero_invoice_number: o.invoice,
+          monday_order_item_id: item.id,
+          source_system: "monday-import-20260704",
+          source_url: `https://innatefurniture-team.monday.com/boards/${ORDERS_BOARD}/pulses/${item.id}`,
+          spec: specPatch(item),
+          notes: "Imported from Monday Orders board (historic backfill, Tuesday v2 Phase 1).",
+        };
+        for (const key of Object.keys(row)) if (row[key] === null || row[key] === undefined) delete row[key];
+        await sb("orders", { method: "POST", body: JSON.stringify(row) });
+        applied.ordersInserted += 1;
+      } else if (o.match) {
+        const existing = sbOrders.find((s) => s.id === o.match.id);
+        if (!existing) continue;
+        const patch = {};
+        // fill-null only
+        for (const [key, value] of [
+          ["due_date", deadlineEnd(item)],
+          ["finished_date", colText(item, OC.finished)],
+          ["item_category", colText(item, OC.item)],
+          ["order_date", colText(item, OC.ordered)],
+          ["monday_order_item_id", item.id],
+          ["xero_invoice_number", o.invoice],
+        ]) {
+          const current = existing[key];
+          if (value != null && (current === null || current === undefined || current === "")) patch[key] = value;
+        }
+        const deliveryText = colText(item, OC.deliveryLocation);
+        const currentDelivery = existing.delivery;
+        const deliveryEmpty = currentDelivery == null || (typeof currentDelivery === "object" && Object.keys(currentDelivery).length === 0);
+        if (deliveryText && deliveryEmpty) patch.delivery = { summary: deliveryText };
+        // spec: additive merge, Monday-owned progress keys only
+        const progress = specPatch(item);
+        if (Object.keys(progress).length > 0) {
+          const currentSpec = existing.spec && typeof existing.spec === "object" ? existing.spec : {};
+          patch.spec = { ...currentSpec, ...progress };
+        }
+        if (Object.keys(patch).length > 0) {
+          await sb(`orders?id=eq.${existing.id}`, { method: "PATCH", body: JSON.stringify(patch), prefer: "return=minimal" });
+          applied.ordersUpdated += 1;
+        }
+      }
+    } catch (err) {
+      applied.errors.push(`order ${o.mondayName}: ${err.message}`);
+    }
+  }
+
+  applied.tasksSkippedStale = 0;
+  for (const t of report.planTasks) {
+    if (t.action !== "insert") continue;
+    const weekStart = weekMondayDate(t.weekGroup);
+    if (!weekStart || weekStart.getTime() < STALE_BEFORE) {
+      applied.tasksSkippedStale += 1;
+      continue;
+    }
+    const scheduled = new Date(weekStart.getTime() + dayOffset[t.day] * 86400000).toISOString().slice(0, 10);
+    try {
+      await sb("production_order_tasks", {
+        method: "POST",
+        prefer: "return=minimal",
+        body: JSON.stringify({
+          order_id: t.linkedSupabaseOrderId,
+          source_task_id: t.sourceId,
+          title: t.text.slice(0, 300),
+          detail: t.linkedSupabaseOrderId ? null : `Monday plan row: ${t.rowName} (${t.weekGroup})`,
+          owner: t.person === "nick" ? "Nick" : "Dylan",
+          day_key: t.day,
+          scheduled_date: scheduled,
+          status: "planned",
+          notes: "Imported from Monday Production Plan board (Tuesday v2 Phase 1).",
+        }),
+      });
+      applied.tasksInserted += 1;
+    } catch (err) {
+      applied.errors.push(`task ${t.sourceId}: ${err.message}`);
+    }
+  }
+
+  report.applied = applied;
+  fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2));
+  console.log("\nAPPLY result:", JSON.stringify(applied, null, 2));
+  if (applied.errors.length > 0) process.exit(3);
+}
+
+function specPatch(item) {
+  const patch = {};
+  const top = colText(item, OC.topPanel);
+  const legs = colText(item, OC.legs);
+  const hours = colText(item, OC.estHours);
+  if (top) patch.monday_top_panel_stage = top;
+  if (legs) patch.monday_legs_stage = legs;
+  if (hours && Number.isFinite(Number(hours))) patch.monday_est_hours = Number(hours);
+  return patch;
 }
