@@ -16,7 +16,7 @@ assert.match(source, /formatPlanningWeekTitle/, 'Generated empty weeks should ha
 assert.match(source, /forcePlanningLanes/, 'Future visible weeks should render empty Nick/Dylan drop lanes');
 assert.match(source, /boardPlanLaneId\(week\.id, day, person\)/, 'Drop lanes should be unique per week, day, and person');
 assert.match(source, /reorderBoardPlanTask/, 'Plan tasks should reorder across the shared six-week board, not inside isolated week widgets');
-assert.match(source, /Approve draft plan/, 'The approve button should describe a Tuesday draft plan, not a Monday write');
+assert.match(source, /Add to schedule/, 'The approve control should describe adding a Tuesday draft to the schedule, not a Monday write');
 assert.doesNotMatch(source, /Drag to plan<\/div>/, 'Visible draft task cards should not carry the old extra Drag to plan badge');
 
 console.log('plan new-order colour tests passed');

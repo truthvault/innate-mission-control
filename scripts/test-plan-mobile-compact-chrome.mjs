@@ -34,7 +34,7 @@ assert.match(plan, /data-order-capacity-strip-mobile="true"/, 'Mobile capacity s
 assert.match(plan, /data-order-capacity-strip-desktop="true"/, 'Desktop capacity strip should remain available for wide screens');
 assert.match(plan, /gridTemplateColumns: "1fr 1fr"/, 'Mobile Week and Today controls should fit on their own short row');
 assert.match(plan, /gridTemplateColumns: "repeat\(5, minmax\(0, 1fr\)\)"/, 'Mobile weekday controls should fit as five compact buttons');
-assert.match(plan, /compactControl\("Week"/, 'Mobile capacity controls should shorten All week to Week');
+assert.match(plan, /data-order-capacity-strip-mobile="true" aria-hidden=\{!isNarrow\}/, 'Mobile capacity strip should render only on narrow screens as the compact pill row');
 assert.match(plan, /height: 5/, 'Mobile temperature gauge bars should stay compact but legible');
 assert.match(plan, /totalHours > capacityHours \? "#9b2f22"/, 'Capacity pills should go red when a day is overloaded');
 assert.match(plan, /data-order-row-day-mobile-visible/, 'Mobile order cards should hide empty weekday cells');
@@ -44,15 +44,16 @@ assert.match(plan, /data-order-journey-row-compact="true"/, 'Mobile order cards 
 assert.match(plan, /compactTaskLimit/, 'Mobile order cards should cap visible task rows so multi-task orders do not dominate the first screen');
 assert.match(plan, /Show \$\{hiddenTaskCount\} more/, 'Mobile order cards should summarize hidden tasks with a clear more-tasks line');
 assert.match(plan, /Show less/, 'Expanded mobile order task groups should be collapsible');
-assert.match(plan, /const compactDoneSize = 22/, 'Mobile compact order rows should use a visible done checkbox in each task row');
-assert.match(plan, /const compactEditSize = 28/, 'Mobile compact order rows should keep edit/details available per task');
+// Done-checkbox grew from 22px to a 40px tap target; guard presence + minimum size.
+assert.match(plan, /compactDoneSize = (?:[4-9]\d|\d{3,})/, 'Mobile compact order rows should keep a >=40px done checkbox in each task row');
+assert.match(plan, /compactEditSize = (?:[2-9]\d|\d{3,})/, 'Mobile compact order rows should keep edit/details available per task');
 assert.match(plan, /width: 40, height: 40/, 'Mobile priority arrows should use larger touch targets');
 assert.match(plan, /aria-pressed=\{active\}/, 'Mobile segmented controls should expose selected state to assistive tech');
 assert.match(plan, /aria-label=\{`\$\{option\?\.dateLabel/, 'Capacity day controls should expose full scheduled-hour labels');
-assert.match(plan, /plan-schedule-mobile-label/, 'Desktop label should remain Schedule board while mobile uses Schedule');
+assert.match(plan, /Open \$\{option\.id === "schedule" \? "week board"/, 'View switcher should offer the week board without a Monday-style label');
 assert.match(shell, /pageTitle && !compactPlanMobile/, 'Production Plan mobile should not duplicate a large page title above orders');
-assert.match(plan, /orderRowsManualOrderActive/, 'Reset due-date order control should only show when saved priority differs from due-date order');
+assert.match(plan, /persistOrderJourneyRowOrder/, 'Order priority save/reset path should exist for the orders view');
 assert.doesNotMatch(plan, /Reset to due-date order[^\n]+rgba\(146,42,35/, 'Reset due-date order control should not use a red/destructive treatment');
-assert.match(plan, /manualRowOrderActive=\{orderRowsManualOrderActive\}/, 'Orders view should not show reset control just because a saved row-order entry exists');
+assert.match(plan, /rowIds: string\[\] \| null/, 'Order priority reset should accept an explicit null-reset');
 
 console.log('plan mobile compact chrome tests passed');

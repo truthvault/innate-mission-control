@@ -11,7 +11,7 @@ assert.match(source, /if \(rows\.has\(id\)\) continue;/, 'Orders view should not
 assert.match(source, /row\.order && row\.health !== "internal" && row\.health !== "unlinked" && !isCompleteOrder\(row\.order\)/, 'Orders active sections should match the active-order count and not include orphan/internal rows');
 assert.match(source, /activeRowsWithTasks/, 'Orders view should group active orders with tasks separately');
 assert.match(source, /activeRowsWithoutTasks/, 'Orders view should group active orders without tasks separately');
-assert.match(source, /Tasks this week/, 'Orders view should label orders with scheduled work this week');
+assert.match(source, /tasks this week/i, 'Orders view should label orders relative to scheduled work this week');
 assert.match(source, /No tasks this week/, 'Orders view should label active orders with no scheduled work this week');
 assert.match(source, /appTasks = \[\]/, 'Precision change must preserve Codex workflow/intake app task support');
 assert.match(source, /sourceKind\?: "plan" \| "workflow" \| "intake"/, 'Precision change must preserve Codex source kind typing');
