@@ -23,7 +23,6 @@ const GUIDO_NAV: NavItem[] = [
   { section: "freight", label: "Freight quotes", href: "/freight-quotes", group: "Ops" },
   { section: "configurator", label: "Configurator", href: "/configurator", group: "Drafts" },
   { section: "calls", label: "Calls", href: "/call-intelligence", group: "Drafts" },
-  { section: "dispatch", label: "Dispatch", href: "/production/dispatch", group: "Drafts" },
   { section: "test", label: "Test job", href: "/production/test", group: "Drafts" },
 ];
 const ALL_NAV = [...NAV, ...GUIDO_NAV];
