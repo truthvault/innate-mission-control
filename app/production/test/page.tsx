@@ -1,5 +1,5 @@
-import TestJobClient from "./TestJobClient";
+import { redirect } from "next/navigation";
 
 export default function TestJobPage() {
-  return <TestJobClient syncedAt={new Date().toISOString()} />;
+  redirect("/production/plan");
 }

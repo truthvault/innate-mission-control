@@ -2,24 +2,8 @@
 
 import type { UiOrder } from "@/lib/monday/mapping";
 import { MissionControlShell } from "@/components/mission-control-shell";
+import { DT } from "@/components/mission-control-ui";
 import { daysUntil, fmtDate, isComplete, sortByShipDate, toDisplayOrder, type DisplayOrder } from "@/lib/production/order-display";
-
-const DT = {
-  cardBg: "#ffffff",
-  headerBg: "#1a1a1a",
-  teal: "#0c7c7a",
-  tealSoft: "rgba(12,124,122,0.08)",
-  gold: "#c8a96e",
-  textPrimary: "#22201a",
-  textSecondary: "#5a5549",
-  textMuted: "#7c746b",
-  textFaint: "#9a9088",
-  border: "rgba(0,0,0,0.06)",
-  shadow: "0 1px 3px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.02)",
-  radius: 14,
-  sans: "'DM Sans', -apple-system, sans-serif",
-  serif: "'Fraunces', Georgia, serif",
-};
 
 type Props = {
   orders: UiOrder[];
@@ -46,6 +30,7 @@ function checklistFor(order: DisplayOrder): ChecklistItem[] {
   return [
     { label: "Final QC complete", state: order.currentStep >= Math.max(0, order.steps.length - 3) ? "check" : "needed" },
     { label: "Final photos uploaded", state: "needed" },
+    { label: "Balance paid", state: order.paymentStage === "balance_paid" ? "done" : order.paymentStage === "awaiting_balance_payment" || order.paymentStage === "balance_authorised" ? "needed" : "check" },
     { label: "Freight / collection confirmed", state: order.rawMondayStatus === "Booked" || order.status === "Finished" ? "check" : "needed" },
     { label: "Customer update needed?", state: daysUntil(order.shipDate) !== null && (daysUntil(order.shipDate) ?? 99) <= 7 ? "check" : "needed" },
     { label: "Xero link present", state: order.xero ? "done" : "needed" },
@@ -62,12 +47,18 @@ function DispatchCard({ order }: { order: DisplayOrder }) {
   const diff = daysUntil(order.shipDate);
   const checklist = checklistFor(order);
   const priority = order.rawMondayItem === "Sample" || diff === null || diff <= 7;
+  const paymentLabel = order.paymentStageLabel
+    ? order.paymentStage === "awaiting_balance_payment" && order.balanceAmountDue != null
+      ? `${order.paymentStageLabel} · $${Math.round(order.balanceAmountDue).toLocaleString("en-NZ")}`
+      : order.paymentStageLabel
+    : null;
   return (
     <section style={{ background: DT.cardBg, border: `1px solid ${priority ? "rgba(217,119,6,0.16)" : DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: "14px 16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
           <div>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20 }}>{order.customer}</h2>
             <div style={{ marginTop: 4, fontSize: 12, color: DT.textSecondary, fontFamily: DT.sans }}>{order.rawMondayItem ?? order.product} · {order.displayStatus} · {order.shipDate ? fmtDate(order.shipDate) : "No due date"}</div>
+            {paymentLabel && <div style={{ marginTop: 5, fontSize: 11, color: order.paymentStage === "awaiting_balance_payment" ? "#9a6b12" : DT.teal, fontFamily: DT.sans, fontWeight: 850 }}>{paymentLabel}</div>}
           </div>
           <span style={{ fontSize: 10, color: priority ? "#b45309" : DT.teal, background: priority ? "rgba(217,119,6,0.10)" : DT.tealSoft, borderRadius: 20, padding: "3px 9px", fontWeight: 800, fontFamily: DT.sans, whiteSpace: "nowrap" }}>{priority ? "Needs proof" : "Watch"}</span>
         </div>

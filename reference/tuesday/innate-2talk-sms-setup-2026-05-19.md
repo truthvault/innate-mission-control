@@ -3,6 +3,11 @@
 Date: 2026-05-19
 Status: code-side foundation prepared; portal approval/token still manual.
 
+Update 2026-06-25: the Slack shared-inbox bridge artifact is documented in
+`reference/tuesday/innate-2talk-slack-sms-bridge-2026-06-25.md`, with the
+additional Supabase mapping schema in
+`reference/tuesday/supabase-sms-slack-threads-schema-2026-06-25.sql`.
+
 ## Purpose
 
 Set up 2talk Business Messaging for Innate administrative/customer-service SMS:

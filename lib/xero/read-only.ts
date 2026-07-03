@@ -1,16 +1,18 @@
 import "server-only";
 
 import { readFile } from "node:fs/promises";
-type Source = "env" | "openclaw";
+type Source = "env" | "hermes";
 type Credentials = { clientId: string; clientSecret: string; source: Source };
 type XeroConnection = { tenantId?: string; tenantName?: string };
 type XeroInvoice = {
   InvoiceID?: string;
   InvoiceNumber?: string;
+  Type?: string;
   Status?: string;
   Reference?: string;
   DateString?: string;
   DueDateString?: string;
+  SentToContact?: boolean;
   Contact?: { Name?: string };
   Total?: number;
   AmountDue?: number;
@@ -22,10 +24,13 @@ type XeroInvoice = {
 type InvoiceResponse = { Invoices?: XeroInvoice[] };
 type OrganisationResponse = { Organisations?: Array<{ Name?: string; OrganisationID?: string; ShortCode?: string }> };
 
+export type XeroInvoiceSummary = ReturnType<typeof summary>;
+
 export type XeroReadiness = {
   configured: boolean;
   source: Source | null;
   envNames: string[];
+  configPath?: string;
   reason?: string;
 };
 
@@ -33,20 +38,24 @@ const TOKEN_URL = "https://identity.xero.com/connect/token";
 const CONNECTIONS_URL = "https://api.xero.com/connections";
 const ACCOUNTING_URL = "https://api.xero.com/api.xro/2.0";
 const SCOPE = "accounting.invoices accounting.contacts accounting.settings accounting.reports.read";
+const HERMES_INTEGRATIONS_PATH = "/Users/mack-mini/.hermes/secrets/innate-integrations.json";
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-async function openClawCredentials(): Promise<Credentials | null> {
-  const configPath = process.env.XERO_OPENCLAW_CONFIG || "/Users/mack-mini/.openclaw/openclaw.json";
+function hermesIntegrationsPath() {
+  return process.env.XERO_HERMES_INTEGRATIONS_PATH || HERMES_INTEGRATIONS_PATH;
+}
+
+async function hermesCredentials(): Promise<Credentials | null> {
   try {
-    const raw = await readFile(/* turbopackIgnore: true */ configPath, "utf8");
+    const raw = await readFile(/* turbopackIgnore: true */ hermesIntegrationsPath(), "utf8");
     const parsed = JSON.parse(raw) as { mcp?: { servers?: { xero?: { env?: Record<string, string> } } } };
     const env = parsed.mcp?.servers?.xero?.env || {};
     const clientId = text(env.XERO_CLIENT_ID);
     const clientSecret = text(env.XERO_CLIENT_SECRET);
-    return clientId && clientSecret ? { clientId, clientSecret, source: "openclaw" } : null;
+    return clientId && clientSecret ? { clientId, clientSecret, source: "hermes" } : null;
   } catch {
     return null;
   }
@@ -56,16 +65,16 @@ async function credentials(): Promise<Credentials | null> {
   const clientId = text(process.env.XERO_CLIENT_ID);
   const clientSecret = text(process.env.XERO_CLIENT_SECRET);
   if (clientId && clientSecret) return { clientId, clientSecret, source: "env" };
-  return openClawCredentials();
+  return hermesCredentials();
 }
 
 export async function getXeroReadiness(): Promise<XeroReadiness> {
   const envNames = ["XERO_CLIENT_ID", "XERO_CLIENT_SECRET"];
   const found = await credentials();
   if (!found) {
-    return { configured: false, source: null, envNames, reason: "Xero read-only credentials are not configured for Tuesday." };
+    return { configured: false, source: null, envNames, configPath: hermesIntegrationsPath(), reason: "Xero read-only credentials are not configured in env or Hermes integrations storage." };
   }
-  return { configured: true, source: found.source, envNames };
+  return { configured: true, source: found.source, envNames, configPath: found.source === "hermes" ? hermesIntegrationsPath() : undefined };
 }
 
 function safeError(raw: string): string {
@@ -128,11 +137,13 @@ function summary(invoice: XeroInvoice, includeLineItems: boolean) {
   return {
     invoiceId: invoice.InvoiceID || null,
     invoiceNumber: invoice.InvoiceNumber || null,
+    type: invoice.Type || null,
     contact: invoice.Contact?.Name || null,
     status: invoice.Status || null,
     reference: invoice.Reference || null,
     date: invoice.DateString || null,
     dueDate: invoice.DueDateString || null,
+    sentToContact: typeof invoice.SentToContact === "boolean" ? invoice.SentToContact : null,
     total: typeof invoice.Total === "number" ? invoice.Total : null,
     amountDue: typeof invoice.AmountDue === "number" ? invoice.AmountDue : null,
     amountPaid: typeof invoice.AmountPaid === "number" ? invoice.AmountPaid : null,
@@ -160,10 +171,10 @@ export async function getXeroOrganisation() {
   };
 }
 
-export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string | null; search?: string | null; includeLineItems?: boolean }) {
+export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string | null; search?: string | null; includeLineItems?: boolean; pageSize?: number }) {
   const params = new URLSearchParams();
   params.set("page", "1");
-  params.set("pageSize", "10");
+  params.set("pageSize", String(Math.max(1, Math.min(100, options.pageSize ?? 10))));
   params.set("summaryOnly", options.includeLineItems ? "false" : "true");
   params.set("order", "UpdatedDateUTC DESC");
   if (options.invoiceNumber) params.append("InvoiceNumbers", options.invoiceNumber);
@@ -174,4 +185,7 @@ export async function listXeroInvoiceSummaries(options: { invoiceNumber?: string
     tenantName: result.tenantName,
     invoices: (result.body.Invoices || []).map((invoice) => summary(invoice, Boolean(options.includeLineItems))),
   };
+}
+export async function listRecentXeroInvoiceSummaries(options: { includeLineItems?: boolean; pageSize?: number } = {}) {
+  return listXeroInvoiceSummaries({ includeLineItems: options.includeLineItems, pageSize: options.pageSize ?? 50 });
 }

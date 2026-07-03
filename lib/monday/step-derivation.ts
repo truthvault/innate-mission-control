@@ -12,9 +12,11 @@
  * warning via the onUnknown callback.
  */
 
-// TABLE_STEPS indices (must match lib/steps.ts constants — kept in sync):
-// 0 confirmed, 1 pos, 2 timber, 3 matWait, 4 received, 5 stress, 6 sand,
-// 7 coat1, 8 coat2, 9 cure, 10 qc, 11 assemble, 12 freight
+// TABLE_STEPS indices (must match lib/production/production-steps.ts constants):
+// 0 confirmed, 1 pos, 2 timber, 3 matWait, 4 received, 5 bottom-prep,
+// 6 bottom-coat, 7 sand-top, 8 coat1, 9 coat2, 10 coat3, 11 cure,
+// 12 qc, 13 assemble, 14 wrap, 15 balance, 16 freight, 17 paid-release,
+// 18 customer-update
 //
 // PANEL_STEPS indices:
 // 0 confirmed, 1 pos, 2 matWait, 3 received, 4 cut, 5 sand,
@@ -44,22 +46,23 @@ function computeTableStep(args: DeriveArgs): number {
     args;
 
   // Terminal states first.
-  if (status === "Finished" || status === "Collected") return 12;
+  if (status === "Finished" || status === "Collected") return 18;
 
   // Pre-production.
   if (status === "Quoting" || status === "To Process") return 0;
-  if (status === "Materials Ordered") return 1;
+  if (status === "Materials Ordered") return 3;
 
   // Coating progression — Top drives.
-  if (top === "Bottom coat" || top === "1st coat" || top === "1st Colour") return 7;
-  if (top === "2nd coat" || top === "2nd Colour" || top === "coated-check over" || top === "coated -check over") return 8;
-  if (top === "3rd coat" || top === "Final coat") return 9;
-  if (top === "Repair") return 10;
+  if (top === "Bottom coat") return 6;
+  if (top === "1st coat" || top === "1st Colour") return 8;
+  if (top === "2nd coat" || top === "2nd Colour" || top === "coated-check over" || top === "coated -check over") return 9;
+  if (top === "3rd coat" || top === "Final coat") return 11;
+  if (top === "Repair") return 12;
 
   // Post-coating.
   const bothDone = top === "Done / NA" && legs === "Done / NA";
-  if (bothDone && status === "Booked") return 11;
-  if (bothDone && status === "In production") return 10;
+  if (bothDone && status === "Booked") return 16;
+  if (bothDone && status === "In production") return 12;
 
   // Materials-ready but coating not started.
   if (status === "Materials Ready" && top === "Unstarted") return 4;

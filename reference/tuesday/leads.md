@@ -63,7 +63,7 @@ Replicate the useful parts of the Monday leads board inside Tuesday, but make it
 - No customer emails, public website publishing, Shopify writes, Monday writes, Xero writes, payments, file deletion, or service restarts.
 - Build work starts only when Guido says `BUILD`.
 - During Gym Mode, append and dedupe ideas; do not rewrite architecture constantly.
-- Treat Monday/Shopify/Xero as sources of truth unless an approved local Tuesday database table is defined.
+- Use the current source-of-truth split: Supabase/Tuesday is forward truth for leads and approved Tuesday-owned records; Monday remains current workshop/legacy truth for stock, customer history, and production tasks until migration gates are met; Xero remains accounting authority; Shopify remains website/product truth.
 
 
 ## Open questions

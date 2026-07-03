@@ -24,17 +24,38 @@ function asString(value: unknown): string | undefined {
   return undefined;
 }
 
+function getCaseInsensitive(payload: Record<string, unknown>, key: string): unknown {
+  if (Object.prototype.hasOwnProperty.call(payload, key)) return payload[key];
+  const lower = key.toLowerCase();
+  const match = Object.keys(payload).find((candidate) => candidate.toLowerCase() === lower);
+  return match ? payload[match] : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  return undefined;
+}
+
+function getPath(payload: Record<string, unknown>, path: string): unknown {
+  let current: unknown = payload;
+  for (const part of path.split(".")) {
+    if (Array.isArray(current)) {
+      const index = Number(part);
+      current = Number.isInteger(index) ? current[index] : undefined;
+      continue;
+    }
+    const record = asRecord(current);
+    if (!record) return undefined;
+    current = getCaseInsensitive(record, part);
+  }
+  return current;
+}
+
 function firstString(payload: Record<string, unknown>, keys: string[]): string | undefined {
   for (const key of keys) {
-    const direct = asString(payload[key]);
+    const value = key.includes(".") ? getPath(payload, key) : getCaseInsensitive(payload, key);
+    const direct = asString(value);
     if (direct) return direct;
-
-    const lower = key.toLowerCase();
-    const match = Object.keys(payload).find((candidate) => candidate.toLowerCase() === lower);
-    if (match) {
-      const value = asString(payload[match]);
-      if (value) return value;
-    }
   }
   return undefined;
 }
@@ -89,8 +110,30 @@ export function normalizeInbound2talkSms(payload: Record<string, unknown>): Norm
     "MSISDN",
     "callerid",
     "caller_id",
+    "from_number",
+    "fromNumber",
+    "source_addr",
+    "src",
+    "data.payload.from.phone_number",
+    "payload.from.phone_number",
   ]);
-  const message = firstString(payload, ["message", "Message", "body", "Body", "text", "Text", "sms", "SMS", "content", "Content"]);
+  const message = firstString(payload, [
+    "message",
+    "Message",
+    "body",
+    "Body",
+    "text",
+    "Text",
+    "sms",
+    "SMS",
+    "content",
+    "Content",
+    "message_text",
+    "messageText",
+    "msg",
+    "data.payload.text",
+    "payload.text",
+  ]);
 
   if (!fromNumber) throw new Error("Inbound SMS payload is missing sender/from number");
   if (!message) throw new Error("Inbound SMS payload is missing message text");
@@ -98,10 +141,51 @@ export function normalizeInbound2talkSms(payload: Record<string, unknown>): Norm
   const fromNumberNormalized = normalizePhoneNumber(fromNumber);
   if (!fromNumberNormalized) throw new Error("Inbound SMS sender number could not be normalized");
 
-  const toNumber = firstString(payload, ["to", "To", "recipient", "Recipient", "destination", "Destination", "did", "DID", "number", "Number"]);
+  const toNumber = firstString(payload, [
+    "to",
+    "To",
+    "recipient",
+    "Recipient",
+    "destination",
+    "Destination",
+    "did",
+    "DID",
+    "number",
+    "Number",
+    "to_number",
+    "toNumber",
+    "destination_addr",
+    "dst",
+    "data.payload.to.0.phone_number",
+    "payload.to.0.phone_number",
+    "data.payload.to.phone_number",
+    "payload.to.phone_number",
+  ]);
   const toNumberNormalized = normalizePhoneNumber(toNumber);
-  const providerMessageId = firstString(payload, ["id", "message_id", "messageId", "sms_id", "smsId", "uuid"]);
-  const receivedAt = firstString(payload, ["received_at", "receivedAt", "timestamp", "Timestamp", "date", "Date"]);
+  const providerMessageId = firstString(payload, [
+    "id",
+    "message_id",
+    "messageId",
+    "sms_id",
+    "smsId",
+    "uuid",
+    "MessageSid",
+    "SmsMessageSid",
+    "data.id",
+    "data.payload.id",
+    "payload.id",
+  ]);
+  const receivedAt = firstString(payload, [
+    "received_at",
+    "receivedAt",
+    "timestamp",
+    "Timestamp",
+    "date",
+    "Date",
+    "data.occurred_at",
+    "data.payload.received_at",
+    "payload.received_at",
+  ]);
   const parsedReceivedAt = receivedAt && !Number.isNaN(Date.parse(receivedAt)) ? new Date(receivedAt).toISOString() : new Date().toISOString();
 
   return {

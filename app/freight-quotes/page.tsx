@@ -1,3 +1,4 @@
+import { MissionControlShell } from "@/components/mission-control-shell";
 import { getFreightPublicAccessStatus } from "@/lib/freight/publicAccess";
 import { getFreightQuoteLogStatus, listQuoteEvents, type FreightQuoteRow } from "@/lib/freight/quoteLog";
 
@@ -60,21 +61,105 @@ function destinationLabel(row: FreightQuoteRow) {
   return row.addressEntered || [row.suburb, row.city, row.postCode].filter(Boolean).join(", ") || "—";
 }
 
+function deviceLabel(row: FreightQuoteRow) {
+  const ua = row.userAgent || "";
+  if (!ua) return "Unknown device";
+
+  const device = /iphone/i.test(ua)
+    ? "iPhone"
+    : /ipad/i.test(ua)
+      ? "iPad"
+      : /android/i.test(ua)
+        ? "Android"
+        : /macintosh|mac os x/i.test(ua)
+          ? "Mac"
+          : /windows/i.test(ua)
+            ? "Windows"
+            : /linux/i.test(ua)
+              ? "Linux"
+              : "Device unknown";
+
+  const browser = /crios/i.test(ua)
+    ? "Chrome iOS"
+    : /fxios/i.test(ua)
+      ? "Firefox iOS"
+      : /edgios/i.test(ua)
+        ? "Edge iOS"
+        : /chrome\//i.test(ua) && !/edg\//i.test(ua)
+          ? "Chrome"
+          : /safari/i.test(ua) && !/chrome|crios|android/i.test(ua)
+            ? "Safari"
+            : /firefox/i.test(ua)
+              ? "Firefox"
+              : /edg\//i.test(ua)
+                ? "Edge"
+                : "Browser unknown";
+
+  return `${device} · ${browser}`;
+}
+
+function referrerLabel(row: FreightQuoteRow) {
+  if (!row.referer) return "Direct / unknown";
+  try {
+    const url = new URL(row.referer);
+    if (url.hostname.includes("innatefurniture.co.nz")) return `Innate site${url.pathname === "/" ? " home" : ` · ${url.pathname}`}`;
+    return url.hostname;
+  } catch {
+    return row.referer.slice(0, 80);
+  }
+}
+
+function locationDetailLabel(row: FreightQuoteRow) {
+  const fields = [
+    row.suburb ? `Suburb: ${row.suburb}` : "Suburb: —",
+    row.city ? `City: ${row.city}` : "City: —",
+    row.postCode ? `Postcode: ${row.postCode}` : "Postcode: —",
+  ];
+  return fields.join(" · ");
+}
+
+function uniqueVisitorCount(rows: FreightQuoteRow[]) {
+  const keys = new Set<string>();
+  rows.forEach((row) => {
+    keys.add(row.clientIpHash || `${row.userAgent.slice(0, 42)}|${row.city || row.suburb}|${row.timestamp.slice(0, 10)}`);
+  });
+  return keys.size;
+}
+
+function locationCount(rows: FreightQuoteRow[]) {
+  return new Set(rows.map((row) => `${row.suburb}|${row.city}|${row.postCode}`).filter((key) => key !== "||")).size;
+}
+
+function topDeviceLabel(rows: FreightQuoteRow[]) {
+  if (!rows.length) return "—";
+  const counts = new Map<string, number>();
+  rows.forEach((row) => {
+    const label = deviceLabel(row).split(" · ")[0] || "Unknown";
+    counts.set(label, (counts.get(label) || 0) + 1);
+  });
+  const [label, count] = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0] || ["—", 0];
+  return count ? `${label} · ${count}` : "—";
+}
+
 function calcStats(rows: FreightQuoteRow[]): Stat[] {
   const total = rows.length;
   const manual = rows.filter((row) => row.manualCheckOffered).length;
   const estimated = rows.filter((row) => row.status === "estimated").length;
   const latest = rows[0]?.timestamp ? timeAgo(rows[0].timestamp) : "—";
-  const avg = rows.length
-    ? Math.round(rows.reduce((sum, row) => sum + (row.estimateInclGst || 0), 0) / rows.filter((row) => row.estimateInclGst !== undefined).length || 0)
+  const pricedRows = rows.filter((row) => row.estimateInclGst !== undefined);
+  const avg = pricedRows.length
+    ? Math.round(pricedRows.reduce((sum, row) => sum + (row.estimateInclGst || 0), 0) / pricedRows.length)
     : 0;
 
   return [
-    { label: "Recent checks", value: String(total), tone: "normal" },
+    { label: "Freight checks", value: String(total), tone: "normal" },
+    { label: "Likely visitors", value: String(uniqueVisitorCount(rows)), tone: "normal" },
+    { label: "Locations", value: String(locationCount(rows)), tone: "normal" },
+    { label: "Top device", value: topDeviceLabel(rows), tone: "normal" },
     { label: "Successful estimates", value: String(estimated), tone: "good" },
+    { label: "Average shown", value: avg ? money(avg) : "—", tone: "normal" },
     { label: "Manual-check prompts", value: String(manual), tone: manual ? "warn" : "normal" },
     { label: "Latest", value: latest, tone: "normal" },
-    { label: "Average shown", value: avg ? money(avg) : "—", tone: "normal" },
   ];
 }
 
@@ -114,6 +199,18 @@ function QuoteCard({ row }: { row: FreightQuoteRow }) {
           <dd>{row.benchCount ?? 0}</dd>
         </div>
         <div>
+          <dt>Device</dt>
+          <dd>{deviceLabel(row)}</dd>
+        </div>
+        <div>
+          <dt>Arrived from</dt>
+          <dd>{referrerLabel(row)}</dd>
+        </div>
+        <div>
+          <dt>Location fields</dt>
+          <dd>{locationDetailLabel(row)}</dd>
+        </div>
+        <div>
           <dt>Mainfreight raw</dt>
           <dd>{money(row.rawMainfreightInclGst)}</dd>
         </div>
@@ -125,6 +222,9 @@ function QuoteCard({ row }: { row: FreightQuoteRow }) {
         </div>
       </dl>
       {row.packageSummary ? <p className="packages">{row.packageSummary}</p> : null}
+      <p className="packages">
+        Source: {row.source || "—"}{row.internalTestReasons?.length ? ` · Test reasons: ${row.internalTestReasons.join(", ")}` : ""}
+      </p>
       {row.pageUrl ? (
         <a className="source-link" href={row.pageUrl} target="_blank" rel="noreferrer">
           Open product page
@@ -137,7 +237,7 @@ function QuoteCard({ row }: { row: FreightQuoteRow }) {
 export default async function FreightQuotesPage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = searchParams ? await searchParams : {};
   const internalParam = firstParam(params.internal);
@@ -148,10 +248,18 @@ export default async function FreightQuotesPage({
   const stats = calcStats(rows);
   const logStatus = getFreightQuoteLogStatus();
   const publicAccessStatus = getFreightPublicAccessStatus();
-  const activeStore = logStatus.supabaseConfigured ? "Supabase" : logStatus.airtableConfigured ? "Airtable fallback" : "not configured";
+  const activeStore = logStatus.supabaseConfigured ? "Supabase" : "not configured";
 
   return (
-    <main className="page">
+    <MissionControlShell
+      section="freight"
+      pageTitle="Freight quotes"
+      pageSubtitle="Customer freight-calculator signal and quote-log health. Guido-only so Nick/Dylan stay focused on workshop work."
+      syncedAt={new Date().toISOString()}
+      source={logStatus.supabaseConfigured ? "supabase" : "none"}
+      mondayError={error || undefined}
+    >
+      <div className="page">
       <style>{`
         :root{color-scheme:light;background:#f4f1eb;color:#283229;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
         body{margin:0;background:#f4f1eb;color:#283229}
@@ -159,7 +267,7 @@ export default async function FreightQuotesPage({
         .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:#6c7568;margin:0 0 10px}
         h1{font-family:Georgia,serif;font-size:clamp(34px,6vw,62px);line-height:.95;margin:0 0 12px;font-weight:500;color:#283229}
         .intro{max-width:760px;color:#586354;font-size:17px;line-height:1.55;margin:0 0 24px}
-        .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:24px 0 26px}
+        .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:24px 0 26px}
         .stat{background:#fff;border:1px solid #ded8cd;padding:15px 16px;border-radius:16px;box-shadow:0 12px 30px rgba(40,50,41,.06)}
         .stat span{display:block;color:#6c7568;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.stat strong{font-size:25px}
         .stat--warn strong{color:#9a5b20}.stat--good strong{color:#2f6e47}
@@ -187,7 +295,7 @@ export default async function FreightQuotesPage({
       <section className="control-panel" aria-label="Freight log controls">
         <div className="panel">
           <h2>Quote log view</h2>
-          <p>Default view hides internal/test traffic so website signal stays clean. Use the chips below for quick freight/shipping slices.</p>
+          <p>Default view shows customer-classified rows only. Internal/test traffic is kept separate so the website signal stays clean. Use the chips below for quick freight/shipping slices.</p>
           <div className="filters">
             <FilterLink href="/freight-quotes" active={!area && !includeInternal}>Customer signal</FilterLink>
             <FilterLink href="/freight-quotes?internal=1" active={includeInternal && !area}>Include internal/tests</FilterLink>
@@ -201,7 +309,6 @@ export default async function FreightQuotesPage({
           <div className="status-list">
             <div className="status-row"><span>Write gate</span><strong>{logStatus.loggingEnabled ? "enabled" : "off"}</strong></div>
             <div className="status-row"><span>Primary store</span><strong>{activeStore}</strong></div>
-            <div className="status-row"><span>Airtable fallback</span><strong>{logStatus.airtableFallbackEnabled ? "allowed" : "blocked"}</strong></div>
             <div className="status-row"><span>Public token</span><strong>{publicAccessStatus.tokenConfigured ? "required" : "origin/referer only"}</strong></div>
             <div className="status-row"><span>Rate guard</span><strong>{publicAccessStatus.rateLimitEnabled ? "on" : "off"}</strong></div>
           </div>
@@ -227,6 +334,7 @@ export default async function FreightQuotesPage({
           ))}
         </section>
       )}
-    </main>
+      </div>
+    </MissionControlShell>
   );
 }

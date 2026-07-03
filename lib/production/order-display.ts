@@ -1,47 +1,16 @@
 import type { UiOrder } from "@/lib/monday/mapping";
-
-export type ProductionStep = { key: string; label: string; who: string | null; wait: boolean; waitLabel?: string };
-
-export const TABLE_STEPS: ProductionStep[] = [
-  { key: "confirmed", label: "Order Confirmed", who: "Workshop", wait: false },
-  { key: "pos", label: "POs Sent", who: "Workshop", wait: false },
-  { key: "timber", label: "Timber Pulled", who: "Workshop", wait: false },
-  { key: "matWait", label: "Materials Wait", who: null, wait: true, waitLabel: "~2 weeks" },
-  { key: "received", label: "Materials Received", who: "Workshop", wait: false },
-  { key: "stress", label: "Stress Cuts", who: "Workshop", wait: false },
-  { key: "sand", label: "Sand", who: "Workshop", wait: false },
-  { key: "coat1", label: "1st Coat", who: "Workshop", wait: false },
-  { key: "coat2", label: "2nd Coat", who: "Workshop", wait: false },
-  { key: "cure", label: "Curing", who: null, wait: true, waitLabel: "~1 week" },
-  { key: "qc", label: "QC + Photos", who: "Workshop", wait: false },
-  { key: "assemble", label: "Assemble / Box", who: "Workshop", wait: false },
-  { key: "freight", label: "Book Freight", who: "Workshop", wait: false },
-];
-
-export const PANEL_STEPS: ProductionStep[] = [
-  { key: "confirmed", label: "Order Confirmed", who: "Workshop", wait: false },
-  { key: "pos", label: "POs Sent", who: "Workshop", wait: false },
-  { key: "matWait", label: "Materials Wait", who: null, wait: true, waitLabel: "~2 weeks" },
-  { key: "received", label: "Materials Received", who: "Workshop", wait: false },
-  { key: "cut", label: "CNC / Cut", who: "Workshop", wait: false },
-  { key: "sand", label: "Sand", who: "Workshop", wait: false },
-  { key: "coat1", label: "1st Coat", who: "Workshop", wait: false },
-  { key: "coat2", label: "2nd Coat", who: "Workshop", wait: false },
-  { key: "cure", label: "Curing", who: null, wait: true, waitLabel: "~1 week" },
-  { key: "qc", label: "QC", who: "Workshop", wait: false },
-  { key: "wrap", label: "Wrap + Ship", who: "Workshop", wait: false },
-];
-
-export const SAMPLE_STEPS: ProductionStep[] = [
-  { key: "received", label: "Request Received", who: "Workshop", wait: false },
-  { key: "species", label: "Species Selected", who: "Workshop", wait: false },
-  { key: "cut", label: "Samples Cut", who: "Workshop", wait: false },
-  { key: "sand", label: "Sanded", who: "Workshop", wait: false },
-  { key: "coat", label: "Coated", who: "Workshop", wait: false },
-  { key: "pack", label: "Packed", who: "Workshop", wait: false },
-  { key: "sent", label: "Sent / Collected", who: null, wait: false },
-  { key: "followup", label: "Follow-up Due", who: "Customer follow-up", wait: false },
-];
+export {
+  TABLE_STEPS,
+  PANEL_STEPS,
+  SAMPLE_STEPS,
+  type ProductionStep,
+} from "@/lib/production/production-steps";
+import {
+  TABLE_STEPS,
+  PANEL_STEPS,
+  SAMPLE_STEPS,
+  type ProductionStep,
+} from "@/lib/production/production-steps";
 
 export type DisplayOrder = UiOrder & {
   steps: ProductionStep[];
@@ -122,6 +91,8 @@ export function attentionFlags(o: UiOrder): string[] {
   if (o.rawMondayItem === "Sample" && diff !== null && diff <= 2 && o.rawMondayStatus === "To Process") flags.push("Sample due soon");
   if (o.rawMondayStatus === "Materials Ordered") flags.push("Waiting on materials");
   if (o.rawMondayStatus === "In production" && o.rawMondayTopPanel == null) flags.push("Needs step update");
+  if (o.paymentStage === "awaiting_balance_payment") flags.push("Awaiting balance payment");
+  if (o.paymentStage === "ready_for_balance") flags.push("Ready for balance invoice");
   return flags;
 }
 
@@ -135,6 +106,9 @@ export function dataQualityFlags(o: UiOrder): string[] {
 }
 
 export function nextAction(o: UiOrder, currentStep: number): string {
+  if (o.paymentNextAction && (o.paymentStage === "awaiting_balance_payment" || o.paymentStage === "balance_authorised" || o.paymentStage === "ready_for_balance" || o.paymentStage === "balance_paid")) {
+    return o.paymentNextAction;
+  }
   if (!o.shipDate) return "Set due date in the source order";
   if (o.rawMondayStatus === "Materials Ordered") return "Confirm material arrival / supplier timing";
   if (o.rawMondayStatus === "To Process") return o.rawMondayItem === "Sample" ? "Cut / prepare sample pack" : "Confirm production plan";

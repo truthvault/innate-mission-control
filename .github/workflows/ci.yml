@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, v2-main]
   pull_request:
-    branches: [main]
+    branches: [main, v2-main]
 
 jobs:
   check:
@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - name: Monday mutation ban (read-only guard)
         run: npm run check:mutations
+      - name: Page contract check
+        run: npm run check:tuesday-page-contracts
       - name: Lint
         run: npm run lint
       - name: Typecheck

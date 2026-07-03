@@ -6,6 +6,9 @@ import {
   approveSuggestedPlanSteps,
   summarizeLaneCapacity,
 } from '../lib/production/new-order-planning.ts';
+import {
+  buildDiningTableProcessPlan,
+} from '../lib/production/workshop-process-rules.ts';
 
 const orders = [
   {
@@ -207,5 +210,35 @@ assert.equal(capacityOver.status, 'over');
 assert.equal(capacityOver.totalHours, 8);
 assert.equal(capacityOver.label, '8h / 7h');
 assert.match(capacityOver.detail, /Over capacity/i);
+
+const blackwashTableProcess = buildDiningTableProcessPlan({
+  orderId: 'blackwash-table',
+  startIso: '2026-06-15',
+  text: 'Dining Table\nShape: rectangle\nTimber: West Coast Rimu\nColour: Blackwash\nBase: Double Crossroads steel',
+});
+assert.deepEqual(
+  blackwashTableProcess
+    .map((task) => task.title)
+    .filter((title) => /stain|clear coat/i.test(title)),
+  ['Sand and first stain coat', 'Second stain coat', 'First clear coat', 'Final clear coat'],
+  'blackwash dining tables show two stain coats and two clear coats'
+);
+assert.ok(blackwashTableProcess.find((task) => task.title === 'Balance invoice' && task.owner === 'Guido'), 'table process keeps balance invoice with Guido');
+assert.ok(blackwashTableProcess.find((task) => task.title === 'Confirm paid before release' && task.owner === 'Guido'), 'table process includes Guido release payment check');
+
+const clearDanishOvalProcess = buildDiningTableProcessPlan({
+  orderId: 'danish-oval',
+  startIso: '2026-06-15',
+  text: 'Dining Table\nShape: Danish oval\nDimensions: 2800x1500x760mm\nTimber: West Coast Beech\nColour: Clear\nBase: Crossroads steel',
+});
+assert.deepEqual(
+  clearDanishOvalProcess
+    .map((task) => task.title)
+    .filter((title) => /coat|clear final/i.test(title)),
+  ['Sand and coat', 'Second coat', '3rd coat (clear final)'],
+  'clear dining tables show three clear coat tasks'
+);
+assert.ok(clearDanishOvalProcess.find((task) => task.title === 'Precision Woodworks CNC'), 'Danish oval gets Precision Woodworks CNC');
+assert.ok(clearDanishOvalProcess.find((task) => task.title === 'Book Pinpoint return'), 'Danish oval gets Pinpoint return booking');
 
 console.log('new-order-planning tests passed');

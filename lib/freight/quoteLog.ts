@@ -64,9 +64,6 @@ export type FreightQuoteRow = {
   clientIpHash?: string;
 };
 
-const AIRTABLE_API_URL = "https://api.airtable.com/v0";
-const DEFAULT_BASE_ID = "apphs7DnsHiLGdNbc";
-const DEFAULT_TABLE_ID = "tbl1OixNuxTBFWMsd";
 const DEFAULT_LOG_TIMEOUT_MS = 1500;
 
 function supabaseConfig() {
@@ -78,10 +75,6 @@ function supabaseConfig() {
 
 function freightQuoteLoggingEnabled() {
   return process.env.FREIGHT_QUOTE_LOGGING_ENABLED === "true";
-}
-
-function airtableFallbackEnabled() {
-  return process.env.FREIGHT_QUOTE_LOG_AIRTABLE_FALLBACK === "true";
 }
 
 function quoteLogTimeoutMs() {
@@ -103,17 +96,7 @@ export function getFreightQuoteLogStatus() {
   return {
     loggingEnabled: freightQuoteLoggingEnabled(),
     supabaseConfigured: Boolean(supabaseConfig()),
-    airtableConfigured: Boolean(airtableConfig()),
-    airtableFallbackEnabled: airtableFallbackEnabled(),
   };
-}
-
-function airtableConfig() {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID || DEFAULT_BASE_ID;
-  const tableId = process.env.AIRTABLE_FREIGHT_QUOTES_TABLE_ID || DEFAULT_TABLE_ID;
-  if (!apiKey || !baseId || !tableId) return null;
-  return { apiKey, baseId, tableId };
 }
 
 function truncate(value: unknown, max = 8000): string | undefined {
@@ -164,6 +147,8 @@ function internalTestReasons(event: FreightQuoteLogEvent, clientIpHash: string |
   if (marker && marker === process.env.FREIGHT_INTERNAL_TEST_TOKEN?.toLowerCase()) reasons.push("internal_test_token");
   if (/internal|test|debug|preview/.test(source)) reasons.push("source_marker");
   if (/freighttest=|internaltest=|testfreight=/.test(pageUrl)) reasons.push("url_test_marker");
+  if (/[?&](tracking_test|cache_check|calc-update-check|shape-ref-check|freight-tracking-check|freight-tracking-visual|freight-live-inspect)=/.test(pageUrl)) reasons.push("url_test_marker");
+  if (/[?&](__ab|_fd|_sc)=/.test(pageUrl)) reasons.push("cache_bust_marker");
   if (status === "dry_run") reasons.push("dry_run");
 
   return Array.from(new Set(reasons));
@@ -260,42 +245,6 @@ function eventId(event: FreightQuoteLogEvent, timestamp: string) {
   return safe.slice(0, 180);
 }
 
-function airtableFields(event: FreightQuoteLogEvent) {
-  const timestamp = event.timestamp || new Date().toISOString();
-  const result = event.result || {};
-  const totals = result.totals && typeof result.totals === "object" ? (result.totals as Record<string, unknown>) : {};
-  const destination = event.destination || {};
-  const addressEntered = event.addressEntered || destination.formattedAddress || [destination.suburb, destination.city, destination.postCode].filter(Boolean).join(", ");
-
-  return {
-    "Event ID": eventId(event, timestamp),
-    Timestamp: timestamp,
-    Status: truncate(event.status, 80),
-    "Product Handle": truncate(event.productHandle, 255),
-    "Variant Title": truncate(event.variantTitle, 255),
-    "Variant ID": truncate(event.variantId, 80),
-    "Table Length mm": numberOrUndefined(event.tableLengthMm),
-    "Table Width mm": numberOrUndefined(event.tableWidthMm),
-    "Bench Count": numberOrUndefined(event.benchCount),
-    "Address Entered": truncate(addressEntered, 2000),
-    Suburb: truncate(destination.suburb, 255),
-    City: truncate(destination.city, 255),
-    Postcode: truncate(destination.postCode, 40),
-    "Estimate Incl GST": numberOrUndefined(result.estimateInclGst),
-    "Raw Mainfreight Incl GST": numberOrUndefined(result.rawMainfreightInclGst),
-    "Manual Check Offered": booleanOrFalse(result.manualCheckOffered),
-    "Package Items": numberOrUndefined(totals.items),
-    "Total Cubic Metres": numberOrUndefined(totals.cubicMetres),
-    "Total Weight kg": numberOrUndefined(totals.weightKg),
-    Source: truncate(event.source, 255),
-    "Page URL": truncate(event.pageUrl, 2000),
-    Referer: truncate(event.referer, 2000),
-    "User Agent": truncate(event.userAgent, 2000),
-    "Package Summary": truncate(packageSummaryFromResult(result), 2000),
-    "Result JSON": truncate(JSON.stringify(result), 8000),
-  };
-}
-
 function compactFields(fields: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined && value !== ""));
 }
@@ -307,66 +256,34 @@ export async function writeQuoteEvent(event: FreightQuoteLogEvent) {
 
   const stampedEvent = { timestamp: new Date().toISOString(), ...event };
   const supabase = supabaseConfig();
-  if (supabase) {
-    try {
-      const response = await fetchQuoteLog(`${supabase.url}/rest/v1/freight_quote_events`, {
-        method: "POST",
-        headers: {
-          apikey: supabase.serviceKey,
-          Authorization: `Bearer ${supabase.serviceKey}`,
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(supabaseRow(stampedEvent)),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.warn(`[freight] quote-event Supabase write failed: HTTP ${response.status} ${text.slice(0, 500)}`);
-        if (!airtableFallbackEnabled()) {
-          return { ok: false, status: response.status, store: "supabase", fallbackSkipped: true };
-        }
-      } else {
-        const body = (await response.json()) as Array<{ id?: string }>;
-        return { ok: true, id: body[0]?.id, store: "supabase" };
-      }
-    } catch (err) {
-      console.warn("[freight] quote-event Supabase write failed", err);
-      if (!airtableFallbackEnabled()) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err), store: "supabase", fallbackSkipped: true };
-      }
-    }
-  }
-
-  // Legacy fallback only. Airtable remains available for old envs, but new
-  // Mission Control logging should use Supabase.
-  const config = airtableConfig();
-  if (!config) {
-    console.warn("[freight] quote-event logging skipped: missing Supabase/Airtable config");
+  if (!supabase) {
+    console.warn("[freight] quote-event logging skipped: missing Supabase config");
     return { ok: false, skipped: true, reason: "missing_quote_log_config" };
   }
 
   try {
-    const response = await fetchQuoteLog(`${AIRTABLE_API_URL}/${config.baseId}/${config.tableId}`, {
+    const response = await fetchQuoteLog(`${supabase.url}/rest/v1/freight_quote_events`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.apiKey}`,
+        apikey: supabase.serviceKey,
+        Authorization: `Bearer ${supabase.serviceKey}`,
         "Content-Type": "application/json",
+        Prefer: "return=representation",
       },
-      body: JSON.stringify({ fields: compactFields(airtableFields(stampedEvent)) }),
+      body: JSON.stringify(supabaseRow(stampedEvent)),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      console.warn(`[freight] quote-event Airtable write failed: HTTP ${response.status} ${text.slice(0, 500)}`);
-      return { ok: false, status: response.status };
+      console.warn(`[freight] quote-event Supabase write failed: HTTP ${response.status} ${text.slice(0, 500)}`);
+      return { ok: false, status: response.status, store: "supabase" };
     }
 
-    const body = (await response.json()) as { id?: string };
-    return { ok: true, id: body.id, store: "airtable" };
+    const body = (await response.json()) as Array<{ id?: string }>;
+    return { ok: true, id: body[0]?.id, store: "supabase" };
   } catch (err) {
-    console.warn("[freight] quote-event Airtable write failed", err);
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.warn("[freight] quote-event Supabase write failed", err);
+    return { ok: false, error: err instanceof Error ? err.message : String(err), store: "supabase" };
   }
 }
 
@@ -380,36 +297,6 @@ function asNumber(value: unknown): number | undefined {
 
 function asBool(value: unknown): boolean {
   return value === true;
-}
-
-function rowFromRecord(record: { id: string; fields?: Record<string, unknown> }): FreightQuoteRow {
-  const f = record.fields || {};
-  return {
-    id: record.id,
-    timestamp: asString(f.Timestamp),
-    status: asString(f.Status),
-    productHandle: asString(f["Product Handle"]),
-    variantTitle: asString(f["Variant Title"]),
-    variantId: asString(f["Variant ID"]),
-    tableLengthMm: asNumber(f["Table Length mm"]),
-    tableWidthMm: asNumber(f["Table Width mm"]),
-    benchCount: asNumber(f["Bench Count"]),
-    addressEntered: asString(f["Address Entered"]),
-    suburb: asString(f.Suburb),
-    city: asString(f.City),
-    postCode: asString(f.Postcode),
-    estimateInclGst: asNumber(f["Estimate Incl GST"]),
-    rawMainfreightInclGst: asNumber(f["Raw Mainfreight Incl GST"]),
-    manualCheckOffered: asBool(f["Manual Check Offered"]),
-    packageItems: asNumber(f["Package Items"]),
-    totalCubicMetres: asNumber(f["Total Cubic Metres"]),
-    totalWeightKg: asNumber(f["Total Weight kg"]),
-    source: asString(f.Source),
-    pageUrl: asString(f["Page URL"]),
-    referer: asString(f.Referer),
-    userAgent: asString(f["User Agent"]),
-    packageSummary: asString(f["Package Summary"]),
-  };
 }
 
 function rowFromSupabase(record: Record<string, unknown>): FreightQuoteRow {
@@ -449,59 +336,30 @@ export async function listQuoteEvents(
   options: { includeInternal?: boolean; productArea?: string } = {},
 ): Promise<{ rows: FreightQuoteRow[]; error?: string }> {
   const supabase = supabaseConfig();
-  if (supabase) {
-    const params = new URLSearchParams({
-      select: "*",
-      order: "created_at.desc",
-      limit: String(Math.max(1, Math.min(limit, 100))),
-    });
-    if (!options.includeInternal) params.set("is_internal_test", "eq.false");
-    if (options.productArea) params.set("product_area", `eq.${options.productArea}`);
-
-    try {
-      const response = await fetch(`${supabase.url}/rest/v1/freight_quote_events?${params}`, {
-        headers: {
-          apikey: supabase.serviceKey,
-          Authorization: `Bearer ${supabase.serviceKey}`,
-        },
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        return { rows: [], error: `Supabase read failed: HTTP ${response.status} ${text.slice(0, 300)}` };
-      }
-      const body = (await response.json()) as Record<string, unknown>[];
-      return { rows: body.map(rowFromSupabase) };
-    } catch (err) {
-      return { rows: [], error: err instanceof Error ? err.message : String(err) };
-    }
-  }
-
-  const config = airtableConfig();
-  if (!config) return { rows: [], error: "Missing Supabase/Airtable quote log config" };
+  if (!supabase) return { rows: [], error: "Missing Supabase quote log config" };
 
   const params = new URLSearchParams({
-    maxRecords: String(Math.max(1, Math.min(limit, 100))),
-    pageSize: String(Math.max(1, Math.min(limit, 100))),
-    "sort[0][field]": "Timestamp",
-    "sort[0][direction]": "desc",
+    select: "*",
+    order: "created_at.desc",
+    limit: String(Math.max(1, Math.min(limit, 100))),
   });
+  if (!options.includeInternal) params.set("is_internal_test", "eq.false");
+  if (options.productArea) params.set("product_area", `eq.${options.productArea}`);
 
   try {
-    const response = await fetch(`${AIRTABLE_API_URL}/${config.baseId}/${config.tableId}?${params}`, {
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+    const response = await fetch(`${supabase.url}/rest/v1/freight_quote_events?${params}`, {
+      headers: {
+        apikey: supabase.serviceKey,
+        Authorization: `Bearer ${supabase.serviceKey}`,
+      },
       cache: "no-store",
     });
-
     if (!response.ok) {
       const text = await response.text();
-      return { rows: [], error: `Airtable read failed: HTTP ${response.status} ${text.slice(0, 300)}` };
+      return { rows: [], error: `Supabase read failed: HTTP ${response.status} ${text.slice(0, 300)}` };
     }
-
-    const body = (await response.json()) as { records?: Array<{ id: string; fields?: Record<string, unknown> }> };
-    let rows = (body.records || []).map(rowFromRecord);
-    if (!options.includeInternal) rows = rows.filter((row) => !/internal|test|debug|preview/.test(row.source.toLowerCase()));
-    return { rows };
+    const body = (await response.json()) as Record<string, unknown>[];
+    return { rows: body.map(rowFromSupabase) };
   } catch (err) {
     return { rows: [], error: err instanceof Error ? err.message : String(err) };
   }

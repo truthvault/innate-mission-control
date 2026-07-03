@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { MissionControlShell } from '@/components/mission-control-shell';
 
 type Owner = 'Commercial' | 'Asset pipeline';
 type Lane = 'Now' | 'Next' | 'Later' | 'Blocked / Decisions';
@@ -423,6 +424,7 @@ function CheckboxCard({
 }
 
 export default function ConfiguratorDashboard() {
+  const [syncedAt] = useState(() => new Date().toISOString());
   const [checkedOverrides, setCheckedOverrides] = useState<Record<string, boolean>>(() => {
     if (typeof window === 'undefined') return {};
 
@@ -501,7 +503,14 @@ export default function ConfiguratorDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3eadc] text-[#241b16]">
+    <MissionControlShell
+      section="configurator"
+      pageTitle="Configurator"
+      pageSubtitle="Draft control board for the lead-gen configurator and 3D asset pipeline. Guido-only so it does not clutter workshop navigation."
+      syncedAt={syncedAt}
+      source="snapshot"
+    >
+      <main className="min-h-screen bg-[#f3eadc] text-[#241b16]">
       <section className="relative overflow-hidden border-b border-[#d1b98f] bg-[#1f1712] text-[#f8ead5]">
         <div className="absolute inset-0 opacity-25 [background:radial-gradient(circle_at_20%_15%,#a66a2d,transparent_32%),radial-gradient(circle_at_78%_0%,#e0af58,transparent_28%),linear-gradient(135deg,#1f1712,#3a281d_55%,#17100d)]" />
         <div className="relative mx-auto flex w-full flex-col gap-5 px-4 py-6 lg:flex-row lg:items-end lg:justify-between">
@@ -743,6 +752,7 @@ export default function ConfiguratorDashboard() {
           </article>
         </section>
       </div>
-    </main>
+      </main>
+    </MissionControlShell>
   );
 }

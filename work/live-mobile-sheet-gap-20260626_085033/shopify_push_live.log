@@ -1,0 +1,25 @@
+╭─ warning ────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│  It doesn't seem like you're running this command in a theme directory.      │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+Uploading files to remote theme [0%] ...
+[2K[1A[2K[G
+Cleaning your remote theme [100%] ...
+[2K[1A[2K[G
+Theme upload complete ...
+[2K[1A[2K[G
+╭─ success ────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│  The theme 'Codex embedded configurator preview proof 20260...'              │
+│  (#141308166203) was pushed successfully.                                    │
+│                                                                              │
+│  Next steps                                                                  │
+│    • View your theme [1]                                                     │
+│    • Customize your theme at the theme editor [2]                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+[1] https://innate-furniture.myshopify.com
+[2] https://innate-furniture.myshopify.com/admin/themes/141308166203/editor
+
