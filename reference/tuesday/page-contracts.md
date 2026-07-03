@@ -97,3 +97,36 @@ Keep contracts short and operational. They are product guardrails, not full spec
 - Must preserve: order identity, readiness/blocker state, address/freight caution, and source authority labels.
 - Success looks like: the team can see what can ship, what cannot, and what must happen next.
 - Verification: check route access, dispatch cards/rows, blocker visibility, mobile layout, and no external/customer mutation unless explicitly approved.
+
+## `/workshop`
+
+- Route/view: `/workshop`, Tuesday v2 Schedule week board.
+- Primary user: Nick and Dylan first; Guido for oversight.
+- Purpose: show the workshop week (Monday–Friday × Nick/Dylan) from the Supabase production task spine so the team can see and move the week's work without Monday.com.
+- This is: a calm week board of production tasks read from Supabase only — tick done, add a task, move a task between days/people, step between weeks.
+- This is not: a Monday.com mirror, a template editor, a drag-heavy planning canvas, or a reporting dashboard.
+- Must preserve: Supabase as the only data source, order linkage on tasks, working-day conventions (Nick and Dylan's workshop days), NZ-timezone week boundaries, one-tap task completion, and mobile usability.
+- Success looks like: Nick opens it Monday morning, sees exactly what the week holds for him and Dylan, and can act on it in one or two taps.
+- Verification: prove the route desktop + mobile via the review-link verifier; tick/untick a task and read it back from Supabase; confirm no Monday API calls are made server-side.
+
+## `/workshop/orders`
+
+- Route/view: `/workshop/orders`, Tuesday v2 active orders + stage checklist.
+- Primary user: Nick, Dylan, and Guido.
+- Purpose: show every active order with its due date, workshop progress, and per-order task checklist from the Supabase spine.
+- This is: an ordered list of live orders (soonest due first) with an expandable stage/task checklist per order.
+- This is not: a CRM, quoting surface, payment ledger, or historic order archive.
+- Must preserve: Supabase as the only data source, due-date honesty (no invented dates), order → task linkage, and read-only Xero authority for financial facts.
+- Success looks like: anyone in the workshop can answer "what state is this order in and what's next?" in under ten seconds.
+- Verification: prove the route desktop + mobile; expand at least one order's checklist; confirm task ticks persist to Supabase and no Monday reads occur.
+
+## `/workshop/today`
+
+- Route/view: `/workshop/today`, Tuesday v2 per-person kiosk.
+- Primary user: Nick or Dylan on a workshop tablet/phone.
+- Purpose: give one person one screen of today's tasks with big one-tap completion, so working from Tuesday is faster than asking or guessing.
+- This is: a large-target, low-noise daily task list for a single selected person, auto-refreshing from Supabase.
+- This is not: an admin surface, a planning board, a metrics page, or a multi-person comparison view.
+- Must preserve: person selection (Nick/Dylan), NZ-timezone "today", ≥44px tap targets, tick + untick, order context per task, and graceful empty state naming the source.
+- Success looks like: Nick taps his name once and can run his day from the tablet without touching anything else.
+- Verification: prove the route on mobile viewport; tick a task and read it back from Supabase; confirm the empty state distinguishes "no tasks today" from "source unavailable".

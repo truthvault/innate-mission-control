@@ -5,11 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates" | "freight" | "configurator" | "today";
+export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates" | "freight" | "configurator" | "today" | "workshop";
 
 type NavItem = { section: MissionControlSection; label: string; href: string; group?: "Control" | "Sales" | "Ops" | "Drafts" };
 
 const NAV: NavItem[] = [
+  { section: "workshop", label: "Workshop", href: "/workshop" },
   { section: "plan", label: "Orders", href: "/production/plan" },
   { section: "stock", label: "Stock", href: "/production/stock" },
   { section: "samples", label: "Samples", href: "/production/samples" },
