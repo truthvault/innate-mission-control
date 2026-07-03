@@ -20,6 +20,8 @@ jobs:
         run: npm run check:mutations
       - name: Page contract check
         run: npm run check:tuesday-page-contracts
+      - name: Planning board tests
+        run: npm run test:planning
       - name: Lint
         run: npm run lint
       - name: Typecheck

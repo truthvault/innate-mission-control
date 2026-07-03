@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { DT, MC_WIDTH } from "@/components/mission-control-ui";
 
-export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates" | "freight" | "configurator" | "today";
+export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "samples" | "stock" | "dispatch" | "test" | "quoting" | "costings" | "processTemplates" | "freight" | "configurator" | "today" | "workshop";
 
 type NavItem = { section: MissionControlSection; label: string; href: string; group?: "Control" | "Sales" | "Ops" | "Drafts" };
 
@@ -23,7 +23,6 @@ const GUIDO_NAV: NavItem[] = [
   { section: "freight", label: "Freight quotes", href: "/freight-quotes", group: "Ops" },
   { section: "configurator", label: "Configurator", href: "/configurator", group: "Drafts" },
   { section: "calls", label: "Calls", href: "/call-intelligence", group: "Drafts" },
-  { section: "dispatch", label: "Dispatch", href: "/production/dispatch", group: "Drafts" },
   { section: "test", label: "Test job", href: "/production/test", group: "Drafts" },
 ];
 const ALL_NAV = [...NAV, ...GUIDO_NAV];

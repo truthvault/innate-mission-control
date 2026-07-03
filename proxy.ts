@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, isValidAuthCookie } from "@/lib/tuesday/auth";
 
 const PUBLIC_PREFIXES = [
+  "/api/health",
   "/timbers/",
   "/api/address-autocomplete",
   "/api/address-details",
@@ -36,6 +37,6 @@ export const config = {
   // expose server-side secrets.
   // Note: /api/monday/refresh IS still matched and stays gated by the auth cookie.
   matcher: [
-    "/((?!login|_next/static|_next/image|favicon.ico|timbers/|api/monday/webhook|api/sms/2talk/inbound|api/sms/slack/events|api/sms/slack/commands|api/sms/slack/context|api/freight/|api/address-autocomplete|api/address-details|api/freight-estimate|api/send-quote).*)",
+    "/((?!login|_next/static|_next/image|favicon.ico|api/health|timbers/|api/monday/webhook|api/sms/2talk/inbound|api/sms/slack/events|api/sms/slack/commands|api/sms/slack/context|api/freight/|api/address-autocomplete|api/address-details|api/freight-estimate|api/send-quote).*)",
   ],
 };

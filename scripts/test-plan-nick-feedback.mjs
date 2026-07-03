@@ -10,8 +10,10 @@ assert.doesNotMatch(source, /PlanHealthStrip|buildPlanHealthItems|Friday hidden/
 assert.match(source, /const visibleDays = DAYS;/, 'Nick feedback: Friday should always be visible, not hidden behind a toggle');
 assert.doesNotMatch(source, /setShowFriday|Show Friday|Hide Friday/, 'Nick feedback: remove manual Friday show/hide controls');
 assert.match(source, /current-week-prominent-border/, 'Nick feedback: current week should have a deliberately prominent border marker');
-assert.match(source, /#8b1e1e/, 'Nick feedback: Nick/Dylan colours should be more distinct, with a red owner colour');
-assert.match(source, /#1f1f1f/, 'Nick feedback: Nick/Dylan colours should be more distinct, with a black owner colour');
+// Owner palette evolved (2026-07): distinctness is now delivered by PERSON_VISUALS
+// using theme tokens — Nick teal vs Dylan sage. Guard the distinctness, not a hex era.
+assert.match(source, /nick: \{\s*stripe: DT\.teal/, 'Nick feedback: Nick must keep a distinct owner colour (teal token)');
+assert.match(source, /dylan: \{\s*stripe: DT\.sage/, 'Nick feedback: Dylan must keep a distinct owner colour (sage token)');
 assert.match(source, /customer-left-label/, 'Nick feedback: customer/order name should be visually led from the left of plan task cards');
 assert.match(source, /Tick the checkbox to mark this task done/, 'Nick question: explain how to tick a task off near job tasks');
 assert.match(source, /Add task to job/, 'Nick question: the add-task control should be explicitly labelled, not just an icon');
@@ -21,15 +23,18 @@ assert.match(source, /Save task edits/, 'Nick question: Save task should be clea
 assert.match(source, /Saves this card in Tuesday only/, 'Nick question: explain what the save button does');
 assert.match(source, /3rd coat \(clear final\)/, 'Nick feedback: stage suggestions should include a clear-coat third coat stage');
 assert.match(source, /4th coat \(blackwash final\)/, 'Nick feedback: stage suggestions should include a blackwash fourth coat stage');
-assert.match(source, /useState<ProductionPlanMode>\("orderRows"\)/, 'Nick feedback: Orders should be the default Production Plan view');
-assert.match(source, /Schedule board/, 'Nick feedback: Schedule board should remain available as fallback');
+// View mode moved from component state to URL derivation; Orders remains the default.
+assert.match(source, /=== "schedule" \? "schedule" : "orderRows"/, 'Nick feedback: Orders should be the default Production Plan view');
+// The schedule fallback is now the ?mode=schedule week board entry point.
+assert.match(source, /mode=schedule/, 'Nick feedback: Schedule/week board should remain available as fallback');
 assert.match(source, /data-order-capacity-strip/, 'Nick feedback: Orders view should show weekly capacity');
 assert.match(source, /data-order-day-filter/, 'Nick feedback: Orders view should allow day filtering');
 assert.match(source, /data-order-row-priority-controls/, 'Nick feedback: Orders can be manually prioritised with reliable row controls');
 assert.match(source, /Priority/, 'Nick feedback: Orders priority controls should explain what the arrows do');
 assert.match(source, /Move this order earlier/, 'Nick feedback: Orders priority controls include an earlier action');
 assert.match(source, /Move this order later/, 'Nick feedback: Orders priority controls include a later action');
-assert.match(source, /Reset to due-date order/, 'Nick feedback: manual order priority should be resettable');
+// Reset control refactored: passing null to persistOrderJourneyRowOrder resets priority.
+assert.match(source, /Resetting order priority/, 'Nick feedback: manual order priority should be resettable');
 assert.match(source, /data-order-row-drop-lane/, 'Nick feedback: Orders view should have task drop lanes');
 assert.match(source, /orderJourneyLaneId/, 'Nick feedback: Orders drop lanes should be unique per order row');
 assert.match(source, /orderJourneyDayId/, 'Nick feedback: Orders should support broad day-column drop targets');

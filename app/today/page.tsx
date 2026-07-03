@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { MissionControlShell } from "@/components/mission-control-shell";
-import { DT } from "@/components/mission-control-ui";
+import { DT } from "@/components/mission-control-tokens";
 import { listLeads } from "@/lib/leads/fetch-leads";
 import type { Lead } from "@/lib/leads/types";
 import { getOrdersWithFallback } from "@/lib/monday/fetch-orders";

@@ -740,6 +740,22 @@ export default function LeadsClient({ result, writesEnabled }: { result: LeadsRe
             <span>{visibleRows.length} of {visible.length} matching · source: {result.source}{result.error ? " issue" : ""}</span>
             <span>{filter === "do_today" ? `Default: priority list. Top ${isNarrow ? 3 : 8} are highlighted above.` : filter === "sample_followups" ? "Showing sample recipients who likely need a warm follow-up." : filter === "overdue" ? "Showing only overdue follow-ups." : "Sorted by urgency, cashflow, follow-up date"}</span>
           </div>
+          <style>{`
+            /* Tablet/mobile: the 6-column lead grid's min widths sum past 980px,
+               so stack into name+value with full-width chips/next-step below. */
+            @media (max-width: 980px) {
+              [data-lead-list-header="true"] { display: none !important; }
+              [data-lead-row-button="true"] {
+                grid-template-columns: minmax(0, 1fr) auto !important;
+                grid-template-rows: auto auto auto;
+              }
+              [data-lead-row-main="true"] { grid-column: 1; grid-row: 1; }
+              [data-lead-row-value="true"] { grid-column: 2; grid-row: 1; justify-self: end; }
+              [data-lead-row-status="true"] { grid-column: 1 / -1; grid-row: 2; }
+              [data-lead-row-next="true"] { grid-column: 1; grid-row: 3; white-space: normal !important; }
+              [data-lead-row-followup="true"] { grid-column: 2; grid-row: 3; justify-self: end; }
+            }
+          `}</style>
           <LeadListHeader />
           <div style={{ display: "grid", gap: 8 }}>
             {visibleRows.map((lead) => <LeadRow key={lead.id} lead={lead} selected={lead.id === selectedId} onSelect={() => setSelectedId(lead.id)} />)}

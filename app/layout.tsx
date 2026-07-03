@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Figtree, Poppins } from "next/font/google";
+import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
-const figtree = Figtree({
+const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
 });
 
-const poppins = Poppins({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+  weight: ["400", "500", "600"],
   variable: "--font-display",
 });
 
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${figtree.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
       <body>{children}</body>
     </html>
   );
