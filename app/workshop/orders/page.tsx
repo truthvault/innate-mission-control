@@ -1,4 +1,5 @@
-import { DT, Chip, type ChipTone } from "@/components/mission-control-ui";
+import { Chip, type ChipTone } from "@/components/mission-control-ui";
+import { DT } from "@/components/mission-control-tokens";
 import { listActiveOrders, nzToday, type WorkshopOrder } from "@/lib/workshop/store";
 import { WorkshopShell } from "../workshop-shell";
 import { TaskRow } from "../workshop-ui";

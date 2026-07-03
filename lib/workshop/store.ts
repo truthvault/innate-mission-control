@@ -173,18 +173,22 @@ export async function createTask(input: {
 }): Promise<WorkshopTask> {
   const dayKeys = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const dayKey = dayKeys[new Date(`${input.scheduledDate}T12:00:00Z`).getUTCDay()];
+  // Omit absent optional columns entirely — several have NOT NULL DEFAULT
+  // constraints (e.g. estimated_hours), and an explicit null bypasses the default.
+  const row: Record<string, unknown> = {
+    source_task_id: `tuesday-ui:${crypto.randomUUID()}`,
+    title: input.title.slice(0, 300),
+    owner: input.owner,
+    scheduled_date: input.scheduledDate,
+    day_key: dayKey,
+    status: "planned",
+    notes: "Created in Tuesday workshop view.",
+  };
+  if (input.orderId) row.order_id = input.orderId;
+  if (typeof input.estimatedHours === "number") row.estimated_hours = input.estimatedHours;
   const rows = await rest<WorkshopTask[]>(`production_order_tasks?select=${encodeURIComponent(TASK_SELECT)}`, {
     method: "POST",
-    body: JSON.stringify({
-      title: input.title.slice(0, 300),
-      owner: input.owner,
-      scheduled_date: input.scheduledDate,
-      day_key: dayKey,
-      order_id: input.orderId || null,
-      estimated_hours: input.estimatedHours ?? null,
-      status: "planned",
-      notes: "Created in Tuesday workshop view.",
-    }),
+    body: JSON.stringify(row),
   });
   if (!rows?.[0]) throw new Error("Task insert returned no row.");
   return rows[0];

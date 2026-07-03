@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DT } from "@/components/mission-control-ui";
+import { DT } from "@/components/mission-control-tokens";
 
 /**
  * Light chrome for the workshop screens. Deliberately not MissionControlShell:

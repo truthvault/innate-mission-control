@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { DT, Chip } from "@/components/mission-control-ui";
+import { Chip } from "@/components/mission-control-ui";
+import { DT } from "@/components/mission-control-tokens";
 import { addDays, listTasksBetween, mondayOfWeek, nzToday, type WorkshopTask } from "@/lib/workshop/store";
 import { WorkshopShell } from "./workshop-shell";
 import { TaskRow } from "./workshop-ui";
