@@ -10,7 +10,6 @@ export type MissionControlSection = "orders" | "leads" | "calls" | "plan" | "sam
 type NavItem = { section: MissionControlSection; label: string; href: string; group?: "Control" | "Sales" | "Ops" | "Drafts" };
 
 const NAV: NavItem[] = [
-  { section: "workshop", label: "Workshop", href: "/workshop" },
   { section: "plan", label: "Orders", href: "/production/plan" },
   { section: "stock", label: "Stock", href: "/production/stock" },
   { section: "samples", label: "Samples", href: "/production/samples" },

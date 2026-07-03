@@ -100,6 +100,8 @@ Keep contracts short and operational. They are product guardrails, not full spec
 
 ## `/workshop`
 
+> **ARCHIVED 2026-07-04** — Guido chose to refine the existing boards instead. Routes still resolve but are out of nav; do not extend without his direction.
+
 - Route/view: `/workshop`, Tuesday v2 Schedule week board.
 - Primary user: Nick and Dylan first; Guido for oversight.
 - Purpose: show the workshop week (Monday–Friday × Nick/Dylan) from the Supabase production task spine so the team can see and move the week's work without Monday.com.
@@ -111,6 +113,8 @@ Keep contracts short and operational. They are product guardrails, not full spec
 
 ## `/workshop/orders`
 
+> **ARCHIVED 2026-07-04** — Guido chose to refine the existing boards instead. Routes still resolve but are out of nav; do not extend without his direction.
+
 - Route/view: `/workshop/orders`, Tuesday v2 active orders + stage checklist.
 - Primary user: Nick, Dylan, and Guido.
 - Purpose: show every active order with its due date, workshop progress, and per-order task checklist from the Supabase spine.
@@ -121,6 +125,8 @@ Keep contracts short and operational. They are product guardrails, not full spec
 - Verification: prove the route desktop + mobile; expand at least one order's checklist; confirm task ticks persist to Supabase and no Monday reads occur.
 
 ## `/workshop/today`
+
+> **ARCHIVED 2026-07-04** — Guido chose to refine the existing boards instead. Routes still resolve but are out of nav; do not extend without his direction.
 
 - Route/view: `/workshop/today`, Tuesday v2 per-person kiosk.
 - Primary user: Nick or Dylan on a workshop tablet/phone.

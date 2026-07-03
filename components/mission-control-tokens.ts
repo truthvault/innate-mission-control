@@ -28,8 +28,8 @@ export const MC_COLORS = {
   shadowHover: "0 2px 8px rgba(0,0,0,0.07), 0 14px 36px rgba(0,0,0,0.08)",
   radius: 14,
   radiusSm: 8,
-  sans: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif",
-  serif: "'Fraunces', Georgia, serif",
+  sans: "var(--font-sans, 'DM Sans'), -apple-system, BlinkMacSystemFont, sans-serif",
+  serif: "var(--font-display, 'Fraunces'), Georgia, serif",
 } as const;
 
 export const DT = MC_COLORS;
