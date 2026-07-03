@@ -15,6 +15,7 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 
 ## Current routers and lane briefs
 
+- `page-contracts.md` — route/view purpose contracts for Tuesday UI/design work. Load this before redesigning a page, tab, or route.
 - `leads.md`
 - `quoting.md` — quote spine, pricing policy approval, Hermes draft-only quote workflow, supplier freshness gates
 - `purchase-orders.md`
@@ -27,6 +28,8 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 
 ## Active operating handovers / current prep
 
+- `../../docs/current/tuesday-agent-design-standard.md` — active design standard for Tuesday/Mission Control UI work
+- `../../docs/current/tuesday-visual-audit-protocol.md` — active desktop/tablet/mobile proof protocol and scanner route
 - `projects-tasks-workboard-handover-2026-05-20.md` — handover/spec for a Supabase-backed Workboard tab seeded from the Stephen meeting
 - `tuesday-readiness-audit-2026-05-24.md` — current percent-readiness audit for Innate lighthouse + external Workshop OS productisation
 - `tuesday-agent-handover-2026-05-24.md` — current operating handover for the Tuesday profile/worker
@@ -65,3 +68,5 @@ Hermes should:
 - Build work starts only when Guido says `BUILD`.
 - During Gym Mode, append and dedupe ideas; do not rewrite architecture constantly.
 - Use the current source-of-truth split: Supabase/Tuesday is forward truth for leads and approved Tuesday-owned records; Monday remains current workshop/legacy truth for stock, customer history, and production tasks until migration gates are met; Xero remains accounting authority; Shopify remains website/product truth.
+- Before calling UI/design work ready, prove the exact route and review source, then check desktop/tablet/mobile using the active Tuesday visual audit protocol.
+- Before changing UI/design for a route or tab, load `page-contracts.md`; if no matching contract exists, add a short contract first instead of guessing the screen's purpose.

@@ -1,73 +1,85 @@
 # Brand Theme Standard
 
-## The Feel
+Status: active current-token/style quick reference.
+Purpose: give Website agents the current visual facts quickly. For judgement, page-family recipes, copy voice, and change modes, use `docs/current/website-agent-brand-kit.md`.
 
-Innate pages should feel calm, crafted, practical, warm, modern, and humble. They should look like one website without removing useful information.
+This file is not a Shopify workflow or approval document. Current theme IDs live in `docs/current/site-state.md`.
+
+## Current Feel
+
+Calm, crafted, practical, warm, modern, humble. One website, not one identical template.
 
 ## Type
 
 - Display headings: Cormorant Garamond, usually weight 600.
 - Body, buttons, forms, nav, proof text: Maven Pro.
-- Fraunces is legacy/draft wording only unless Guido explicitly chooses to return to it; do not introduce Fraunces into new website work.
-- H1 size depends on page type:
-  - Image hero pages can be larger.
-  - Split/service pages should be calmer.
-  - About, Contact, forms, FAQs and utility pages should be quieter again.
+- Fraunces is legacy/draft only unless Guido explicitly chooses to return to it.
+- Image-led hero pages may use larger H1s.
+- Split/service/editorial pages should use calmer H1s.
+- About, Contact, forms, FAQs, policy, care, delivery, installation, and utility pages should be quieter.
 - H2s must be clearly smaller than H1s.
-- No awkward orphan words in headings when the layout has room.
+- Avoid awkward orphan words in headings when the layout has room.
 
-## Colours
+## Colour
 
-- Main dark green: `#0c201c`.
-- Secondary green: `#283229`.
-- Page background: `#fbf8f2`.
+- Primary forest: `#163832` for CTAs, links, active states, and selected states.
+- Dark forest: `#0c201c` for headings and dark overlay tone.
+- Secondary green: `#283229` for subdued green surfaces/details.
+- Body ink: `#131311`; avoid raw black.
+- Page paper: `#fbf8f2`.
 - Warm card surface: `#fffaf3`.
 - Soft contrast band: `#f3ede3`.
-- Avoid pages that become all beige, all grey, all dark green, or otherwise one-note.
+- Preferred rust accent: `#9a4f35`. Guido likes this styling. Use sparingly for eyebrows, rules, numbers, metadata, tiny icons, or short emphasis.
+- Do not use rust as the main CTA colour.
+- Avoid pages that become all beige, all grey, all dark green, all brown/orange, or otherwise one-note.
 
 ## Buttons
 
 - Rectangular, restrained, small radius.
 - No pill buttons unless explicitly approved.
-- Dark buttons need clear warm-light text in normal, hover, focus and visited states.
+- Primary: forest background, warm-light text.
+- Secondary: warm/transparent background, forest border/text.
+- Dark buttons need readable normal, hover, focus, and visited states.
+- Labels should describe the action.
 
 ## Forms
 
 - Fields must be obvious.
-- Use white or high-contrast field backgrounds, visible borders, readable placeholder text, and clear focus states.
+- Use white or high-contrast field backgrounds.
+- Borders, placeholder text, and focus states must be visible.
 - Large text boxes must not disappear into the page background.
+- Mobile tap targets must be comfortable.
 
 ## Cards
 
-- Use cards for repeated items, product choices, forms, and examples.
+- Use cards for repeated items, product choices, forms, examples, proof, or real objects.
 - Do not put cards inside cards.
 - Keep borders quiet but visible.
 - Keep image ratios stable.
+- Do not use cards as page-section wrappers unless the existing design requires it.
 
 ## Accordions
 
 - Use the approved dining-style accordion: clear rows, subtle borders, compact type, visible plus/minus control, readable open state.
 
-## Reviews
+## Reviews And Widgets
 
 - Google Reviews should match the homepage treatment.
-- Do not ship raw app/widget styling on polished pages.
+- Do not ship raw app/widget/form/newsletter styling on polished pages.
 
 ## Images
 
 - Prefer real Innate workshop, product, timber, people, and project images.
 - Avoid AI-looking images unless explicitly approved.
-- Crops must protect faces, hands, tools, furniture edges, timber details, and room context.
-- Check crops on desktop and mobile before review.
-- Image zoom/lightbox popups should feel invisible around the image: no card frame unless needed, clear breathing room from the browser/header, and a tidy circular close button inside the image at the top right.
-- Use labels and next/back arrows only for like-sized image sets where browsing feels natural. Do not mix small swatches into a large image carousel.
-- Live pages must reference permanent image sources: Shopify Files, live theme assets, product media, or the correct external app. Do not leave live page content dependent on staging theme asset URLs.
-- For repeated material/product imagery, use one maintained source where practical so Dining, Materials, Samples, Benchtops and configurators do not drift apart.
+- Crops must protect faces, heads, hands, tools, furniture edges, timber details, and room context.
+- Check crops on desktop, intermediate/tablet, and mobile before review.
+- Image zoom/lightbox popups should feel invisible around the image: no unnecessary frame, clear top breathing room, no mobile overflow, and a tidy close button inside the image at top right.
+- Use labels and next/back arrows only for like-sized image sets; do not mix small swatches into a large image carousel.
+- Live pages must reference permanent image sources: Shopify Files, live theme assets, product media, or the correct external app.
+- For repeated material/product imagery, use one maintained source where practical so Dining, Materials, Samples, Benchtops, and configurators do not drift apart.
 
 ## Shopify Editing
 
-Main page text, images, links, cards, FAQs, proof points, and section order should be editable in Shopify where practical.
-
-Hard-code only structural labels, accessibility text, schema constants, and tiny UI text.
-
-Every page update should include a plain-English Shopify editor overview for Guido: what sections exist, what text/images/links can be edited, which blocks can be reordered, and what remains code-controlled.
+- Main page text, images, links, cards, FAQs, proof points, and section order should be editable in Shopify where practical.
+- Hard-code only structural labels, accessibility text, schema constants, and tiny UI text.
+- Every page update should include a plain-English Shopify editor overview for Guido: sections, editable text/images/links, reorderable blocks, and what remains code-controlled.

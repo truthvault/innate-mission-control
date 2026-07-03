@@ -1,0 +1,327 @@
+{
+  "raw": {
+    "assetUrl": "https://innatefurniture.co.nz/cdn/shop/t/86/assets/innate-benchtop-configurator.js?v=119367109372206795811782276976&atelier=20260623-phase12-hardening-v5",
+    "bytes": 304765,
+    "sha256": "acccb33c7de5a174031d13d82f586d3ed537e258d3285f3cf74627188bc314d6",
+    "markers": {
+      "selected_rotate": true,
+      "active_panel": true,
+      "active_card": true,
+      "old_warning": false,
+      "default_1800": true,
+      "default_600": true,
+      "default_43": true,
+      "old_default_1500": false,
+      "old_vercel": false,
+      "mission_control": true
+    }
+  },
+  "results": [
+    {
+      "viewport": {
+        "name": "desktop",
+        "w": 1440,
+        "h": 1000
+      },
+      "data": {
+        "lengthBtn": "Panel length, 1800 mm. Click to edit.",
+        "widthBtn": "Panel width, 600 mm. Click to edit.",
+        "length": "1800",
+        "width": "600",
+        "thickness": "43",
+        "materialLine": true,
+        "totaraChecked": false,
+        "rotatePresent": true,
+        "rotateRect": {
+          "x": 689,
+          "y": 398,
+          "w": 40,
+          "h": 40
+        },
+        "rotateClickOk": true,
+        "activePanel": true,
+        "activeCard": true,
+        "oldWarning": false,
+        "handleCount": 13,
+        "handleSample": [
+          {
+            "rect": {
+              "x": 166,
+              "y": 409,
+              "w": 20,
+              "h": 20
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 170,
+              "y": 413,
+              "w": 12,
+              "h": 12
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 657,
+              "y": 409,
+              "w": 20,
+              "h": 20
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 661,
+              "y": 413,
+              "w": 12,
+              "h": 12
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 166,
+              "y": 572,
+              "w": 20,
+              "h": 20
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 170,
+              "y": 576,
+              "w": 12,
+              "h": 12
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 657,
+              "y": 572,
+              "w": 20,
+              "h": 20
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 661,
+              "y": 576,
+              "w": 12,
+              "h": 12
+            },
+            "cursor": "nwse-resize"
+          }
+        ],
+        "overflow": false,
+        "visibleText": ""
+      }
+    },
+    {
+      "viewport": {
+        "name": "mobile",
+        "w": 390,
+        "h": 844
+      },
+      "data": {
+        "lengthBtn": "Panel length, 1800 mm. Click to edit.",
+        "widthBtn": "Panel width, 600 mm. Click to edit.",
+        "materialLine": false,
+        "totaraChecked": false,
+        "rotatePresent": true,
+        "rotateRect": {
+          "x": 71,
+          "y": 1494,
+          "w": 248,
+          "h": 44
+        },
+        "rotateClickOk": false,
+        "activePanel": true,
+        "activeCard": true,
+        "oldWarning": false,
+        "handleCount": 13,
+        "handleSample": [
+          {
+            "rect": {
+              "x": 67,
+              "y": 1307,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 67,
+              "y": 1307,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 310,
+              "y": 1307,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 310,
+              "y": 1307,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 67,
+              "y": 1388,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 67,
+              "y": 1388,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 310,
+              "y": 1388,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 310,
+              "y": 1388,
+              "w": 10,
+              "h": 10
+            },
+            "cursor": "nwse-resize"
+          }
+        ],
+        "overflow": false,
+        "visibleText": ""
+      }
+    },
+    {
+      "viewport": {
+        "name": "tablet",
+        "w": 820,
+        "h": 1180
+      },
+      "data": {
+        "lengthBtn": "Panel length, 1800 mm. Click to edit.",
+        "widthBtn": "Panel width, 600 mm. Click to edit.",
+        "materialLine": false,
+        "totaraChecked": false,
+        "rotatePresent": true,
+        "rotateRect": {
+          "x": 286,
+          "y": 2242,
+          "w": 248,
+          "h": 44
+        },
+        "rotateClickOk": false,
+        "activePanel": true,
+        "activeCard": true,
+        "oldWarning": false,
+        "handleCount": 13,
+        "handleSample": [
+          {
+            "rect": {
+              "x": 121,
+              "y": 1889,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 121,
+              "y": 1889,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 671,
+              "y": 1889,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 671,
+              "y": 1889,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 121,
+              "y": 2072,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 121,
+              "y": 2072,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nesw-resize"
+          },
+          {
+            "rect": {
+              "x": 671,
+              "y": 2072,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nwse-resize"
+          },
+          {
+            "rect": {
+              "x": 671,
+              "y": 2072,
+              "w": 23,
+              "h": 23
+            },
+            "cursor": "nwse-resize"
+          }
+        ],
+        "overflow": false,
+        "visibleText": ""
+      }
+    }
+  ]
+}

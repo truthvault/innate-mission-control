@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const url='https://innatefurniture.co.nz/pages/timber-panels?preview_theme_id=141408796731&qa=probe-svg-'+Date.now()+'&_fd=0&_sc=1';
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,deviceScaleFactor:1});
+await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+await page.waitForSelector('#innate-benchtop-configurator',{timeout:40000});
+await page.waitForLoadState('networkidle',{timeout:15000}).catch(()=>{});
+await page.locator('#innate-benchtop-configurator').scrollIntoViewIfNeeded();
+const add=async()=>{const loc=page.getByRole('button',{name:/add another benchtop piece|add another piece|add piece/i}); const n=await loc.count(); for(let i=0;i<n;i++){if(await loc.nth(i).isVisible().catch(()=>false)){await loc.nth(i).click(); await page.waitForTimeout(700); return true;}} return false;};
+await add(); await add(); await page.waitForTimeout(1000);
+const state=await page.evaluate(()=>{const q=s=>document.querySelector(s), qa=s=>[...document.querySelectorAll(s)]; const box=el=>{if(!el)return null; const r=el.getBoundingClientRect(); return {x:r.x,y:r.y,w:r.width,h:r.height,right:r.right,bottom:r.bottom};}; const svg=q('.stage__preview .slab-preview svg, .stage__visual .slab-preview svg'); return {rootClasses:q('#innate-benchtop-configurator')?.className, widgetClasses:q('#innate-benchtop-configurator .innate-bench-widget--embedded')?.className, stage:box(q('.stage__preview,.stage__visual')), slab:box(q('.slab-preview:not(.slab-preview--panel-card)')), svg:box(svg), viewBox:svg?.getAttribute('viewBox'), width:svg?.getAttribute('width'), height:svg?.getAttribute('height'), overflow:getComputedStyle(svg).overflow, svgHTML:svg?.outerHTML.slice(0,1000), panels:qa('.slab-preview svg image,.slab-preview svg rect,.slab-preview svg g').map((el,i)=>({i,tag:el.tagName,cls:el.getAttribute('class')||'',x:el.getAttribute('x'),y:el.getAttribute('y'),w:el.getAttribute('width'),h:el.getAttribute('height'),transform:el.getAttribute('transform'),box:box(el)})).filter(x=>x.box&&x.box.w>20&&x.box.h>20).slice(0,80), tabs:qa('.mobile-piece-tab').map(e=>e.innerText)};});
+console.log(JSON.stringify(state,null,2));
+await browser.close();

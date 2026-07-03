@@ -72,3 +72,8 @@ scripts/__pycache__/
 /tools/content-recording/node_modules/
 /tools/content-recording/test-results/
 /tools/content-recording/.playwright/
+
+# local 3d/tool artifacts (preserved on disk, not in git)
+/tools/glb-web-compress/node_modules/
+/tools/glb-web-compress/out/
+/reference/assets/

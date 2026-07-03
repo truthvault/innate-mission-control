@@ -1,0 +1,20 @@
+{
+  "put_key": "assets/innate-benchtop-configurator.js",
+  "put_size": 304890,
+  "expected_hash": "acccb33c7de5a174031d13d82f586d3ed537e258d3285f3cf74627188bc314d6",
+  "readback_hash": "acccb33c7de5a174031d13d82f586d3ed537e258d3285f3cf74627188bc314d6",
+  "matches": true,
+  "readback_bytes": 304765,
+  "markers": {
+    "selected_rotate": true,
+    "active_panel": true,
+    "active_card": true,
+    "old_warning": false,
+    "default_1800": true,
+    "default_600": true,
+    "default_43": true,
+    "old_default_1500": false,
+    "old_vercel": false,
+    "mission_control": true
+  }
+}

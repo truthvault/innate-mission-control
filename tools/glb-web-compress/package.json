@@ -1,0 +1,19 @@
+{
+  "name": "glb-web-compress",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Compress an Innate dining-configurator GLB into a web-ready file (texture-only, no geometry compression, preserves material variants).",
+  "bin": {
+    "glb-web-compress": "./compress-glb.mjs"
+  },
+  "scripts": {
+    "compress": "node compress-glb.mjs"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.4.0",
+    "@gltf-transform/extensions": "^4.4.0",
+    "@gltf-transform/functions": "^4.4.0",
+    "sharp": "^0.33.5"
+  }
+}

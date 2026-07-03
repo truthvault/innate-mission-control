@@ -129,7 +129,7 @@ Work staging-only first.
 Likely files in scope:
 
 - `assets/page-benchtops-atelier.css`
-- `assets/innate-benchtop-configurator.js` only if behaviour is genuinely wrong
+- `assets/innate-benchtop-configurator.js` only if behaviour is genuinely wrong; before pushing it, run `npm run guard:shopify-asset -- --candidate <local-file> --asset-key assets/innate-benchtop-configurator.js` and stop if it fails.
 - `sections/benchtops-atelier.liquid` only if markup/schema is genuinely wrong
 - `templates/page.benchtops.json` only if Shopify section settings need changing
 
@@ -155,6 +155,7 @@ The goal is a polished website that the user can still edit from Shopify if Code
 ## Things To Avoid
 
 - Do not diagnose from stale local theme files.
+- Do not push a rebuilt JS bundle from `/Users/mack-mini/innate-benchtop-quote/dist` or `/Users/mack-mini/innate-benchtop-quote/src` unless it has first been rebased onto the latest approved/live asset and passes `guard:shopify-asset`.
 - Do not use old `.codex-theme-work` folders as source of truth.
 - Do not treat a staging preview URL as live.
 - Do not make broad theme pushes.

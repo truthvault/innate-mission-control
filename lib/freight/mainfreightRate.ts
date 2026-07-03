@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as https from "node:https";
 import * as path from "node:path";
 import type { DiningPackageLine } from "@/lib/freight/diningFreightPackages";
+import type { BenchtopPackageLine } from "@/lib/benchtops/benchtopFreightPackages";
 
 export interface MainfreightDestinationAddress {
   suburb: string;
@@ -58,7 +59,9 @@ function tomorrowAtTenNzIsoLike(): string {
   return `${parts.year}-${parts.month}-${parts.day}T10:00:00`;
 }
 
-function toMainfreightFreightDetails(lines: DiningPackageLine[]) {
+type MainfreightPackageLine = DiningPackageLine | BenchtopPackageLine;
+
+function toMainfreightFreightDetails(lines: MainfreightPackageLine[]) {
   return lines.map((line) => ({
     units: String(line.quantity),
     packTypeCode: line.packType,
@@ -162,7 +165,7 @@ export function hasMainfreightRateConfig(): boolean {
 
 export async function requestMainfreightRate(params: {
   destination: MainfreightDestinationAddress;
-  lines: DiningPackageLine[];
+  lines: MainfreightPackageLine[];
   accountCode?: string;
   serviceLevel?: string;
 }): Promise<MainfreightRateResult> {
