@@ -145,7 +145,7 @@ async function submitEnquiry(body: EnquiryRequestBody, request: Request) {
   };
 
   const logResult = await writeQuoteEvent({
-    // Keep Status inside the existing Airtable single-select values so the
+    // Keep Status inside the existing quote-log status vocabulary so the
     // storefront submit cannot fail because of a new schema option.
     status: "estimated",
     productHandle: requiredString(body.productHandle, "productHandle"),

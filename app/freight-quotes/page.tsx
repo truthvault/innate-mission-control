@@ -248,7 +248,7 @@ export default async function FreightQuotesPage({
   const stats = calcStats(rows);
   const logStatus = getFreightQuoteLogStatus();
   const publicAccessStatus = getFreightPublicAccessStatus();
-  const activeStore = logStatus.supabaseConfigured ? "Supabase" : logStatus.airtableConfigured ? "Airtable fallback" : "not configured";
+  const activeStore = logStatus.supabaseConfigured ? "Supabase" : "not configured";
 
   return (
     <MissionControlShell
@@ -256,7 +256,7 @@ export default async function FreightQuotesPage({
       pageTitle="Freight quotes"
       pageSubtitle="Customer freight-calculator signal and quote-log health. Guido-only so Nick/Dylan stay focused on workshop work."
       syncedAt={new Date().toISOString()}
-      source={logStatus.supabaseConfigured || logStatus.airtableConfigured ? "supabase" : "none"}
+      source={logStatus.supabaseConfigured ? "supabase" : "none"}
       mondayError={error || undefined}
     >
       <div className="page">
@@ -309,7 +309,6 @@ export default async function FreightQuotesPage({
           <div className="status-list">
             <div className="status-row"><span>Write gate</span><strong>{logStatus.loggingEnabled ? "enabled" : "off"}</strong></div>
             <div className="status-row"><span>Primary store</span><strong>{activeStore}</strong></div>
-            <div className="status-row"><span>Airtable fallback</span><strong>{logStatus.airtableFallbackEnabled ? "allowed" : "blocked"}</strong></div>
             <div className="status-row"><span>Public token</span><strong>{publicAccessStatus.tokenConfigured ? "required" : "origin/referer only"}</strong></div>
             <div className="status-row"><span>Rate guard</span><strong>{publicAccessStatus.rateLimitEnabled ? "on" : "off"}</strong></div>
           </div>
