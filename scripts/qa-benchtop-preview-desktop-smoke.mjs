@@ -1,0 +1,27 @@
+import { chromium } from 'playwright';
+import fs from 'fs/promises';
+import path from 'path';
+const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z');
+const OUT = path.join('/Users/mack-mini/innate-mission-control/reference/evidence', new Date().toISOString().slice(0,10), `benchtop-preview-desktop-smoke-${stamp}`);
+const TARGET_URL = process.env.BENCHTOP_QA_URL || 'https://innatefurniture.co.nz/pages/timber-panels?preview_theme_id=141408796731';
+await fs.mkdir(path.join(OUT,'screenshots'),{recursive:true});
+const browser = await chromium.launch({headless:true});
+const page = await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+const errors=[]; const failures=[];
+page.on('pageerror', e=>errors.push(e.message));
+page.on('console', m=>{ if(m.type()==='error') errors.push(m.text()); });
+page.on('response', r=>{ if(r.status()>=400 && !/google|clarity|facebook|doubleclick|shop.app/i.test(r.url())) failures.push({status:r.status(), url:r.url()}); });
+const u = new URL(TARGET_URL); u.searchParams.set('qa',`desktop-smoke-${stamp}`); u.searchParams.set('_fd','0'); u.searchParams.set('_sc','1');
+await page.goto(u.toString(),{waitUntil:'domcontentloaded',timeout:60000});
+await page.waitForSelector('#innate-benchtop-configurator',{timeout:40000});
+await page.waitForLoadState('networkidle',{timeout:15000}).catch(()=>{});
+await page.locator('#innate-benchtop-configurator').scrollIntoViewIfNeeded();
+const addButton = page.getByRole('button',{name:/add another benchtop piece|add another piece|add piece/i});
+for (let n=0;n<2;n++) { const c=await addButton.count(); let clicked=false; for(let i=0;i<c;i++){const el=addButton.nth(i); if(await el.isVisible().catch(()=>false)){await el.click(); clicked=true; await page.waitForTimeout(800); break;}} if(!clicked) throw new Error('Add piece button not visible'); }
+await page.waitForTimeout(1000);
+const shot = path.join(OUT,'screenshots','desktop-1440x1000-after-add-2.png');
+await page.screenshot({path:shot, fullPage:false});
+const state = await page.evaluate(()=>{const q=s=>document.querySelector(s), qa=s=>[...document.querySelectorAll(s)]; const box=el=>{if(!el)return null; const r=el.getBoundingClientRect(); return {x:r.x,y:r.y,w:r.width,h:r.height,bottom:r.bottom,right:r.right};}; return {pieceCountText:(document.body.innerText.match(/\b\d+\s+PIECES?\b/i)||[''])[0], rows:qa('.panel-row').length, overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth, stage:box(q('.stage__preview,.stage__visual')), images:qa('.slab-preview svg image').map(box)};});
+await fs.writeFile(path.join(OUT,'results.json'), JSON.stringify({checkedAt:new Date().toISOString(), url:u.toString(), shot, state, errors, failures}, null, 2));
+console.log(JSON.stringify({out:OUT, shot, state, errors:errors.length, failures:failures.length}, null, 2));
+await browser.close();

@@ -14,6 +14,7 @@ What is the source?
 - Name the exact files or admin objects in scope.
 - Pull or inspect the exact target files before changing them.
 - Do not use old patch folders as source.
+- For `assets/innate-benchtop-configurator.js`, run `npm run guard:shopify-asset -- --candidate <local-file> --asset-key assets/innate-benchtop-configurator.js` before any preview or live push. A failing guard means the candidate is stale or drops protected behavior; stop and rebase onto the latest approved asset.
 - For page work, list the Shopify editor controls that will remain available: sections, blocks, images, text, links, FAQs, cards, forms, and anything that can be reordered.
 - If the change uses new images, state where the permanent image asset will live: Shopify Files, live theme asset, product media, or external app. Do not rely on staging theme asset URLs for live pages.
 
@@ -28,6 +29,7 @@ What is the source?
 ## Preview / Sandbox
 
 - Push only explicit files to the exact approved preview/sandbox theme. Current broad tidy-up sandbox is `141105463355`; `140760219707` is an unpublished benchtops cohesion preview, not the default staging target.
+- The project hook blocks stale benchtop configurator JS pushes. Do not bypass it with an override; fix the source candidate instead.
 - Visually check desktop and mobile.
 - Use the status: `Ready for Guido review` only after staging and visual QA are complete.
 - Before review, confirm the main page content can still be edited in Shopify and say which controls are available.

@@ -1,0 +1,848 @@
+<script>
+  (function () {
+    var builderHash = '#atelier-builder';
+
+    document.documentElement.classList.add('bench-atelier-template');
+
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    if (window.location.hash === builderHash && window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  })();
+</script>
+
+{{ 'page-benchtops-atelier.css' | asset_url | append: '&atelier=20260623-phase12-hardening-v5' | stylesheet_tag }}
+<!-- benchtop-modal-hardening-start -->
+<style>
+
+
+/* phase12-hardening-inline-20260623 */
+.innate-bench-widget .slab-preview{aspect-ratio:auto!important;display:block!important;overflow:visible!important}.innate-bench-widget .slab-preview svg{width:100%!important;height:auto!important;display:block!important}.innate-bench-widget .panel-move__hit{cursor:move}.innate-bench-widget .panel-move__hit:active{cursor:grabbing}.innate-bench-widget .snap-guide{stroke:#b66b36;stroke-width:1.5;stroke-dasharray:5 5;vector-effect:non-scaling-stroke;opacity:.76;pointer-events:none}.innate-bench-widget .snap-guide--grid{stroke:#82928a;opacity:.5}.innate-bench-widget .addr-search__dropdown{list-style:none!important;padding:.35rem!important;overflow:auto;background:rgba(255,252,246,.98);border:1px solid rgba(12,32,28,.16);box-shadow:0 14px 34px rgba(12,32,28,.16)}.innate-bench-widget .addr-search__dropdown li::marker{content:""}.innate-bench-widget .addr-search__opt{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:.1rem .55rem;padding:.62rem 2rem .62rem .72rem!important;cursor:pointer}.innate-bench-widget .addr-search__opt+.addr-search__opt{border-top:1px solid rgba(12,32,28,.07)}.innate-bench-widget .addr-search__opt:hover,.innate-bench-widget .addr-search__opt.is-active{background:#f2eadc}.innate-bench-widget .addr-search__main{grid-column:1;font-size:.9rem;font-weight:650;line-height:1.25}.innate-bench-widget .addr-search__sec{grid-column:1;font-size:.76rem;line-height:1.25;margin-top:0}.innate-bench-widget .addr-search__chev{grid-column:2;grid-row:1/span 2;align-self:center;justify-self:end;opacity:.55;font-size:.86rem}
+
+/* Benchtop quote/share modal hardening — 2026-06-22
+   Keeps every quote pop-up inside the viewport and makes form/success actions readable. */
+.innate-bench-modal,
+.innate-bench-modal *,
+.innate-bench-modal *::before,
+.innate-bench-modal *::after {
+  box-sizing: border-box;
+}
+
+.innate-bench-modal {
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.innate-bench-modal .modal__panel {
+  margin: auto;
+  max-height: calc(100dvh - 24px);
+  max-width: min(1080px, calc(100vw - 24px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  width: 100%;
+}
+
+.innate-bench-modal--success .modal__panel {
+  max-width: min(520px, calc(100vw - 24px));
+}
+
+.innate-bench-modal .modal__head {
+  min-width: 0;
+}
+
+.innate-bench-modal .modal__head h2,
+.innate-bench-modal .quote-summary,
+.innate-bench-modal .share-path,
+.innate-bench-modal .trust-strip,
+.innate-bench-modal .quote-success,
+.innate-bench-modal .quote-success p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.innate-bench-modal .quote-form {
+  gap: .72rem .75rem;
+}
+
+.innate-bench-modal .field {
+  gap: .28rem;
+  min-width: 0;
+}
+
+.innate-bench-modal .field span {
+  line-height: 1.35;
+}
+
+.innate-bench-modal .field input,
+.innate-bench-modal .field textarea {
+  font-size: 16px;
+  line-height: 1.35;
+  min-height: 44px;
+  padding: .64rem .72rem;
+}
+
+.innate-bench-modal .field--notes textarea {
+  min-height: 78px;
+}
+
+.innate-bench-modal .quote-form__actions,
+.innate-bench-modal .quote-success__actions {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+  justify-content: flex-end;
+  margin-top: .9rem;
+  width: 100%;
+}
+
+.innate-bench-modal .quote-form__actions .btn-ghost,
+.innate-bench-modal .quote-form__actions .btn-primary,
+.innate-bench-modal .quote-success__actions .btn-ghost,
+.innate-bench-modal .quote-success__actions .btn-primary,
+.innate-bench-modal .quote-form__err .btn-ghost {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 44px;
+  white-space: normal;
+}
+
+.innate-bench-modal .quote-form__actions .btn-ghost,
+.innate-bench-modal .quote-success__actions .btn-ghost {
+  border-color: var(--stone-200);
+  background: var(--paper);
+}
+
+.innate-bench-modal .quote-form__err--send {
+  align-items: flex-start;
+  background: #fff7f5;
+  border: 1px solid rgba(170, 69, 43, .28);
+  border-radius: 8px;
+  color: var(--danger);
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  line-height: 1.45;
+  margin-top: .1rem;
+  padding: .75rem .85rem;
+}
+
+.innate-bench-modal .quote-success {
+  align-items: flex-start;
+  padding: .4rem 0 .1rem;
+  text-align: left;
+}
+
+.innate-bench-modal .quote-success__check {
+  margin-bottom: .75rem;
+}
+
+.innate-bench-modal .quote-success__title {
+  font-family: var(--atelier-serif, Georgia, serif);
+  font-size: clamp(1.8rem, 8vw, 2.35rem);
+  line-height: 1.05;
+}
+
+.innate-bench-modal .quote-success__body,
+.innate-bench-modal .quote-success__note {
+  max-width: none;
+  width: 100%;
+}
+
+.innate-bench-modal .quote-success__body {
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.innate-bench-modal .quote-success__note {
+  font-size: .9rem !important;
+  line-height: 1.5;
+}
+
+@media (min-width: 760px) {
+  .innate-bench-modal--success .modal__panel {
+    display: block;
+    padding: 32px;
+  }
+
+  .innate-bench-modal--form .modal__panel,
+  .innate-bench-modal--sending .modal__panel,
+  .innate-bench-modal--error .modal__panel {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 759px) {
+  .innate-bench-modal {
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .innate-bench-modal .modal__panel {
+    border-radius: 10px;
+    max-height: calc(100dvh - 20px);
+    max-width: calc(100vw - 20px);
+    padding: 1rem;
+  }
+
+  .innate-bench-modal .modal__head {
+    gap: .55rem;
+    margin-bottom: .75rem;
+  }
+
+  .innate-bench-modal .modal__head h2 {
+    font-size: clamp(1.35rem, 7vw, 1.85rem);
+  }
+
+  .innate-bench-modal .quote-summary {
+    margin-bottom: .8rem;
+    padding: .78rem .82rem;
+  }
+
+  .innate-bench-modal .quote-summary__total-amt {
+    font-size: clamp(1.7rem, 10vw, 2.2rem);
+  }
+
+  .innate-bench-modal .share-paths {
+    gap: .62rem;
+  }
+
+  .innate-bench-modal .share-path {
+    min-height: 0;
+    padding: .82rem .78rem;
+  }
+
+  .innate-bench-modal .share-path__sub,
+  .innate-bench-modal .trust-strip p {
+    font-size: .88rem;
+  }
+
+  .innate-bench-modal .quote-form {
+    grid-template-columns: 1fr;
+  }
+
+  .innate-bench-modal .quote-form__actions,
+  .innate-bench-modal .quote-success__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .innate-bench-modal .quote-form__actions .btn-ghost,
+  .innate-bench-modal .quote-form__actions .btn-primary,
+  .innate-bench-modal .quote-success__actions .btn-ghost,
+  .innate-bench-modal .quote-success__actions .btn-primary {
+    width: 100%;
+  }
+
+  .innate-bench-modal .preference-group__details,
+  .innate-bench-modal .contact-method {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Benchtop modal hardening follow-up: success panel and real mobile viewport cap. */
+.innate-bench-modal .modal__panel:has(.quote-success) {
+  display: block !important;
+  max-width: min(520px, calc(100vw - 24px)) !important;
+}
+
+@media (max-width: 759px) {
+  .innate-bench-modal .modal__panel {
+    max-height: calc(100vh - 20px) !important;
+  }
+}
+
+
+  
+  /* quote-share-delivery-inline-polish-20260622 */
+  .innate-bench-widget .addr-search__zone { display: grid !important; grid-template-columns: minmax(0,1fr) auto !important; align-items: center !important; gap: .65rem !important; margin-top: .55rem !important; padding: .58rem .68rem !important; border: 1px solid rgba(22,56,50,.26) !important; border-radius: 8px !important; background: linear-gradient(180deg,#fffdf8,#f5ecdf) !important; color: var(--ink) !important; font-size: .86rem !important; line-height: 1.25 !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.75) !important; }
+  .innate-bench-widget .addr-search__zone-copy { display: grid !important; gap: .12rem !important; min-width: 0 !important; }
+  .innate-bench-widget .addr-search__zone-copy strong { color: var(--forest-ink) !important; font-size: .7rem !important; font-weight: 850 !important; letter-spacing: .1em !important; line-height: 1.1 !important; text-transform: uppercase !important; }
+  .innate-bench-widget .addr-search__zone-copy span { color: var(--ink) !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  .innate-bench-widget .addr-search__zone-price { color: var(--forest-ink) !important; font-size: 1rem !important; font-weight: 850 !important; font-variant-numeric: tabular-nums !important; white-space: nowrap !important; }
+
+  /* quote-share-followup-inline-polish-20260622 */
+  .innate-bench-modal .contact-method { display: grid !important; grid-template-columns: 1fr 1fr !important; background: rgba(255,253,248,.72) !important; border: 1px solid var(--stone-200) !important; border-radius: 999px !important; padding: .18rem !important; gap: .18rem !important; }
+  .innate-bench-modal .contact-method__opt { position: relative !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 0 !important; min-height: 40px !important; padding: .52rem .8rem !important; border: 1px solid transparent !important; border-radius: 999px !important; background: transparent !important; color: var(--ink) !important; font-weight: 540 !important; line-height: 1.1 !important; cursor: pointer !important; }
+  .innate-bench-modal .contact-method__opt input { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; margin: 0 !important; }
+  .innate-bench-modal .contact-method__opt.is-on { background: var(--forest) !important; color: var(--paper) !important; border-color: var(--forest) !important; box-shadow: 0 4px 12px rgba(12,32,28,.14) !important; }
+  .innate-bench-modal .contact-method__opt span { display: block !important; white-space: nowrap !important; }
+/* quote-share-final-inline-polish-20260622 */
+  .innate-bench-modal .quote-summary__total-amt { font-size: clamp(1.35rem, 2.1vw, 1.6rem) !important; font-weight: 650 !important; color: var(--forest-ink) !important; }
+  .innate-bench-modal .quote-summary__panels ul { list-style: none; margin: .18rem 0 0; padding: 0; display: grid; gap: .16rem; }
+  .innate-bench-modal .quote-summary__panels li { display: grid; gap: .02rem; color: var(--ink-soft); font-size: .78rem; line-height: 1.32; }
+  .innate-bench-modal .quote-summary__panels li em { color: var(--ink-faint); font-style: normal; }
+  .innate-bench-modal .contact-method { border-radius: 999px !important; padding: .18rem !important; gap: .18rem !important; }
+  .innate-bench-modal .contact-method__opt { border-radius: 999px !important; min-height: 40px !important; }
+  .innate-bench-modal .contact-method__opt.is-on { background: var(--forest) !important; color: var(--paper) !important; border-color: var(--forest) !important; box-shadow: 0 4px 12px rgba(12,32,28,.14) !important; }
+</style>
+<!-- benchtop-modal-hardening-end -->
+
+{%- liquid
+  assign hero_alt = section.settings.hero_image_alt | default: 'Custom NZ native timber benchtop in a kitchen'
+  assign hero_layout = section.settings.hero_layout | default: 'image_right'
+  assign hero_primary_link = section.settings.hero_primary_link | default: '#atelier-builder'
+  assign hero_secondary_link = section.settings.hero_secondary_link | default: '/products/product-sample'
+  assign sample_link = section.settings.sample_link | default: '/products/product-sample'
+  assign after_cta_link = section.settings.after_cta_link | default: '#atelier-builder'
+  assign api_base = section.settings.api_base | default: 'https://innate-mission-control.vercel.app'
+  assign asset_base = section.settings.asset_base | default: 'https://innate-mission-control.vercel.app'
+-%}
+
+<div class="bench-atelier bench-atelier--hero-{{ hero_layout | handle }}" data-section-id="{{ section.id }}">
+  <section class="atelier-hero" aria-label="Custom timber benchtops NZ">
+    <div class="atelier-hero__inner">
+      <div class="atelier-hero__copy">
+        <p class="atelier-kicker">{{ section.settings.hero_kicker | default: 'Custom timber benchtops NZ' | escape }}</p>
+        <h1>{{ section.settings.hero_heading | default: 'Plan your timber benchtop. See the quote as you go.' | escape }}</h1>
+        <p class="atelier-lead">{{ section.settings.hero_lead | default: 'For kitchen benchtops, shelves, vanities, laundries and other timber work surfaces. Choose your timber, set the size and see the quote as you go.' | escape }}</p>
+        <div class="atelier-actions" aria-label="Benchtop actions">
+          <a class="atelier-button atelier-button--primary innate-glass-primary-cta" href="{{ hero_primary_link }}">{{ section.settings.hero_primary_label | default: 'Start your benchtop brief' | escape }}</a>
+          <a class="atelier-button atelier-button--secondary" href="{{ hero_secondary_link }}">{{ section.settings.hero_secondary_label | default: 'Order samples' | escape }}</a>
+        </div>
+      </div>
+
+      {%- if section.settings.customer_install_image != blank -%}
+        <figure class="atelier-hero__image">
+          {{ section.settings.customer_install_image | image_url: width: 2400 | image_tag:
+            alt: hero_alt,
+            class: 'atelier-hero__photo',
+            sizes: '(min-width: 990px) 46vw, 100vw',
+            loading: 'eager',
+            fetchpriority: 'high',
+            width: section.settings.customer_install_image.width,
+            height: section.settings.customer_install_image.height
+          }}
+        </figure>
+      {%- elsif section.settings.customer_install_asset_filename != blank -%}
+        <figure class="atelier-hero__image">
+          <img
+            src="{{ section.settings.customer_install_asset_filename | asset_url }}"
+            alt="{{ hero_alt | escape }}"
+            class="atelier-hero__photo"
+            loading="eager"
+            fetchpriority="high"
+            width="958"
+            height="1280"
+          >
+        </figure>
+      {%- elsif section.settings.hero_image != blank -%}
+        {%- capture hero_srcset -%}
+          {%- assign widths = '720,1080,1440,1920,2400' | split: ',' -%}
+          {%- for w in widths -%}
+            {{ section.settings.hero_image | image_url: width: w }} {{ w }}w{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        {%- endcapture -%}
+        <figure class="atelier-hero__image">
+          {{ section.settings.hero_image | image_url: width: 2400 | image_tag:
+            alt: hero_alt,
+            class: 'atelier-hero__photo',
+            sizes: '(min-width: 990px) 46vw, 100vw',
+            srcset: hero_srcset,
+            loading: 'eager',
+            fetchpriority: 'high',
+            width: section.settings.hero_image.width,
+            height: section.settings.hero_image.height
+          }}
+        </figure>
+      {%- endif -%}
+
+    </div>
+  
+<style id="phase12-hardening-inline-20260623">
+.innate-bench-widget .slab-preview{aspect-ratio:auto!important;display:block!important;overflow:visible!important}.innate-bench-widget .slab-preview svg{width:100%!important;height:auto!important;display:block!important}.innate-bench-widget .panel-move__hit{cursor:move}.innate-bench-widget .panel-move__hit:active{cursor:grabbing}.innate-bench-widget .snap-guide{stroke:#b66b36;stroke-width:1.5;stroke-dasharray:5 5;vector-effect:non-scaling-stroke;opacity:.76;pointer-events:none}.innate-bench-widget .snap-guide--grid{stroke:#82928a;opacity:.5}.innate-bench-widget .addr-search__dropdown{list-style:none!important;padding:.35rem!important;overflow:auto;background:rgba(255,252,246,.98);border:1px solid rgba(12,32,28,.16);box-shadow:0 14px 34px rgba(12,32,28,.16)}.innate-bench-widget .addr-search__dropdown li::marker{content:""}.innate-bench-widget .addr-search__opt{position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:.1rem .55rem;padding:.62rem 2rem .62rem .72rem!important;cursor:pointer}.innate-bench-widget .addr-search__opt+.addr-search__opt{border-top:1px solid rgba(12,32,28,.07)}.innate-bench-widget .addr-search__opt:hover,.innate-bench-widget .addr-search__opt.is-active{background:#f2eadc}.innate-bench-widget .addr-search__main{grid-column:1;font-size:.9rem;font-weight:650;line-height:1.25}.innate-bench-widget .addr-search__sec{grid-column:1;font-size:.76rem;line-height:1.25;margin-top:0}.innate-bench-widget .addr-search__chev{grid-column:2;grid-row:1/span 2;align-self:center;justify-self:end;opacity:.55;font-size:.86rem}
+</style>
+</section>
+
+  <section id="atelier-builder" class="atelier-builder" data-atelier-builder aria-label="Benchtop quote builder">
+    <div class="atelier-builder__frame">
+      <div
+        id="innate-benchtop-configurator"
+        class="atelier-configurator-mount"
+        data-api-base="{{ api_base | escape }}"
+        data-asset-base="{{ asset_base | escape }}"
+      ></div>
+    </div>
+  </section>
+
+  {%- if section.settings.show_premise != false -%}
+  <section class="atelier-premise" aria-label="What makes this benchtop page different">
+    <div class="atelier-premise__statement">
+      <p class="atelier-kicker">{{ section.settings.premise_kicker | default: 'The difference' | escape }}</p>
+      <h2>{{ section.settings.premise_heading | default: 'A useful brief before we talk.' | escape }}</h2>
+    </div>
+    <div class="atelier-premise__grid">
+      <article>
+        <span>{{ section.settings.premise_1_heading | default: 'Size and shape' | escape }}</span>
+        <p>{{ section.settings.premise_1_text | default: 'Enter your made-to-size dimensions, thickness, panel count, common cut-outs and delivery details before you email us.' | escape }}</p>
+      </article>
+      <article>
+        <span>{{ section.settings.premise_2_heading | default: 'Indicative quote' | escape }}</span>
+        <p>{{ section.settings.premise_2_text | default: 'The quote gives you an indicative price early, then we check joins, support, delivery and the final details properly.' | escape }}</p>
+      </article>
+      <article>
+        <span>{{ section.settings.premise_3_heading | default: 'Native timber' | escape }}</span>
+        <p>{{ section.settings.premise_3_text | default: 'Compare NZ Rimu benchtops, Tōtara benchtops and Beech benchtops, with samples available before you commit.' | escape }}</p>
+      </article>
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- if section.settings.show_uses != false -%}
+  <section class="atelier-uses" aria-label="Where custom timber benchtops work">
+    <div class="atelier-uses__intro">
+      <p class="atelier-kicker">{{ section.settings.uses_kicker | default: 'Where it works' | escape }}</p>
+      <h2>{{ section.settings.uses_heading | default: 'Made-to-size timber surfaces for kitchens, islands and laundries.' | escape }}</h2>
+      <p>{{ section.settings.uses_text | default: 'Timber is warm, practical and repairable when it is designed around the room. Use the builder for a first quote on the common shapes below, then send through drawings or photos if the space needs more thought.' | escape }}</p>
+    </div>
+    <div class="atelier-uses__grid" role="list">
+      <article role="listitem"><h3>{{ section.settings.use_1_heading | default: 'Kitchen benchtops' | escape }}</h3><p>{{ section.settings.use_1_text | default: 'Long runs, appliance zones and everyday preparation surfaces with real timber warmth.' | escape }}</p></article>
+      <article role="listitem"><h3>{{ section.settings.use_2_heading | default: 'Island tops' | escape }}</h3><p>{{ section.settings.use_2_text | default: 'Feature pieces where size, overhang and timber character matter.' | escape }}</p></article>
+      <article role="listitem"><h3>{{ section.settings.use_3_heading | default: 'Laundry tops' | escape }}</h3><p>{{ section.settings.use_3_text | default: 'Practical custom surfaces with sensible care around water and appliances.' | escape }}</p></article>
+      <article role="listitem"><h3>{{ section.settings.use_4_heading | default: 'Bathroom vanities' | escape }}</h3><p>{{ section.settings.use_4_text | default: 'Timber tops where sealing, splash zones and maintenance details need checking.' | escape }}</p></article>
+      <article role="listitem"><h3>{{ section.settings.use_5_heading | default: 'Desks and shelves' | escape }}</h3><p>{{ section.settings.use_5_text | default: 'Working surfaces, floating shelves and panels in the same native species.' | escape }}</p></article>
+      <article role="listitem"><h3>{{ section.settings.use_6_heading | default: 'Commercial counters' | escape }}</h3><p>{{ section.settings.use_6_text | default: 'Reception, hospitality and customer-facing tops with a warmer material presence.' | escape }}</p></article>
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- if section.settings.show_material_wall != false -%}
+  <section class="atelier-material-wall" aria-label="Compare NZ native timber benchtop materials">
+    <div class="atelier-material-wall__intro">
+      <p class="atelier-kicker">{{ section.settings.material_kicker | default: 'Material wall' | escape }}</p>
+      <h2>{{ section.settings.material_heading | default: 'Three native timbers. Pick for character, then confirm with samples.' | escape }}</h2>
+      <p>{{ section.settings.material_text | default: 'The configurator prices Clear, Country Bark and Blackwash options. Your final timber choice should be checked in the room beside cabinetry, flooring and natural light.' | escape }}</p>
+    </div>
+
+    <div class="atelier-timber-stack" role="list">
+      <article role="listitem">
+        <figure>
+          {%- if section.settings.rimu_image != blank -%}
+            {{ section.settings.rimu_image | image_url: width: 1400 | image_tag: alt: section.settings.rimu_image_alt, loading: 'lazy', width: section.settings.rimu_image.width, height: section.settings.rimu_image.height }}
+          {%- elsif section.settings.rimu_asset_filename != blank -%}
+            {%- assign rimu_asset_src = section.settings.rimu_asset_filename -%}
+            {%- unless rimu_asset_src contains '://' -%}
+              {%- assign rimu_asset_src = rimu_asset_src | asset_url -%}
+            {%- endunless -%}
+            <img src="{{ rimu_asset_src | escape }}" alt="{{ section.settings.rimu_image_alt | default: 'Rimu benchtop timber grain sample' | escape }}" loading="lazy" width="2048" height="1024">
+          {%- endif -%}
+        </figure>
+        <div>
+          <span>{{ section.settings.rimu_region | default: 'West Coast' | escape }}</span>
+          <h3>{{ section.settings.rimu_heading | default: 'Rimu' | escape }}</h3>
+          <p>{{ section.settings.rimu_text | default: 'Warm, lively and recognisably New Zealand. Best when the benchtop should be a feature.' | escape }}</p>
+          <dl><div><dt>{{ section.settings.timber_character_label | default: 'Character' | escape }}</dt><dd>{{ section.settings.rimu_character | default: 'Rich amber grain' | escape }}</dd></div></dl>
+        </div>
+      </article>
+
+      <article role="listitem">
+        <figure>
+          {%- if section.settings.totara_image != blank -%}
+            {{ section.settings.totara_image | image_url: width: 1400 | image_tag: alt: section.settings.totara_image_alt, loading: 'lazy', width: section.settings.totara_image.width, height: section.settings.totara_image.height }}
+          {%- elsif section.settings.totara_asset_filename != blank -%}
+            {%- assign totara_asset_src = section.settings.totara_asset_filename -%}
+            {%- unless totara_asset_src contains '://' -%}
+              {%- assign totara_asset_src = totara_asset_src | asset_url -%}
+            {%- endunless -%}
+            <img src="{{ totara_asset_src | escape }}" alt="{{ section.settings.totara_image_alt | default: 'Tōtara benchtop timber grain sample' | escape }}" loading="lazy" width="2048" height="1024">
+          {%- endif -%}
+        </figure>
+        <div>
+          <span>{{ section.settings.totara_region | default: 'Northland' | escape }}</span>
+          <h3>{{ section.settings.totara_heading | default: 'Tōtara' | escape }}</h3>
+          <p>{{ section.settings.totara_text | default: 'Golden, calmer and grounded. A strong Aotearoa story without a busy surface.' | escape }}</p>
+          <dl><div><dt>{{ section.settings.timber_character_label | default: 'Character' | escape }}</dt><dd>{{ section.settings.totara_character | default: 'Honeyed, quieter grain' | escape }}</dd></div></dl>
+        </div>
+      </article>
+
+      <article role="listitem">
+        <figure>
+          {%- if section.settings.beech_image != blank -%}
+            {{ section.settings.beech_image | image_url: width: 1400 | image_tag: alt: section.settings.beech_image_alt, loading: 'lazy', width: section.settings.beech_image.width, height: section.settings.beech_image.height }}
+          {%- elsif section.settings.beech_asset_filename != blank -%}
+            {%- assign beech_asset_src = section.settings.beech_asset_filename -%}
+            {%- unless beech_asset_src contains '://' -%}
+              {%- assign beech_asset_src = beech_asset_src | asset_url -%}
+            {%- endunless -%}
+            <img src="{{ beech_asset_src | escape }}" alt="{{ section.settings.beech_image_alt | default: 'West Coast Beech dining table timber grain sample' | escape }}" loading="lazy" width="2048" height="1024">
+          {%- endif -%}
+        </figure>
+        <div>
+          <span>{{ section.settings.beech_region | default: 'West Coast' | escape }}</span>
+          <h3>{{ section.settings.beech_heading | default: 'Beech' | escape }}</h3>
+          <p>{{ section.settings.beech_text | default: 'Clean, practical and contemporary. Often the easiest native timber for modern kitchens.' | escape }}</p>
+          <dl><div><dt>{{ section.settings.timber_character_label | default: 'Character' | escape }}</dt><dd>{{ section.settings.beech_character | default: 'Light red to warm brown' | escape }}</dd></div></dl>
+        </div>
+      </article>
+    </div>
+
+    <div class="atelier-sample-bar">
+      <p><strong>{{ section.settings.sample_bar_heading | default: 'Check the timber in your own light.' | escape }}</strong> {{ section.settings.sample_bar_text | default: 'Samples are the clearest way to compare Rimu, Tōtara and Beech beside your cabinetry, flooring and wall colour.' | escape }}</p>
+      <a href="{{ sample_link }}">{{ section.settings.sample_link_label | default: 'Order timber samples' | escape }}</a>
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- if section.settings.show_after_quote != false -%}
+  <section class="atelier-after" aria-label="What happens after the benchtop quote">
+    {%- if section.settings.after_image != blank -%}
+      <figure>
+        {{ section.settings.after_image | image_url: width: 1600 | image_tag:
+          alt: section.settings.after_image_alt,
+          loading: 'lazy',
+          sizes: '(min-width: 990px) 34vw, 100vw',
+          width: section.settings.after_image.width,
+          height: section.settings.after_image.height
+        }}
+      </figure>
+    {%- elsif section.settings.hero_image != blank -%}
+      <figure>
+        {{ section.settings.hero_image | image_url: width: 1600 | image_tag:
+          alt: hero_alt,
+          loading: 'lazy',
+          sizes: '(min-width: 990px) 34vw, 100vw',
+          width: section.settings.hero_image.width,
+          height: section.settings.hero_image.height
+        }}
+      </figure>
+    {%- elsif section.settings.customer_install_asset_filename != blank -%}
+      <figure><img src="{{ section.settings.customer_install_asset_filename | asset_url }}" alt="Finished West Coast Beech timber benchtop in a customer kitchen" loading="lazy" width="1200" height="1764"></figure>
+    {%- endif -%}
+    <div class="atelier-after__copy">
+      <p class="atelier-kicker">{{ section.settings.after_kicker | default: 'After the quote' | escape }}</p>
+      <h2>{{ section.settings.after_heading | default: 'Before we make it, we check the details with you.' | escape }}</h2>
+      <p>{{ section.settings.after_text | default: 'Timber is warm, repairable and honest. It is not stone, and it needs sensible care around heat, water and spills. That is also why we review every quote before cutting: good timber should suit the room, not just fit the numbers.' | escape }}</p>
+      <div class="atelier-after__checks" aria-label="What we check before production">
+        <article><span>{{ section.settings.after_check_1_number | default: '01' | escape }}</span><strong>{{ section.settings.after_check_1_heading | default: 'Joins and grain' | escape }}</strong><p>{{ section.settings.after_check_1_text | default: 'Panel layout, grain direction and joins that make sense in the room.' | escape }}</p></article>
+        <article><span>{{ section.settings.after_check_2_number | default: '02' | escape }}</span><strong>{{ section.settings.after_check_2_heading | default: 'Support and overhangs' | escape }}</strong><p>{{ section.settings.after_check_2_text | default: 'Whether the timber has the support it needs for daily use.' | escape }}</p></article>
+        <article><span>{{ section.settings.after_check_3_number | default: '03' | escape }}</span><strong>{{ section.settings.after_check_3_heading | default: 'Finish and care' | escape }}</strong><p>{{ section.settings.after_check_3_text | default: 'Sample choice, oil finish and realistic expectations around timber care.' | escape }}</p></article>
+        <article><span>{{ section.settings.after_check_4_number | default: '04' | escape }}</span><strong>{{ section.settings.after_check_4_heading | default: 'Delivery details' | escape }}</strong><p>{{ section.settings.after_check_4_text | default: 'Nationwide freight, access and timing checked before order confirmation.' | escape }}</p></article>
+      </div>
+      <a class="atelier-button atelier-button--primary innate-glass-primary-cta" href="{{ after_cta_link }}">{{ section.settings.after_cta_label | default: 'Return to the builder' | escape }}</a>
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- if section.settings.show_review_intro != false -%}
+  <section class="atelier-review-intro" aria-label="Customer reviews for Innate Furniture">
+    <div class="atelier-review-intro__inner">
+      <p class="atelier-kicker">{{ section.settings.review_kicker | default: 'Customer proof' | escape }}</p>
+      <h2>{{ section.settings.review_heading | default: 'Made in Christchurch. Trusted around New Zealand.' | escape }}</h2>
+      <p>{{ section.settings.review_text | default: 'Benchtops are newer for us than dining tables, but the same workshop, timber knowledge and follow-through sit behind every quote. These reviews show the standard customers already expect from Innate.' | escape }}</p>
+    </div>
+  </section>
+  {%- endif -%}
+</div>
+
+<script>
+  (function () {
+    var builderHash = '#atelier-builder';
+    var scrollTargetSelector = '.atelier-configurator-mount';
+
+    function track(eventName, detail) {
+      try {
+        if (Array.isArray(window.dataLayer)) {
+          window.dataLayer.push(Object.assign({ event: eventName }, detail || {}));
+        }
+      } catch (error) {
+        /* Keep custom events available even if a tag manager is not present. */
+      }
+
+      try {
+        document.dispatchEvent(new CustomEvent('innate:' + eventName, { detail: detail || {} }));
+      } catch (error) {
+        return;
+      }
+    }
+
+    function scrollToBuilder() {
+      var target = document.querySelector('[data-atelier-builder]') || document.querySelector('.atelier-builder');
+      if (!target) return;
+      var visualTarget = target.querySelector(scrollTargetSelector) || target;
+      var offset = window.innerWidth < 760 ? 78 : 96;
+      var y = visualTarget.getBoundingClientRect().top + window.pageYOffset - offset;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+
+    function closeTimberPreview() {
+      var preview = document.querySelector('.atelier-swatch-preview');
+      if (preview) preview.remove();
+      document.documentElement.classList.remove('atelier-swatch-preview-open');
+    }
+
+    function openTimberPreview(tile) {
+      if (!tile) return;
+      var image = tile.querySelector('img');
+      if (!image) return;
+      closeTimberPreview();
+
+      var name = tile.querySelector('.timber-tile__name');
+      var rate = tile.querySelector('.timber-tile__rate');
+      var preview = document.createElement('div');
+      preview.className = 'atelier-swatch-preview';
+      preview.setAttribute('role', 'dialog');
+      preview.setAttribute('aria-modal', 'true');
+      preview.setAttribute('aria-label', 'Timber sample preview');
+      preview.innerHTML =
+        '<button class="atelier-swatch-preview__close" type="button" aria-label="Close timber preview">×</button>' +
+        '<figure>' +
+          '<img src="' + (image.currentSrc || image.src) + '" alt="' + (image.alt || 'Timber sample') + '">' +
+          '<figcaption><strong>' + (name ? name.textContent : 'Timber sample') + '</strong>' +
+          (rate ? '<span>' + rate.textContent + '</span>' : '') +
+          '</figcaption>' +
+        '</figure>';
+      document.body.appendChild(preview);
+      document.documentElement.classList.add('atelier-swatch-preview-open');
+      preview.querySelector('.atelier-swatch-preview__close').focus({ preventScroll: true });
+    }
+
+    document.addEventListener('click', function (event) {
+      var link = event.target && event.target.closest ? event.target.closest('a[href="' + builderHash + '"]') : null;
+      if (link) {
+        event.preventDefault();
+        track('bench_start_quote', { source: link.textContent.trim() || 'builder_cta' });
+        scrollToBuilder();
+        return;
+      }
+
+      var sampleLink = event.target && event.target.closest ? event.target.closest('a[href*="/products/product-sample"]') : null;
+      if (sampleLink) {
+        track('bench_order_samples_click', { source: sampleLink.textContent.trim() || 'sample_link' });
+        return;
+      }
+
+      var config = event.target && event.target.closest ? event.target.closest('#innate-benchtop-configurator') : null;
+      if (!config) {
+        var faqSummary = event.target && event.target.closest ? event.target.closest('.faq summary') : null;
+        if (faqSummary) {
+          var title = faqSummary.textContent.trim().replace(/\s+/g, ' ');
+          track('bench_faq_open', { question: title });
+        }
+        return;
+      }
+
+      var swatchImage = event.target.closest('.timber-tile__photo, .timber-tile img');
+      if (swatchImage) {
+        closeTimberPreview();
+      }
+
+      if (event.target.closest('.timber-tile')) track('bench_change_timber');
+      if (event.target.closest('.material-card__seg-btn, .stickybar__finish-btn')) track('bench_change_finish');
+      if (event.target.closest('.panel-row__add, .panel-editor__add')) track('bench_add_panel');
+      if (event.target.closest('.stickybar__cta, .stickybar__price--btn')) track('bench_share_quote_start');
+    }, true);
+
+    document.addEventListener('click', function (event) {
+      if (!event.target || !event.target.closest) return;
+      if (event.target.matches('.atelier-swatch-preview') || event.target.closest('.atelier-swatch-preview__close')) {
+        closeTimberPreview();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeTimberPreview();
+    });
+
+    document.addEventListener('change', function (event) {
+      if (!event.target || !event.target.closest) return;
+      if (event.target.closest('#innate-benchtop-configurator .panel-row')) {
+        track('bench_change_dimensions');
+      }
+      if (event.target.closest('#innate-benchtop-configurator .addr-search')) {
+        track('bench_delivery_address_entered');
+      }
+    }, true);
+
+    function updateBuilderStickyState() {
+      var builder = document.querySelector('[data-atelier-builder]') || document.querySelector('.atelier-builder');
+      var footer = document.querySelector('.shopify-section-group-footer-group') || document.querySelector('footer');
+      if (!builder) return;
+      var rect = builder.getBoundingClientRect();
+      var footerRect = footer ? footer.getBoundingClientRect() : null;
+      var narrow = window.innerWidth < 960;
+      var active = narrow
+        ? rect.top < (window.innerHeight * 0.68) && rect.bottom > (window.innerHeight * 0.46)
+        : rect.top < (window.innerHeight * 0.82) && rect.bottom > 120;
+      var finalCta = document.querySelector('.atelier-final-cta');
+      var finalCtaRect = finalCta ? finalCta.getBoundingClientRect() : null;
+      var footerActive = footerRect ? footerRect.top < (window.innerHeight - 120) : false;
+      if (finalCtaRect && finalCtaRect.top < (window.innerHeight - 80)) footerActive = true;
+      document.body.classList.toggle('bench-builder-ready', active);
+      document.body.classList.toggle('bench-builder-footer', footerActive);
+    }
+
+    updateBuilderStickyState();
+    window.addEventListener('scroll', updateBuilderStickyState, { passive: true });
+    window.addEventListener('resize', updateBuilderStickyState);
+    document.addEventListener('click', function (event) {
+      var modeButton = event.target && event.target.closest ? event.target.closest('.mobile-mode-rail button, .mobile-piece-tab, .mobile-dim-chip') : null;
+      if (!modeButton) return;
+      window.setTimeout(function () {
+        updateBuilderStickyState();
+        var builder = document.querySelector('[data-atelier-builder]') || document.querySelector('.atelier-builder');
+        if (!builder || window.innerWidth > 959) return;
+        var y = builder.getBoundingClientRect().top + window.pageYOffset - 72;
+        if (window.pageYOffset > y + 180 || window.pageYOffset < y - 120) {
+          window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+        }
+      }, 80);
+    }, true);
+
+  })();
+</script>
+<script type="module" src="{{ 'innate-benchtop-configurator.js' | asset_url | append: '&atelier=20260623-phase12-hardening-v5' }}"></script>
+
+{% schema %}
+{
+  "name": "Benchtops atelier",
+  "class": "section-benchtops-atelier",
+  "settings": [
+    { "type": "header", "content": "Layout controls" },
+    {
+      "type": "select",
+      "id": "hero_layout",
+      "label": "Hero image position",
+      "default": "image_right",
+      "options": [
+        { "value": "image_right", "label": "Image right" },
+        { "value": "image_left", "label": "Image left" }
+      ]
+    },
+    { "type": "checkbox", "id": "show_premise", "label": "Show difference section", "default": true },
+    { "type": "checkbox", "id": "show_uses", "label": "Show where it works section", "default": true },
+    { "type": "checkbox", "id": "show_material_wall", "label": "Show timber material section", "default": true },
+    { "type": "checkbox", "id": "show_after_quote", "label": "Show after the quote section", "default": true },
+    { "type": "checkbox", "id": "show_review_intro", "label": "Show review intro section", "default": true },
+
+    { "type": "header", "content": "Hero" },
+    { "type": "text", "id": "hero_kicker", "label": "Hero kicker", "default": "Custom timber benchtops NZ" },
+    { "type": "text", "id": "hero_heading", "label": "Hero heading", "default": "Plan your timber benchtop. See the quote as you go." },
+    { "type": "textarea", "id": "hero_lead", "label": "Hero body", "default": "For kitchen benchtops, shelves, vanities, laundries and other timber work surfaces. Choose your timber, set the size and see the quote as you go." },
+    { "type": "text", "id": "hero_primary_label", "label": "Primary button label", "default": "Design your own benchtop" },
+    { "type": "url", "id": "hero_primary_link", "label": "Primary button link" },
+    { "type": "text", "id": "hero_secondary_label", "label": "Secondary button label", "default": "Order samples" },
+    { "type": "url", "id": "hero_secondary_link", "label": "Secondary button link" },
+    { "type": "image_picker", "id": "customer_install_image", "label": "Main customer kitchen image" },
+    { "type": "text", "id": "customer_install_asset_filename", "label": "Fallback customer kitchen asset filename", "default": "beech-kitchen-island-hero-2026-05-23.jpg" },
+    { "type": "image_picker", "id": "hero_image", "label": "Fallback hero image" },
+    { "type": "text", "id": "hero_image_alt", "label": "Main image alt text", "default": "Custom NZ native timber benchtop in a kitchen" },
+    { "type": "text", "id": "hero_caption_heading", "label": "Image caption heading", "default": "Price the practical stuff first." },
+    { "type": "text", "id": "hero_caption_text", "label": "Image caption text", "default": "We confirm the craft details before anything is cut." },
+
+    { "type": "header", "content": "Proof strip" },
+    { "type": "text", "id": "proof_1_heading", "label": "Proof 1 heading", "default": "Quote before enquiry" },
+    { "type": "text", "id": "proof_1_text", "label": "Proof 1 text", "default": "Use real dimensions and options before emailing." },
+    { "type": "text", "id": "proof_2_heading", "label": "Proof 2 heading", "default": "NZ native timber" },
+    { "type": "text", "id": "proof_2_text", "label": "Proof 2 text", "default": "Rimu, Tōtara and West Coast Beech." },
+    { "type": "text", "id": "proof_3_heading", "label": "Proof 3 heading", "default": "Made in Christchurch" },
+    { "type": "text", "id": "proof_3_text", "label": "Proof 3 text", "default": "Workshop reviewed before cutting." },
+    { "type": "text", "id": "proof_4_heading", "label": "Proof 4 heading", "default": "Delivered nationwide" },
+    { "type": "text", "id": "proof_4_text", "label": "Proof 4 text", "default": "Freight is estimated in the brief." },
+
+    { "type": "header", "content": "Quote builder intro" },
+    { "type": "text", "id": "builder_kicker", "label": "Builder kicker", "default": "Quote builder" },
+    { "type": "text", "id": "builder_heading", "label": "Builder heading", "default": "Build a useful brief for workshop review." },
+
+    { "type": "header", "content": "Difference section" },
+    { "type": "text", "id": "premise_kicker", "label": "Kicker", "default": "The difference" },
+    { "type": "text", "id": "premise_heading", "label": "Heading", "default": "A useful brief before we talk." },
+    { "type": "text", "id": "premise_1_heading", "label": "Card 1 heading", "default": "Size and shape" },
+    { "type": "textarea", "id": "premise_1_text", "label": "Card 1 text", "default": "Enter your made-to-size dimensions, thickness, panel count, common cut-outs and delivery details before you email us." },
+    { "type": "text", "id": "premise_2_heading", "label": "Card 2 heading", "default": "Indicative quote" },
+    { "type": "textarea", "id": "premise_2_text", "label": "Card 2 text", "default": "The quote gives you an indicative price early, then we check joins, support, delivery and the final details properly." },
+    { "type": "text", "id": "premise_3_heading", "label": "Card 3 heading", "default": "Native timber" },
+    { "type": "textarea", "id": "premise_3_text", "label": "Card 3 text", "default": "Compare NZ Rimu benchtops, Tōtara benchtops and Beech benchtops, with samples available before you commit." },
+
+    { "type": "header", "content": "Where it works" },
+    { "type": "text", "id": "uses_kicker", "label": "Kicker", "default": "Where it works" },
+    { "type": "text", "id": "uses_heading", "label": "Heading", "default": "Wooden kitchen benchtops, islands, laundries and working surfaces, made to size." },
+    { "type": "textarea", "id": "uses_text", "label": "Body", "default": "Timber is warm, practical and repairable when it is designed around the room. Use the builder for a first quote on the common shapes below, then send through drawings or photos if the space needs more thought." },
+    { "type": "text", "id": "use_1_heading", "label": "Use 1 heading", "default": "Kitchen benchtops" },
+    { "type": "textarea", "id": "use_1_text", "label": "Use 1 text", "default": "Long runs, appliance zones and everyday preparation surfaces with real timber warmth." },
+    { "type": "text", "id": "use_2_heading", "label": "Use 2 heading", "default": "Island tops" },
+    { "type": "textarea", "id": "use_2_text", "label": "Use 2 text", "default": "Feature pieces where size, overhang and timber character matter." },
+    { "type": "text", "id": "use_3_heading", "label": "Use 3 heading", "default": "Laundry tops" },
+    { "type": "textarea", "id": "use_3_text", "label": "Use 3 text", "default": "Practical custom surfaces with sensible care around water and appliances." },
+    { "type": "text", "id": "use_4_heading", "label": "Use 4 heading", "default": "Bathroom vanities" },
+    { "type": "textarea", "id": "use_4_text", "label": "Use 4 text", "default": "Timber tops where sealing, splash zones and maintenance details need checking." },
+    { "type": "text", "id": "use_5_heading", "label": "Use 5 heading", "default": "Desks and shelves" },
+    { "type": "textarea", "id": "use_5_text", "label": "Use 5 text", "default": "Working surfaces, floating shelves and panels in the same native species." },
+    { "type": "text", "id": "use_6_heading", "label": "Use 6 heading", "default": "Commercial counters" },
+    { "type": "textarea", "id": "use_6_text", "label": "Use 6 text", "default": "Reception, hospitality and customer-facing tops with a warmer material presence." },
+
+    { "type": "header", "content": "Timber section" },
+    { "type": "text", "id": "material_kicker", "label": "Kicker", "default": "Material wall" },
+    { "type": "text", "id": "material_heading", "label": "Heading", "default": "Three native timbers. Pick for character, then confirm with samples." },
+    { "type": "textarea", "id": "material_text", "label": "Body", "default": "The configurator prices Clear, Country Bark and Blackwash options. Your final timber choice should be checked in the room beside cabinetry, flooring and natural light." },
+    { "type": "text", "id": "timber_character_label", "label": "Timber detail label", "default": "Character" },
+    { "type": "image_picker", "id": "rimu_image", "label": "Rimu image" },
+    { "type": "text", "id": "rimu_asset_filename", "label": "Rimu fallback Shopify Files URL or asset filename", "default": "https://cdn.shopify.com/s/files/1/0307/3094/4571/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043193" },
+    { "type": "text", "id": "rimu_image_alt", "label": "Rimu image alt text", "default": "Rimu benchtop timber grain sample" },
+    { "type": "text", "id": "rimu_region", "label": "Rimu region", "default": "West Coast" },
+    { "type": "text", "id": "rimu_heading", "label": "Rimu heading", "default": "Rimu" },
+    { "type": "textarea", "id": "rimu_text", "label": "Rimu text", "default": "Warm, lively and recognisably New Zealand. Best when the benchtop should be a feature." },
+    { "type": "text", "id": "rimu_character", "label": "Rimu character", "default": "Rich amber grain" },
+    { "type": "image_picker", "id": "totara_image", "label": "Tōtara image" },
+    { "type": "text", "id": "totara_asset_filename", "label": "Tōtara fallback Shopify Files URL or asset filename", "default": "https://cdn.shopify.com/s/files/1/0307/3094/4571/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043363" },
+    { "type": "text", "id": "totara_image_alt", "label": "Tōtara image alt text", "default": "Tōtara benchtop timber grain sample" },
+    { "type": "text", "id": "totara_region", "label": "Tōtara region", "default": "Northland" },
+    { "type": "text", "id": "totara_heading", "label": "Tōtara heading", "default": "Tōtara" },
+    { "type": "textarea", "id": "totara_text", "label": "Tōtara text", "default": "Golden, calmer and grounded. A strong Aotearoa story without a busy surface." },
+    { "type": "text", "id": "totara_character", "label": "Tōtara character", "default": "Honeyed, quieter grain" },
+    { "type": "image_picker", "id": "beech_image", "label": "Beech image" },
+    { "type": "text", "id": "beech_asset_filename", "label": "Beech fallback Shopify Files URL or asset filename", "default": "https://cdn.shopify.com/s/files/1/0307/3094/4571/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043485" },
+    { "type": "text", "id": "beech_image_alt", "label": "Beech image alt text", "default": "West Coast Beech dining table timber grain sample" },
+    { "type": "text", "id": "beech_region", "label": "Beech region", "default": "West Coast" },
+    { "type": "text", "id": "beech_heading", "label": "Beech heading", "default": "Beech" },
+    { "type": "textarea", "id": "beech_text", "label": "Beech text", "default": "Clean, practical and contemporary. Often the easiest native timber for modern kitchens." },
+    { "type": "text", "id": "beech_character", "label": "Beech character", "default": "Light red to warm brown" },
+    { "type": "text", "id": "sample_bar_heading", "label": "Sample bar heading", "default": "Check the timber in your own light." },
+    { "type": "textarea", "id": "sample_bar_text", "label": "Sample bar text", "default": "Samples are the clearest way to compare Rimu, Tōtara and Beech beside your cabinetry, flooring and wall colour." },
+    { "type": "text", "id": "sample_link_label", "label": "Sample link label", "default": "Order timber samples" },
+    { "type": "url", "id": "sample_link", "label": "Sample link" },
+
+    { "type": "header", "content": "After the quote" },
+    { "type": "image_picker", "id": "after_image", "label": "After quote image" },
+    { "type": "text", "id": "after_image_alt", "label": "After quote image alt text", "default": "Finished West Coast Beech timber benchtop in a customer kitchen" },
+    { "type": "text", "id": "after_kicker", "label": "Kicker", "default": "After the quote" },
+    { "type": "text", "id": "after_heading", "label": "Heading", "default": "Before we make it, we check the details with you." },
+    { "type": "textarea", "id": "after_text", "label": "Body", "default": "Timber is warm, repairable and honest. It is not stone, and it needs sensible care around heat, water and spills. That is also why we review every quote before cutting: good timber should suit the room, not just fit the numbers." },
+    { "type": "text", "id": "after_check_1_number", "label": "Check 1 number", "default": "01" },
+    { "type": "text", "id": "after_check_1_heading", "label": "Check 1 heading", "default": "Joins and grain" },
+    { "type": "textarea", "id": "after_check_1_text", "label": "Check 1 text", "default": "Panel layout, grain direction and joins that make sense in the room." },
+    { "type": "text", "id": "after_check_2_number", "label": "Check 2 number", "default": "02" },
+    { "type": "text", "id": "after_check_2_heading", "label": "Check 2 heading", "default": "Support and overhangs" },
+    { "type": "textarea", "id": "after_check_2_text", "label": "Check 2 text", "default": "Whether the timber has the support it needs for daily use." },
+    { "type": "text", "id": "after_check_3_number", "label": "Check 3 number", "default": "03" },
+    { "type": "text", "id": "after_check_3_heading", "label": "Check 3 heading", "default": "Finish and care" },
+    { "type": "textarea", "id": "after_check_3_text", "label": "Check 3 text", "default": "Sample choice, oil finish and realistic expectations around timber care." },
+    { "type": "text", "id": "after_check_4_number", "label": "Check 4 number", "default": "04" },
+    { "type": "text", "id": "after_check_4_heading", "label": "Check 4 heading", "default": "Delivery details" },
+    { "type": "textarea", "id": "after_check_4_text", "label": "Check 4 text", "default": "Nationwide freight, access and timing checked before order confirmation." },
+    { "type": "text", "id": "after_cta_label", "label": "Button label", "default": "Return to the builder" },
+    { "type": "url", "id": "after_cta_link", "label": "Button link" },
+
+    { "type": "header", "content": "Review intro" },
+    { "type": "text", "id": "review_kicker", "label": "Kicker", "default": "Customer proof" },
+    { "type": "text", "id": "review_heading", "label": "Heading", "default": "Made in our Christchurch workshop, trusted in homes around New Zealand." },
+    { "type": "textarea", "id": "review_text", "label": "Body", "default": "Benchtops are newer for us than dining tables, but the same workshop, timber knowledge and follow-through sit behind every quote. These reviews show the standard customers already expect from Innate." },
+
+    { "type": "header", "content": "Configurator connection" },
+    { "type": "text", "id": "api_base", "label": "Backend API base URL", "default": "https://innate-mission-control.vercel.app" },
+    { "type": "text", "id": "asset_base", "label": "Remote asset base URL for timber photos", "default": "https://innate-mission-control.vercel.app" }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops atelier"
+    }
+  ]
+}
+{% endschema %}

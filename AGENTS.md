@@ -9,21 +9,25 @@ Read these current docs before website work:
 1. `reference/INDEX.md`
 2. `docs/current/site-state.md`
 3. `docs/current/shopify-workflow.md`
-4. `docs/current/brand-theme-standard.md`
-5. `docs/current/visual-qa-checklist.md`
-6. `docs/current/known-failure-modes.md`
-7. `reference/brand-kit.md`
-8. `reference/innate-website-implementation-playbook.md`
+4. `docs/current/website-agent-brand-kit.md`
+5. `docs/current/brand-theme-standard.md`
+6. `docs/current/visual-qa-checklist.md`
+7. `docs/current/website-visual-audit-protocol.md`
+8. `docs/current/known-failure-modes.md`
 9. `reference/website-change-log.md`
+10. `/Users/mack-mini/.hermes/profiles/website/skills/devops/website-exact-version-control-loop/SKILL.md`
+11. `/Users/mack-mini/.hermes/profiles/website/skills/productivity/shopify-storefront-operations/references/draft-preview-qa-loop.md`
 
 Old dated notes are historical. Do not treat them as current instructions unless they are explicitly referenced by the user.
 
 ## Operating Skill And Tools
 
-- Use the `innate-shopify-ops` skill when available for Innate website, Shopify theme, staging, live, or visual QA work.
-- Run `scripts/innate-preflight.sh` before multi-file website work or any day-start website push.
-- Use `scripts/innate-scoped-theme.sh` for Shopify CLI theme operations. It supports exact-file pulls and staging pushes only; live publishing remains a manual approval gate.
-- Project hooks in `.codex/hooks.json` add source-of-truth context, block unscoped theme pushes, and guard against live pushes without a deliberate override.
+- Use the Website Agent `website-exact-version-control-loop` skill for source-of-truth lock, visual target lock, tiny design-change loops, and screenshot proof.
+- Use the Website Agent `shopify-storefront-operations` skill when available for Shopify product/page/theme operations, previews, backups, approval gates, and storefront verification.
+- Do not rely on retired local wrappers such as `scripts/innate-preflight.sh`, `scripts/innate-scoped-theme.sh`, or the old `innate-shopify-ops` skill unless they are restored and verified in this repo.
+- For Shopify CLI theme operations, confirm the exact target theme role in `docs/current/site-state.md`, use `--only` exact-file scope, and keep live publishing behind an explicit approval plus the project hook override.
+- Project hooks in `.codex/hooks.json` add source-of-truth context, block unscoped theme pushes, block stale benchtop configurator asset pushes, and guard against live pushes without a deliberate override.
+- Before pushing `assets/innate-benchtop-configurator.js`, run `npm run guard:shopify-asset -- --candidate <local-file> --asset-key assets/innate-benchtop-configurator.js`. If it fails, rebase onto the latest approved/live asset; do not push the local bundle.
 
 ## Read-Only Checks
 
@@ -36,7 +40,8 @@ Old dated notes are historical. Do not treat them as current instructions unless
 
 - Guido often reviews Mission Control from a MacBook Air connected to the Mac mini over Tailscale.
 - `localhost` in Guido's browser means the MacBook Air, not this Mac mini. For local Mission Control/Tuesday review links, use the Mac mini's Tailscale address or hostname, verify the URL responds, and provide that as the clickable link.
-- Before sending Guido a local Tuesday review link, run `npm run verify:tuesday-review-link` and only share the exact URL it verifies.
+- Before sending Guido a local Tuesday review link, run `npm run verify:tuesday-review-link -- --port <actual-dev-server-port>` or set `TUESDAY_PORT`; add `--expect "<visible changed text>"` and `--require-selector "<selector>"` when proving a specific UI change, and only share the exact Tailscale URL it verifies. This verifier must pass desktop and mobile Chromium; a raw HTTP 200 is not enough.
+- For Tuesday design/polish proof, also follow `docs/current/tuesday-visual-audit-protocol.md` and use `npm run audit:tuesday-visual -- --port <actual-dev-server-port>` or a focused `--url` scan.
 
 ## Live Website Questions
 
@@ -54,7 +59,7 @@ When the user refers to the live website, a live URL, or a problem they can see 
 - `140732760123` is now unpublished (`Benchtops live cache refresh 2026-05-28 18:45`); do not treat it as live.
 - Broad tidy-up sandbox: `141105463355` — unpublished.
 - `140760219707` is an unpublished benchtops cohesion preview, not the default staging target.
-- Before preview/sandbox work, confirm the exact theme ID and role in `docs/current/site-state.md` or `reference/brand-kit.md` Appendix B.
+- Before preview/sandbox work, confirm the exact theme ID and role in `docs/current/site-state.md`.
 
 ## Push Discipline
 
@@ -65,3 +70,7 @@ When the user refers to the live website, a live URL, or a problem they can see 
 ## Visual Checks
 
 For visual/theme work, inspect desktop and mobile before saying it is ready for review. Do not rely only on code inspection.
+
+For whole-site consistency scans or broad design QA, run `npm run audit:website-visual -- --base-url https://innatefurniture.co.nz` from this repo, then review the saved report and screenshots before reporting the site as visually clear.
+
+For Tuesday/Mission Control consistency scans or broad design QA, load `docs/current/tuesday-agent-design-standard.md`, run `npm run audit:tuesday-visual -- --port <actual-dev-server-port>` from this repo, then review the saved report and screenshots before reporting Tuesday as visually clear.

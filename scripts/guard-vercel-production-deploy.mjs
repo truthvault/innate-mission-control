@@ -4,7 +4,8 @@ import { execSync } from "node:child_process";
 import process from "node:process";
 
 const ALLOWED_PRODUCTION_REFS = new Set([
-  "integration/tuesday-process-live-baseline-20260626",
+  "main",
+  "v2-main",
 ]);
 
 function run(command) {

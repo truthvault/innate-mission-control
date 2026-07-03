@@ -68,9 +68,12 @@ For website work, always start by reading:
 2. `reference/INDEX.md`
 3. `docs/current/site-state.md`
 4. `docs/current/shopify-workflow.md`
-5. `docs/current/brand-theme-standard.md`
-6. `docs/current/visual-qa-checklist.md`
-7. `docs/current/known-failure-modes.md`
-8. `reference/brand-kit.md`
-9. `reference/innate-website-implementation-playbook.md`
+5. `docs/current/website-agent-brand-kit.md`
+6. `docs/current/brand-theme-standard.md`
+7. `docs/current/visual-qa-checklist.md`
+8. `docs/current/website-visual-audit-protocol.md`
+9. `docs/current/known-failure-modes.md`
 10. `reference/website-change-log.md`
+11. `/Users/mack-mini/.hermes/profiles/website/skills/devops/website-exact-version-control-loop/SKILL.md`
+
+Do not use retired local pointers such as `reference/brand-kit.md` or `reference/innate-website-implementation-playbook.md` as active instructions. Current website brand and implementation guidance lives in `docs/current/`.

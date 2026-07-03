@@ -164,6 +164,8 @@ function internalTestReasons(event: FreightQuoteLogEvent, clientIpHash: string |
   if (marker && marker === process.env.FREIGHT_INTERNAL_TEST_TOKEN?.toLowerCase()) reasons.push("internal_test_token");
   if (/internal|test|debug|preview/.test(source)) reasons.push("source_marker");
   if (/freighttest=|internaltest=|testfreight=/.test(pageUrl)) reasons.push("url_test_marker");
+  if (/[?&](tracking_test|cache_check|calc-update-check|shape-ref-check|freight-tracking-check|freight-tracking-visual|freight-live-inspect)=/.test(pageUrl)) reasons.push("url_test_marker");
+  if (/[?&](__ab|_fd|_sc)=/.test(pageUrl)) reasons.push("cache_bust_marker");
   if (status === "dry_run") reasons.push("dry_run");
 
   return Array.from(new Set(reasons));

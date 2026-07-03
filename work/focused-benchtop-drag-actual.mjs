@@ -1,0 +1,23 @@
+import { chromium } from 'playwright';
+const url=process.env.URL; const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function jsState(){
+ return (()=>{
+  const q=s=>document.querySelector(s), qa=s=>[...document.querySelectorAll(s)];
+  const vis=el=>{if(!el)return false; const r=el.getBoundingClientRect(), cs=getComputedStyle(el); return r.width>2&&r.height>2&&cs.display!=='none'&&cs.visibility!=='hidden'&&cs.opacity!=='0'};
+  const rect=el=>{const r=el.getBoundingClientRect(); return {x:+r.x.toFixed(1),y:+r.y.toFixed(1),w:+r.width.toFixed(1),h:+r.height.toFixed(1),cx:+(r.left+r.width/2).toFixed(1),cy:+(r.top+r.height/2).toFixed(1)}};
+  const num=s=>{const m=String(s||'').match(/piece\s*([1-9])/i); return m?+m[1]:null};
+  const moves=qa('[data-panel-move="true"]').filter(vis).map((e,i)=>({idx:i,n:num(e.getAttribute('data-panel-label')||e.getAttribute('aria-label'))||i+1,id:e.getAttribute('data-panel-id'),cls:e.getAttribute('class'),rect:rect(e)}));
+  const resizes=qa('.panel-resize').filter(vis).map((e,i)=>({idx:i,n:moves[i]?.n||i+1,cls:e.getAttribute('class'),active:e.classList.contains('innate-panel-is-active'),rect:rect(e),hits:document.elementsFromPoint(rect(e).cx,rect(e).cy).slice(0,6).map(h=>({tag:h.tagName,cls:String(h.getAttribute('class')||h.className||''),id:h.getAttribute('data-panel-id'),label:h.getAttribute('data-panel-label')||h.getAttribute('aria-label')||'',cursor:getComputedStyle(h).cursor}))}));
+  const rows=qa('.panel-row').filter(vis).map((e,i)=>({idx:i,n:num(e.textContent)||i+1,active:e.classList.contains('innate-panel-card-is-active'),rect:rect(e),text:e.textContent.replace(/\s+/g,' ').trim().slice(0,70)}));
+  const preview=q('.slab-preview,.stage__preview,.stage__visual'); return {href:location.href,preview: preview?rect(preview):null,moves,resizes,rows,activeResize:resizes.find(x=>x.active),activeRow:rows.find(x=>x.active)};
+ })()
+}
+async function state(page){return await page.evaluate(jsState)}
+async function load(page){await page.addInitScript(()=>{localStorage.removeItem('innate.benchtop.v4');localStorage.removeItem('innate.benchtop.v3')}); await page.goto(url+(url.includes('?')?'&':'?')+'qa='+Date.now(),{waitUntil:'domcontentloaded',timeout:45000}); await page.waitForLoadState('networkidle',{timeout:20000}).catch(()=>{}); await page.locator('.slab-preview').first().scrollIntoViewIfNeeded(); await page.waitForTimeout(800)}
+async function add(page){await page.evaluate(()=>[...document.querySelectorAll('button')].find(b=>/add another benchtop piece/i.test(b.textContent||''))?.click()); await sleep(300)}
+async function selectRow(page,n){await page.evaluate(n=>{const rows=[...document.querySelectorAll('.panel-row')]; const row=rows[n-1]; row.scrollIntoView({block:'center'}); row.dispatchEvent(new MouseEvent('pointerdown',{bubbles:true,clientX:row.getBoundingClientRect().left+20,clientY:row.getBoundingClientRect().top+20})); row.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:row.getBoundingClientRect().left+20,clientY:row.getBoundingClientRect().top+20}));},n); await sleep(500)}
+async function dragAt(page, rect, dx, dy){await page.mouse.move(rect.cx,rect.cy); await page.mouse.down(); for(let i=1;i<=20;i++){await page.mouse.move(rect.cx+dx*i/20,rect.cy+dy*i/20); await sleep(15)} await page.mouse.up(); await sleep(700)}
+const browser=await chromium.launch({headless:true}); const page=await browser.newPage({viewport:{width:1440,height:1000}}); const errors=[]; page.on('pageerror',e=>errors.push(e.message)); page.on('console',m=>{if(['error','warning'].includes(m.type())) errors.push(m.type()+': '+m.text().slice(0,120))});
+await load(page); for(let i=1;i<4;i++) await add(page); let afterAdd=await state(page); await selectRow(page,2); let selected2=await state(page); await dragAt(page, selected2.activeResize.rect, 80,50); let afterDrag2=await state(page); await selectRow(page,3); let selected3=await state(page); await dragAt(page, selected3.activeResize.rect, -60,40); let afterDrag3=await state(page);
+function movements(a,b){return b.moves.map(x=>{const old=a.moves.find(y=>y.n===x.n); return {n:x.n,dx:+(x.rect.cx-old.rect.cx).toFixed(1),dy:+(x.rect.cy-old.rect.cy).toFixed(1),relDx:+((x.rect.cx-b.preview.cx)-(old.rect.cx-a.preview.cx)).toFixed(1),relDy:+((x.rect.cy-b.preview.cy)-(old.rect.cy-a.preview.cy)).toFixed(1),previewDx:+(b.preview.cx-a.preview.cx).toFixed(1),previewDy:+(b.preview.cy-a.preview.cy).toFixed(1),activeResize:b.resizes.find(r=>r.n===x.n)?.active, activeRow:b.rows.find(r=>r.n===x.n)?.active}})}
+console.log(JSON.stringify({errors,afterAdd,selected2,move2:movements(selected2,afterDrag2),afterDrag2,selected3,move3:movements(selected3,afterDrag3),afterDrag3},null,2)); await browser.close();

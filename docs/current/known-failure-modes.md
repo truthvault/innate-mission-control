@@ -14,6 +14,10 @@ Old `.codex-theme-work` folders are historical evidence only. They are not sourc
 
 Rendered HTML and code checks are not visual QA. Look at desktop and mobile.
 
+## Configurator Selection Drift
+
+For the benchtop configurator, the canvas panel, detail/editor row, mobile piece tab, and selected-object rotate target must share one selected panel index. Verify both directions: canvas-to-card/tab and card/tab-to-canvas. After adding or copying a second piece, rotate the selected second piece and confirm the first piece keeps its previous orientation.
+
 ## Copy Drift
 
 Do not change page wording during a theme cleanup unless Guido approves copy changes.

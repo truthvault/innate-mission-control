@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, isValidAuthCookie } from "@/lib/tuesday/auth";
 
 const PUBLIC_PREFIXES = [
+  "/timbers/",
+  "/api/address-autocomplete",
+  "/api/address-details",
+  "/api/freight-estimate",
+  "/api/send-quote",
+  "/api/freight/",
   "/api/monday/webhook",
   "/api/sms/2talk/inbound",
   "/api/sms/slack/events",
   "/api/sms/slack/commands",
   "/api/sms/slack/context",
-  "/api/freight/",
 ];
 
 export async function proxy(request: NextRequest) {
@@ -25,9 +30,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude: login page, Next internals, favicon, the Monday webhook, and the
-  // preview-only freight endpoints. The freight endpoints still validate request
-  // shape/origin in route handlers and never expose server-side secrets.
+  // Exclude: login page, Next internals, favicon, the Monday webhook, public
+  // storefront assets, and public configurator endpoints. The storefront-facing
+  // endpoints still validate request shape/origin in route handlers and never
+  // expose server-side secrets.
   // Note: /api/monday/refresh IS still matched and stays gated by the auth cookie.
-  matcher: ["/((?!login|_next/static|_next/image|favicon.ico|api/monday/webhook|api/sms/2talk/inbound|api/sms/slack/events|api/sms/slack/commands|api/sms/slack/context|api/freight/).*)"],
+  matcher: [
+    "/((?!login|_next/static|_next/image|favicon.ico|timbers/|api/monday/webhook|api/sms/2talk/inbound|api/sms/slack/events|api/sms/slack/commands|api/sms/slack/context|api/freight/|api/address-autocomplete|api/address-details|api/freight-estimate|api/send-quote).*)",
+  ],
 };

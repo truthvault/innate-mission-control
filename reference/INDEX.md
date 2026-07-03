@@ -37,10 +37,10 @@ Keywords: materials hub, Northland tōtara, West Coast rimu, West Coast red beec
 Folder: `website-content/materials-proof-pages/`
 Use when: drafting or reviewing the canonical materials/process/people/About page system. Blogs are explicitly out of scope for this pack because the Website Agent is cleaning them separately.
 
-## Website page inventory
-Keywords: canonical URL, page map, handle, title, H1, homepage, dining, outdoor, benchtops, commercial, contact, about.
-File: `reference/website-page-inventory.md`
-Use when: choosing audit scope, checking canonical URLs, or avoiding repeated page discovery.
+## Website route inventory / scan scope
+Keywords: canonical URL, page map, handle, title, H1, homepage, dining, outdoor, benchtops, commercial, contact, about, visual scan.
+File: `docs/current/website-visual-audit-protocol.md`
+Use when: choosing visual audit scope, checking the default route set, or avoiding repeated page discovery. The older `reference/website-page-inventory.md` file is not present in this worktree; regenerate a fresh inventory from sitemap/live crawl evidence before treating any page list as complete.
 
 ## Hospitality landing-page planning
 Keywords: hospitality furniture NZ, cafe tables, restaurant tables, bar leaners, commercial tables, hospitality preview, hospitality wireframe, hospitality copy, hospitality polish, project proof.
@@ -87,6 +87,11 @@ Keywords: Tuesday, Mission Control, leads tab, purchase orders, stocktake, freig
 Folder: `reference/tuesday/`
 Use when: capturing, deduping, planning, or building Tuesday/Mission Control tab work. Start with `reference/tuesday/README.md`, then load the relevant lane file: `reference/tuesday/leads.md`, `reference/tuesday/quoting.md`, `reference/tuesday/purchase-orders.md`, `reference/tuesday/stocktake.md`, `reference/tuesday/freight.md`, `reference/tuesday/dashboard.md`, `reference/tuesday/foundations.md`, or `reference/tuesday/inbox.md`.
 
+## Tuesday current implementation and visual QA rules
+Keywords: Tuesday design rules, Mission Control visual QA, Production Plan mobile, review link, Tailscale, formatting scan, desktop tablet mobile, visual audit, source-backed internal ops UI.
+Files: `reference/tuesday/page-contracts.md`, `docs/current/tuesday-agent-design-standard.md`, `docs/current/tuesday-visual-audit-protocol.md`, `/Users/mack-mini/.hermes/profiles/tuesday/reference/current-tuesday-state.md`, `/Users/mack-mini/.hermes/profiles/tuesday/reference/tuesday-efficiency-policy.md`, `/Users/mack-mini/.hermes/profiles/tuesday/reference/tuesday-product-language-brief.md`, `/Users/mack-mini/.hermes/profiles/tuesday/skills/devops/tuesday-reliability-control-loop/SKILL.md`, `/Users/mack-mini/.hermes/profiles/tuesday/skills/devops/tuesday-mobile-work-queue-ux/SKILL.md`, `scripts/check-tuesday-page-contracts.mjs`, `scripts/audit-tuesday-visual-consistency.mjs`, `scripts/verify-tuesday-review-link.mjs`
+Use when: implementing, polishing, scanning, QAing, or handing off Tuesday/Mission Control UI work. Start with `reference/tuesday/page-contracts.md` to lock the exact route/view purpose, then use the Tuesday design standard and visual audit protocol for design work; use the current state and efficiency policy for session discipline; use the reliability loop for incidents/live/review provenance; use the mobile work queue skill for mobile Production Plan/workshop queue changes. If a route or tab has no page contract, add one before redesigning it. Current status: these are internal/reference rules only, not approval for live deploys, external data writes, or customer/team-visible changes.
+
 
 ## Innate Quote Spine / quoting approval workbench
 Keywords: quoting, quote spine, quote pricing, Hermes quote worker, supplier prices, stale source, quote category policy, Xero dry-run, pricing approval, margin, GST.
@@ -108,6 +113,11 @@ Keywords: Scott Gregan, Distinct, marketing, branding, storytelling, Anthony Bou
 File: `reference/brand-storytelling-reference.md`
 Use when: discussing brand direction, agency proposals, marketing strategy, content campaigns, or the emotional provenance story.
 
+## Stadium story release plan
+Keywords: Stadium story, One NZ Stadium, Venues Ōtautahi, Aitkens, Richard Page, Charlotte McDonald, Daniel Shanks, West Coast beech, local procurement, Christchurch Economic Ambition, Avenues, Canterbury Today, publication pitch, release timing.
+File: `reference/content-bank/plans/stadium-story-release-plan-2026-06-22.md`
+Use when: continuing the Stadium project story, preparing the polished draft for Richard/Dan, deciding approval gates, partner versions, own-channel release, or external publication timing.
+
 ## Book / manufacturing principles
 Keywords: book, principles, local manufacturing, natural materials, sustainability, people planet profit, NZ manufacturing, craft, long-term business, wellbeing, Guido philosophy.
 Folder: `reference/book-principles/`
@@ -118,10 +128,10 @@ Keywords: tone of voice, brand voice, authentic, educational, helpful, humble bu
 File: `reference/innate-tone-of-voice-dna-2026-05-19.md`
 Use when: drafting or reviewing Innate newsletters, social posts, website story copy, material pages, project stories, quote/proposal language, or content schedules. This is the canonical voice guide for Content.
 
-## Website brand kit and implementation playbook
-Keywords: brand kit, implementation playbook, Website Agent design rules, preview readiness, visual QA, Shopify editability, Cormorant Garamond, Maven Pro, bench tokens, page structure, Shopify theme architecture, tidy-up sandbox, theme unification, visual system, Benchtops style, Boardroom style, Dining SEO structure.
-Files: `reference/innate-website-implementation-playbook.md`, `reference/brand-kit.md` (canonical, consolidated 2026-06-12; predecessors archived as `brand-kit-v1-archive-2026-06-12.md` and `brand-kit-v2-draft-archive-2026-06-12.md`), `reference/website-tidy-up-audit-and-plan-2026-06-12.md` (current prioritized tidy-up plan), `reference/brand-kit-unification-audit-2026-05-28.md`, `reference/website-theme-unification-sweep-map-2026-05-28.md`
-Use when: implementing, previewing, QAing, or handing off Innate website/theme/product/page work. Start with the implementation playbook for agent behaviour, preview-readiness gates, Shopify editability, visual proof, and do-not-show rules; use `brand-kit.md` for design tokens, current theme IDs (Appendix B), and coordination rules. Current status: these are internal/reference rules only, not approval for Shopify/theme changes. Keep customer-visible Shopify/theme writes behind the normal approval, backup and verification workflow. Verified 2026-06-17: live theme `141163200571`; broad tidy-up sandbox `141105463355`; `140760219707` is an unpublished benchtops cohesion preview, not a general staging target.
+## Website current implementation and visual QA rules
+Keywords: Website Agent design rules, preview readiness, visual QA, Shopify editability, Cormorant Garamond, Maven Pro, page structure, Shopify theme architecture, tidy-up sandbox, theme unification, visual system, Benchtops style, Boardroom style, Dining SEO structure.
+Files: `docs/current/site-state.md`, `docs/current/shopify-workflow.md`, `docs/current/website-agent-brand-kit.md`, `docs/current/brand-theme-standard.md`, `docs/current/visual-qa-checklist.md`, `docs/current/website-visual-audit-protocol.md`, `docs/current/known-failure-modes.md`, `reference/website-change-log.md`, `reference/website-tidy-up-audit-and-plan-2026-06-12.md`, `reference/brand-kit-unification-audit-2026-05-28.md`, `reference/website-theme-unification-sweep-map-2026-05-28.md`, `/Users/mack-mini/.hermes/profiles/website/skills/devops/website-exact-version-control-loop/SKILL.md`, `/Users/mack-mini/.hermes/profiles/website/skills/productivity/shopify-storefront-operations/references/draft-preview-qa-loop.md`, `scripts/guard-shopify-asset-source.mjs`
+Use when: implementing, previewing, QAing, scanning, or handing off Innate website/theme/product/page work. Start with current site state and Shopify workflow for theme truth, then the Website Agent brand kit, brand-theme standard, visual QA checklist, visual audit protocol, known failure modes, exact-version-control loop, draft-preview QA loop, and the Shopify asset guard before touching protected configurator JS. Retired files named `reference/brand-kit.md` and `reference/innate-website-implementation-playbook.md` are not active source-of-truth files in this repo; do not chase quarantine copies unless Guido explicitly asks for historical archaeology. The older `reference/website-page-inventory.md` pointer is not currently present in this worktree; use the visual audit protocol's route set or regenerate a fresh inventory before treating any page list as complete. Current status: these are internal/reference rules only, not approval for Shopify/theme changes. Keep customer-visible Shopify/theme writes behind the normal approval, backup and verification workflow. Verified 2026-06-21: live theme `141308166203`; broad tidy-up sandbox `141105463355`; `140760219707` is an unpublished benchtops cohesion preview, not a general staging target.
 
 ## Memory / reference architecture
 Keywords: memory, reference files, always remember, router, context, INDEX, cron, session handoff.
