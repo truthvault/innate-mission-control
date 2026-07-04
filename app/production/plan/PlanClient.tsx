@@ -81,42 +81,17 @@ const PLAN_TASK_LINKS_REALTIME_CHANNEL = "production-plan-task-links";
 const PLAN_TASK_LINKS_REALTIME_EVENT = "plan-task-links-changed";
 type PlanTaskLinksStorage = "blob" | "supabase";
 
-const TUESDAY_THEME = {
-  page: "#f6f3ed",
-  surface: "#fffdf9",
-  surfaceClean: "#ffffff",
-  surfaceSoft: "#f7f5ef",
-  line: "#e8e2d7",
-  lineStrong: "#d7cdbd",
-  ink: "#28231f",
-  muted: "#746f66",
-  quiet: "#9b948a",
-  teal: "#0d7c78",
-  tealSoft: "#e7f3f2",
-  tealLine: "#bfdedb",
-  sage: "#5f7f5f",
-  sageSoft: "#edf4ed",
-  amber: "#9a6715",
-  amberSoft: "#fff5df",
-  amberLine: "#ead7a7",
-  clay: "#9a3b2f",
-  claySoft: "#f8e9e6",
-  clayLine: "#e7bbb4",
-  done: "#ededeb",
-  shadow: "0 18px 45px rgba(37, 30, 20, 0.10)",
-  shadowSoft: "0 10px 28px rgba(37, 30, 20, 0.08)",
-};
 
 const newOrderPalette = {
-  clayBg: "rgba(111,143,123,0.14)",
+  clayBg: "rgba(110,138,106,0.14)",
   clayPanel: "rgba(249,251,247,0.98)",
-  clayBorder: "rgba(111,143,123,0.30)",
-  clayBorderStrong: "rgba(111,143,123,0.46)",
-  clayAccent: "#55715f",
-  clayAccentDark: "#3f5949",
-  clayStripe: "#6f8f7b",
-  clayGlow: "rgba(111,143,123,0.18)",
-  clayTaskBg: "linear-gradient(135deg, rgba(249,251,247,0.98) 0%, rgba(111,143,123,0.20) 100%)",
+  clayBorder: "rgba(110,138,106,0.30)",
+  clayBorderStrong: "rgba(110,138,106,0.46)",
+  clayAccent: DT.green,
+  clayAccentDark: DT.green,
+  clayStripe: DT.green,
+  clayGlow: "rgba(110,138,106,0.18)",
+  clayTaskBg: "linear-gradient(135deg, rgba(249,251,247,0.98) 0%, rgba(110,138,106,0.20) 100%)",
 };
 
 const DAY_LABELS: Record<DayKey, string> = {
@@ -151,18 +126,18 @@ const PERSON_VISUALS: Record<Person, { stripe: string; stripeMuted: string; text
   },
 };
 const REVIEW_GLOW = {
-  color: "#8a5d08",
-  border: "rgba(190,137,24,0.62)",
-  borderStrong: "rgba(190,137,24,0.86)",
-  bg: "linear-gradient(135deg, rgba(255,246,199,0.78), rgba(255,253,249,0.96) 54%, rgba(255,255,255,0.98))",
-  bgSoft: "linear-gradient(135deg, rgba(255,246,199,0.46), rgba(255,255,255,0.88))",
-  shadow: "0 0 0 3px rgba(211,154,35,0.18), 0 0 0 8px rgba(211,154,35,0.08), 0 16px 34px rgba(80,57,20,0.10)",
-  modalShadow: "0 0 0 4px rgba(211,154,35,0.20), 0 0 0 12px rgba(211,154,35,0.09), 0 28px 78px rgba(34,32,26,0.26)",
+  color: DT.goldInk,
+  border: "rgba(200,169,110,0.62)",
+  borderStrong: "rgba(200,169,110,0.86)",
+  bg: "linear-gradient(135deg, rgba(255,245,223,0.78), rgba(255,253,249,0.96) 54%, rgba(255,255,255,0.98))",
+  bgSoft: "linear-gradient(135deg, rgba(255,245,223,0.46), rgba(255,255,255,0.88))",
+  shadow: "0 0 0 3px rgba(200,169,110,0.18), 0 0 0 8px rgba(200,169,110,0.08), 0 16px 34px rgba(80,57,20,0.10)",
+  modalShadow: "0 0 0 4px rgba(200,169,110,0.20), 0 0 0 12px rgba(200,169,110,0.09), 0 28px 78px rgba(34,32,26,0.26)",
 };
 const CAPACITY_STYLES = {
-  ok: { color: "#3f6f3f", bg: "rgba(63,111,63,0.09)", border: "rgba(63,111,63,0.22)", label: "OK" },
-  watch: { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
-  over: { color: "#9b2f22", bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
+  ok: { color: DT.green, bg: "rgba(63,111,63,0.09)", border: "rgba(63,111,63,0.22)", label: "OK" },
+  watch: { color: DT.goldInk, bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
+  over: { color: DT.clay, bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
 } as const;
 
 const PRODUCTION_PANEL_STYLE = {
@@ -851,10 +826,10 @@ function OrderHealthStrip({
   const needsCosting = active.filter((order) => !costingIsFullyApproved(orderCostings?.matches[order.id])).length;
   const allCards: Array<{ label: string; mobileLabel: string; value: number; color: string; filter: RailFilter }> = [
     { label: "Active Orders", mobileLabel: "Active", value: active.length, color: DT.textPrimary, filter: "all" },
-    { label: "On Track", mobileLabel: "Track", value: onTrack, color: "#15803d", filter: "onTrack" },
-    { label: "Watch", mobileLabel: "Watch", value: watch, color: "#b45309", filter: "watch" },
-    { label: "Blocked", mobileLabel: "Blocked", value: blocked || overdue, color: blocked || overdue ? "#991b1b" : "#15803d", filter: "blocked" },
-    { label: "Needs Costing", mobileLabel: "Cost", value: needsCosting, color: needsCosting ? "#b45309" : "#15803d", filter: "costing" },
+    { label: "On Track", mobileLabel: "Track", value: onTrack, color: DT.green, filter: "onTrack" },
+    { label: "Watch", mobileLabel: "Watch", value: watch, color: DT.goldInk, filter: "watch" },
+    { label: "Blocked", mobileLabel: "Blocked", value: blocked || overdue, color: blocked || overdue ? DT.clay : DT.green, filter: "blocked" },
+    { label: "Needs Costing", mobileLabel: "Cost", value: needsCosting, color: needsCosting ? DT.goldInk : DT.green, filter: "costing" },
     { label: "Due This Week", mobileLabel: "Due", value: dueThis, color: DT.textPrimary, filter: "thisWeek" },
     { label: "Due Next Week", mobileLabel: "Next", value: dueNext, color: DT.textPrimary, filter: "nextWeek" },
   ];
@@ -882,9 +857,9 @@ function OrderHealthStrip({
 function ApprovedOrdersDivider() {
   return (
     <div data-approved-orders-divider="true" style={{ margin: "12px 0 9px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)", alignItems: "center", gap: 8 }}>
-      <span aria-hidden="true" style={{ height: 1, background: "linear-gradient(90deg, rgba(214,207,193,0), rgba(214,207,193,0.92))" }} />
-      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Approved schedule</span>
-      <span aria-hidden="true" style={{ height: 1, background: "linear-gradient(90deg, rgba(214,207,193,0.92), rgba(214,207,193,0))" }} />
+      <span aria-hidden="true" style={{ height: 1, background: "linear-gradient(90deg, rgba(215,205,189,0), rgba(215,205,189,0.92))" }} />
+      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Approved schedule</span>
+      <span aria-hidden="true" style={{ height: 1, background: "linear-gradient(90deg, rgba(215,205,189,0.92), rgba(215,205,189,0))" }} />
     </div>
   );
 }
@@ -893,7 +868,7 @@ function ApprovedOrdersSectionHeader({ count }: { count: number }) {
   return (
     <div data-approved-orders-section-header="true" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, padding: "1px 1px 0" }}>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Orders</div>
+        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Orders</div>
         <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{count} active</div>
       </div>
     </div>
@@ -931,10 +906,10 @@ function ProductionPulseRow({
             type="button"
             aria-pressed={selected}
             onClick={() => onFilterChange(selected ? "all" : item.filter)}
-            style={{ boxSizing: "border-box", minWidth: 0, minHeight: 40, border: `1px solid ${selected ? "rgba(12,124,122,0.30)" : colours.border}`, background: selected ? DT.tealSoft : colours.bg, color: colours.color, borderRadius: 10, padding: "9px 6px", fontFamily: DT.sans, fontSize: 10, fontWeight: 850, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.07)" : undefined, cursor: "pointer", touchAction: "manipulation" }}
+            style={{ boxSizing: "border-box", minWidth: 0, minHeight: 40, border: `1px solid ${selected ? "rgba(12,124,122,0.30)" : colours.border}`, background: selected ? DT.tealSoft : colours.bg, color: colours.color, borderRadius: 8, padding: "9px 6px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", overflow: "hidden", boxShadow: selected ? "0 0 0 2px rgba(12,124,122,0.07)" : undefined, cursor: "pointer", touchAction: "manipulation" }}
           >
-            <span style={{ minWidth: 0, color: selected ? DT.teal : DT.textFaint, fontSize: 7.8, fontWeight: 950, letterSpacing: "0.025em", textTransform: "uppercase", overflow: "hidden", textOverflow: "clip" }}>{item.label}</span>
-            <span style={{ flex: "0 0 auto", color: colours.color, fontWeight: 950 }}>{item.value}</span>
+            <span style={{ minWidth: 0, color: selected ? DT.teal : DT.textFaint, fontSize: 7.8, fontWeight: 900, letterSpacing: "0.025em", textTransform: "uppercase", overflow: "hidden", textOverflow: "clip" }}>{item.label}</span>
+            <span style={{ flex: "0 0 auto", color: colours.color, fontWeight: 900 }}>{item.value}</span>
           </button>
         );
       })}
@@ -943,9 +918,9 @@ function ProductionPulseRow({
 }
 
 const HEALTH_META: Record<OrderHealthLevel, { label: string; color: string; bg: string; border: string }> = {
-  onTrack: { label: "On track", color: "#15803d", bg: "rgba(21,128,61,0.08)", border: "rgba(21,128,61,0.20)" },
-  watch: { label: "Watch", color: "#b45309", bg: "rgba(180,83,9,0.09)", border: "rgba(180,83,9,0.22)" },
-  blocked: { label: "Blocked", color: "#991b1b", bg: "rgba(153,27,27,0.09)", border: "rgba(153,27,27,0.24)" },
+  onTrack: { label: "On track", color: DT.green, bg: "rgba(79,127,89,0.08)", border: "rgba(79,127,89,0.20)" },
+  watch: { label: "Watch", color: DT.goldInk, bg: "rgba(180,83,9,0.09)", border: "rgba(180,83,9,0.22)" },
+  blocked: { label: "Blocked", color: DT.clay, bg: "rgba(154,59,47,0.09)", border: "rgba(154,59,47,0.24)" },
 };
 
 function formatShortDate(date: string | null) {
@@ -1002,9 +977,9 @@ type SignalTone = "neutral" | "good" | "warn" | "danger" | "teal";
 
 const SIGNAL_STYLES: Record<SignalTone, { color: string; bg: string; border: string }> = {
   neutral: { color: DT.textMuted, bg: "rgba(255,255,255,0.70)", border: DT.border },
-  good: { color: "#15803d", bg: "rgba(21,128,61,0.08)", border: "rgba(21,128,61,0.22)" },
-  warn: { color: "#9a5b12", bg: "rgba(250,204,21,0.13)", border: "rgba(154,91,18,0.22)" },
-  danger: { color: "#991b1b", bg: "rgba(153,27,27,0.07)", border: "rgba(153,27,27,0.20)" },
+  good: { color: DT.green, bg: "rgba(79,127,89,0.08)", border: "rgba(79,127,89,0.22)" },
+  warn: { color: DT.goldInk, bg: "rgba(250,204,21,0.13)", border: "rgba(138,91,31,0.22)" },
+  danger: { color: DT.clay, bg: "rgba(154,59,47,0.07)", border: "rgba(154,59,47,0.20)" },
   teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.22)" },
 };
 
@@ -1023,12 +998,12 @@ function InfoDot({ title }: { title: string }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
-        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: 8, border: `1px solid ${open ? "rgba(12,124,122,0.28)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer", padding: 0 }}
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: 8, border: `1px solid ${open ? "rgba(12,124,122,0.28)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer", padding: 0 }}
       >
         i
       </button>
       {open && (
-        <span role="tooltip" style={{ position: "absolute", top: 44, right: 0, zIndex: 200, width: 240, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.98)", borderRadius: 10, boxShadow: "0 12px 30px rgba(37,30,20,0.16)", padding: 9, fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.35, fontWeight: 800, color: DT.textMuted, textAlign: "left" }}>
+        <span role="tooltip" style={{ position: "absolute", top: 44, right: 0, zIndex: 200, width: 240, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.98)", borderRadius: 8, boxShadow: "0 12px 30px rgba(37,30,20,0.16)", padding: 9, fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.35, fontWeight: 800, color: DT.textMuted, textAlign: "left" }}>
           {title}
         </span>
       )}
@@ -1845,7 +1820,7 @@ function OrderRail({
               type="button"
               onClick={onClear}
               aria-label="Back to orders list"
-              style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "9px 14px", fontSize: 12, fontFamily: DT.sans, fontWeight: 950, cursor: "pointer", boxShadow: "0 4px 12px rgba(12,124,122,0.08)" }}
+              style={{ border: `1px solid rgba(12,124,122,0.22)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "9px 14px", fontSize: 12, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer", boxShadow: "0 4px 12px rgba(12,124,122,0.08)" }}
             >
               ← Back
             </button>
@@ -1884,7 +1859,7 @@ function OrderRail({
               value={sort}
               onChange={(event) => setSort(event.target.value as RailSort)}
               aria-label="Sort approved orders"
-              style={{ width: compactRail ? "100%" : 112, minHeight: compactRail ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textMuted, background: "rgba(255,255,255,0.88)", outline: "none" }}
+              style={{ width: compactRail ? "100%" : 112, minHeight: compactRail ? 40 : undefined, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textMuted, background: "rgba(255,255,255,0.88)", outline: "none" }}
             >
               <option value="soonest">Due soonest</option>
               <option value="latest">Due latest</option>
@@ -1911,9 +1886,9 @@ function OrderRail({
 
 function costingTone(costing: OrderCostingMatch | undefined) {
   if (costing?.status === "verified_attached") return { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.24)" };
-  if (costing?.status === "verified_needs_review") return { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.22)" };
-  if (costing?.status === "costings_unavailable") return { color: "#922a23", bg: "rgba(146,42,35,0.07)", border: "rgba(146,42,35,0.18)" };
-  return { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.22)" };
+  if (costing?.status === "verified_needs_review") return { color: DT.goldInk, bg: "rgba(138,91,31,0.08)", border: "rgba(138,91,31,0.22)" };
+  if (costing?.status === "costings_unavailable") return { color: DT.clay, bg: "rgba(154,59,47,0.07)", border: "rgba(154,59,47,0.18)" };
+  return { color: DT.goldInk, bg: "rgba(138,91,31,0.08)", border: "rgba(138,91,31,0.22)" };
 }
 
 function formatCostingMoney(value: number | null | undefined) {
@@ -1930,7 +1905,7 @@ function OrderCostingPill({ costing }: { costing?: OrderCostingMatch }) {
   const tone = costingTone(costing);
   const label = costing?.label || "Needs costing match";
   return (
-    <span title={costing?.detail || "No source-verified costing relation is attached to this order."} style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${tone.border}`, background: tone.bg, color: tone.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+    <span title={costing?.detail || "No source-verified costing relation is attached to this order."} style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${tone.border}`, background: tone.bg, color: tone.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
       {label}
     </span>
   );
@@ -1948,9 +1923,9 @@ function OrderCostingPanel({ costing }: { costing?: OrderCostingMatch }) {
       title={costing?.label || "Needs costing match"}
       action={<OrderCommandPill label={pillLabel} tone={pillTone} />}
     >
-      <div style={{ border: `1px solid ${tone.border}`, background: tone.bg, borderRadius: 10, padding: "9px 10px", fontFamily: DT.sans, color: tone.color }}>
+      <div style={{ border: `1px solid ${tone.border}`, background: tone.bg, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, color: tone.color }}>
         <div style={{ fontSize: 12, lineHeight: 1.35, fontWeight: 900 }}>{costing?.detail || "No source-verified product costing is explicitly attached to this order."}</div>
-        <div style={{ marginTop: 5, fontSize: 10, lineHeight: 1.35, fontWeight: 850 }}>
+        <div style={{ marginTop: 5, fontSize: 10, lineHeight: 1.35, fontWeight: 900 }}>
           {hasVerifiedSource
             ? `${formatCostingMoney(costing?.totalCostExGst)} · ${formatCostingPercent(costing?.grossMarginPercent)} · ${status === "verified_attached" ? "Approved for quote use" : "Needs approval before quote use"} · Matched by ${costing?.matchedBy || "verified source"}`
             : "Needed relation: exact product code, Xero invoice/reference, or approved order-to-costing link."}
@@ -1960,7 +1935,7 @@ function OrderCostingPanel({ costing }: { costing?: OrderCostingMatch }) {
         <div style={{ marginTop: 7, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           <OrderCommandPill label={`Source: ${costing.sourceLabel}`} tone="neutral" />
           {costing.sourceUrl && (
-            <a href={costing.sourceUrl} target="_blank" rel="noreferrer" style={{ border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>
+            <a href={costing.sourceUrl} target="_blank" rel="noreferrer" style={{ border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textDecoration: "none" }}>
               Open proof
             </a>
           )}
@@ -1991,7 +1966,7 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
         borderStyle: "solid",
         borderColor: `${DT.border} ${DT.border} ${DT.border} ${health.color}`,
         background: DT.cardBg,
-        borderRadius: 9,
+        borderRadius: 8,
         padding: "10px 10px 9px",
         cursor: "pointer",
         boxShadow: "0 1px 0 rgba(255,255,255,0.72) inset",
@@ -2009,16 +1984,16 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, whiteSpace: "normal", overflowWrap: "anywhere" }}>{order.customer}</div>
-          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, lineHeight: 1.2, whiteSpace: "normal", overflowWrap: "anywhere" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
+          <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800, lineHeight: 1.2, whiteSpace: "normal", overflowWrap: "anywhere" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
           <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>
+            <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>
             <OrderCostingPill costing={costing} />
           </div>
-          {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 850, lineHeight: 1.25, whiteSpace: "normal", overflowWrap: "anywhere" }}>{reason}</div>}
+          {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 900, lineHeight: 1.25, whiteSpace: "normal", overflowWrap: "anywhere" }}>{reason}</div>}
         </div>
         <div style={{ flex: "0 0 auto", textAlign: "right" }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 950, color: DT.textPrimary }}>{formatRailDueDate(order)}</div>
-          <div style={{ marginTop: 4, display: "inline-flex", border: `1px solid ${health.border}`, background: health.bg, color: health.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary }}>{formatRailDueDate(order)}</div>
+          <div style={{ marginTop: 4, display: "inline-flex", border: `1px solid ${health.border}`, background: health.bg, color: health.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{health.label}</div>
         </div>
       </div>
     </button>
@@ -2026,10 +2001,10 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
 }
 
 const INTAKE_STATE_META: Record<OrderIntakeReviewState, { color: string; bg: string; border: string }> = {
-  awaiting_payment: { color: DT.textMuted, bg: "rgba(232,230,224,0.42)", border: "rgba(0,0,0,0.08)" },
+  awaiting_payment: { color: DT.textMuted, bg: "rgba(232,226,215,0.42)", border: "rgba(0,0,0,0.08)" },
   paid_needs_review: { color: DT.teal, bg: "rgba(12,124,122,0.08)", border: "rgba(12,124,122,0.22)" },
-  needs_review: { color: "#9a5b12", bg: "rgba(154,91,18,0.08)", border: "rgba(154,91,18,0.24)" },
-  approved: { color: "#15803d", bg: "rgba(21,128,61,0.08)", border: "rgba(21,128,61,0.22)" },
+  needs_review: { color: DT.goldInk, bg: "rgba(138,91,31,0.08)", border: "rgba(138,91,31,0.24)" },
+  approved: { color: DT.green, bg: "rgba(79,127,89,0.08)", border: "rgba(79,127,89,0.22)" },
 };
 
 function intakeOwnerToPerson(owner: OrderIntakeOwner): Person {
@@ -2143,14 +2118,14 @@ function OrderIntakeRailCard({
   const pendingItems = sorted.filter((item) => item.reviewState !== "approved");
   const actionableCount = pendingItems.length;
   return (
-    <section data-pending-new-orders-rail="true" style={{ ...PRODUCTION_PANEL_STYLE, marginBottom: 10, borderRadius: 12, padding: 10 }}>
+    <section data-pending-new-orders-rail="true" style={{ ...PRODUCTION_PANEL_STYLE, marginBottom: 10, borderRadius: 14, padding: 10 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted, letterSpacing: "0.08em", textTransform: "uppercase" }}>Pending new orders</div>
           <div style={{ marginTop: 2, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.05, color: DT.textPrimary }}>{loaded ? actionableCount : "Loading"}</div>
         </div>
         {loaded && (
-          <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid ${busy ? DT.border : "rgba(12,124,122,0.18)"}`, background: busy ? "rgba(232,230,224,0.42)" : "rgba(255,255,255,0.82)", color: busy ? DT.textMuted : DT.teal, borderRadius: 9, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
+          <button type="button" onClick={onRefresh} disabled={busy} style={{ minWidth: 64, minHeight: 40, border: `1px solid ${busy ? DT.border : "rgba(12,124,122,0.18)"}`, background: busy ? "rgba(232,226,215,0.42)" : "rgba(255,255,255,0.82)", color: busy ? DT.textMuted : DT.teal, borderRadius: 8, padding: "8px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: busy ? "wait" : "pointer", touchAction: "manipulation" }}>
             {busy ? "Checking" : "Refresh"}
           </button>
         )}
@@ -2158,21 +2133,21 @@ function OrderIntakeRailCard({
       {status && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>{status}</div>}
       <div style={{ marginTop: 9, display: "flex", flexDirection: "column", gap: 7 }}>
         {!loaded ? (
-          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>Checking pending intake orders...</div>
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>Checking pending intake orders...</div>
         ) : pendingItems.length === 0 ? (
-          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 10, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>No pending intake orders loaded.</div>
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>No pending intake orders loaded.</div>
         ) : pendingItems.slice(0, 7).map((item) => {
           const meta = INTAKE_STATE_META[item.reviewState];
           const lifecycleLabel = intakePaymentStageBadge(item.paymentLifecycle);
           return (
-            <button key={item.orderId} type="button" onClick={() => onOpen(item.orderId)} style={{ textAlign: "left", borderWidth: "1px 1px 1px 3px", borderStyle: "solid", borderColor: `${meta.border} ${meta.border} ${meta.border} ${meta.color}`, background: item.reviewState === "paid_needs_review" ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(237,248,247,0.58))" : "rgba(255,255,255,0.82)", borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 0 rgba(255,255,255,0.72) inset" }}>
+            <button key={item.orderId} type="button" onClick={() => onOpen(item.orderId)} style={{ textAlign: "left", borderWidth: "1px 1px 1px 3px", borderStyle: "solid", borderColor: `${meta.border} ${meta.border} ${meta.border} ${meta.color}`, background: item.reviewState === "paid_needs_review" ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(231,243,242,0.58))" : "rgba(255,255,255,0.82)", borderRadius: 8, padding: "8px 9px", cursor: "pointer", boxShadow: "0 1px 0 rgba(255,255,255,0.72) inset" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.customerName}</div>
-                  <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.invoiceNumber || "No invoice"} · {formatXeroMoney(item.total)}</div>
-                  {lifecycleLabel && <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, color: paymentStageTone(item.paymentLifecycle?.paymentStage) === "warn" ? "#9a5b12" : DT.teal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lifecycleLabel}</div>}
+                  <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.customerName}</div>
+                  <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.invoiceNumber || "No invoice"} · {formatXeroMoney(item.total)}</div>
+                  {lifecycleLabel && <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, color: paymentStageTone(item.paymentLifecycle?.paymentStage) === "warn" ? DT.goldInk : DT.teal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lifecycleLabel}</div>}
                 </div>
-                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: item.reviewState === "paid_needs_review" ? DT.teal : meta.bg, color: item.reviewState === "paid_needs_review" ? "#fff" : meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
+                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: item.reviewState === "paid_needs_review" ? DT.teal : meta.bg, color: item.reviewState === "paid_needs_review" ? "#fff" : meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
               </div>
             </button>
           );
@@ -2196,23 +2171,23 @@ function CompletedTuesdayOrdersCard({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        style={{ minHeight: 40, border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 9, padding: "6px 10px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", touchAction: "manipulation" }}
+        style={{ minHeight: 40, border: `1px solid ${open ? "rgba(12,124,122,0.24)" : DT.border}`, background: open ? DT.tealSoft : "rgba(255,255,255,0.78)", color: open ? DT.teal : DT.textMuted, borderRadius: 8, padding: "6px 10px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", touchAction: "manipulation" }}
         aria-expanded={open}
       >
         Completed {items.length}
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(37,30,20,0.18)", padding: 8 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Completed in Tuesday</div>
+        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(37,30,20,0.18)", padding: 8 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Completed in Tuesday</div>
           <div style={{ marginTop: 2, marginBottom: 7, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted }}>Restore if this was marked complete by mistake.</div>
           <div style={{ display: "grid", gap: 6, maxHeight: 230, overflowY: "auto", paddingRight: 2 }}>
           {items.map((item) => (
-            <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(251,250,247,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
+            <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 8, background: "rgba(251,250,247,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.15, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.15, fontWeight: 900, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
                 <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, lineHeight: 1.2, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.reason ? `${item.reason} · ${item.detail}` : item.detail}</div>
               </div>
-              <button type="button" onClick={() => onRestore(item)} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, cursor: "pointer" }}>Restore</button>
+              <button type="button" onClick={() => onRestore(item)} style={{ border: `1px solid rgba(12,124,122,0.20)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, cursor: "pointer" }}>Restore</button>
             </div>
           ))}
           </div>
@@ -2252,9 +2227,9 @@ function TuesdayCompletionDialog({
 
   return (
     <div role="dialog" aria-modal="true" aria-label={isRestore ? `Restore ${label}` : `Mark ${label} complete in Tuesday`} style={{ position: "fixed", inset: 0, zIndex: 260, display: "grid", placeItems: "center", background: "rgba(26,22,17,0.38)", padding: 16 }}>
-      <div style={{ width: "min(520px, 100%)", border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(146,42,35,0.18)"}`, background: DT.cardBg, borderRadius: 18, boxShadow: "0 24px 64px rgba(37,30,20,0.22)", overflow: "hidden" }}>
+      <div style={{ width: "min(520px, 100%)", border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(154,59,47,0.18)"}`, background: DT.cardBg, borderRadius: 14, boxShadow: "0 24px 64px rgba(37,30,20,0.22)", overflow: "hidden" }}>
         <div style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${DT.border}` }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: isRestore ? DT.teal : "#922a23" }}>{isRestore ? "Restore order" : "Complete in Tuesday"}</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.10em", textTransform: "uppercase", color: isRestore ? DT.teal : DT.clay }}>{isRestore ? "Restore order" : "Complete in Tuesday"}</div>
           <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 31, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 900, overflowWrap: "anywhere" }}>{label}</h3>
           <div style={{ marginTop: 8, fontFamily: DT.sans, fontSize: 12, lineHeight: 1.45, color: DT.textMuted, fontWeight: 800 }}>{detail}</div>
         </div>
@@ -2262,21 +2237,21 @@ function TuesdayCompletionDialog({
           {!isRestore && (
             <>
               <label style={{ display: "grid", gap: 5 }}>
-                <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Reason</span>
-                <select value={reason} onChange={(event) => setReason(event.target.value as CompletionReason)} style={{ width: "100%", border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 10, padding: "10px 11px", fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 850 }}>
+                <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Reason</span>
+                <select value={reason} onChange={(event) => setReason(event.target.value as CompletionReason)} style={{ width: "100%", border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "10px 11px", fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 900 }}>
                   {COMPLETION_REASONS.map((option) => <option key={option} value={option}>{option}</option>)}
                 </select>
               </label>
               <label style={{ display: "grid", gap: 5 }}>
-                <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Note</span>
-                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Optional context for why this was completed" style={{ width: "100%", resize: "vertical", border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 10, padding: "10px 11px", fontFamily: DT.sans, fontSize: 13, lineHeight: 1.35, color: DT.textPrimary, fontWeight: 750 }} />
+                <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Note</span>
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Optional context for why this was completed" style={{ width: "100%", resize: "vertical", border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "10px 11px", fontFamily: DT.sans, fontSize: 13, lineHeight: 1.35, color: DT.textPrimary, fontWeight: 800 }} />
               </label>
             </>
           )}
-          {isRestore && <div style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, borderRadius: 12, padding: "10px 11px", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.45, color: DT.teal, fontWeight: 850 }}>Use this when an order was hidden from Tuesday by mistake and should come back into the active boards.</div>}
+          {isRestore && <div style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, borderRadius: 14, padding: "10px 11px", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.45, color: DT.teal, fontWeight: 900 }}>Use this when an order was hidden from Tuesday by mistake and should come back into the active boards.</div>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
-            <button type="button" onClick={onCancel} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}>Cancel</button>
-            <button type="button" onClick={confirm} style={{ border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(146,42,35,0.18)"}`, background: isRestore ? DT.teal : "rgba(146,42,35,0.08)", color: isRestore ? "#fff" : "#922a23", borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}>{isRestore ? "Restore to active" : "Mark complete"}</button>
+            <button type="button" onClick={onCancel} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}>Cancel</button>
+            <button type="button" onClick={confirm} style={{ border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(154,59,47,0.18)"}`, background: isRestore ? DT.teal : "rgba(154,59,47,0.08)", color: isRestore ? "#fff" : DT.clay, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}>{isRestore ? "Restore to active" : "Mark complete"}</button>
           </div>
         </div>
       </div>
@@ -2312,7 +2287,7 @@ function IntakeTaskDraftRow({
     <div
       ref={setNodeRef}
       title={task.detail || task.title}
-      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.34)" : "rgba(12,124,122,0.14)"}`, borderRadius: 10, background: isDragging ? "rgba(237,248,247,0.94)" : "rgba(255,255,255,0.92)", padding: 6, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : "0 2px 8px rgba(37,30,20,0.035)", opacity: isDragging ? 0.82 : 1 }}
+      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.34)" : "rgba(12,124,122,0.14)"}`, borderRadius: 8, background: isDragging ? "rgba(231,243,242,0.94)" : "rgba(255,255,255,0.92)", padding: 6, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : "0 2px 8px rgba(37,30,20,0.035)", opacity: isDragging ? 0.82 : 1 }}
     >
       <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "40px 34px minmax(0, 1fr) 74px" : "40px 42px minmax(320px, 1fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
         <button
@@ -2321,11 +2296,11 @@ function IntakeTaskDraftRow({
           {...attributes}
           {...listeners}
           aria-label={`Drag task ${index + 1}`}
-          style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "grab", touchAction: "none" }}
+          style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "grab", touchAction: "none" }}
         >
           =
         </button>
-        <span style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "center" }}>{index + 1}</span>
+        <span style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 0", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textAlign: "center" }}>{index + 1}</span>
         <input
           type="text"
           value={task.title}
@@ -2333,16 +2308,16 @@ function IntakeTaskDraftRow({
           aria-label={`Task ${index + 1} text`}
           title="Edit this task name directly."
           placeholder="Task name"
-          style={{ minHeight: 40, minWidth: 0, width: "100%", border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, color: DT.textPrimary, background: "#fff", boxShadow: "inset 3px 0 0 rgba(12,124,122,0.18)" }}
+          style={{ minHeight: 40, minWidth: 0, width: "100%", border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff", boxShadow: "inset 3px 0 0 rgba(12,124,122,0.18)" }}
         />
-        <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
+        <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
           {(["Nick", "Dylan", "Guido"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
         </select>
-        <select value={task.scheduledDate} onChange={(event) => onChooseDate(task.id, event.target.value)} aria-label={`Task ${index + 1} date`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }}>
+        <select value={task.scheduledDate} onChange={(event) => onChooseDate(task.id, event.target.value)} aria-label={`Task ${index + 1} date`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
           {!dateKnown && <option value={task.scheduledDate}>{task.scheduledDate}</option>}
           {dateOptions.map((option) => <option key={`${task.id}:${option.dateIso}`} value={option.dateIso}>{option.dateLabel}</option>)}
         </select>
-        <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => onPatch(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 7px", fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, background: "#fff" }} />
+        <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => onPatch(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 7px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: "#fff" }} />
         <button type="button" onClick={() => onDelete(task.id)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, cursor: "pointer" }}>Delete</button>
       </div>
     </div>
@@ -2578,17 +2553,17 @@ function OrderIntakeReviewModal({
 
   return (
 	    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: isNarrow ? 0 : 64, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "center", padding: isNarrow ? 0 : "10px 18px 14px", overflow: "hidden" }}>
-	      <section style={{ width: isNarrow ? "100vw" : "min(1480px, calc(100vw - 36px))", height: isNarrow ? "100vh" : "calc(100vh - 88px)", maxHeight: isNarrow ? "100vh" : "calc(100vh - 88px)", overflow: "hidden", display: "flex", flexDirection: "column", border: isNarrow ? "none" : `1px solid ${DT.border}`, borderRadius: isNarrow ? 0 : 16, background: "#fbfaf7", boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
+	      <section style={{ width: isNarrow ? "100vw" : "min(1480px, calc(100vw - 36px))", height: isNarrow ? "100vh" : "calc(100vh - 88px)", maxHeight: isNarrow ? "100vh" : "calc(100vh - 88px)", overflow: "hidden", display: "flex", flexDirection: "column", border: isNarrow ? "none" : `1px solid ${DT.border}`, borderRadius: isNarrow ? 0 : 16, background: DT.surface, boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
 	        <header style={{ flex: "0 0 auto", background: "rgba(251,250,247,0.98)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "10px 12px" : "10px 18px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 14 }}>
           <div style={{ minWidth: 0, flex: "1 1 auto" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
 	              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 28, lineHeight: 1.0, color: DT.textPrimary, overflowWrap: "anywhere" }}>{item.customerName}</h2>
-              <span title={item.stateDetail} style={{ border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, color: reviewSignal.color, borderRadius: 999, padding: "5px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950 }}>{headerStatusLabel}</span>
+              <span title={item.stateDetail} style={{ border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, color: reviewSignal.color, borderRadius: 999, padding: "5px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900 }}>{headerStatusLabel}</span>
             </div>
           </div>
           <div style={{ flex: "0 0 auto", display: "flex", gap: 7, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
-	            <button type="button" onClick={onMarkComplete} disabled={busy} title="Move this pending order out of active Tuesday review if it has already been handled elsewhere." style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 9, padding: "9px 12px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Complete / hide</button>
-	            <button type="button" onClick={onClose} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 9, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>Close</button>
+	            <button type="button" onClick={onMarkComplete} disabled={busy} title="Move this pending order out of active Tuesday review if it has already been handled elsewhere." style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 8, padding: "9px 12px", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Complete / hide</button>
+	            <button type="button" onClick={onClose} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 8, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer" }}>Close</button>
 	          </div>
 	        </header>
 	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(280px, 0.64fr) minmax(0, 2.36fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
@@ -2598,48 +2573,48 @@ function OrderIntakeReviewModal({
 	                ["Details", "#intake-order-details"],
 	                ["Payments", "#intake-payments"],
 	                ["Plan", "#intake-plan"],
-	              ].map(([label, href]) => <a key={label} href={href} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.84)", color: DT.textMuted, borderRadius: 9, padding: "9px 6px", textAlign: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{label}</a>)}
+	              ].map(([label, href]) => <a key={label} href={href} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.84)", color: DT.textMuted, borderRadius: 8, padding: "9px 6px", textAlign: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textDecoration: "none", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{label}</a>)}
 	            </nav>
 	          )}
 	          <aside id="intake-order-details" style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0, minHeight: isNarrow ? undefined : 0, overflowY: isNarrow ? "visible" : "auto", paddingRight: isNarrow ? 0 : 2, paddingBottom: isNarrow ? 12 : 18 }}>
-            <section style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 10, background: "rgba(237,248,247,0.72)", padding: 8 }}>
-              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Order details</div>
+            <section style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 8, background: "rgba(231,243,242,0.72)", padding: 8 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Order details</div>
 	              <div style={{ marginTop: 6, display: "grid", gap: 5 }}>
 	                {item.lineItems.length === 0 ? (
-	                  <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 850 }}>No Xero line items stored yet.</div>
+	                  <div style={{ fontFamily: DT.sans, fontSize: 12, color: DT.textMuted, fontWeight: 900 }}>No Xero line items stored yet.</div>
 	                ) : item.lineItems.map((line, index) => (
 	                  <InvoiceSpecCard key={`${line.description}:${index}`} line={line} primary={index === 0} compact={!isNarrow && index > 0} />
 	                ))}
 	              </div>
             </section>
             <InvoiceReferenceLinks xeroUrl={item.xeroUrl} documents={invoiceDocuments} status={invoiceDocumentStatus} />
-            <section style={{ border: `1px solid ${expectedReadyDate ? "rgba(12,124,122,0.20)" : "rgba(154,91,18,0.22)"}`, borderRadius: 10, background: expectedReadyDate ? "rgba(237,248,247,0.70)" : "rgba(250,204,21,0.10)", padding: 8 }}>
+            <section style={{ border: `1px solid ${expectedReadyDate ? "rgba(12,124,122,0.20)" : "rgba(138,91,31,0.22)"}`, borderRadius: 8, background: expectedReadyDate ? "rgba(231,243,242,0.70)" : "rgba(250,204,21,0.10)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 10, color: expectedReadyDate ? DT.teal : "#9a5b12", fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>{expectedReady.label}</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: expectedReadyDate ? DT.teal : DT.goldInk, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{expectedReady.label}</div>
                 <InfoDot title="Customer-ready date. Tuesday calculates this from the promised lead time in the invoice text, anchored to the invoice paid date once payment is visible." />
               </div>
-              <div style={{ marginTop: 5, fontFamily: DT.serif, fontSize: 22, lineHeight: 1, color: DT.textPrimary, fontWeight: 650 }}>{dueDisplay}</div>
-              <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{expectedReady.source}</div>
+              <div style={{ marginTop: 5, fontFamily: DT.serif, fontSize: 22, lineHeight: 1, color: DT.textPrimary, fontWeight: 700 }}>{dueDisplay}</div>
+              <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>{expectedReady.source}</div>
             </section>
-            <section id="intake-payments" style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
+            <section id="intake-payments" style={{ border: `1px solid ${DT.border}`, borderRadius: 8, background: "rgba(255,255,255,0.78)", padding: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payments</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Payments</div>
                 <InfoDot title="Deposit and balance invoice status from Xero/Supabase payment evidence. Yellow means money is still waiting or settling; green means paid." />
               </div>
               <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
                 {paymentRows.map((payment) => {
                   const tone = signalStyle(payment.tone);
                   return (
-                    <div key={payment.label} style={{ border: `1px solid ${tone.border}`, borderRadius: 9, background: tone.bg, padding: 8, display: "grid", gap: 6 }}>
+                    <div key={payment.label} style={{ border: `1px solid ${tone.border}`, borderRadius: 8, background: tone.bg, padding: 8, display: "grid", gap: 6 }}>
                       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-                        <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em" }}>{payment.label}</span>
-                        <span style={{ fontFamily: DT.sans, fontSize: 10, color: tone.color, fontWeight: 950, textAlign: "right" }}>{payment.status}</span>
+                        <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em" }}>{payment.label}</span>
+                        <span style={{ fontFamily: DT.sans, fontSize: 10, color: tone.color, fontWeight: 900, textAlign: "right" }}>{payment.status}</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
                         {payment.invoiceUrl ? (
-                          <a href={payment.invoiceUrl} target="_blank" rel="noreferrer" style={{ minHeight: 40, minWidth: 0, display: "inline-flex", alignItems: "center", fontFamily: DT.sans, fontSize: 11, color: DT.teal, fontWeight: 950, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{payment.invoice}</a>
+                          <a href={payment.invoiceUrl} target="_blank" rel="noreferrer" style={{ minHeight: 40, minWidth: 0, display: "inline-flex", alignItems: "center", fontFamily: DT.sans, fontSize: 11, color: DT.teal, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{payment.invoice}</a>
                         ) : (
-                          <span style={{ minWidth: 0, fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, fontWeight: 950, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{payment.invoice}</span>
+                          <span style={{ minWidth: 0, fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{payment.invoice}</span>
                         )}
                         {payment.amount && <span style={{ flex: "0 0 auto", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>{payment.amount}</span>}
                       </div>
@@ -2653,42 +2628,42 @@ function OrderIntakeReviewModal({
                 })}
               </div>
             </section>
-            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 10, background: "rgba(255,255,255,0.78)", padding: 8 }}>
-              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice facts</div>
+            <section style={{ border: `1px solid ${DT.border}`, borderRadius: 8, background: "rgba(255,255,255,0.78)", padding: 8 }}>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice facts</div>
               <div style={{ marginTop: 5, display: "grid", gap: 4 }}>
                 {[["Status", item.invoiceStatus || "Unknown"], ["Invoice date", formatShortDate(item.invoiceDate)], ["Xero due", formatShortDate(item.invoiceDueDate)]].map(([label, value]) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontFamily: DT.sans, fontSize: 10 }}>
-                    <span style={{ color: DT.textMuted, fontWeight: 850 }}>{label}</span>
-                    <span style={{ color: DT.textPrimary, fontWeight: 950, textAlign: "right" }}>{value}</span>
+                    <span style={{ color: DT.textMuted, fontWeight: 900 }}>{label}</span>
+                    <span style={{ color: DT.textPrimary, fontWeight: 900, textAlign: "right" }}>{value}</span>
                   </div>
                 ))}
               </div>
             </section>
           </aside>
 
-	          <section id="intake-plan" style={{ border: `1px solid rgba(12,124,122,0.22)`, borderRadius: 12, background: "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(237,248,247,0.58))", padding: 10, minWidth: 0, minHeight: isNarrow ? undefined : 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: isNarrow ? "visible" : "hidden", boxShadow: "0 12px 30px rgba(12,124,122,0.07)" }}>
+	          <section id="intake-plan" style={{ border: `1px solid rgba(12,124,122,0.22)`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.96), rgba(231,243,242,0.58))", padding: 10, minWidth: 0, minHeight: isNarrow ? undefined : 0, alignSelf: "stretch", display: "flex", flexDirection: "column", overflow: isNarrow ? "visible" : "hidden", boxShadow: "0 12px 30px rgba(12,124,122,0.07)" }}>
 	            <div style={{ display: "flex", flexDirection: isNarrow ? "column" : "row", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 12 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production plan</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Production plan</div>
                 <div style={{ marginTop: 2, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <h3 style={{ margin: 0, fontFamily: DT.sans, fontSize: 20, lineHeight: 1.1, color: DT.textPrimary, fontWeight: 950 }}>Suggested production plan</h3>
-                  <span style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{tasks.length} steps · {totalDraftHours}h</span>
+                  <h3 style={{ margin: 0, fontFamily: DT.sans, fontSize: 20, lineHeight: 1.1, color: DT.textPrimary, fontWeight: 900 }}>Suggested production plan</h3>
+                  <span style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{tasks.length} steps · {totalDraftHours}h</span>
                   <InfoDot title="Review stages, owners, dates, and hours before approving them into the live schedule." />
                 </div>
               </div>
 	              <div style={{ flex: "0 0 auto", display: "flex", gap: 6, alignItems: "center", justifyContent: isNarrow ? "stretch" : "flex-end", flexWrap: "wrap" }}>
-	                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>-1 workday</button>
-	                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>+1 workday</button>
-	                <button type="button" onClick={addTask} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.84)", color: DT.teal, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Add task</button>
+	                <button type="button" onClick={() => moveAllTasksByWorkingDay(-1)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>-1 workday</button>
+	                <button type="button" onClick={() => moveAllTasksByWorkingDay(1)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>+1 workday</button>
+	                <button type="button" onClick={addTask} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(255,255,255,0.84)", color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Add task</button>
               </div>
             </div>
-            <div style={{ marginTop: 8, border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, borderRadius: 10, padding: "7px 9px" }}>
+            <div style={{ marginTop: 8, border: `1px solid ${reviewSignal.border}`, background: reviewSignal.bg, borderRadius: 8, padding: "7px 9px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 12, color: reviewSignal.color, fontWeight: 950 }}>{canApprove ? "Ready to approve" : headerStatusLabel}</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 12, color: reviewSignal.color, fontWeight: 900 }}>{canApprove ? "Ready to approve" : headerStatusLabel}</div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {approvalChecks.map((check) => {
                     const tone = signalStyle(check.tone === "good" ? "teal" : "warn");
-                    return <span key={check.label} style={{ border: `1px solid ${tone.border}`, background: "rgba(255,255,255,0.72)", color: tone.color, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950 }}>{check.label}: {check.value}</span>;
+                    return <span key={check.label} style={{ border: `1px solid ${tone.border}`, background: "rgba(255,255,255,0.72)", color: tone.color, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900 }}>{check.label}: {check.value}</span>;
                   })}
                 </div>
               </div>
@@ -2716,7 +2691,7 @@ function OrderIntakeReviewModal({
             </div>
 	            <footer style={{ flex: "0 0 auto", position: isNarrow ? "sticky" : undefined, bottom: isNarrow ? 0 : undefined, zIndex: isNarrow ? 2 : undefined, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.92)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", backdropFilter: isNarrow ? "blur(10px)" : undefined }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-                {modalStatus && <div style={{ fontFamily: DT.sans, fontSize: 11, color: canApprove ? DT.textMuted : "#9a5b12", fontWeight: 850 }}>{modalStatus}</div>}
+                {modalStatus && <div style={{ fontFamily: DT.sans, fontSize: 11, color: canApprove ? DT.textMuted : DT.goldInk, fontWeight: 900 }}>{modalStatus}</div>}
                 {canApprove && (
                   <label style={{ display: "inline-flex", alignItems: "center", gap: 7, fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 900 }}>
                     <input type="checkbox" checked={approvalConfirmed} onChange={(event) => setApprovalConfirmed(event.target.checked)} />
@@ -2725,8 +2700,8 @@ function OrderIntakeReviewModal({
                 )}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button type="button" onClick={saveDraft} disabled={busy} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.86)", color: DT.textMuted, borderRadius: 9, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
-                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ minHeight: 40, border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.30)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,230,224,0.55)", color: canApprove && approvalConfirmed ? "#fff" : DT.textMuted, borderRadius: 9, padding: "9px 14px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed", boxShadow: canApprove && approvalConfirmed ? "0 8px 18px rgba(12,124,122,0.14)" : undefined }}>Add to schedule</button>
+                <button type="button" onClick={saveDraft} disabled={busy} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.86)", color: DT.textMuted, borderRadius: 8, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
+                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ minHeight: 40, border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.30)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,226,215,0.55)", color: canApprove && approvalConfirmed ? "#fff" : DT.textMuted, borderRadius: 8, padding: "9px 14px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed", boxShadow: canApprove && approvalConfirmed ? "0 8px 18px rgba(12,124,122,0.14)" : undefined }}>Add to schedule</button>
               </div>
             </footer>
           </section>
@@ -2799,15 +2774,15 @@ function TaskAssignmentPanel({
 
   return (
     <div style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-      <div style={{ border: "1px dashed rgba(125,122,115,0.28)", background: "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(232,230,224,0.55))", borderRadius: 10, padding: 10 }}>
-        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7d7a73" }}>Assign this task to a job</div>
+      <div style={{ border: "1px dashed rgba(125,122,115,0.28)", background: "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(232,226,215,0.55))", borderRadius: 8, padding: 10 }}>
+        <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textMuted }}>Assign this task to a job</div>
         <h3 style={{ margin: "5px 0 0", fontFamily: DT.serif, fontSize: 18, lineHeight: 1.1, color: DT.textPrimary }}>{task.text}</h3>
         <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>
           {task.weekTitle} · {DAY_LABELS[task.day]} · {PERSON_LABELS[task.person]}
         </div>
         <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textFaint, lineHeight: 1.35, overflowWrap: "anywhere" }}>{task.rowName}</div>
       </div>
-      <div style={{ marginTop: 9, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 10, padding: 9 }}>
+      <div style={{ marginTop: 9, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 8, padding: 9 }}>
         <label style={{ display: "block", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>
           Assign to order
         </label>
@@ -2820,7 +2795,7 @@ function TaskAssignmentPanel({
           placeholder="Search customer, item, or address"
           style={{ marginTop: 7, width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "7px 8px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, outline: "none" }}
         />
-        {status && <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{status}</div>}
+        {status && <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>{status}</div>}
         {canRemoveLink && (
           <div style={{ marginTop: 7, display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button
@@ -2833,11 +2808,11 @@ function TaskAssignmentPanel({
           </div>
         )}
         {selectedOrder && (
-          <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(12,124,122,0.05)", borderRadius: 10, padding: 9, boxShadow: "0 5px 16px rgba(12,124,122,0.06)" }}>
+          <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, background: "rgba(12,124,122,0.05)", borderRadius: 8, padding: 9, boxShadow: "0 5px 16px rgba(12,124,122,0.06)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.teal }}>Selected order</div>
-                <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 13, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedOrder.customer}</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.teal }}>Selected order</div>
+                <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedOrder.customer}</div>
                 <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{orderItemLabel(selectedOrder)} · Due {formatShortDate(selectedOrder.shipDate)}</div>
               </div>
               <button
@@ -2861,7 +2836,7 @@ function TaskAssignmentPanel({
                       setPlacementMode(mode);
                       if ((mode === "before" || mode === "after") && !anchorTaskId) setAnchorTaskId(selectedOrderTasks[0]?.id ?? "");
                     }}
-                    style={{ border: `1px solid ${active ? "rgba(12,124,122,0.24)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}
+                    style={{ border: `1px solid ${active ? "rgba(12,124,122,0.24)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.72)", color: disabled ? DT.textFaint : active ? DT.teal : DT.textMuted, borderRadius: 999, padding: "6px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1 }}
                   >
                     {mode === "start" ? "At start" : mode === "end" ? "At end" : mode === "before" ? "Before task" : "After task"}
                   </button>
@@ -2881,12 +2856,12 @@ function TaskAssignmentPanel({
             )}
             {selectedOrderTasks.length > 0 && (
               <div style={{ marginTop: 8, display: "grid", gap: 5 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Current job task order</div>
+                <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Current job task order</div>
                 {selectedOrderTasks.slice(0, 8).map((existingTask, index) => (
                   <div key={existingTask.id} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 6, alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", borderRadius: 8, padding: "6px 7px" }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{index + 1}. {existingTask.text}</div>
-                      <div style={{ marginTop: 1, fontFamily: DT.sans, fontSize: 9, fontWeight: 750, color: DT.textMuted }}>{DAY_LABELS[existingTask.day]} · {PERSON_LABELS[existingTask.person]}</div>
+                      <div style={{ marginTop: 1, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, color: DT.textMuted }}>{DAY_LABELS[existingTask.day]} · {PERSON_LABELS[existingTask.person]}</div>
                     </div>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button type="button" onClick={() => assignHere("before", existingTask.id)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer" }}>Before</button>
@@ -2899,7 +2874,7 @@ function TaskAssignmentPanel({
             <button
               type="button"
               onClick={() => assignHere()}
-              style={{ marginTop: 9, width: "100%", border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.12)" }}
+              style={{ marginTop: 9, width: "100%", border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.12)" }}
             >
               Assign here · {placementText()}
             </button>
@@ -2914,14 +2889,14 @@ function TaskAssignmentPanel({
                 type="button"
                 key={order.id}
                 onClick={() => chooseOrder(order)}
-                style={{ width: "100%", minWidth: 0, textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${active ? "rgba(12,124,122,0.24)" : DT.border} ${active ? "rgba(12,124,122,0.24)" : DT.border} ${active ? "rgba(12,124,122,0.24)" : DT.border} ${active ? DT.teal : health.color}`, background: active ? "rgba(12,124,122,0.06)" : DT.cardBg, borderRadius: 9, padding: "8px 9px", cursor: "pointer", boxShadow: active ? "0 8px 18px rgba(12,124,122,0.08)" : "0 1px 4px rgba(0,0,0,0.025)" }}
+                style={{ width: "100%", minWidth: 0, textAlign: "left", borderWidth: "1px 1px 1px 4px", borderStyle: "solid", borderColor: `${active ? "rgba(12,124,122,0.24)" : DT.border} ${active ? "rgba(12,124,122,0.24)" : DT.border} ${active ? "rgba(12,124,122,0.24)" : DT.border} ${active ? DT.teal : health.color}`, background: active ? "rgba(12,124,122,0.06)" : DT.cardBg, borderRadius: 8, padding: "8px 9px", cursor: "pointer", boxShadow: active ? "0 8px 18px rgba(12,124,122,0.08)" : "0 1px 4px rgba(0,0,0,0.025)" }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{order.customer}</div>
-                    <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
+                    <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
                   </div>
-                  <div style={{ flex: "0 0 auto", textAlign: "right", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textPrimary }}>{formatShortDate(order.shipDate)}</div>
+                  <div style={{ flex: "0 0 auto", textAlign: "right", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textPrimary }}>{formatShortDate(order.shipDate)}</div>
                 </div>
               </button>
             );
@@ -3077,7 +3052,7 @@ function OrderRailDetail({
     return {
       border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`,
       background: done ? DONE_TASK_VISUAL.bg : DT.cardBg,
-      borderRadius: 10,
+      borderRadius: 8,
       padding: 8,
       boxShadow: done ? DONE_TASK_VISUAL.shadow : "none",
     };
@@ -3090,21 +3065,21 @@ function OrderRailDetail({
 
 	  return (
 	    <div data-order-rail-compact-detail="true" style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-	      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.86)", borderRadius: 10, padding: 10, boxShadow: DT.shadow }}>
+	      <div style={{ border: "1px solid " + DT.border, background: "rgba(255,255,255,0.86)", borderRadius: 8, padding: 10, boxShadow: DT.shadow }}>
 	        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
 	          <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: 19, lineHeight: 1.04, color: DT.textPrimary }}>{order.customer}</h3>
           <div style={{ flex: "0 0 auto", display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {paymentLabel && <span style={{ border: `1px solid ${paymentStageTone(order.paymentStage) === "warn" ? "rgba(154,91,18,0.24)" : "rgba(12,124,122,0.20)"}`, background: paymentStageTone(order.paymentStage) === "warn" ? "rgba(154,91,18,0.08)" : DT.tealSoft, color: paymentStageTone(order.paymentStage) === "warn" ? "#9a5b12" : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{paymentLabel}</span>}
-            <span title={`${trust.detail} ${trust.source}`} style={{ border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{trust.label}</span>
-            <span style={{ border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{health.label}</span>
+            {paymentLabel && <span style={{ border: `1px solid ${paymentStageTone(order.paymentStage) === "warn" ? "rgba(138,91,31,0.24)" : "rgba(12,124,122,0.20)"}`, background: paymentStageTone(order.paymentStage) === "warn" ? "rgba(138,91,31,0.08)" : DT.tealSoft, color: paymentStageTone(order.paymentStage) === "warn" ? DT.goldInk : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{paymentLabel}</span>}
+            <span title={`${trust.detail} ${trust.source}`} style={{ border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{trust.label}</span>
+            <span style={{ border: `1px solid ${health.border}`, background: DT.cardBg, color: health.color, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{health.label}</span>
           </div>
         </div>
-	        <div style={{ marginTop: 8, border: `1px solid ${openJobTasks.length + openPlanTasks.length ? "rgba(12,124,122,0.20)" : DT.border}`, background: openJobTasks.length + openPlanTasks.length ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: 10, padding: "8px 9px" }}>
-	          <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: openJobTasks.length + openPlanTasks.length ? DT.teal : DT.textFaint }}>Next action</div>
-	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 14, lineHeight: 1.18, color: DT.textPrimary, fontWeight: 950, overflowWrap: "anywhere" }}>{nextActionLabel}</div>
-	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>{nextJobTask?.owner || (nextPlanTask ? PERSON_LABELS[nextPlanTask.person] : "No owner set")} · {activeProductionStep?.label ?? order.rawMondayStatus ?? "Stage not set"}</div>
+	        <div style={{ marginTop: 8, border: `1px solid ${openJobTasks.length + openPlanTasks.length ? "rgba(12,124,122,0.20)" : DT.border}`, background: openJobTasks.length + openPlanTasks.length ? DT.tealSoft : "rgba(255,255,255,0.72)", borderRadius: 8, padding: "8px 9px" }}>
+	          <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: openJobTasks.length + openPlanTasks.length ? DT.teal : DT.textFaint }}>Next action</div>
+	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 14, lineHeight: 1.18, color: DT.textPrimary, fontWeight: 900, overflowWrap: "anywhere" }}>{nextActionLabel}</div>
+	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>{nextJobTask?.owner || (nextPlanTask ? PERSON_LABELS[nextPlanTask.person] : "No owner set")} · {activeProductionStep?.label ?? order.rawMondayStatus ?? "Stage not set"}</div>
 	        </div>
-	        <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 9.5, color: trustStyle.color, fontWeight: 850, lineHeight: 1.25 }}>{trust.detail} · {trust.source}</div>
+	        <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 9.5, color: trustStyle.color, fontWeight: 900, lineHeight: 1.25 }}>{trust.detail} · {trust.source}</div>
 	        <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
 	          <MiniFact label="Due" value={orderDueSummary(order)} />
 	          <MiniFact label="Item" value={orderItemLabel(order)} />
@@ -3117,7 +3092,7 @@ function OrderRailDetail({
 	          <button
 	            type="button"
 	            onClick={onOpen}
-	            style={{ display: "block", width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 950, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
+	            style={{ display: "block", width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
 	          >
 		            Open full order details
 	          </button>
@@ -3125,27 +3100,27 @@ function OrderRailDetail({
 	            type="button"
 	            onClick={() => onMarkComplete(order)}
 	            title="Hide this order from active Tuesday views without changing Monday"
-	            style={{ display: "block", width: "100%", border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}
+	            style={{ display: "block", width: "100%", border: "1px solid rgba(154,59,47,0.16)", background: "rgba(154,59,47,0.06)", color: DT.clay, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer" }}
 	          >
 	            Mark complete in Tuesday
 	          </button>
 	        </div>
-        {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{workflowStatus}</div>}
+        {workflowStatus && <div style={{ marginTop: 6, textAlign: "center", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 900 }}>{workflowStatus}</div>}
       </div>
 
       <div style={{ marginTop: 8 }}>
         <OrderCostingPanel costing={costing} />
       </div>
 
-      <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.80)", borderRadius: 10, padding: "9px 10px" }}>
+      <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.80)", borderRadius: 8, padding: "9px 10px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
-            <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Job tasks</div>
+            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Tuesday</div>
+            <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 900 }}>Job tasks</div>
           </div>
-          <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{workflow.tasks.length}</span>
+          <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{workflow.tasks.length}</span>
         </div>
-        <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(247,249,248,0.82)", borderRadius: 10, padding: 8 }}>
+        <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(247,249,248,0.82)", borderRadius: 8, padding: 8 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, marginBottom: 6 }}>Quick add order task</div>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 76px", gap: 6 }}>
             <select value={selectedDraftAction} onChange={(event) => setDraftAction(event.target.value)} style={compactSelectStyle()}>
@@ -3173,7 +3148,7 @@ function OrderRailDetail({
             onClick={addWorkflowTask}
             disabled={addDisabled}
             title="Add task to job"
-            style={{ marginTop: 7, width: "100%", border: `1px solid ${addDisabled ? DT.border : "rgba(12,124,122,0.18)"}`, background: addDisabled ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: addDisabled ? DT.textFaint : DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: addDisabled ? "not-allowed" : "pointer" }}
+            style={{ marginTop: 7, width: "100%", border: `1px solid ${addDisabled ? DT.border : "rgba(12,124,122,0.18)"}`, background: addDisabled ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: addDisabled ? DT.textFaint : DT.teal, borderRadius: 999, padding: "7px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: addDisabled ? "not-allowed" : "pointer" }}
           >
             Add task to job
           </button>
@@ -3218,7 +3193,7 @@ function OrderRailDetail({
                     </div>
                     <input value={task.notes} onChange={(event) => updateWorkflowTask(task.id, { notes: event.target.value })} placeholder="Task notes" style={{ ...compactInputStyle(done), marginTop: 5, color: done ? DONE_TASK_VISUAL.text : DT.textMuted }} />
                     <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                      <span style={{ fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontWeight: 850 }}>{done && task.completedAt ? `Done ${formatCompletedAt(task.completedAt)}` : task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}</span>
+                      <span style={{ fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontWeight: 900 }}>{done && task.completedAt ? `Done ${formatCompletedAt(task.completedAt)}` : task.scheduledDate ? formatLongDate(new Date(`${task.scheduledDate}T12:00:00`)) : "No date"}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -3229,7 +3204,7 @@ function OrderRailDetail({
                           setPendingDeleteTaskId(task.id);
                         }}
                         aria-label="Delete job task"
-                        style={{ border: "1px solid rgba(146,42,35,0.16)", background: deleteArmed ? "rgba(146,42,35,0.12)" : "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+                        style={{ border: "1px solid rgba(154,59,47,0.16)", background: deleteArmed ? "rgba(154,59,47,0.12)" : "rgba(154,59,47,0.06)", color: DT.clay, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}
                       >
                         {deleteArmed ? "Delete now" : "Delete"}
                       </button>
@@ -3239,17 +3214,17 @@ function OrderRailDetail({
               </div>
             );
           })}
-          {workflow.tasks.length > visibleWorkflowTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Full order details for all job tasks</button>}
+          {workflow.tasks.length > visibleWorkflowTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Full order details for all job tasks</button>}
         </div>
       </div>
 
-      <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 10, padding: "9px 10px" }}>
+      <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", borderRadius: 8, padding: "9px 10px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
           <div>
-            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Week schedule</div>
-            <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 950 }}>Tasks on board</div>
+            <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Week schedule</div>
+            <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textPrimary, fontWeight: 900 }}>Tasks on board</div>
           </div>
-          <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>{planTasks.length}</span>
+          <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{planTasks.length}</span>
         </div>
         <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
           {visibleScheduleTasks.length === 0 ? (
@@ -3257,18 +3232,18 @@ function OrderRailDetail({
           ) : visibleScheduleTasks.map((task) => {
             const done = Boolean(task.done);
             return (
-              <div key={task.id} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? DONE_TASK_VISUAL.bg : DT.cardBg, borderRadius: 9, padding: "7px 8px" }}>
+              <div key={task.id} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? DONE_TASK_VISUAL.bg : DT.cardBg, borderRadius: 8, padding: "7px 8px" }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 11, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, fontWeight: 900, lineHeight: 1.2, textDecoration: done ? "line-through" : "none" }}>{task.text}</div>
                 <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 9, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, lineHeight: 1.25 }}>{task.dateLabel} · {PERSON_LABELS[task.person]}</div>
                 <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>
-                  <button type="button" onClick={(event) => onPlanTaskDoneToggle(task, !done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.18)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
-                  <button type="button" onClick={() => onPlanTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
-                  {task.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(task)} style={{ border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Unlink</button>}
+                  <button type="button" onClick={(event) => onPlanTaskDoneToggle(task, !done, { x: event.clientX, y: event.clientY })} style={{ border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.18)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
+                  <button type="button" onClick={() => onPlanTaskEdit(task)} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Edit</button>
+                  {task.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(task)} style={{ border: "1px solid rgba(154,59,47,0.16)", background: "rgba(154,59,47,0.06)", color: DT.clay, borderRadius: 999, padding: "4px 7px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Unlink</button>}
                 </div>
               </div>
             );
           })}
-          {planTasks.length > visibleScheduleTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Full order details for all board tasks</button>}
+          {planTasks.length > visibleScheduleTasks.length && <button type="button" onClick={onOpen} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "6px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Full order details for all board tasks</button>}
         </div>
       </div>
     </div>
@@ -3283,14 +3258,14 @@ function OrderCommandPill({
   tone?: "neutral" | "good" | "warn" | "danger" | "teal";
 }) {
   const tones = {
-    neutral: { color: TUESDAY_THEME.muted, bg: TUESDAY_THEME.surfaceClean, border: TUESDAY_THEME.line },
-    good: { color: TUESDAY_THEME.sage, bg: TUESDAY_THEME.sageSoft, border: "#ccddcc" },
-    warn: { color: TUESDAY_THEME.amber, bg: TUESDAY_THEME.amberSoft, border: TUESDAY_THEME.amberLine },
-    danger: { color: TUESDAY_THEME.clay, bg: TUESDAY_THEME.claySoft, border: TUESDAY_THEME.clayLine },
-    teal: { color: TUESDAY_THEME.teal, bg: TUESDAY_THEME.tealSoft, border: TUESDAY_THEME.tealLine },
+    neutral: { color: DT.textMuted, bg: DT.cardBg, border: DT.line },
+    good: { color: DT.sage, bg: DT.sagePale, border: DT.tealLine },
+    warn: { color: DT.goldInk, bg: DT.goldPale, border: DT.goldLine },
+    danger: { color: DT.clay, bg: DT.clayPale, border: DT.clayLine },
+    teal: { color: DT.teal, bg: DT.tealPale, border: DT.tealLine },
   }[tone];
   return (
-    <span style={{ border: `1px solid ${tones.border}`, background: tones.bg, color: tones.color, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, whiteSpace: "nowrap" }}>
+    <span style={{ border: `1px solid ${tones.border}`, background: tones.bg, color: tones.color, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" }}>
       {label}
     </span>
   );
@@ -3309,12 +3284,12 @@ function OrderCommandMetric({
   tone?: "neutral" | "good" | "warn" | "danger" | "teal";
   compact?: boolean;
 }) {
-  const color = tone === "good" ? TUESDAY_THEME.sage : tone === "warn" ? TUESDAY_THEME.amber : tone === "danger" ? TUESDAY_THEME.clay : tone === "teal" ? TUESDAY_THEME.teal : TUESDAY_THEME.ink;
+  const color = tone === "good" ? DT.sage : tone === "warn" ? DT.goldInk : tone === "danger" ? DT.clay : tone === "teal" ? DT.teal : DT.textPrimary;
   return (
-    <div style={{ minWidth: 0, border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 10, padding: "14px 15px", boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
-      <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>{label}</div>
-      <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: compact ? 16 : 20, lineHeight: 1.12, fontWeight: 950, color, overflowWrap: "anywhere" }}>{value}</div>
-      {detail && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 12, lineHeight: 1.3, color: TUESDAY_THEME.muted }}>{detail}</div>}
+    <div style={{ minWidth: 0, border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "14px 15px", boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+      <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>{label}</div>
+      <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: compact ? 16 : 20, lineHeight: 1.12, fontWeight: 900, color, overflowWrap: "anywhere" }}>{value}</div>
+      {detail && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 12, lineHeight: 1.3, color: DT.textMuted }}>{detail}</div>}
     </div>
   );
 }
@@ -3331,11 +3306,11 @@ function OrderCommandSection({
   children: ReactNode;
 }) {
   return (
-    <section data-order-command-section={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <section data-order-command-section={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
         <div style={{ minWidth: 0 }}>
-          {eyebrow && <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>{eyebrow}</div>}
-          <div style={{ marginTop: eyebrow ? 2 : 0, fontFamily: DT.sans, fontSize: 17, lineHeight: 1.18, color: TUESDAY_THEME.ink, fontWeight: 950 }}>{title}</div>
+          {eyebrow && <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>{eyebrow}</div>}
+          <div style={{ marginTop: eyebrow ? 2 : 0, fontFamily: DT.sans, fontSize: 17, lineHeight: 1.18, color: DT.textPrimary, fontWeight: 900 }}>{title}</div>
         </div>
         {action}
       </div>
@@ -3374,7 +3349,7 @@ function RepairNotesPanel({
         onChange={(event) => onChange((state) => ({ ...state, repairNotes: event.target.value.trim() ? event.target.value : null }))}
         placeholder="What repair is needed, what decision is pending, and what should happen next?"
         rows={4}
-        style={{ width: "100%", resize: "vertical", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, lineHeight: 1.35 }}
+        style={{ width: "100%", resize: "vertical", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg, lineHeight: 1.35 }}
       />
     </OrderCommandSection>
   );
@@ -3447,14 +3422,14 @@ function InvoiceReferenceLinks({ xeroUrl, documents, status }: { xeroUrl: string
   });
   const hasLinks = Boolean(xeroUrl) || visibleDocuments.length > 0;
   return (
-    <section data-invoice-reference-links="true" style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 10, background: "rgba(237,248,247,0.54)", padding: 8 }}>
+    <section data-invoice-reference-links="true" style={{ border: `1px solid rgba(12,124,122,0.20)`, borderRadius: 8, background: "rgba(231,243,242,0.54)", padding: 8 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-        <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice links</div>
+        <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>Invoice links</div>
         {visibleDocuments.length > 0 && <span style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 900 }}>{visibleDocuments.length} file{visibleDocuments.length === 1 ? "" : "s"}</span>}
       </div>
       <div style={{ marginTop: 7, display: "grid", gap: 6 }}>
         {xeroUrl && (
-          <a href={xeroUrl} target="_blank" rel="noreferrer" style={{ minHeight: 40, maxWidth: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid rgba(12,124,122,0.24)`, background: DT.tealSoft, color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Open Xero invoice</a>
+          <a href={xeroUrl} target="_blank" rel="noreferrer" style={{ minHeight: 40, maxWidth: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid rgba(12,124,122,0.24)`, background: DT.tealSoft, color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Open Xero invoice</a>
         )}
         {visibleDocuments.map((document) => (
           <a
@@ -3463,12 +3438,12 @@ function InvoiceReferenceLinks({ xeroUrl, documents, status }: { xeroUrl: string
             target="_blank"
             rel="noreferrer"
             title={`${document.filename}${document.sha256 ? ` · sha256 ${document.sha256}` : ""}`}
-            style={{ minHeight: 40, maxWidth: "100%", display: "inline-flex", alignItems: "center", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+            style={{ minHeight: 40, maxWidth: "100%", display: "inline-flex", alignItems: "center", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.86)", color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
           >
             {documentKindLabel(document.kind)} · {document.label}{document.byteSize ? ` · ${formatBytes(document.byteSize)}` : ""}
           </a>
         ))}
-        {!hasLinks && <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>No Xero invoice link or invoice files attached yet.</span>}
+        {!hasLinks && <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>No Xero invoice link or invoice files attached yet.</span>}
       </div>
       {status && visibleDocuments.length === 0 && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, lineHeight: 1.3, fontWeight: 800 }}>{status}</div>}
     </section>
@@ -3488,13 +3463,13 @@ function CustomerMirrorPanel({ order }: { order: UiOrder }) {
       action={<OrderCommandPill label={hasMirror ? `${documents.length} docs` : "No mirror"} tone={hasMirror ? confidenceTone : "warn"} />}
     >
       {!hasMirror && (
-        <div style={{ border: "1px solid rgba(154,91,18,0.18)", background: "rgba(250,204,21,0.10)", color: "#9a5b12", borderRadius: 10, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, fontWeight: 850 }}>
+        <div style={{ border: "1px solid rgba(138,91,31,0.18)", background: "rgba(250,204,21,0.10)", color: DT.goldInk, borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, fontWeight: 900 }}>
           {status || "No customer mirror has been backfilled for this order yet."}
         </div>
       )}
       {hasMirror && mirror && (
         <div style={{ display: "grid", gap: 8 }}>
-          <div style={{ border: "1px solid rgba(12,124,122,0.18)", background: "rgba(237,248,247,0.48)", borderRadius: 10, padding: "9px 10px" }}>
+          <div style={{ border: "1px solid rgba(12,124,122,0.18)", background: "rgba(231,243,242,0.48)", borderRadius: 8, padding: "9px 10px" }}>
             <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.35, color: DT.textPrimary, fontWeight: 900 }}>{mirror.customerKnownSummary}</div>
             <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>
               {mirror.leadTimePromise && <OrderCommandPill label={mirror.leadTimePromise} tone="warn" />}
@@ -3513,35 +3488,35 @@ function CustomerMirrorPanel({ order }: { order: UiOrder }) {
                 target="_blank"
                 rel="noreferrer"
                 title={`${document.filename}${document.sha256 ? ` · sha256 ${document.sha256}` : ""}`}
-                style={{ maxWidth: "100%", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.82)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                style={{ maxWidth: "100%", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.82)", color: DT.teal, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
               >
                 {documentKindLabel(document.kind)} · {document.label}{document.byteSize ? ` · ${formatBytes(document.byteSize)}` : ""}
               </a>
             ))}
-            {documents.length === 0 && <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 850 }}>No documents uploaded yet.</span>}
+            {documents.length === 0 && <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900 }}>No documents uploaded yet.</span>}
           </div>
           <details>
-            <summary style={{ listStyle: "none", cursor: "pointer", fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 950 }}>Timeline, profile, sources</summary>
+            <summary style={{ listStyle: "none", cursor: "pointer", fontFamily: DT.sans, fontSize: 10, color: DT.teal, fontWeight: 900 }}>Timeline, profile, sources</summary>
             <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
               {visibleTimeline.length > 0 && (
                 <div style={{ display: "grid", gap: 6 }}>
                   {visibleTimeline.map((entry, index) => (
-                    <div key={`${entry.title}:${index}`} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "7px 8px" }}>
+                    <div key={`${entry.title}:${index}`} style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 8, padding: "7px 8px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline" }}>
-                        <span style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, fontWeight: 950 }}>{entry.title}</span>
-                        <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textFaint, fontWeight: 850 }}>{formatShortDate(entry.date)}</span>
+                        <span style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, fontWeight: 900 }}>{entry.title}</span>
+                        <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textFaint, fontWeight: 900 }}>{formatShortDate(entry.date)}</span>
                       </div>
                       <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, lineHeight: 1.3, fontWeight: 800 }}>{entry.detail}</div>
-                      <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9, color: DT.textFaint, fontWeight: 850 }}>{entry.source}</div>
+                      <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9, color: DT.textFaint, fontWeight: 900 }}>{entry.source}</div>
                     </div>
                   ))}
                 </div>
               )}
               {(mirror.communicationStyleSummary || mirror.communicationStyleTags.length > 0 || mirror.quirksIssues.length > 0) && (
-                <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "7px 8px" }}>
-                  {mirror.communicationStyleSummary && <div style={{ fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, lineHeight: 1.35, fontWeight: 850 }}>{mirror.communicationStyleSummary}</div>}
+                <div style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 8, padding: "7px 8px" }}>
+                  {mirror.communicationStyleSummary && <div style={{ fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, lineHeight: 1.35, fontWeight: 900 }}>{mirror.communicationStyleSummary}</div>}
                   {mirror.communicationStyleTags.length > 0 && <div style={{ marginTop: 6, display: "flex", gap: 5, flexWrap: "wrap" }}>{mirror.communicationStyleTags.map((tag) => <OrderCommandPill key={tag} label={tag} tone="neutral" />)}</div>}
-                  {mirror.quirksIssues.length > 0 && <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, color: "#9a5b12", lineHeight: 1.3, fontWeight: 850 }}>{mirror.quirksIssues.join(" · ")}</div>}
+                  {mirror.quirksIssues.length > 0 && <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, color: DT.goldInk, lineHeight: 1.3, fontWeight: 900 }}>{mirror.quirksIssues.join(" · ")}</div>}
                 </div>
               )}
               <div style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textFaint, lineHeight: 1.3, fontWeight: 800 }}>
@@ -3650,9 +3625,9 @@ function OrderOverviewOverlay({
           maxHeight: isNarrow ? undefined : "calc(100vh - 48px)",
           overflowY: "auto",
           borderRadius: isNarrow ? 0 : 16,
-          border: isNarrow ? "none" : `1px solid ${TUESDAY_THEME.lineStrong}`,
-          background: TUESDAY_THEME.surfaceSoft,
-          boxShadow: TUESDAY_THEME.shadow,
+          border: isNarrow ? "none" : `1px solid ${DT.lineStrong}`,
+          background: DT.surfaceSoft,
+          boxShadow: DT.shadowHover,
         }}
         data-order-command-center="desktop-order-command-center"
       >
@@ -3665,17 +3640,17 @@ function OrderOverviewOverlay({
             outline-offset: 2px;
           }
         `}</style>
-        <div style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(255,253,249,0.96)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${TUESDAY_THEME.line}`, padding: isNarrow ? "12px 14px 11px" : "16px 24px 14px" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 1, background: "rgba(255,253,249,0.96)", backdropFilter: "blur(16px)", borderBottom: `1px solid ${DT.line}`, padding: isNarrow ? "12px 14px 11px" : "16px 24px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start" }}>
             <div style={{ minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 28 : 34, lineHeight: 1, color: TUESDAY_THEME.ink, fontWeight: 500 }}>{order.customer}</h2>
+                <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 28 : 34, lineHeight: 1, color: DT.textPrimary, fontWeight: 500 }}>{order.customer}</h2>
                 <OrderCommandPill label={orderItemLabel(order)} />
                 <OrderCommandPill label={health.label} tone={orderHealth(order) === "blocked" ? "danger" : orderHealth(order) === "watch" ? "warn" : "good"} />
                 {completeInTuesday && <OrderCommandPill label="Complete in Tuesday" tone="good" />}
                 <OrderCommandPill label={`Source: ${invoiceLabel}`} tone={invoiceTone} />
               </div>
-              <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textMuted }}>
+              <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textMuted }}>
                 <span>Due {formatShortDate(order.shipDate)}</span>
                 <span>{dueLabel(order)}</span>
                 <span>{formatCurrencyShort(order.value)}</span>
@@ -3692,14 +3667,14 @@ function OrderOverviewOverlay({
                 }}
                 disabled={completeInTuesday}
 	                title="Move this order to the completed Tuesday list without changing Monday"
-	                style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: completeInTuesday ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.74)", color: completeInTuesday ? DT.sage : DT.textMuted, borderRadius: 9, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: completeInTuesday ? "default" : "pointer" }}
+	                style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: completeInTuesday ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.74)", color: completeInTuesday ? DT.sage : DT.textMuted, borderRadius: 8, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: completeInTuesday ? "default" : "pointer" }}
 	              >
 	                {completeInTuesday ? "Complete in Tuesday" : "Mark complete"}
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 9, padding: "9px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+                style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 12px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}
               >
                 Close
               </button>
@@ -3707,7 +3682,7 @@ function OrderOverviewOverlay({
           </div>
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ flex: 1, height: 5, background: "rgba(40,35,31,0.07)", borderRadius: 999, overflow: "hidden" }}>
-              <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: TUESDAY_THEME.teal, transition: "width 450ms ease" }} />
+              <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: DT.teal, transition: "width 450ms ease" }} />
             </div>
             <span style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textMuted, minWidth: 34, textAlign: "right" }}>{progress}%</span>
           </div>
@@ -3742,9 +3717,9 @@ function OrderOverviewOverlay({
 
 function MiniFact({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(255,255,255,0.74)", borderRadius: 7, padding: "6px 7px" }}>
-      <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>{label}</div>
-      <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 11, fontWeight: 850, color: DT.textPrimary, lineHeight: 1.22, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
+    <div style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(255,255,255,0.74)", borderRadius: 8, padding: "6px 7px" }}>
+      <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>{label}</div>
+      <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.22, overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
     </div>
   );
 }
@@ -3766,15 +3741,15 @@ function CollectionControl({
     collection.by || null,
   ].filter(Boolean).join(" · ");
   return (
-    <div style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
         <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Dispatch</div>
-          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 15, color: DT.textPrimary, fontWeight: 950 }}>Collection / dispatch</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>Dispatch</div>
+          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 15, color: DT.textPrimary, fontWeight: 900 }}>Collection / dispatch</div>
         </div>
-        {status && <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850 }}>{status}</span>}
+        {status && <span style={{ fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 900 }}>{status}</span>}
       </div>
-      <label style={{ marginTop: 7, display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: 7, alignItems: "start", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 850 }}>
+      <label style={{ marginTop: 7, display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: 7, alignItems: "start", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 900 }}>
         <input
           type="checkbox"
           checked={collection.status === "booked" || collection.status === "collected"}
@@ -3794,7 +3769,7 @@ function CollectionControl({
           Booked{hasBooking ? ` · ${bookingLabel}` : ""}
         </span>
       </label>
-      <label style={{ marginTop: 5, display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: 7, alignItems: "start", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 850 }}>
+      <label style={{ marginTop: 5, display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: 7, alignItems: "start", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 900 }}>
         <input
           type="checkbox"
           checked={collection.status === "collected"}
@@ -3819,19 +3794,19 @@ function CollectionControl({
             type="date"
             value={collection.bookedDay}
             onChange={(event) => onChange((state) => ({ ...state, collection: { ...state.collection, bookedDay: event.target.value, status: state.collection.status === "collected" ? "collected" : event.target.value ? "booked" : "open" } }))}
-            style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 7, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
+            style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
           />
           <input
             type="time"
             value={collection.bookedTime}
             onChange={(event) => onChange((state) => ({ ...state, collection: { ...state.collection, bookedTime: event.target.value } }))}
-            style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 7, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
+            style={{ minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
           />
         </div>
         <select
           value={collection.by}
           onChange={(event) => onChange((state) => ({ ...state, collection: { ...state.collection, by: event.target.value as Carrier, status: state.collection.status === "collected" ? "collected" : "booked" } }))}
-          style={{ marginTop: 6, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 7, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
+          style={{ marginTop: 6, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "6px 7px", fontFamily: DT.sans, fontSize: 11, color: DT.textPrimary, background: DT.cardBg }}
         >
           <option value="">Booked by...</option>
           <option value="Pinpoint">Pinpoint</option>
@@ -3990,7 +3965,7 @@ function OrderTasksPanel({
       gap: 8,
       border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`,
       background: done ? DONE_TASK_VISUAL.bg : DT.cardBg,
-      borderRadius: 10,
+      borderRadius: 8,
       padding: "8px 9px",
       boxShadow: done ? DONE_TASK_VISUAL.shadow : "none",
     };
@@ -4001,7 +3976,7 @@ function OrderTasksPanel({
 	      fontFamily: DT.sans,
 	      fontSize: 10,
       color: done ? DONE_TASK_VISUAL.text : DT.textMuted,
-      fontWeight: 750,
+      fontWeight: 800,
       lineHeight: 1.32,
 	    };
 	  }
@@ -4041,7 +4016,7 @@ function OrderTasksPanel({
 	                    aria-label="Edit job task"
 	                    value={workflowTask.title}
 	                    onChange={(event) => updateWorkflowTask(workflowTask.id, { title: event.target.value })}
-	                    style={{ width: "100%", border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? "rgba(255,255,255,0.50)" : DT.cardBg, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textDecoration: done ? "line-through" : "none", outline: "none" }}
+	                    style={{ width: "100%", border: `1px solid ${done ? DONE_TASK_VISUAL.border : DT.border}`, background: done ? "rgba(255,255,255,0.50)" : DT.cardBg, borderRadius: 8, padding: "5px 6px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textDecoration: done ? "line-through" : "none", outline: "none" }}
 	                  />
 	                  <button
 	                    type="button"
@@ -4053,7 +4028,7 @@ function OrderTasksPanel({
 	                      setPendingDeleteTaskId(workflowTask.id);
 	                    }}
 	                    aria-label="Delete job task"
-	                    style={{ minHeight: 32, border: "1px solid rgba(146,42,35,0.16)", background: deleteArmed ? "rgba(146,42,35,0.12)" : "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 8, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+	                    style={{ minHeight: 32, border: "1px solid rgba(154,59,47,0.16)", background: deleteArmed ? "rgba(154,59,47,0.12)" : "rgba(154,59,47,0.06)", color: DT.clay, borderRadius: 8, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}
 	                  >
 	                    {deleteArmed ? "Delete now" : "Delete"}
 	                  </button>
@@ -4065,7 +4040,7 @@ function OrderTasksPanel({
 	                    type="date"
 	                    value={workflowTask.scheduledDate || ""}
 	                    onChange={(event) => updateWorkflowTask(workflowTask.id, { scheduledDate: event.target.value })}
-	                    style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+	                    style={{ border: `1px solid ${DT.border}`, borderRadius: 8, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
 	                  />
 	                  {workflowTask.done && <PersonSelect value={workflowTask.completedBy} onChange={(value) => updateWorkflowTask(workflowTask.id, { completedBy: value })} />}
 	                </div>
@@ -4073,18 +4048,18 @@ function OrderTasksPanel({
 	                  value={workflowTask.notes}
 	                  onChange={(event) => updateWorkflowTask(workflowTask.id, { notes: event.target.value })}
 	                  placeholder="Task notes"
-	                  style={{ marginTop: 5, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 7, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+	                  style={{ marginTop: 5, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "5px 6px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
 	                />
-	                <button type="button" onClick={() => setEditingWorkflowTaskId(null)} style={{ marginTop: 6, minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Done editing</button>
+	                <button type="button" onClick={() => setEditingWorkflowTaskId(null)} style={{ marginTop: 6, minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Done editing</button>
 	              </>
 	            ) : (
 	              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
 	                <div style={{ minWidth: 0 }}>
-	                  <div style={{ fontFamily: DT.sans, fontSize: 12.5, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.2, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{workflowTask.title}</div>
+	                  <div style={{ fontFamily: DT.sans, fontSize: 12.5, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.2, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{workflowTask.title}</div>
 	                  <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.meta}</div>
 	                  {workflowTask.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{workflowTask.notes}</div>}
 	                </div>
-	                <button type="button" onClick={() => setEditingWorkflowTaskId(workflowTask.id)} style={{ flex: "0 0 auto", minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
+	                <button type="button" onClick={() => setEditingWorkflowTaskId(workflowTask.id)} style={{ flex: "0 0 auto", minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Edit</button>
 	              </div>
 	            )}
 	          </div>
@@ -4111,7 +4086,7 @@ function OrderTasksPanel({
 	        <div style={{ minWidth: 0 }}>
 	          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 7, alignItems: "start" }}>
 	            <div style={{ minWidth: 0 }}>
-	              <div style={{ fontFamily: DT.sans, fontSize: 12.5, fontWeight: 950, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.2, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{planTask.text}</div>
+	              <div style={{ fontFamily: DT.sans, fontSize: 12.5, fontWeight: 900, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, lineHeight: 1.2, textDecoration: done ? "line-through" : "none", overflowWrap: "anywhere" }}>{planTask.text}</div>
 	              <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{task.meta}</div>
 	              {planTask.notes && <div style={{ marginTop: 3, ...taskMetaStyle(done) }}>{planTask.notes}</div>}
 	              <div style={{ marginTop: 5, display: "flex", gap: 5, flexWrap: "wrap" }}>
@@ -4120,9 +4095,9 @@ function OrderTasksPanel({
 	              </div>
 	            </div>
 	            <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
-	              <button type="button" onClick={(event) => onPlanTaskDoneToggle(planTask, !done, { x: event.clientX, y: event.clientY })} style={{ minHeight: 40, border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.20)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
-	              <button type="button" onClick={() => onPlanTaskEdit(planTask)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Edit</button>
-	              {planTask.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(planTask)} style={{ minHeight: 32, border: "1px solid rgba(146,42,35,0.16)", background: "rgba(146,42,35,0.06)", color: "#922a23", borderRadius: 8, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}>Unlink</button>}
+	              <button type="button" onClick={(event) => onPlanTaskDoneToggle(planTask, !done, { x: event.clientX, y: event.clientY })} style={{ minHeight: 40, border: `1px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.20)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, color: done ? DONE_TASK_VISUAL.title : DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>{done ? "Undo" : "Done"}</button>
+	              <button type="button" onClick={() => onPlanTaskEdit(planTask)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Edit</button>
+	              {planTask.assignedViaTuesday && <button type="button" onClick={() => onRemoveTaskLink(planTask)} style={{ minHeight: 32, border: "1px solid rgba(154,59,47,0.16)", background: "rgba(154,59,47,0.06)", color: DT.clay, borderRadius: 8, padding: "7px 9px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}>Unlink</button>}
 	            </div>
 	          </div>
 	        </div>
@@ -4131,19 +4106,19 @@ function OrderTasksPanel({
 	  }
 
 	  return (
-    <div style={{ border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceClean, borderRadius: 12, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: TUESDAY_THEME.quiet }}>Production path</div>
-          <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 16, color: DT.textPrimary, fontWeight: 950 }}>Scheduled tasks</div>
-          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750, lineHeight: 1.35 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>Production path</div>
+          <div title="Tick the checkbox to mark this task done" style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 16, color: DT.textPrimary, fontWeight: 900 }}>Scheduled tasks</div>
+          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800, lineHeight: 1.35 }}>
             Current stage: {activeProductionStep?.label ?? order.rawMondayStatus ?? "Not set"} · next task: {defaultDraftAction}
           </div>
         </div>
         <OrderCommandPill label={`${openCount} open · ${doneCount} done`} tone={openCount ? "teal" : "neutral"} />
       </div>
 
-      <div style={{ marginTop: 10, border: `1px solid ${DT.border}`, background: TUESDAY_THEME.surfaceSoft, borderRadius: 10, padding: 10 }}>
+      <div style={{ marginTop: 10, border: `1px solid ${DT.border}`, background: DT.surfaceSoft, borderRadius: 8, padding: 10 }}>
         <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, marginBottom: 7 }}>Add next task</div>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 88px", gap: 7 }}>
           <select
@@ -4190,7 +4165,7 @@ function OrderTasksPanel({
             onClick={addWorkflowTask}
             disabled={!draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate}
             title="Add task to job"
-            style={{ minHeight: 40, whiteSpace: "nowrap", border: `1px solid rgba(12,124,122,0.18)`, background: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? DT.textFaint : DT.teal, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "not-allowed" : "pointer" }}
+            style={{ minHeight: 40, whiteSpace: "nowrap", border: `1px solid rgba(12,124,122,0.18)`, background: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "rgba(0,0,0,0.035)" : DT.tealSoft, color: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? DT.textFaint : DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: !draftTitle || !workflowOwnerToPerson(draftOwner) || !draftDate ? "not-allowed" : "pointer" }}
           >
             Add task to job
           </button>
@@ -4206,16 +4181,16 @@ function OrderTasksPanel({
 	          const suggested = suggestedJobTaskLabelForStep(step, order);
 	          const waitActive = step.wait && active;
 	          return (
-	            <div key={step.key} style={{ border: `1px solid ${active ? "rgba(12,124,122,0.24)" : waitActive ? TUESDAY_THEME.amberLine : DT.border}`, background: active ? "rgba(237,248,247,0.70)" : waitActive ? TUESDAY_THEME.amberSoft : "rgba(255,255,255,0.74)", borderRadius: 11, padding: "8px 9px", display: "grid", gridTemplateColumns: "32px minmax(0, 1fr)", gap: 9, alignItems: "start" }}>
-	              <div style={{ width: 28, height: 28, borderRadius: step.wait ? 8 : 999, border: `1px ${step.wait ? "dashed" : "solid"} ${active ? fill : done ? "rgba(95,127,95,0.35)" : DT.border}`, background: done ? "rgba(95,127,95,0.12)" : active ? "rgba(12,124,122,0.10)" : "rgba(255,255,255,0.76)", color: fill, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>
+	            <div key={step.key} style={{ border: `1px solid ${active ? "rgba(12,124,122,0.24)" : waitActive ? DT.goldLine : DT.border}`, background: active ? "rgba(231,243,242,0.70)" : waitActive ? DT.goldPale : "rgba(255,255,255,0.74)", borderRadius: 8, padding: "8px 9px", display: "grid", gridTemplateColumns: "32px minmax(0, 1fr)", gap: 9, alignItems: "start" }}>
+	              <div style={{ width: 28, height: 28, borderRadius: step.wait ? 8 : 999, border: `1px ${step.wait ? "dashed" : "solid"} ${active ? fill : done ? "rgba(95,127,95,0.35)" : DT.border}`, background: done ? "rgba(95,127,95,0.12)" : active ? "rgba(12,124,122,0.10)" : "rgba(255,255,255,0.76)", color: fill, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>
 	                {done ? "✓" : index + 1}
 	              </div>
 	              <div style={{ minWidth: 0 }}>
 	                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", flexWrap: "wrap" }}>
 	                  <div style={{ minWidth: 0 }}>
-	                    <div style={{ fontFamily: DT.sans, fontSize: 13.5, lineHeight: 1.2, color: active ? DT.teal : done ? DT.textSecondary : DT.textPrimary, fontWeight: 950, textDecoration: done && !active ? "line-through" : "none", overflowWrap: "anywhere" }}>{step.label}</div>
+	                    <div style={{ fontFamily: DT.sans, fontSize: 13.5, lineHeight: 1.2, color: active ? DT.teal : done ? DT.textSecondary : DT.textPrimary, fontWeight: 900, textDecoration: done && !active ? "line-through" : "none", overflowWrap: "anywhere" }}>{step.label}</div>
 	                    <div style={{ marginTop: 2, display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
-	                      {suggested && <span style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 850 }}>{suggested}</span>}
+	                      {suggested && <span style={{ fontFamily: DT.sans, fontSize: 9.5, color: DT.textMuted, fontWeight: 900 }}>{suggested}</span>}
 	                      {step.wait && <OrderCommandPill label={step.waitLabel || "Wait"} tone="warn" />}
 	                      {active && <OrderCommandPill label="Current" tone="teal" />}
 	                    </div>
@@ -4231,7 +4206,7 @@ function OrderTasksPanel({
 	                        setDraftAction("Custom");
 	                        setDraftCustom(suggested);
 	                      }}
-	                      style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: "pointer" }}
+	                      style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: "pointer" }}
 	                    >
 	                      Plan this
 	                    </button>
@@ -4239,7 +4214,7 @@ function OrderTasksPanel({
 	                </div>
 	                <div style={{ marginTop: rowTasks.length ? 7 : 5, display: "grid", gap: 6 }}>
 	                  {rowTasks.length ? rowTasks.map((task) => renderUnifiedTask(task)) : (
-	                    <div style={{ border: `1px dashed ${DT.border}`, background: "rgba(255,255,255,0.52)", borderRadius: 9, padding: "6px 7px", fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 850 }}>No scheduled task on this step yet.</div>
+	                    <div style={{ border: `1px dashed ${DT.border}`, background: "rgba(255,255,255,0.52)", borderRadius: 8, padding: "6px 7px", fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 900 }}>No scheduled task on this step yet.</div>
 	                  )}
 	                </div>
 	              </div>
@@ -4247,8 +4222,8 @@ function OrderTasksPanel({
 	          );
 	        })}
 	        {supportTasks.length > 0 && (
-	          <div style={{ border: `1px solid ${DT.border}`, background: "rgba(247,245,239,0.76)", borderRadius: 11, padding: "8px 9px" }}>
-	            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Support / off-path tasks</div>
+	          <div style={{ border: `1px solid ${DT.border}`, background: "rgba(247,245,239,0.76)", borderRadius: 8, padding: "8px 9px" }}>
+	            <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Support / off-path tasks</div>
 	            <div style={{ marginTop: 7, display: "grid", gap: 6 }}>{supportTasks.map((task) => renderUnifiedTask(task))}</div>
 	          </div>
 	        )}
@@ -4263,7 +4238,7 @@ function PersonSelect({ value, onChange, workshopOnly = false }: { value: Worksh
     <select
       value={selectValue}
       onChange={(event) => onChange(event.target.value as WorkshopPerson)}
-      style={{ border: `1px solid ${DT.border}`, borderRadius: 7, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
+      style={{ border: `1px solid ${DT.border}`, borderRadius: 8, padding: "4px 5px", fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, background: DT.cardBg }}
     >
       {!workshopOnly && <option value="">By</option>}
       <option value="Nick">Nick</option>
@@ -4308,10 +4283,10 @@ function QcChecklist({
     toggle("Final photos uploaded", true);
   }
   return (
-    <div style={{ border: compact ? `1px solid ${complete ? "rgba(64,128,72,0.18)" : "rgba(154,91,18,0.18)"}` : `1px solid ${DT.border}`, background: compact ? (complete ? "rgba(64,128,72,0.06)" : "rgba(250,204,21,0.10)") : TUESDAY_THEME.surfaceClean, borderRadius: compact ? 10 : 12, padding: compact ? 8 : 12, boxShadow: compact ? "none" : "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ border: compact ? `1px solid ${complete ? "rgba(79,127,89,0.18)" : "rgba(138,91,31,0.18)"}` : `1px solid ${DT.border}`, background: compact ? (complete ? "rgba(79,127,89,0.06)" : "rgba(250,204,21,0.10)") : DT.cardBg, borderRadius: compact ? 10 : 12, padding: compact ? 8 : 12, boxShadow: compact ? "none" : "0 6px 18px rgba(37,30,20,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div>
-          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>QC</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>QC</div>
           {!compact && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 13, color: DT.textMuted, fontWeight: 800 }}>Final checks before release</div>}
         </div>
         <OrderCommandPill label={`${doneCount}/${items.length}`} tone={complete ? "good" : "warn"} />
@@ -4321,16 +4296,16 @@ function QcChecklist({
           const item = workflow.qc[label] ?? { done: false, completedAt: null, completedBy: "" as WorkshopPerson };
           const done = Boolean(item.done);
           return (
-            <div key={label} style={{ border: `1px solid ${done ? "rgba(64,128,72,0.18)" : DT.border}`, background: done ? "rgba(64,128,72,0.07)" : "rgba(255,255,255,0.70)", borderRadius: compact ? 8 : 10, padding: compact ? "5px 6px" : "7px 8px", display: "grid", gap: compact ? 3 : 5 }}>
+            <div key={label} style={{ border: `1px solid ${done ? "rgba(79,127,89,0.18)" : DT.border}`, background: done ? "rgba(79,127,89,0.07)" : "rgba(255,255,255,0.70)", borderRadius: compact ? 8 : 10, padding: compact ? "5px 6px" : "7px 8px", display: "grid", gap: compact ? 3 : 5 }}>
               <button
                 type="button"
                 onClick={() => toggle(label, !done)}
                 aria-pressed={done}
                 style={{ width: "100%", minHeight: 40, border: "none", background: "transparent", padding: 0, display: "grid", gridTemplateColumns: compact ? "18px minmax(0, 1fr) auto" : "22px minmax(0, 1fr) auto", gap: compact ? 5 : 7, alignItems: "center", textAlign: "left", cursor: "pointer" }}
               >
-                <span style={{ width: compact ? 17 : 20, height: compact ? 17 : 20, borderRadius: 999, border: `1px solid ${done ? "rgba(64,128,72,0.30)" : DT.border}`, background: done ? "rgba(64,128,72,0.14)" : "rgba(255,255,255,0.88)", color: done ? "#408048" : DT.textFaint, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: compact ? 10 : 12, fontWeight: 950 }}>{done ? "✓" : ""}</span>
+                <span style={{ width: compact ? 17 : 20, height: compact ? 17 : 20, borderRadius: 999, border: `1px solid ${done ? "rgba(79,127,89,0.30)" : DT.border}`, background: done ? "rgba(79,127,89,0.14)" : "rgba(255,255,255,0.88)", color: done ? DT.green : DT.textFaint, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: compact ? 10 : 12, fontWeight: 900 }}>{done ? "✓" : ""}</span>
                 <span style={{ minWidth: 0, fontFamily: DT.sans, fontSize: compact ? 10.5 : 11.5, color: done ? DT.textSecondary : DT.textPrimary, fontWeight: 900, lineHeight: 1.15, overflowWrap: "anywhere" }}>{label}</span>
-                <span style={{ border: `1px solid ${done ? "rgba(64,128,72,0.18)" : DT.border}`, background: done ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.025)", color: done ? "#408048" : DT.textMuted, borderRadius: 7, padding: compact ? "2px 5px" : "3px 6px", fontFamily: DT.sans, fontSize: compact ? 8.5 : 9, fontWeight: 950 }}>{done ? "Done" : "Open"}</span>
+                <span style={{ border: `1px solid ${done ? "rgba(79,127,89,0.18)" : DT.border}`, background: done ? "rgba(255,255,255,0.72)" : "rgba(0,0,0,0.025)", color: done ? DT.green : DT.textMuted, borderRadius: 8, padding: compact ? "2px 5px" : "3px 6px", fontFamily: DT.sans, fontSize: compact ? 8.5 : 9, fontWeight: 900 }}>{done ? "Done" : "Open"}</span>
               </button>
               {done && !compact && (
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", paddingLeft: 29 }}>
@@ -4388,10 +4363,10 @@ function xeroPaymentLabel(invoice: XeroProofInvoice | null, loading: boolean, er
 }
 
 function xeroPaymentTone(label: string) {
-  if (label === "Paid") return { bg: "rgba(64,128,72,0.10)", border: "rgba(64,128,72,0.22)", color: "#408048" };
+  if (label === "Paid") return { bg: "rgba(79,127,89,0.10)", border: "rgba(79,127,89,0.22)", color: DT.green };
   if (label === "Xero link saved") return { bg: "rgba(12,124,122,0.09)", border: "rgba(12,124,122,0.18)", color: DT.teal };
-  if (label === "Awaiting payment" || label === "Draft" || label === "Invoice saved - not verified" || label === "Invoice saved - Xero link missing") return { bg: "rgba(178,97,36,0.09)", border: "rgba(178,97,36,0.20)", color: "#b26124" };
-  if (label === "Xero unavailable" || label === "Invoice needed") return { bg: "rgba(146,42,35,0.08)", border: "rgba(146,42,35,0.18)", color: "#922a23" };
+  if (label === "Awaiting payment" || label === "Draft" || label === "Invoice saved - not verified" || label === "Invoice saved - Xero link missing") return { bg: "rgba(178,97,36,0.09)", border: "rgba(178,97,36,0.20)", color: DT.goldInk };
+  if (label === "Xero unavailable" || label === "Invoice needed") return { bg: "rgba(154,59,47,0.08)", border: "rgba(154,59,47,0.18)", color: DT.clay };
   return { bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.20)", color: DT.sage };
 }
 
@@ -4590,31 +4565,31 @@ function InvoiceSpecCard({
   const titleSize = compact ? 17 : primary ? 24 : 15;
   const labelWidth = compact ? 74 : primary ? 98 : 78;
   return (
-    <div style={{ border: `1px solid ${primary ? "rgba(12,124,122,0.26)" : DT.border}`, borderRadius: 11, padding: compact ? 9 : primary ? 12 : 8, background: primary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.74)", boxShadow: primary ? "0 8px 18px rgba(37,30,20,0.045)" : "none", minWidth: 0 }}>
+    <div style={{ border: `1px solid ${primary ? "rgba(12,124,122,0.26)" : DT.border}`, borderRadius: 8, padding: compact ? 9 : primary ? 12 : 8, background: primary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.74)", boxShadow: primary ? "0 8px 18px rgba(37,30,20,0.045)" : "none", minWidth: 0 }}>
       <div style={{ display: "grid", gap: compact ? 5 : 6, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
         <div style={{ fontFamily: DT.serif, fontSize: titleSize, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.03, overflowWrap: "anywhere" }}>{parsed.title}</div>
-        {specFacts.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: compact ? 10.5 : 11.5, color: DT.textMuted, fontWeight: 850 }}>No structured spec captured yet.</div>}
+        {specFacts.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: compact ? 10.5 : 11.5, color: DT.textMuted, fontWeight: 900 }}>No structured spec captured yet.</div>}
         {specFacts.map((fact) => (
           <div key={`${fact.label}:${fact.value}`} style={{ display: "grid", gridTemplateColumns: `${labelWidth}px minmax(0, 1fr)`, gap: compact ? 7 : 10, fontSize: compact ? 11 : 12.5, fontWeight: 900, overflowWrap: "anywhere", alignItems: "baseline" }}>
-            <span style={{ color: DT.textMuted, fontWeight: 950 }}>{fact.label}</span>
+            <span style={{ color: DT.textMuted, fontWeight: 900 }}>{fact.label}</span>
             <span>{fact.value}</span>
           </div>
         ))}
       </div>
-      {parsed.notes.map((note) => <div key={note} style={{ marginTop: 7, fontFamily: DT.sans, fontSize: compact ? 10.5 : 11, color: DT.textMuted, fontWeight: 850, lineHeight: 1.25, overflowWrap: "anywhere" }}>{note}</div>)}
+      {parsed.notes.map((note) => <div key={note} style={{ marginTop: 7, fontFamily: DT.sans, fontSize: compact ? 10.5 : 11, color: DT.textMuted, fontWeight: 900, lineHeight: 1.25, overflowWrap: "anywhere" }}>{note}</div>)}
       {showDelivery && deliveryFacts.length > 0 && (
-        <div style={{ marginTop: 9, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(247,245,239,0.72)", borderRadius: 9, padding: "7px 8px" }}>
-          <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Delivered to</div>
+        <div style={{ marginTop: 9, border: "1px solid rgba(0,0,0,0.045)", background: "rgba(247,245,239,0.72)", borderRadius: 8, padding: "7px 8px" }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Delivered to</div>
           <div style={{ marginTop: 4, display: "grid", gap: 3 }}>
             {deliveryFacts.map((fact) => (
-              <div key={`${fact.label}:${fact.value}`} style={{ fontFamily: DT.sans, fontSize: compact ? 10 : 10.5, fontWeight: 850, color: DT.textSecondary, lineHeight: 1.28, overflowWrap: "anywhere" }}>
+              <div key={`${fact.label}:${fact.value}`} style={{ fontFamily: DT.sans, fontSize: compact ? 10 : 10.5, fontWeight: 900, color: DT.textSecondary, lineHeight: 1.28, overflowWrap: "anywhere" }}>
                 {fact.value}
               </div>
             ))}
           </div>
         </div>
       )}
-      <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap", fontFamily: DT.sans, fontSize: compact ? 10 : 11, color: DT.textMuted, fontWeight: 950 }}>
+      <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap", fontFamily: DT.sans, fontSize: compact ? 10 : 11, color: DT.textMuted, fontWeight: 900 }}>
         {line.quantity !== undefined && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>Qty {formatXeroQuantity(line.quantity)}</span>}
         {line.lineAmount !== undefined && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.70)", borderRadius: 999, padding: "2px 6px" }}>{formatXeroMoney(line.lineAmount)}</span>}
         {sourceLabel && <span style={{ border: `1px solid rgba(12,124,122,0.14)`, background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 6px" }}>{sourceLabel}</span>}
@@ -4720,20 +4695,20 @@ function WorkshopSpec({
           : "Add the Xero invoice number to unlock exact invoice items here.";
 
   return (
-	    <div style={{ marginTop: prominent ? 0 : 8, border: `1px solid ${DT.border}`, background: prominent ? TUESDAY_THEME.surfaceClean : "rgba(255,255,255,0.72)", borderRadius: prominent ? 12 : 9, padding: prominent ? 12 : "8px 9px", boxShadow: prominent ? "0 6px 18px rgba(37,30,20,0.035)" : "none" }}>
+	    <div style={{ marginTop: prominent ? 0 : 8, border: `1px solid ${DT.border}`, background: prominent ? DT.cardBg : "rgba(255,255,255,0.72)", borderRadius: prominent ? 12 : 9, padding: prominent ? 12 : "8px 9px", boxShadow: prominent ? "0 6px 18px rgba(37,30,20,0.035)" : "none" }}>
 	      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
 	        <div>
-	          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>Order details</div>
+	          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>Order details</div>
 	        </div>
 	        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
           {xeroSourceUrl && (
-            <a href={xeroSourceUrl} target="_blank" rel="noreferrer" style={{ minHeight: 40, display: "inline-flex", alignItems: "center", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textDecoration: "none" }}>
+            <a href={xeroSourceUrl} target="_blank" rel="noreferrer" style={{ minHeight: 40, display: "inline-flex", alignItems: "center", border: "1px solid rgba(12,124,122,0.18)", background: "rgba(255,255,255,0.74)", color: DT.teal, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textDecoration: "none" }}>
               Open Xero
             </a>
 	          )}
 	        </div>
 	      </div>
-		      <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 11, background: "rgba(237,248,247,0.45)", padding: 8, display: "grid", gap: 7 }}>
+		      <div style={{ marginTop: 8, border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 8, background: "rgba(231,243,242,0.45)", padding: 8, display: "grid", gap: 7 }}>
 		        {visibleSpecLines.map((line, index) => (
 		          <InvoiceSpecCard
 		            key={`${line.description}:${index}`}
@@ -4746,20 +4721,20 @@ function WorkshopSpec({
 			      </div>
 		      {afterSpec && <div style={{ marginTop: 8 }}>{afterSpec}</div>}
 		      {deliveryDetail && !visibleSpecLines.some((line) => parseIntakeInvoiceLine(line.description).facts.some((fact) => DELIVERY_FACT_LABELS.has(fact.label))) && (
-		        <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 9, padding: "8px 9px" }}>
-	          <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Delivered to</div>
-	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 12, fontWeight: 850, color: DT.textPrimary, lineHeight: 1.28 }}>{deliveryDetail}</div>
+		        <div style={{ marginTop: 8, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 8, padding: "8px 9px" }}>
+	          <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}>Delivered to</div>
+	          <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.28 }}>{deliveryDetail}</div>
 	        </div>
 	      )}
 	      {showInvoiceDetails && (
 	        <div style={{ marginTop: 8, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-	          <span style={{ border: `1px solid ${paymentTone.border}`, background: paymentTone.bg, color: paymentTone.color, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950 }}>
+	          <span style={{ border: `1px solid ${paymentTone.border}`, background: paymentTone.bg, color: paymentTone.color, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>
 	            Source: {paymentLabel}
 	          </span>
-	          {xeroInvoiceNumber && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>From {xeroInvoiceNumber}</span>}
-	          {xeroProof.invoice?.dueDate && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Invoice due {formatShortDate(xeroProof.invoice.dueDate)}</span>}
-	          <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Pack: {packDetailLabel}</span>
-	          <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 850, color: DT.textMuted }}>Freight: {freightBookByLabel}</span>
+	          {xeroInvoiceNumber && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted }}>From {xeroInvoiceNumber}</span>}
+	          {xeroProof.invoice?.dueDate && <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted }}>Invoice due {formatShortDate(xeroProof.invoice.dueDate)}</span>}
+	          <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted }}>Pack: {packDetailLabel}</span>
+	          <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted }}>Freight: {freightBookByLabel}</span>
 	        </div>
 	      )}
       {showInvoiceDetails && onInvoiceNumberChange && invoiceExpectation.requiresInvoice && (
@@ -4780,14 +4755,14 @@ function WorkshopSpec({
             type="button"
             onClick={saveInvoiceDraft}
             disabled={(invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "")}
-            style={{ border: `1px solid rgba(110,138,106,0.24)`, background: (invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "") ? "rgba(0,0,0,0.035)" : "rgba(110,138,106,0.13)", color: (invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "") ? DT.textFaint : DT.sage, borderRadius: 999, padding: "7px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, cursor: (invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "") ? "not-allowed" : "pointer" }}
+            style={{ border: `1px solid rgba(110,138,106,0.24)`, background: (invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "") ? "rgba(0,0,0,0.035)" : "rgba(110,138,106,0.13)", color: (invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "") ? DT.textFaint : DT.sage, borderRadius: 999, padding: "7px 10px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, cursor: (invoiceDraft.trim().toUpperCase() || "") === (xeroInvoiceNumber || "") ? "not-allowed" : "pointer" }}
           >
             Save invoice number
           </button>
         </div>
       )}
       {showInvoiceDetails && xeroInvoiceNumber && (
-        <div style={{ marginTop: 10, border: `1px solid rgba(110,138,106,0.20)`, borderRadius: 10, background: "rgba(255,255,255,0.72)", overflow: "hidden" }}>
+        <div style={{ marginTop: 10, border: `1px solid rgba(110,138,106,0.20)`, borderRadius: 8, background: "rgba(255,255,255,0.72)", overflow: "hidden" }}>
           <div style={{ padding: "8px 9px", display: "grid", gridTemplateColumns: prominent ? "repeat(auto-fit, minmax(118px, 1fr))" : "1fr 1fr", gap: 6, borderBottom: `1px solid ${DT.border}` }}>
             <MiniFact label="Invoice" value={xeroProof.invoice?.invoiceNumber || xeroInvoiceNumber} />
             <MiniFact label="Contact" value={invoiceContactValue} />
@@ -4798,20 +4773,20 @@ function WorkshopSpec({
           </div>
           <div style={{ padding: "8px 9px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Invoice items</div>
+              <div style={{ fontFamily: DT.sans, fontSize: 8, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Invoice items</div>
               <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 800, color: DT.textMuted }}>{lineItems.length} line item{lineItems.length === 1 ? "" : "s"}</div>
             </div>
             <div style={{ marginTop: 6, display: "grid", gap: 6, maxHeight: prominent ? 310 : 200, overflowY: "auto", paddingRight: 3 }}>
               {xeroProof.loading && <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted }}>Loading invoice details...</div>}
               {!xeroProof.loading && xeroUnavailable && (
-                <div style={{ border: "1px solid rgba(146,42,35,0.18)", background: "rgba(146,42,35,0.06)", borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: "#922a23", fontWeight: 850 }}>
+                <div style={{ border: "1px solid rgba(154,59,47,0.18)", background: "rgba(154,59,47,0.06)", borderRadius: 8, padding: "8px 9px", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: DT.clay, fontWeight: 900 }}>
                   Xero proof unavailable. {xeroReadinessLabel || "Use Open Xero or verify outside Tuesday before relying on payment or invoice item details."}
                 </div>
               )}
 	              {!xeroProof.loading && lineItems.map((line, index) => { const parsed = parseIntakeInvoiceLine(line.description); const facts = formatParsedIntakeSpec(parsed); return (
 	                <div key={`${index}-${line.description.slice(0, 24)}`} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "7px 8px", display: "grid", gridTemplateColumns: prominent ? "minmax(0, 1fr) 58px 72px 82px" : "1fr", gap: prominent ? 8 : 5, alignItems: "start" }}>
 	                  <div style={{ minWidth: 0 }}>
-	                    <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.22, color: DT.textPrimary, fontWeight: 950, overflowWrap: "anywhere" }}>{parsed.title}</div>
+	                    <div style={{ fontFamily: DT.sans, fontSize: 12, lineHeight: 1.22, color: DT.textPrimary, fontWeight: 900, overflowWrap: "anywhere" }}>{parsed.title}</div>
 	                    <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: prominent ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: 5 }}>
 	                      {facts.length === 0 ? <MiniFact label="Spec" value="No structured spec" /> : facts.map((fact) => <MiniFact key={`${fact.label}:${fact.value}`} label={fact.label} value={fact.value} />)}
 	                    </div>
@@ -4834,7 +4809,7 @@ function WorkshopSpec({
 	      {showInvoiceDetails && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, lineHeight: 1.3 }}>
 	        {invoiceProofDetail}
 	      </div>}
-      {xeroProof.error && !showInvoiceDetails && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, color: "#922a23", lineHeight: 1.3 }}>{xeroReadinessLabel}</div>}
+      {xeroProof.error && !showInvoiceDetails && <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 10, color: DT.clay, lineHeight: 1.3 }}>{xeroReadinessLabel}</div>}
     </div>
   );
 }
@@ -4883,7 +4858,7 @@ function FeedbackButtons({ scope, id }: { scope: string; id: string | number }) 
   }
   return (
     <details style={{ maxWidth: "100%" }}>
-      <summary style={{ listStyle: "none", cursor: "pointer", color: DT.textMuted, fontSize: 10, fontFamily: DT.sans, fontWeight: 850 }}>
+      <summary style={{ listStyle: "none", cursor: "pointer", color: DT.textMuted, fontSize: 10, fontFamily: DT.sans, fontWeight: 900 }}>
         Local feedback{selected.length ? ` · ${selected.length}` : ""}
       </summary>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 7 }} aria-label="Local Production Plan feedback">
@@ -5181,18 +5156,18 @@ function orderConnectionLabel(
 }
 
 function orderConnectionStyle(state: OrderConnectionState, selected = false) {
-  if (state === "connected") return { color: selected ? "#8a5d08" : DT.teal, bg: selected ? "rgba(255,246,199,0.96)" : DT.tealSoft, border: selected ? "rgba(190,137,24,0.34)" : "rgba(12,124,122,0.14)" };
-  if (state === "possible") return { color: "#8a5d08", bg: "rgba(255,246,199,0.68)", border: "rgba(190,137,24,0.36)" };
+  if (state === "connected") return { color: selected ? DT.goldInk : DT.teal, bg: selected ? "rgba(255,245,223,0.96)" : DT.tealSoft, border: selected ? "rgba(200,169,110,0.34)" : "rgba(12,124,122,0.14)" };
+  if (state === "possible") return { color: DT.goldInk, bg: "rgba(255,245,223,0.68)", border: "rgba(200,169,110,0.36)" };
   if (state === "internal") return { color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.20)" };
-  return { color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.38)" };
+  return { color: DT.goldInk, bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.38)" };
 }
 
 const DONE_TASK_VISUAL = {
   bg: "linear-gradient(135deg, rgba(232,232,228,0.98), rgba(203,202,196,0.92))",
   border: "rgba(105,104,99,0.44)",
-  stripe: "#77756f",
-  text: "#6f6d67",
-  title: "#585651",
+  stripe: DT.textMuted,
+  text: DT.textMuted,
+  title: DT.textSecondary,
   buttonBg: "rgba(120,118,112,0.13)",
   buttonBorder: "rgba(105,104,99,0.28)",
   shadow: "inset 0 0 0 1px rgba(255,255,255,0.34), 0 1px 2px rgba(0,0,0,0.012)",
@@ -5539,10 +5514,10 @@ function LinkedOrderPill({ row, onOpenOrder }: { row: PlanRow; onOpenOrder?: (or
           color: DT.teal,
           background: DT.tealSoft,
           border: "1px solid rgba(12,124,122,0.16)",
-          borderRadius: 4,
+          borderRadius: 8,
           padding: "2px 6px",
           fontFamily: DT.sans,
-          fontWeight: 850,
+          fontWeight: 900,
           cursor: "pointer",
         }}
       >
@@ -5557,7 +5532,7 @@ function LinkedOrderPill({ row, onOpenOrder }: { row: PlanRow; onOpenOrder?: (or
         color: DT.textMuted,
         background: "rgba(0,0,0,0.03)",
         border: "1px solid rgba(0,0,0,0.04)",
-        borderRadius: 4,
+        borderRadius: 8,
         padding: "2px 6px",
         fontFamily: DT.sans,
         fontStyle: "italic",
@@ -5593,7 +5568,7 @@ function DayPills({ row }: { row: PlanRow }) {
                 fontFamily: DT.sans,
                 background: DT.cardBg,
                 border: `1px solid ${DT.border}`,
-                borderRadius: 4,
+                borderRadius: 8,
                 padding: "2px 6px",
                 display: "inline-flex",
                 alignItems: "center",
@@ -5650,11 +5625,11 @@ function NewOrderHalo({
   return (
     <>
       {open && (
-        <section style={{ borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, borderRadius: 12, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.shadow, padding: 12 }}>
+        <section style={{ borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, borderRadius: 14, background: REVIEW_GLOW.bg, boxShadow: REVIEW_GLOW.shadow, padding: 12 }}>
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontSize: 9, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: REVIEW_GLOW.color, fontFamily: DT.sans }}>Suggested task list</div>
+                <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: REVIEW_GLOW.color, fontFamily: DT.sans }}>Suggested task list</div>
                 <h3 style={{ margin: "3px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 18, letterSpacing: "-0.03em" }}>{order.customer}</h3>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                   <Chip label={order.rawMondayStatus ?? order.status} tone="amber" />
@@ -5666,7 +5641,7 @@ function NewOrderHalo({
                 <button
                   type="button"
                   onClick={onApprove}
-                  style={{ border: `1px solid ${REVIEW_GLOW.borderStrong}`, background: REVIEW_GLOW.color, color: "white", borderRadius: 999, padding: "8px 13px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 18px rgba(190,137,24,0.16)" }}
+                  style={{ border: `1px solid ${REVIEW_GLOW.borderStrong}`, background: REVIEW_GLOW.color, color: "white", borderRadius: 999, padding: "8px 13px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 8px 18px rgba(200,169,110,0.16)" }}
                 >
                   Approve tasks to month view
                 </button>
@@ -5674,7 +5649,7 @@ function NewOrderHalo({
                   type="button"
                   aria-label="Close full task list"
                   onClick={onClose}
-                  style={{ width: 35, height: 35, border: `1px solid ${REVIEW_GLOW.borderStrong}`, background: "rgba(255,255,255,0.82)", color: REVIEW_GLOW.color, borderRadius: 999, fontFamily: DT.sans, fontSize: 18, fontWeight: 950, cursor: "pointer", lineHeight: 1 }}
+                  style={{ width: 35, height: 35, border: `1px solid ${REVIEW_GLOW.borderStrong}`, background: "rgba(255,255,255,0.82)", color: REVIEW_GLOW.color, borderRadius: 999, fontFamily: DT.sans, fontSize: 18, fontWeight: 900, cursor: "pointer", lineHeight: 1 }}
                 >
                   ×
                 </button>
@@ -5682,13 +5657,13 @@ function NewOrderHalo({
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "repeat(2, minmax(0, 1fr))" : "repeat(8, minmax(0, 1fr))", gap: 6 }}>
               {detailCards.map(([label, value]) => (
-                <div key={label} style={{ padding: "7px 8px", borderRadius: 9, border: `1px solid ${REVIEW_GLOW.border}`, background: "rgba(255,255,255,0.58)" }}>
+                <div key={label} style={{ padding: "7px 8px", borderRadius: 8, border: `1px solid ${REVIEW_GLOW.border}`, background: "rgba(255,255,255,0.58)" }}>
                   <div style={{ fontSize: 8, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>{label}</div>
                   <div style={{ marginTop: 3, fontSize: 11, lineHeight: 1.35, color: DT.textPrimary, fontWeight: 800 }}>{value}</div>
                 </div>
               ))}
               {order.xero && (
-                <a href={order.xero} target="_blank" rel="noreferrer" style={{ padding: "7px 8px", borderRadius: 9, border: `1px solid ${REVIEW_GLOW.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, textDecoration: "none", fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center" }}>
+                <a href={order.xero} target="_blank" rel="noreferrer" style={{ padding: "7px 8px", borderRadius: 8, border: `1px solid ${REVIEW_GLOW.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, textDecoration: "none", fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center" }}>
                   Xero invoice
                 </a>
               )}
@@ -5697,22 +5672,22 @@ function NewOrderHalo({
               <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: REVIEW_GLOW.color }}>Editable task suggestions</div>
               <div style={{ display: "grid", gap: 6, marginTop: 7 }}>
                 {suggestions.map((step, index) => (
-                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 9, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bgSoft, boxShadow: "0 5px 16px rgba(190,137,24,0.08)" }}>
+                  <div key={step.id} style={{ display: "grid", gridTemplateColumns: isNarrow ? "24px minmax(0, 1fr)" : "24px minmax(180px, 1.5fr) minmax(104px, 0.7fr) minmax(110px, 0.7fr) 70px minmax(140px, 0.9fr)", gap: 6, alignItems: "center", padding: 7, borderRadius: 8, borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.borderStrong} ${REVIEW_GLOW.color}`, background: REVIEW_GLOW.bgSoft, boxShadow: "0 5px 16px rgba(200,169,110,0.08)" }}>
                     <div style={{ width: 22, height: 22, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.70)", color: newOrderPalette.clayAccentDark, fontSize: 10, fontWeight: 900 }}>{index + 1}</div>
                     <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "subgrid", gridColumn: isNarrow ? undefined : "2 / -1", gap: 7, alignItems: "center" }}>
                       <input
                         aria-label={`Step ${index + 1} title`}
                         value={step.title}
                         onChange={(event) => onStepChange(step.id, { title: event.target.value })}
-                      style={{ width: "100%", minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 7, padding: "6px 8px", color: DT.textPrimary, fontSize: 12, fontWeight: 850, fontFamily: DT.sans, background: "rgba(255,255,255,0.82)" }}
+                      style={{ width: "100%", minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 8, padding: "6px 8px", color: DT.textPrimary, fontSize: 12, fontWeight: 900, fontFamily: DT.sans, background: "rgba(255,255,255,0.82)" }}
                       />
                         <select aria-label={`Step ${index + 1} date`} value={step.dateIso} onChange={(event) => {
                           const option = dateOptions.find((current) => current.dateIso === event.target.value);
                           if (option) onStepChange(step.id, { day: option.day, dateIso: option.dateIso, dateLabel: option.dateLabel });
-                        }} style={{ minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 7, padding: "6px 8px", fontSize: 11, color: DT.textMuted, background: "rgba(255,255,255,0.82)" }}>
+                        }} style={{ minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 8, padding: "6px 8px", fontSize: 11, color: DT.textMuted, background: "rgba(255,255,255,0.82)" }}>
                           {dateOptions.map((option) => <option key={option.dateIso} value={option.dateIso}>{option.dateLabel} · {option.weekTitle}</option>)}
                         </select>
-                        <select aria-label={`Step ${index + 1} owner`} value={step.person} onChange={(event) => onStepChange(step.id, { person: event.target.value as Person })} style={{ minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 7, padding: "6px 8px", fontSize: 11, color: DT.textMuted, background: "rgba(255,255,255,0.82)" }}>
+                        <select aria-label={`Step ${index + 1} owner`} value={step.person} onChange={(event) => onStepChange(step.id, { person: event.target.value as Person })} style={{ minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 8, padding: "6px 8px", fontSize: 11, color: DT.textMuted, background: "rgba(255,255,255,0.82)" }}>
                           {PEOPLE.map((person) => <option key={person} value={person}>{PERSON_LABELS[person]}</option>)}
                         </select>
                         <input
@@ -5722,14 +5697,14 @@ function NewOrderHalo({
                           step="0.5"
                           value={step.estimatedHours}
                           onChange={(event) => onStepChange(step.id, { estimatedHours: Number(event.target.value) })}
-                        style={{ minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 7, padding: "6px 8px", fontSize: 11, color: DT.textMuted, background: "rgba(255,255,255,0.82)" }}
+                        style={{ minWidth: 0, border: `1px solid ${newOrderPalette.clayBorder}`, borderRadius: 8, padding: "6px 8px", fontSize: 11, color: DT.textMuted, background: "rgba(255,255,255,0.82)" }}
                         />
                       {(() => {
                         const capacity = capacityByLane[dateCapacityKey(step.dateIso, step.person)];
                         if (!capacity) return null;
                         const style = CAPACITY_STYLES[capacity.status];
                         return (
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, border: `1px solid ${style.border}`, background: style.bg, borderRadius: 8, padding: "6px 7px", fontSize: 10, color: style.color, fontWeight: 850, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, border: `1px solid ${style.border}`, background: style.bg, borderRadius: 8, padding: "6px 7px", fontSize: 10, color: style.color, fontWeight: 900, minWidth: 0 }}>
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{step.dateLabel} {PERSON_LABELS[step.person]}</span>
                           <span style={{ whiteSpace: "nowrap" }}>{style.label} · {capacity.label}</span>
                           </div>
@@ -5785,7 +5760,7 @@ function PlanRowCard({ row, onOpenOrder }: { row: PlanRow; onOpenOrder?: (orderI
             fontFamily: DT.sans,
             padding: "6px 10px",
             background: "rgba(0,0,0,0.015)",
-            borderRadius: 6,
+            borderRadius: 8,
           }}
         >
           {row.notes}
@@ -5981,7 +5956,7 @@ function WeekRow({
           key={person}
           style={{
             background: DT.cardBg,
-            borderRadius: 6,
+            borderRadius: 8,
             border: `1px solid ${DT.border}`,
             padding: 4,
             display: "flex",
@@ -5998,7 +5973,7 @@ function WeekRow({
                 style={{
                   display: "block",
                   padding: "4px 6px",
-                  borderRadius: 4,
+                  borderRadius: 8,
                   background: "rgba(12,124,122,0.05)",
                   border: `1px solid ${DT.border}`,
                   textDecoration: "none",
@@ -6066,10 +6041,10 @@ function PlanTaskDragCard({ task }: { task: DraggablePlanTask }) {
     <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", borderWidth: "1px 1px 1px 6px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
-          <div style={{ marginTop: 3, fontSize: 10, fontWeight: 750, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.text}</div>
+          <div style={{ marginTop: 3, fontSize: 10, fontWeight: 800, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName}</div>
         </div>
-        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontWeight: 950 }}>1h</span>
+        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontWeight: 900 }}>1h</span>
       </div>
     </div>
   );
@@ -6081,10 +6056,10 @@ function AppTaskDragCard({ task }: { task: AppPlanTask }) {
     <div style={{ width: 220, maxWidth: "min(260px, 70vw)", pointerEvents: "none", borderWidth: "1px 1px 1px 6px", borderStyle: "solid", borderColor: `${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.taskBorder} ${personVisual.stripe}`, background: personVisual.taskBg, borderRadius: 8, padding: "7px 8px", boxShadow: "0 14px 34px rgba(34,32,26,0.20)", fontFamily: DT.sans }}>
       <div style={{ display: "flex", alignItems: "start", justifyContent: "space-between", gap: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 950, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.title}</div>
-          <div style={{ marginTop: 3, fontSize: 10, fontWeight: 750, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer ?? "Tuesday task"}</div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, overflowWrap: "anywhere" }}>{task.title}</div>
+          <div style={{ marginTop: 3, fontSize: 10, fontWeight: 800, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer ?? "Tuesday task"}</div>
         </div>
-        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontWeight: 950 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.22)", background: "rgba(110,138,106,0.09)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
       </div>
     </div>
   );
@@ -6135,16 +6110,16 @@ function SortablePlanTaskCard({
   const taskBackground = task.done
     ? DONE_TASK_VISUAL.bg
     : isSelectedOrderTask
-    ? "linear-gradient(135deg, rgba(255,246,199,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
+    ? "linear-gradient(135deg, rgba(255,245,223,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.12))"
     : isNextTask && !isUnlinkedTask
       ? "linear-gradient(135deg, rgba(255,253,249,0.98), rgba(110,138,106,0.12))"
       : isUnlinkedTask
-        ? "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(232,230,224,0.52))"
+        ? "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(232,226,215,0.52))"
         : personVisual.taskBg;
   const taskBorder = task.done
     ? DONE_TASK_VISUAL.border
     : isSelectedOrderTask
-    ? "rgba(190,137,24,0.92)"
+    ? "rgba(200,169,110,0.92)"
     : isNextTask && !isUnlinkedTask
       ? "rgba(110,138,106,0.30)"
       : isUnlinkedTask
@@ -6160,7 +6135,7 @@ function SortablePlanTaskCard({
     : task.done
       ? DONE_TASK_VISUAL.shadow
       : isSelectedOrderTask
-      ? "0 0 0 3px rgba(211,154,35,0.28), 0 0 0 7px rgba(12,124,122,0.08), 0 8px 20px rgba(80,57,20,0.16)"
+      ? "0 0 0 3px rgba(200,169,110,0.28), 0 0 0 7px rgba(12,124,122,0.08), 0 8px 20px rgba(80,57,20,0.16)"
       : isNextTask && !isUnlinkedTask
         ? "0 2px 8px rgba(110,138,106,0.08)"
         : "0 1px 2px rgba(0,0,0,0.025)";
@@ -6192,7 +6167,7 @@ function SortablePlanTaskCard({
         boxSizing: "border-box",
         overflow: "hidden",
         textDecoration: "none",
-        color: task.done ? DONE_TASK_VISUAL.text : isUnlinkedTask ? "#4f4b46" : DT.textPrimary,
+        color: task.done ? DONE_TASK_VISUAL.text : isUnlinkedTask ? DT.textSecondary : DT.textPrimary,
         background: taskBackground,
         borderStyle: task.done || isUnlinkedTask ? "dashed" : "solid",
         borderTopWidth: isSelectedOrderTask ? 2 : 1,
@@ -6203,7 +6178,7 @@ function SortablePlanTaskCard({
         borderRightColor: taskBorder,
         borderBottomColor: taskBorder,
         borderLeftColor: taskStripe,
-        borderRadius: 10,
+        borderRadius: 8,
         minHeight: isSelectedOrderTask ? 96 : 88,
         padding: isSelectedOrderTask ? "9px 9px" : isNextTask ? "8px 8px" : "7px 8px",
         cursor: "default",
@@ -6227,14 +6202,14 @@ function SortablePlanTaskCard({
           <div style={{ minWidth: 0, display: "grid", gap: 3 }}>
             <div data-task-card-meta="task-card-meta" style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flexWrap: "wrap" }}>
               {orderConnectionNeedsAttention && (
-                <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
+                <span title={orderConnection.detail} style={{ flex: "1 1 86px", minWidth: 0, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", color: orderConnectionVisual.color, background: orderConnectionVisual.bg, border: `1px solid ${orderConnectionVisual.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8, fontWeight: 900, whiteSpace: "nowrap", textAlign: "center" }}>{orderConnection.label}</span>
               )}
             </div>
-            {showCustomerLabel && <div data-customer-left-label="customer-left-label" style={{ fontSize: isSelectedOrderTask ? 11 : 10, color: task.done ? DONE_TASK_VISUAL.text : isUnlinkedTask ? "#8d8880" : DT.textPrimary, fontFamily: DT.sans, fontWeight: 980, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>}
+            {showCustomerLabel && <div data-customer-left-label="customer-left-label" style={{ fontSize: isSelectedOrderTask ? 11 : 10, color: task.done ? DONE_TASK_VISUAL.text : isUnlinkedTask ? DT.textFaint : DT.textPrimary, fontFamily: DT.sans, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayCustomerName}</div>}
           </div>
-          <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
+          <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "3px 7px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
         </div>
-        <div data-task-card-title="task-card-title" style={{ alignSelf: "center", fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 820 : 930, lineHeight: 1.18, overflowWrap: "break-word", wordBreak: "normal", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecorationLine: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined, opacity: task.done ? 0.72 : 1 }}>{displayTaskText}</div>
+        <div data-task-card-title="task-card-title" style={{ alignSelf: "center", fontSize: isSelectedOrderTask ? 13.5 : isNextTask ? 12.5 : 12, fontFamily: DT.sans, fontWeight: isSelectedOrderTask ? 980 : isUnlinkedTask ? 820 : 930, lineHeight: 1.18, overflowWrap: "break-word", wordBreak: "normal", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecorationLine: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(124,116,107,0.68)" : undefined, opacity: task.done ? 0.72 : 1 }}>{displayTaskText}</div>
         <div data-task-card-actions="task-card-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 5, minWidth: 0, flexWrap: "nowrap" }}>
           <button
             type="button"
@@ -6248,7 +6223,7 @@ function SortablePlanTaskCard({
               const cardElement = event.currentTarget.closest("[data-plan-task-id]") as HTMLElement | null;
               onTaskDoneToggle?.(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
             }}
-            style={{ flex: "0 0 auto", minHeight: 40, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : DT.border}`, background: task.done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.82)", color: task.done ? DONE_TASK_VISUAL.title : DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
+            style={{ flex: "0 0 auto", minHeight: 40, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : DT.border}`, background: task.done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.82)", color: task.done ? DONE_TASK_VISUAL.title : DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: "pointer", whiteSpace: "nowrap", lineHeight: 1.2 }}
           >
             {task.done ? "↩ Undo" : "✓ Done"}
           </button>
@@ -6358,9 +6333,9 @@ function WorkshopTaskEditor({
         <div style={{ flex: "0 0 auto", padding: "12px 16px 10px", borderBottom: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.94)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Edit workshop task</div>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Edit workshop task</div>
               <h3 style={{ margin: "2px 0 0", fontFamily: DT.serif, fontSize: 25, lineHeight: 1.02, color: DT.textPrimary, overflowWrap: "anywhere" }}>{draft.text.trim() || task.text}</h3>
-              <div style={{ marginTop: 4, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 850 }}>
+              <div style={{ marginTop: 4, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", fontFamily: DT.sans, fontSize: 10.5, color: DT.textMuted, fontWeight: 900 }}>
                 <span>{draft.rowName.trim() || "Customer / order"}</span>
                 <span aria-hidden="true">/</span>
                 <span>{selectedDateLabel}</span>
@@ -6368,14 +6343,14 @@ function WorkshopTaskEditor({
                 <span>{PERSON_LABELS[draft.person]}</span>
               </div>
             </div>
-            <button type="button" onClick={onClose} style={{ flex: "0 0 auto", minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 9, padding: "9px 12px", cursor: "pointer", color: DT.textMuted, fontWeight: 900 }}>Close</button>
+            <button type="button" onClick={onClose} style={{ flex: "0 0 auto", minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 8, padding: "9px 12px", cursor: "pointer", color: DT.textMuted, fontWeight: 900 }}>Close</button>
           </div>
         </div>
 
         <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto", padding: 12 }}>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(320px, 0.95fr)", gap: 12, alignItems: "start" }}>
             <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
-              <section style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 12, padding: 10, display: "grid", gap: 8 }}>
+              <section style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 14, padding: 10, display: "grid", gap: 8 }}>
                 <label style={{ display: "grid", gap: 5, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
                   What to do
                   <select
@@ -6385,20 +6360,20 @@ function WorkshopTaskEditor({
                       if (event.target.value === STAGE_CUSTOM_VALUE) return;
                       setDraft((current) => ({ ...current, text: event.target.value }));
                     }}
-                    style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: DT.cardBg, fontWeight: 850 }}
+                    style={{ border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: DT.cardBg, fontWeight: 900 }}
                   >
                     <option value="" disabled>Choose standard table stage...</option>
                     {TABLE_TASK_STAGE_SUGGESTIONS.map((stage, optionIndex) => <option key={stage} value={stage}>{numberedJobTaskOptionLabel(stage, optionIndex)}</option>)}
                     <option value={STAGE_CUSTOM_VALUE}>Custom task...</option>
                   </select>
                   {isCustomTask && (
-                    <input aria-label="Custom task" value={draft.text} onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Describe custom task" style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: "rgba(255,255,255,0.94)" }} />
+                    <input aria-label="Custom task" value={draft.text} onChange={(event) => setDraft((current) => ({ ...current, text: event.target.value }))} placeholder="Describe custom task" style={{ border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: "rgba(255,255,255,0.94)" }} />
                   )}
                 </label>
 
                 <label style={{ display: "grid", gap: 5, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
                   Customer / order label
-                  <input value={draft.rowName} onChange={(event) => setDraft((current) => ({ ...current, rowName: event.target.value }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: "rgba(255,255,255,0.94)", fontWeight: 850 }} />
+                  <input value={draft.rowName} onChange={(event) => setDraft((current) => ({ ...current, rowName: event.target.value }))} style={{ border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: "rgba(255,255,255,0.94)", fontWeight: 900 }} />
                 </label>
 
                 <label style={{ display: "grid", gap: 5, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 900 }}>
@@ -6410,17 +6385,17 @@ function WorkshopTaskEditor({
                     step="0.5"
                     value={hours}
                     onChange={(event) => setDraft((current) => ({ ...current, estimatedHours: cleanTaskEstimatedHours(event.target.value) }))}
-                    style={{ border: `1px solid ${hours === 0 ? "rgba(153,27,27,0.24)" : DT.border}`, borderRadius: 9, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: "rgba(255,255,255,0.94)", fontWeight: 850 }}
+                    style={{ border: `1px solid ${hours === 0 ? "rgba(154,59,47,0.24)" : DT.border}`, borderRadius: 8, padding: "8px 10px", fontSize: 13, color: DT.textPrimary, background: "rgba(255,255,255,0.94)", fontWeight: 900 }}
                   />
                 </label>
               </section>
 
-              <section style={{ border: `1px solid ${DT.border}`, borderRadius: 12, padding: 10, background: "rgba(255,255,255,0.82)" }}>
+              <section style={{ border: `1px solid ${DT.border}`, borderRadius: 14, padding: 10, background: "rgba(255,255,255,0.82)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-                  <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Order connection</div>
-                  <span style={{ color: connectionVisual.color, background: connectionVisual.bg, border: `1px solid ${connectionVisual.border}`, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{activeConnection.label}</span>
+                  <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Order connection</div>
+                  <span style={{ color: connectionVisual.color, background: connectionVisual.bg, border: `1px solid ${connectionVisual.border}`, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{activeConnection.label}</span>
                 </div>
-                <select value={orderId} onChange={(event) => setOrderId(event.target.value)} style={{ marginTop: 8, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 9, padding: "8px 10px", color: DT.textPrimary, background: DT.cardBg, fontSize: 13 }}>
+                <select value={orderId} onChange={(event) => setOrderId(event.target.value)} style={{ marginTop: 8, width: "100%", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 10px", color: DT.textPrimary, background: DT.cardBg, fontSize: 13 }}>
                   <option value="">Choose customer/order...</option>
                   {orders.map((order) => <option key={order.id} value={order.id}>{order.customer}</option>)}
                 </select>
@@ -6431,26 +6406,26 @@ function WorkshopTaskEditor({
                   </div>
                 )}
                 <div style={{ marginTop: 9, display: "flex", gap: 7, flexWrap: "wrap" }}>
-                  <button type="button" onClick={() => orderId && onConnectOrder(task, Number(orderId))} disabled={!orderId} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: orderId ? DT.tealSoft : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Connect order</button>
-                  <button type="button" onClick={openSelectedOrderDetails} disabled={!orderId} title={selectedOrder ? `Open ${selectedOrder.customer} full order details` : "Choose an order first"} style={{ minHeight: 40, border: `1px solid ${orderId ? "rgba(12,124,122,0.20)" : DT.border}`, background: orderId ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: orderId ? "pointer" : "not-allowed" }}>Open full order details</button>
-                  <button type="button" onClick={markInternal} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.84)", color: DT.textMuted, borderRadius: 9, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer" }}>No customer / internal</button>
+                  <button type="button" onClick={() => orderId && onConnectOrder(task, Number(orderId))} disabled={!orderId} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.20)`, background: orderId ? DT.tealSoft : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: orderId ? "pointer" : "not-allowed" }}>Connect order</button>
+                  <button type="button" onClick={openSelectedOrderDetails} disabled={!orderId} title={selectedOrder ? `Open ${selectedOrder.customer} full order details` : "Choose an order first"} style={{ minHeight: 40, border: `1px solid ${orderId ? "rgba(12,124,122,0.20)" : DT.border}`, background: orderId ? "rgba(255,255,255,0.86)" : "rgba(0,0,0,0.035)", color: orderId ? DT.teal : DT.textFaint, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: orderId ? "pointer" : "not-allowed" }}>Open full order details</button>
+                  <button type="button" onClick={markInternal} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.84)", color: DT.textMuted, borderRadius: 8, padding: "9px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer" }}>No customer / internal</button>
                 </div>
               </section>
             </div>
 
             <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
-              <section style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 12, padding: 10 }}>
+              <section style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 14, padding: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
                   <div>
-                    <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Date</div>
+                    <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Date</div>
                     <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, fontWeight: 900 }}>{selectedDateLabel}</div>
                   </div>
-                  <span style={{ border: "1px solid rgba(12,124,122,0.18)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>6 weeks</span>
+                  <span style={{ border: "1px solid rgba(12,124,122,0.18)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "3px 8px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>6 weeks</span>
                 </div>
                 <div data-workshop-date-list="six-week-date-options" style={{ marginTop: 8, maxHeight: 220, overflowY: "auto", paddingRight: 4, display: "grid", gap: 8 }}>
                   {dateOptionGroups.map((group) => (
                     <div key={group.weekTitle}>
-                      <div style={{ marginBottom: 4, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>{group.weekTitle}</div>
+                      <div style={{ marginBottom: 4, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>{group.weekTitle}</div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 5 }}>
                         {group.options.map((option) => {
                           const active = option.weekId === draft.weekId && option.day === draft.day;
@@ -6460,10 +6435,10 @@ function WorkshopTaskEditor({
                               key={`${option.weekId}:${option.day}`}
                               data-workshop-date-option={option.dateIso}
                               onClick={() => chooseDate(option)}
-                              style={{ minHeight: 42, border: `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.82)", color: active ? DT.teal : DT.textPrimary, borderRadius: 9, padding: "6px 5px", cursor: "pointer", boxShadow: active ? "inset 0 0 0 1px rgba(12,124,122,0.16)" : undefined, textAlign: "center" }}
+                              style={{ minHeight: 42, border: `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.82)", color: active ? DT.teal : DT.textPrimary, borderRadius: 8, padding: "6px 5px", cursor: "pointer", boxShadow: active ? "inset 0 0 0 1px rgba(12,124,122,0.16)" : undefined, textAlign: "center" }}
                             >
-                              <span style={{ display: "block", fontFamily: DT.sans, fontSize: 11, fontWeight: 950, lineHeight: 1.15 }}>{option.dateLabel.split(", ")[0]}</span>
-                              <span style={{ display: "block", marginTop: 2, fontFamily: DT.sans, fontSize: 9, fontWeight: 850, color: active ? DT.teal : DT.textMuted, lineHeight: 1.15 }}>{option.dateLabel.split(", ")[1] ?? ""}</span>
+                              <span style={{ display: "block", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, lineHeight: 1.15 }}>{option.dateLabel.split(", ")[0]}</span>
+                              <span style={{ display: "block", marginTop: 2, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: active ? DT.teal : DT.textMuted, lineHeight: 1.15 }}>{option.dateLabel.split(", ")[1] ?? ""}</span>
                             </button>
                           );
                         })}
@@ -6473,8 +6448,8 @@ function WorkshopTaskEditor({
                 </div>
               </section>
 
-              <section style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 12, padding: 10 }}>
-                <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Person</div>
+              <section style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.82)", borderRadius: 14, padding: 10 }}>
+                <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.textFaint }}>Person</div>
                 <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
                   {PEOPLE.map((person) => {
                     const active = draft.person === person;
@@ -6483,7 +6458,7 @@ function WorkshopTaskEditor({
                         type="button"
                         key={person}
                         onClick={() => setDraft((current) => ({ ...current, person }))}
-                        style={{ minHeight: 40, border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.82)", color: active ? DT.teal : DT.textMuted, borderRadius: 9, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer" }}
+                        style={{ minHeight: 40, border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`, background: active ? DT.tealSoft : "rgba(255,255,255,0.82)", color: active ? DT.teal : DT.textMuted, borderRadius: 8, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}
                       >
                         {PERSON_LABELS[person]}
                       </button>
@@ -6493,10 +6468,10 @@ function WorkshopTaskEditor({
               </section>
 
               {editorChecks.length > 0 && (
-                <section style={{ border: "1px solid rgba(154,106,20,0.20)", background: "rgba(255,250,235,0.76)", borderRadius: 12, padding: 10 }}>
-                  <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.07em", color: "#8a5d08" }}>Review before saving</div>
+                <section style={{ border: "1px solid rgba(154,106,20,0.20)", background: "rgba(255,250,235,0.76)", borderRadius: 14, padding: 10 }}>
+                  <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.goldInk }}>Review before saving</div>
                   <div style={{ marginTop: 7, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {editorChecks.map((check) => <span key={check} style={{ border: "1px solid rgba(154,106,20,0.18)", background: "rgba(255,255,255,0.68)", color: "#8a5d08", borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{check}</span>)}
+                    {editorChecks.map((check) => <span key={check} style={{ border: "1px solid rgba(154,106,20,0.18)", background: "rgba(255,255,255,0.68)", color: DT.goldInk, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{check}</span>)}
                   </div>
                 </section>
               )}
@@ -6505,10 +6480,10 @@ function WorkshopTaskEditor({
         </div>
 
         <div style={{ flex: "0 0 auto", display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", padding: "10px 14px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.96)" }}>
-          <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 750 }}>Saves this card in Tuesday only. It does not change the source order record.</span>
+          <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>Saves this card in Tuesday only. It does not change the source order record.</span>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-            <button type="button" onClick={onClose} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 9, padding: "9px 14px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
-            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: "#fff", borderRadius: 9, padding: "9px 14px", fontWeight: 950, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.14)" }}>Save task edits</button>
+            <button type="button" onClick={onClose} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 14px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
+            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: "#fff", borderRadius: 8, padding: "9px 14px", fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.14)" }}>Save task edits</button>
           </div>
         </div>
       </div>
@@ -6603,13 +6578,13 @@ function SortableSuggestedStepCard({
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0, marginBottom: 2 }}>
-            <span style={{ flex: "0 0 auto", fontSize: 8, color: REVIEW_GLOW.color, fontFamily: DT.sans, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.04em" }}>{approved ? "Approved draft" : "Draft"}</span>
-            <span style={{ minWidth: 0, fontSize: 9, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 850, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.dateLabel}</span>
+            <span style={{ flex: "0 0 auto", fontSize: 8, color: REVIEW_GLOW.color, fontFamily: DT.sans, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>{approved ? "Approved draft" : "Draft"}</span>
+            <span style={{ minWidth: 0, fontSize: 9, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.dateLabel}</span>
           </div>
-          <div style={{ fontSize: 12, fontFamily: DT.sans, fontWeight: 920, lineHeight: 1.18, overflowWrap: "anywhere" }}>{step.title}</div>
-          <div style={{ marginTop: 3, fontSize: 10, color: DT.textMuted, fontFamily: DT.sans, fontWeight: 750, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{customer ?? step.noWriteLabel}</div>
+          <div style={{ fontSize: 12, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1.18, overflowWrap: "anywhere" }}>{step.title}</div>
+          <div style={{ marginTop: 3, fontSize: 10, color: DT.textMuted, fontFamily: DT.sans, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{customer ?? step.noWriteLabel}</div>
         </div>
-        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{Number(step.estimatedHours || 1)}h</span>
+        <span style={{ flex: "0 0 auto", border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, lineHeight: 1 }}>{Number(step.estimatedHours || 1)}h</span>
       </div>
     </div>
   );
@@ -6651,11 +6626,11 @@ function DroppablePlanLane({
       data-plan-lane-date-iso={dateIso}
       data-plan-lane-date-label={dateLabel}
       onDragOver={(event) => event.preventDefault()}
-      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 9, borderWidth: "1px 1px 1px 3px", borderStyle: "dashed dashed dashed solid", borderColor: (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
+      style={{ minHeight: 54, minWidth: 0, overflow: "hidden", padding: 5, borderRadius: 8, borderWidth: "1px 1px 1px 3px", borderStyle: "dashed dashed dashed solid", borderColor: (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + (isDropTarget ? "rgba(110,138,106,0.62)" : personVisual.laneBorder) + " " + personVisual.stripe, background: isDropTarget ? "rgba(110,138,106,0.085)" : "linear-gradient(135deg, " + personVisual.laneBg + ", " + (isTodayColumn ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.38)") + ")", transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease", boxShadow: isTodayColumn ? "inset 0 0 0 1px " + personVisual.taskSoft : undefined }}
     >
       <div style={{ marginBottom: 5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, flexWrap: "wrap", minWidth: 0 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9, color: personVisual.text, fontFamily: DT.sans, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: "0 0 0 3px " + personVisual.taskSoft, flex: "0 0 auto" }} />{PERSON_LABELS[person]}</span>
-        <span title={capacity.detail} style={{ border: `1px solid ${capacityStyle.border}`, background: capacityStyle.bg, color: capacityStyle.color, borderRadius: 999, padding: "2px 5px", fontSize: 8, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9, color: personVisual.text, fontFamily: DT.sans, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: "0 0 0 3px " + personVisual.taskSoft, flex: "0 0 auto" }} />{PERSON_LABELS[person]}</span>
+        <span title={capacity.detail} style={{ border: `1px solid ${capacityStyle.border}`, background: capacityStyle.bg, color: capacityStyle.color, borderRadius: 999, padding: "2px 5px", fontSize: 8, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1, maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {capacityText}
         </span>
       </div>
@@ -6753,16 +6728,16 @@ function MobileScheduleAgenda({
     return (
       <div key={task.id} style={{ borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: `${done ? DONE_TASK_VISUAL.border : personVisual.taskBorder} ${done ? DONE_TASK_VISUAL.border : personVisual.taskBorder} ${done ? DONE_TASK_VISUAL.border : personVisual.taskBorder} ${done ? DONE_TASK_VISUAL.stripe : personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.88)", padding: "4px 5px", display: "grid", gap: 2 }}>
         <div style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr) auto 40px", gap: 5, alignItems: "center" }}>
-          <button type="button" role="checkbox" aria-checked={done} aria-label={done ? "Mark task not done" : "Mark task done"} onClick={(event) => { event.stopPropagation(); onTaskDoneToggle?.(task, !done, { x: event.clientX, y: event.clientY }); }} style={{ width: 40, height: 40, border: `1.5px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: done ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, lineHeight: 1 }}>{done ? "✓" : ""}</button>
-          <button type="button" onClick={() => onTaskSelect?.(task)} onDoubleClick={() => onTaskOpen?.(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>
+          <button type="button" role="checkbox" aria-checked={done} aria-label={done ? "Mark task not done" : "Mark task done"} onClick={(event) => { event.stopPropagation(); onTaskDoneToggle?.(task, !done, { x: event.clientX, y: event.clientY }); }} style={{ width: 40, height: 40, border: `1.5px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: done ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900, lineHeight: 1 }}>{done ? "✓" : ""}</button>
+          <button type="button" onClick={() => onTaskSelect?.(task)} onDoubleClick={() => onTaskOpen?.(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>
             {title}
           </button>
           <span style={{ color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
-          <button type="button" aria-label="Edit task" onClick={(event) => { event.stopPropagation(); onTaskEdit?.(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950 }}>✎</button>
+          <button type="button" aria-label="Edit task" onClick={(event) => { event.stopPropagation(); onTaskEdit?.(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900 }}>✎</button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, paddingLeft: 23 }}>
-          {(needsOrder || possibleOrder) && <span style={{ border: "1px solid rgba(190,137,24,0.24)", background: "rgba(255,246,199,0.78)", color: "#9a5b12", borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, whiteSpace: "nowrap" }}>{needsOrder ? "Needs order" : "Check order"}</span>}
-          <button type="button" onClick={() => needsOrder ? onTaskEdit?.(task) : onTaskOpen?.(task)} style={{ minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName || selectedOrder?.customer || "Workshop task"}</button>
+          {(needsOrder || possibleOrder) && <span style={{ border: "1px solid rgba(200,169,110,0.24)", background: "rgba(255,245,223,0.78)", color: DT.goldInk, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>{needsOrder ? "Needs order" : "Check order"}</span>}
+          <button type="button" onClick={() => needsOrder ? onTaskEdit?.(task) : onTaskOpen?.(task)} style={{ minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.rowName || selectedOrder?.customer || "Workshop task"}</button>
         </div>
       </div>
     );
@@ -6771,37 +6746,37 @@ function MobileScheduleAgenda({
     const personVisual = PERSON_VISUALS[task.person];
     const done = Boolean(task.done);
     return (
-      <div key={task.id} style={{ width: "100%", borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : `rgba(190,137,24,0.42) rgba(190,137,24,0.42) rgba(190,137,24,0.42) ${personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.90)", padding: "4px 5px", display: "grid", gap: 2 }}>
+      <div key={task.id} style={{ width: "100%", borderWidth: "1px 1px 1px 3px", borderStyle: done ? "dashed" : "solid", borderColor: done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : `rgba(200,169,110,0.42) rgba(200,169,110,0.42) rgba(200,169,110,0.42) ${personVisual.stripe}`, borderRadius: 8, background: done ? DONE_TASK_VISUAL.bg : "rgba(255,255,255,0.90)", padding: "4px 5px", display: "grid", gap: 2 }}>
         <div style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr) auto 40px", gap: 5, alignItems: "center" }}>
-          <button type="button" role="checkbox" aria-checked={done} aria-label={done ? "Mark task not done" : "Mark task done"} onClick={(event) => { event.stopPropagation(); onAppTaskDoneToggle?.(task, !done, { x: event.clientX, y: event.clientY }); }} style={{ width: 40, height: 40, border: `1.5px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: done ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, lineHeight: 1 }}>{done ? "✓" : ""}</button>
-          <button type="button" onClick={() => onAppTaskSelect?.(task)} onDoubleClick={() => onAppTaskOpen?.(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>{task.title}</button>
-          <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
-          <button type="button" aria-label="Open task details" onClick={(event) => { event.stopPropagation(); onAppTaskOpen?.(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950 }}>↗</button>
+          <button type="button" role="checkbox" aria-checked={done} aria-label={done ? "Mark task not done" : "Mark task done"} onClick={(event) => { event.stopPropagation(); onAppTaskDoneToggle?.(task, !done, { x: event.clientX, y: event.clientY }); }} style={{ width: 40, height: 40, border: `1.5px solid ${done ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: done ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: done ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900, lineHeight: 1 }}>{done ? "✓" : ""}</button>
+          <button type="button" onClick={() => onAppTaskSelect?.(task)} onDoubleClick={() => onAppTaskOpen?.(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>{task.title}</button>
+          <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+          <button type="button" aria-label="Open task details" onClick={(event) => { event.stopPropagation(); onAppTaskOpen?.(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900 }}>↗</button>
         </div>
-        <button type="button" onClick={() => onAppTaskOpen?.(task)} style={{ marginLeft: 23, minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"} · {task.source === "intake" ? "Order" : "Job"}</button>
+        <button type="button" onClick={() => onAppTaskOpen?.(task)} style={{ marginLeft: 23, minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"} · {task.source === "intake" ? "Order" : "Job"}</button>
       </div>
     );
   };
   const suggestionRow = (step: SuggestedOrderPlanStep) => (
-    <button key={step.id} type="button" onClick={onSuggestedStepSelect} onDoubleClick={onSuggestedStepOpen} style={{ width: "100%", border: "1px dashed rgba(12,124,122,0.26)", borderLeft: `3px solid ${PERSON_VISUALS[step.person].stripe}`, borderRadius: 8, background: approvedSuggestions ? "rgba(237,248,247,0.78)" : "rgba(255,246,199,0.62)", padding: "4px 5px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 5, alignItems: "center", textAlign: "left" }}>
+    <button key={step.id} type="button" onClick={onSuggestedStepSelect} onDoubleClick={onSuggestedStepOpen} style={{ width: "100%", border: "1px dashed rgba(12,124,122,0.26)", borderLeft: `3px solid ${PERSON_VISUALS[step.person].stripe}`, borderRadius: 8, background: approvedSuggestions ? "rgba(231,243,242,0.78)" : "rgba(255,245,223,0.62)", padding: "4px 5px", display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 5, alignItems: "center", textAlign: "left" }}>
       <span style={{ minWidth: 0 }}>
-        <span style={{ display: "block", color: DT.textPrimary, fontFamily: DT.sans, fontSize: 10.5, fontWeight: 920, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.title}</span>
-        <span style={{ display: "block", marginTop: 2, color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 820, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{suggestedStepCustomer || selectedOrder?.customer || step.detail || "Suggested order task"}</span>
+        <span style={{ display: "block", color: DT.textPrimary, fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{step.title}</span>
+        <span style={{ display: "block", marginTop: 2, color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{suggestedStepCustomer || selectedOrder?.customer || step.detail || "Suggested order task"}</span>
       </span>
-      <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, whiteSpace: "nowrap" }}>{formatTaskHours(step.estimatedHours)}</span>
+      <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap" }}>{formatTaskHours(step.estimatedHours)}</span>
     </button>
   );
   return (
     <section data-mobile-schedule-agenda="true" style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, padding: 6, display: "grid", gap: 6 }}>
       <ScheduleWeekBar week={week} weekLabel={displayWeekTitle(week.title)} tasks={tasks} appTasks={appTasks} suggestedSteps={suggestedSteps} weekIndex={weekIndex} weekCount={weekCount} onPreviousWeek={onPreviousWeek} onNextWeek={onNextWeek} isNarrow />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.teal, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current week</div> : <span />}
+        {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: DT.teal, textTransform: "uppercase", letterSpacing: "0.05em" }}>Current week</div> : <span />}
         {showDraftControls && isDraftChanged && <button type="button" onClick={onResetDraftLayout} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontSize: 9, fontFamily: DT.sans, fontWeight: 900 }}>Revert</button>}
       </div>
-      {visibleDays.length === 0 ? <div style={{ padding: 12, color: DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 850 }}>No scheduled tasks for this week.</div> : visibleDays.map((day) => (
-        <section key={day.day} id={`schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.20)" : DT.border}`, borderRadius: 11, background: day.isToday ? "rgba(237,248,247,0.42)" : "rgba(255,255,255,0.58)", padding: 6, display: "grid", gap: 6 }}>
+      {visibleDays.length === 0 ? <div style={{ padding: 12, color: DT.textMuted, fontFamily: DT.sans, fontSize: 11, fontWeight: 900 }}>No scheduled tasks for this week.</div> : visibleDays.map((day) => (
+        <section key={day.day} id={`schedule-${week.id}-${day.day}`} style={{ border: `1px solid ${day.isToday ? "rgba(12,124,122,0.20)" : DT.border}`, borderRadius: 8, background: day.isToday ? "rgba(231,243,242,0.42)" : "rgba(255,255,255,0.58)", padding: 6, display: "grid", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-            <h3 style={{ margin: 0, color: day.isToday ? DT.teal : DT.textPrimary, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, lineHeight: 1 }}>{day.isToday ? "Today · " : ""}{day.dateOption?.dateLabel ?? DAY_LABELS[day.day]}</h3>
+            <h3 style={{ margin: 0, color: day.isToday ? DT.teal : DT.textPrimary, fontFamily: DT.sans, fontSize: 11, fontWeight: 900, lineHeight: 1 }}>{day.isToday ? "Today · " : ""}{day.dateOption?.dateLabel ?? DAY_LABELS[day.day]}</h3>
             <span style={{ color: DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(day.totalHours)}</span>
           </div>
           {day.people.filter((lane) => lane.laneTasks.length || lane.laneAppTasks.length || lane.laneSuggestions.length).map((lane) => {
@@ -6810,8 +6785,8 @@ function MobileScheduleAgenda({
             return (
               <div key={lane.person} style={{ display: "grid", gap: 3 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: personVisual.text, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.04em" }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: personVisual.stripe }} />{PERSON_LABELS[lane.person]}</span>
-                  <span style={{ color: overCapacity ? "#991b1b" : DT.textMuted, background: overCapacity ? "rgba(153,27,27,0.08)" : "rgba(255,255,255,0.70)", border: `1px solid ${overCapacity ? "rgba(153,27,27,0.18)" : DT.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950 }}>{formatTaskHours(lane.hours)} / 7h</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color: personVisual.text, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: personVisual.stripe }} />{PERSON_LABELS[lane.person]}</span>
+                  <span style={{ color: overCapacity ? DT.clay : DT.textMuted, background: overCapacity ? "rgba(154,59,47,0.08)" : "rgba(255,255,255,0.70)", border: `1px solid ${overCapacity ? "rgba(154,59,47,0.18)" : DT.border}`, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(lane.hours)} / 7h</span>
                 </div>
                 <div style={{ display: "grid", gap: 3 }}>
                   {lane.laneTasks.map(taskRow)}
@@ -6956,7 +6931,7 @@ function MonthWeekSection({
       )}
       <section data-current-week-prominent-border={isCurrentWeek ? "current-week-prominent-border" : undefined} style={{ ...PRODUCTION_PANEL_STYLE, borderColor: isCurrentWeek ? "rgba(12,124,122,0.24)" : DT.border, overflow: "hidden", minWidth: 0 }}>
         {(isCurrentWeek || weekHeaderControl || (showDraftControls && isDraftChanged) || !hasVisibleTasks) && <div style={{ padding: "7px 12px", borderBottom: `1px solid ${DT.border}`, display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", background: "rgba(255,255,255,0.38)" }}>
-          {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div> : <span />}
+          {isCurrentWeek ? <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.teal }}>Current week</div> : <span />}
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", justifyContent: "flex-end", flex: "1 1 520px" }}>
             {weekHeaderControl}
             {showDraftControls && isDraftChanged && <Chip label="Move saving..." tone="amber" />}
@@ -6978,7 +6953,7 @@ function MonthWeekSection({
             const dateOption = suggestedDateOptionForWeekDay(week, day);
             return (
               <div key={day} style={{ flex: isNarrow ? "0 0 250px" : undefined, minWidth: 0, minHeight: showPlanningLanes ? 146 : 42, padding: 8, borderLeft: day === "monday" || isNarrow ? "none" : `1px solid ${DT.border}`, borderRight: isNarrow ? `1px solid ${DT.border}` : undefined, background: isTodayColumn ? "linear-gradient(180deg, rgba(12,124,122,0.065), rgba(255,255,255,0))" : "rgba(255,255,255,0.18)" }}>
-                {isTodayColumn && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: showPlanningLanes ? 7 : 0 }}><span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950 }}>Today</span></div>}
+                {isTodayColumn && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: showPlanningLanes ? 7 : 0 }}><span style={{ border: "1px solid rgba(12,124,122,0.22)", background: DT.tealSoft, color: DT.teal, borderRadius: 999, padding: "2px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 900 }}>Today</span></div>}
                 {showPlanningLanes && (
                   <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     {visiblePeople.map((person) => {
@@ -7054,23 +7029,23 @@ function MonthWeekSection({
                                 background: task.done ? DONE_TASK_VISUAL.bg : "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94) 54%, rgba(12,124,122,0.08))",
                                 borderWidth: "2px 2px 2px 7px",
                                 borderStyle: task.done ? "dashed" : "solid",
-                                borderColor: task.done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : "rgba(190,137,24,0.86) rgba(190,137,24,0.86) rgba(190,137,24,0.86) " + PERSON_VISUALS[person].stripe,
+                                borderColor: task.done ? `${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.border} ${DONE_TASK_VISUAL.stripe}` : "rgba(200,169,110,0.86) rgba(200,169,110,0.86) rgba(200,169,110,0.86) " + PERSON_VISUALS[person].stripe,
                                 borderRadius: 8,
                                 padding: "8px 8px",
                                 cursor: onAppTaskSelect ? "pointer" : "default",
                                 opacity: 1,
-                                boxShadow: task.done ? DONE_TASK_VISUAL.shadow : "0 0 0 3px rgba(211,154,35,0.24), 0 0 0 7px rgba(12,124,122,0.08), 0 8px 20px rgba(80,57,20,0.14)",
+                                boxShadow: task.done ? DONE_TASK_VISUAL.shadow : "0 0 0 3px rgba(200,169,110,0.24), 0 0 0 7px rgba(12,124,122,0.08), 0 8px 20px rgba(80,57,20,0.14)",
                                 outline: "none",
                               }}
                             >
                               <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start", minWidth: 0 }}>
                                 <div style={{ minWidth: 0 }}>
-                                  <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 980, lineHeight: 1.2, overflowWrap: "anywhere", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecorationLine: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(111,107,99,0.68)" : undefined }}>{task.title}</div>
+                                  <div style={{ fontSize: 12.5, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1.2, overflowWrap: "anywhere", color: task.done ? DONE_TASK_VISUAL.title : undefined, textDecorationLine: task.done ? "line-through" : "none", textDecorationColor: task.done ? "rgba(124,116,107,0.68)" : undefined }}>{task.title}</div>
                                   {(task.customer || selectedOrder?.customer) && <div style={{ marginTop: 3, fontSize: 9, color: task.done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, lineHeight: 1.28, overflowWrap: "anywhere", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer}</div>}
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
-                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 950, lineHeight: 1 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
-                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 950, whiteSpace: "nowrap" }}>{task.done ? "Done" : task.source === "intake" ? "Order" : "Job"}</span>
+                                  <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, lineHeight: 1 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
+                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 900, whiteSpace: "nowrap" }}>{task.done ? "Done" : task.source === "intake" ? "Order" : "Job"}</span>
                                 </div>
                               </div>
                             </div>
@@ -7093,7 +7068,7 @@ function MonthWeekSection({
                             );
                           })}
                           {laneTasks.length === 0 && laneAppTasks.length === 0 && laneSuggestions.length === 0 && (
-                            <div style={{ padding: "6px 4px", borderRadius: 6, color: "rgba(124,116,107,0.54)", fontSize: 9, fontFamily: DT.sans, fontStyle: "italic", textAlign: "center" }}>Drop task</div>
+                            <div style={{ padding: "6px 4px", borderRadius: 8, color: "rgba(124,116,107,0.54)", fontSize: 9, fontFamily: DT.sans, fontStyle: "italic", textAlign: "center" }}>Drop task</div>
                           )}
                         </DroppablePlanLane>
                       );
@@ -7186,8 +7161,8 @@ function WorkshopFocusBar({
             onClick={() => onPersonFilterChange(option.id)}
             style={{ boxSizing: "border-box", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: isNarrow ? 3 : 5, border: isNarrow ? 0 : `1px solid ${active ? "rgba(12,124,122,0.34)" : DT.border}`, background: active ? DT.tealSoft : isNarrow ? "transparent" : "rgba(255,255,255,0.72)", color: active ? DT.teal : DT.textMuted, borderRadius: isNarrow ? 999 : 10, padding: isNarrow ? "8px 8px" : "8px 10px", fontFamily: DT.sans, cursor: "pointer", height: isNarrow ? 40 : undefined, minHeight: isNarrow ? 40 : 40, minWidth: isNarrow ? 0 : 112, flex: isNarrow ? "1 1 0" : undefined, textAlign: "center", whiteSpace: "nowrap", touchAction: "manipulation" }}
           >
-            <span style={{ fontSize: isNarrow ? 11 : 11, fontWeight: 950, lineHeight: 1 }}>{option.label}</span>
-            {!isNarrow && <span style={{ fontSize: 9, fontWeight: 850, lineHeight: 1, color: active ? DT.teal : DT.textFaint }}>{option.sublabel}</span>}
+            <span style={{ fontSize: isNarrow ? 11 : 11, fontWeight: 900, lineHeight: 1 }}>{option.label}</span>
+            {!isNarrow && <span style={{ fontSize: 9, fontWeight: 900, lineHeight: 1, color: active ? DT.teal : DT.textFaint }}>{option.sublabel}</span>}
           </button>
         );
       })}
@@ -7199,7 +7174,7 @@ function WorkshopFocusBar({
 function processTemplateIssueStyle(level: ProcessTemplateIssueLevel): CSSProperties {
   if (level === "aligned") return { borderColor: "rgba(110,138,106,0.24)", background: "rgba(110,138,106,0.10)", color: DT.sage };
   if (level === "gap") return { borderColor: "rgba(154,59,47,0.18)", background: "rgba(154,59,47,0.08)", color: DT.clay };
-  return { borderColor: "rgba(200,169,110,0.28)", background: "rgba(200,169,110,0.13)", color: "#8a5b1f" };
+  return { borderColor: "rgba(200,169,110,0.28)", background: "rgba(200,169,110,0.13)", color: DT.goldInk };
 }
 
 const PROCESS_TEMPLATE_ISSUE_OPTIONS: ProcessTemplateIssueLevel[] = ["aligned", "watch", "gap"];
@@ -7221,12 +7196,12 @@ function processTemplateInputStyle(extra: CSSProperties = {}): CSSProperties {
     width: "100%",
     minWidth: 0,
     border: "1px solid rgba(60,60,67,0.16)",
-    borderRadius: 12,
+    borderRadius: 14,
     background: "rgba(255,255,255,0.92)",
     color: DT.textPrimary,
     fontFamily: DT.sans,
     fontSize: 12,
-    fontWeight: 850,
+    fontWeight: 900,
     minHeight: 40,
     padding: "7px 9px",
     outline: "none",
@@ -7304,7 +7279,7 @@ function processTemplateColumnStyle(tone: "logic" | "tasks" | "flow"): CSSProper
     border: `1px solid ${tones.border}`,
     borderLeft: `3px solid ${tones.stripe}`,
     background: tones.background,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 12,
     boxSizing: "border-box",
   };
@@ -7352,7 +7327,7 @@ function SortableProcessTemplatePathRow({
       ref={setNodeRef}
       key={row.id}
       data-process-template-row="path"
-      style={{ display: "grid", gridTemplateColumns: "58px minmax(170px, 1.18fr) minmax(96px, 0.5fr) 68px minmax(168px, 1fr) minmax(104px, 0.52fr) 118px minmax(104px, 0.52fr) 150px", gap: 7, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(190,137,24,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 11, padding: "7px 8px", background: isDragging ? "rgba(237,248,247,0.96)" : pathWait ? "rgba(255,246,199,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
+      style={{ display: "grid", gridTemplateColumns: "58px minmax(170px, 1.18fr) minmax(96px, 0.5fr) 68px minmax(168px, 1fr) minmax(104px, 0.52fr) 118px minmax(104px, 0.52fr) 150px", gap: 7, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(200,169,110,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 8, padding: "7px 8px", background: isDragging ? "rgba(231,243,242,0.96)" : pathWait ? "rgba(255,245,223,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
     >
       <button
         type="button"
@@ -7361,7 +7336,7 @@ function SortableProcessTemplatePathRow({
         {...listeners}
         aria-label={`Drag production path row ${index + 1}`}
         title="Drag to reorder"
-        style={{ display: "grid", gridTemplateColumns: "1fr", alignItems: "center", gap: 2, minHeight: 40, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: pathWait ? "rgba(255,246,199,0.72)" : DT.tealSoft, color: pathWait ? "#9a6a14" : DT.teal, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, cursor: isDragging ? "grabbing" : "grab", touchAction: "none", padding: "5px 6px" }}
+        style={{ display: "grid", gridTemplateColumns: "1fr", alignItems: "center", gap: 2, minHeight: 40, borderRadius: 999, border: "1px solid rgba(12,124,122,0.20)", background: pathWait ? "rgba(255,245,223,0.72)" : DT.tealSoft, color: pathWait ? DT.goldInk : DT.teal, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, cursor: isDragging ? "grabbing" : "grab", touchAction: "none", padding: "5px 6px" }}
       >
         <span aria-hidden="true" style={{ color: DT.textMuted, fontSize: 7, lineHeight: 1, textTransform: "uppercase", letterSpacing: "0.04em" }}>Drag</span>
         <span>{index + 1}</span>
@@ -7375,9 +7350,9 @@ function SortableProcessTemplatePathRow({
       <select aria-label={`Production path ${index + 1} flow owner`} value={step?.who || ""} onChange={(event) => onUpdateStep(index, { who: event.target.value || null })} style={processTemplateInputStyle()}>
         {PROCESS_TEMPLATE_WHO_OPTIONS.map((who) => <option key={who || "none"} value={who}>{who || "No owner"}</option>)}
       </select>
-      <label style={{ position: "relative", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: DT.textMuted, fontSize: 9, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>
+      <label style={{ position: "relative", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: DT.textMuted, fontSize: 9, fontWeight: 900, cursor: "pointer", touchAction: "manipulation" }}>
         <input type="checkbox" checked={pathWait} onChange={(event) => onUpdateStep(index, { wait: event.target.checked })} style={{ position: "absolute", opacity: 0, width: 1, height: 1, margin: 0, pointerEvents: "none" }} />
-        <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,246,199,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? "#9a6a14" : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 950, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
+        <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 8, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,245,223,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? DT.goldInk : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 900, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
         <span>Supplier wait</span>
       </label>
       <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="Wait label" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
@@ -7387,7 +7362,7 @@ function SortableProcessTemplatePathRow({
         <button type="button" onClick={() => onDelete(index)} style={processTemplateTinyButtonStyle("danger")} aria-label={`Remove production path row ${index + 1}`} title="Remove row">Remove</button>
       </div>
       <textarea aria-label={`Production path ${index + 1} note`} value={task?.note || ""} placeholder="Task note" rows={2} onChange={(event) => onUpdateTask(index, { note: event.target.value })} style={{ ...processTemplateTextareaStyle({ color: DT.textMuted, minHeight: 54 }), gridColumn: "2 / span 4" }} />
-      <div style={{ gridColumn: "6 / span 3", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 850, lineHeight: 1.25, overflow: "visible", textOverflow: "clip", whiteSpace: "normal", overflowWrap: "anywhere" }}>
+      <div style={{ gridColumn: "6 / span 3", fontFamily: DT.sans, fontSize: 9, color: DT.textMuted, fontWeight: 900, lineHeight: 1.25, overflow: "visible", textOverflow: "clip", whiteSpace: "normal", overflowWrap: "anywhere" }}>
         {task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Shows as ${step.label} in the order flow` : "Task and visible flow stage are aligned"}
       </div>
     </div>
@@ -7459,7 +7434,7 @@ function ProcessTemplatePathEditor({
       {rowCount > 0 && (
         <div
           data-process-template-row="path-header"
-          style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "end", padding: "0 6px 2px", boxSizing: "border-box", fontFamily: DT.sans, fontSize: 8.5, lineHeight: 1.1, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}
+          style={{ display: "grid", gridTemplateColumns: "54px minmax(132px, 1.05fr) minmax(82px, 0.48fr) 60px minmax(132px, 0.9fr) minmax(90px, 0.48fr) 86px minmax(84px, 0.5fr) 112px", gap: 5, alignItems: "end", padding: "0 6px 2px", boxSizing: "border-box", fontFamily: DT.sans, fontSize: 8.5, lineHeight: 1.1, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", color: DT.textFaint }}
         >
           <span>Drag</span>
           <span>Task to schedule</span>
@@ -7473,7 +7448,7 @@ function ProcessTemplatePathEditor({
         </div>
       )}
       {rowCount === 0 && (
-        <div style={{ border: "1px dashed rgba(161,31,31,0.26)", background: "rgba(161,31,31,0.04)", color: "#a11f1f", borderRadius: 10, padding: "10px 12px", fontSize: 12, fontWeight: 900 }}>
+        <div style={{ border: "1px dashed rgba(161,31,31,0.26)", background: "rgba(161,31,31,0.04)", color: DT.clay, borderRadius: 8, padding: "10px 12px", fontSize: 12, fontWeight: 900 }}>
           No production path yet
         </div>
       )}
@@ -7517,7 +7492,7 @@ function processTemplateTotalHours(template: ProcessTemplatePreview) {
 
 function ProcessTemplateSummaryChip({ label }: { label: string }) {
   return (
-    <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.76)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 850, lineHeight: 1 }}>
+    <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.76)", color: DT.textMuted, borderRadius: 999, padding: "5px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, lineHeight: 1 }}>
       {label}
     </span>
   );
@@ -7590,7 +7565,7 @@ function ProcessTemplateReviewPath({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
-          <div style={{ marginTop: 3, fontSize: 12, fontWeight: 750, color: DT.textMuted }}>Review mode · tap/click one step to adjust it.</div>
+          <div style={{ marginTop: 3, fontSize: 12, fontWeight: 800, color: DT.textMuted }}>Review mode · tap/click one step to adjust it.</div>
         </div>
         <button
           type="button"
@@ -7619,7 +7594,7 @@ function ProcessTemplateReviewPath({
             <div
               key={`${template.id}-review-row-${index}`}
               data-process-template-step-editor={isEditingStep ? "open" : "closed"}
-              style={{ border: `1px solid ${isEditingStep ? "rgba(12,124,122,0.30)" : missing ? "rgba(154,59,47,0.16)" : pathWait ? "rgba(200,169,110,0.24)" : "rgba(12,124,122,0.12)"}`, background: isEditingStep ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.06))" : "rgba(255,255,255,0.78)", borderRadius: 16, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 16px 34px rgba(12,124,122,0.10), 0 1px 0 rgba(255,255,255,0.72) inset" : "0 1px 0 rgba(255,255,255,0.68) inset, 0 2px 8px rgba(37,30,20,0.035)" }}
+              style={{ border: `1px solid ${isEditingStep ? "rgba(12,124,122,0.30)" : missing ? "rgba(154,59,47,0.16)" : pathWait ? "rgba(200,169,110,0.24)" : "rgba(12,124,122,0.12)"}`, background: isEditingStep ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.06))" : "rgba(255,255,255,0.78)", borderRadius: 14, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 16px 34px rgba(12,124,122,0.10), 0 1px 0 rgba(255,255,255,0.72) inset" : "0 1px 0 rgba(255,255,255,0.68) inset, 0 2px 8px rgba(37,30,20,0.035)" }}
             >
               <button
                 type="button"
@@ -7633,26 +7608,26 @@ function ProcessTemplateReviewPath({
                   setEditingStepIndex((current) => current === index ? null : index);
                 }}
                 aria-expanded={isEditingStep}
-                style={{ width: "100%", textAlign: "left", border: 0, background: "transparent", borderRadius: 16, padding: isEditingStep ? 0 : "12px 12px", display: "grid", gridTemplateColumns: "34px minmax(0, 1fr) auto", gap: 10, alignItems: "center", cursor: "pointer", fontFamily: DT.sans }}
+                style={{ width: "100%", textAlign: "left", border: 0, background: "transparent", borderRadius: 14, padding: isEditingStep ? 0 : "12px 12px", display: "grid", gridTemplateColumns: "34px minmax(0, 1fr) auto", gap: 10, alignItems: "center", cursor: "pointer", fontFamily: DT.sans }}
               >
-                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isEditingStep ? DT.teal : pathWait ? "rgba(200,169,110,0.15)" : "rgba(12,124,122,0.08)", color: isEditingStep ? "#ffffff" : pathWait ? "#8a5b1f" : DT.teal, fontSize: 11, fontWeight: 900 }}>{index + 1}</span>
+                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isEditingStep ? DT.teal : pathWait ? "rgba(200,169,110,0.15)" : "rgba(12,124,122,0.08)", color: isEditingStep ? "#ffffff" : pathWait ? DT.goldInk : DT.teal, fontSize: 11, fontWeight: 900 }}>{index + 1}</span>
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: "block", color: DT.textPrimary, fontSize: 15, fontWeight: 900, lineHeight: 1.22, letterSpacing: "-0.01em" }}>{task?.title || step?.label || "Untitled step"}</span>
-                  <span style={{ display: "block", color: DT.textMuted, fontSize: 12, fontWeight: 750, lineHeight: 1.35, marginTop: 4 }}>
+                  <span style={{ display: "block", color: DT.textMuted, fontSize: 12, fontWeight: 800, lineHeight: 1.35, marginTop: 4 }}>
                     {ownerLabel} · {hours.toLocaleString("en-NZ", { maximumFractionDigits: 2 })}h · Customer sees: {step?.label || "No stage"}
                   </span>
-                  {!isEditingStep && task?.note && <span style={{ display: "block", color: DT.textMuted, fontSize: 12, lineHeight: 1.42, marginTop: 7, fontWeight: 650 }}>{task.note}</span>}
+                  {!isEditingStep && task?.note && <span style={{ display: "block", color: DT.textMuted, fontSize: 12, lineHeight: 1.42, marginTop: 7, fontWeight: 700 }}>{task.note}</span>}
                 </span>
                 <span style={{ display: "flex", gap: 5, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
-                  {pathWait && <span style={{ border: "1px solid rgba(200,169,110,0.24)", background: "rgba(200,169,110,0.13)", color: "#8a5b1f", borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 850 }}>Supplier wait</span>}
-                  {missing && <span style={{ border: "1px solid rgba(154,59,47,0.16)", background: "rgba(154,59,47,0.08)", color: DT.clay, borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 850 }}>Check</span>}
+                  {pathWait && <span style={{ border: "1px solid rgba(200,169,110,0.24)", background: "rgba(200,169,110,0.13)", color: DT.goldInk, borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 900 }}>Supplier wait</span>}
+                  {missing && <span style={{ border: "1px solid rgba(154,59,47,0.16)", background: "rgba(154,59,47,0.08)", color: DT.clay, borderRadius: 999, padding: "4px 8px", fontSize: 10, fontWeight: 900 }}>Check</span>}
                   <span style={{ color: DT.teal, fontSize: 11, fontWeight: 900 }}>{isEditingStep ? "Editing" : "Edit"}</span>
                 </span>
               </button>
               {isEditingStep && (
                 <div data-process-template-step-fields="true" style={{ marginTop: 10, display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(112px, 0.55fr) 84px minmax(0, 1.1fr) minmax(120px, 0.62fr)", gap: 7, alignItems: "start" }}>
                   <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.72)", borderRadius: 14, padding: "8px 9px" }}>
-                    <span style={{ color: DT.textMuted, fontSize: 11, fontWeight: 850 }}>Editing step {index + 1} only</span>
+                    <span style={{ color: DT.textMuted, fontSize: 11, fontWeight: 900 }}>Editing step {index + 1} only</span>
                     <span data-process-template-step-actions="true" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
                       <button type="button" onClick={() => moveStep(index, -1)} disabled={index === 0} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} up`} title="Move up">Up</button>
                       <button type="button" onClick={() => moveStep(index, 1)} disabled={index === rowCount - 1} style={processTemplateTinyButtonStyle()} aria-label={`Move production path row ${index + 1} down`} title="Move down">Down</button>
@@ -7684,13 +7659,13 @@ function ProcessTemplateReviewPath({
                     {PROCESS_TEMPLATE_WHO_OPTIONS.map((who) => <option key={who || "none"} value={who}>{who || "No owner"}</option>)}
                   </select>
                   <textarea aria-label={`Production path ${index + 1} note`} value={task?.note || ""} placeholder="Task note" rows={2} onChange={(event) => updateTask(index, { note: event.target.value })} style={{ ...processTemplateTextareaStyle({ color: DT.textMuted, minHeight: 54 }), gridColumn: "1 / span 3" }} />
-                  <label style={{ minHeight: 40, display: "flex", alignItems: "center", gap: 7, color: DT.textMuted, fontSize: 10, fontWeight: 950, cursor: "pointer", touchAction: "manipulation" }}>
+                  <label style={{ minHeight: 40, display: "flex", alignItems: "center", gap: 7, color: DT.textMuted, fontSize: 10, fontWeight: 900, cursor: "pointer", touchAction: "manipulation" }}>
                     <input type="checkbox" checked={pathWait} onChange={(event) => updateStep(index, { wait: event.target.checked })} />
                     <span>Supplier wait</span>
                   </label>
                   <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder={pathWait ? "Wait label" : "Only if supplier wait"} disabled={!pathWait} onChange={(event) => updateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: pathWait ? DT.textMuted : DT.textFaint, opacity: pathWait ? 1 : 0.58, background: pathWait ? "rgba(255,255,255,0.88)" : "rgba(245,243,238,0.64)" })} />
                   <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap", borderTop: `1px solid ${DT.border}`, paddingTop: 9, marginTop: 2 }}>
-                    <span style={{ color: DT.textMuted, fontSize: 10, fontWeight: 850 }}>{task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Shows as ${step.label} in the order flow` : "Task and visible flow stage are aligned"}</span>
+                    <span style={{ color: DT.textMuted, fontSize: 10, fontWeight: 900 }}>{task?.title && step?.label && task.title.toLowerCase() !== step.label.toLowerCase() ? `Shows as ${step.label} in the order flow` : "Task and visible flow stage are aligned"}</span>
                   </div>
                 </div>
               )}
@@ -7732,13 +7707,13 @@ function ProcessTemplateCard({
       data-process-template-card="true"
       data-process-template-expanded={showEditor ? "true" : "false"}
       data-process-template-mode={showEditor ? "edit" : "review"}
-      style={{ border: `1px solid ${DT.border}`, borderRadius: 22, background: "linear-gradient(135deg, rgba(255,255,255,0.91), rgba(255,253,249,0.82))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 16px 38px rgba(37,30,20,0.075)", padding: isNarrow ? 12 : 18, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 10 : 16, alignItems: "start" }}
+      style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.91), rgba(255,253,249,0.82))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 16px 38px rgba(37,30,20,0.075)", padding: isNarrow ? 12 : 18, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 10 : 16, alignItems: "start" }}
     >
       <div style={processTemplateColumnStyle("logic")}>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
           <div style={{ minWidth: 0, flex: "1 1 280px" }}>
             {showEditor ? (
-              <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: isNarrow ? 18 : 20, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 850, padding: "8px 10px", resize: "none", overflow: "hidden", minHeight: titleRows > 1 ? 66 : 48 })} />
+              <textarea aria-label={`${template.title} template title`} value={template.title} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, title: event.target.value }))} rows={titleRows} style={processTemplateInputStyle({ fontFamily: DT.serif, fontSize: isNarrow ? 18 : 20, lineHeight: 1.08, letterSpacing: "-0.03em", fontWeight: 900, padding: "8px 10px", resize: "none", overflow: "hidden", minHeight: titleRows > 1 ? 66 : 48 })} />
             ) : (
               <h3 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 29, lineHeight: 1.02, letterSpacing: "-0.045em", color: DT.textPrimary }}>{template.title}</h3>
             )}
@@ -7763,7 +7738,7 @@ function ProcessTemplateCard({
           <>
             <textarea aria-label={`${template.title} issue label`} value={template.issueLabel} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, issueLabel: event.target.value }))} rows={2} style={processTemplateInputStyle({ marginTop: 7, fontSize: 10, lineHeight: 1.25, minHeight: 48, resize: "none", overflow: "hidden" })} />
             <textarea aria-label={`${template.title} description`} value={template.subtitle} onChange={(event) => updateTemplate(templateIndex, (item) => ({ ...item, subtitle: event.target.value }))} rows={isNarrow ? 3 : 2} style={processTemplateInputStyle({ margin: "5px 0 8px", minHeight: isNarrow ? 74 : 44, resize: "none", color: DT.textMuted, lineHeight: 1.25, overflow: "hidden" })} />
-            <div title="Rules Tuesday uses to decide when this process template applies." style={{ marginBottom: 5, fontSize: 9, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
+            <div title="Rules Tuesday uses to decide when this process template applies." style={{ marginBottom: 5, fontSize: 9, fontWeight: 900, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {template.detection.map((rule, ruleIndex) => (
                 <div key={`detection-row-${ruleIndex}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 86px", gap: 6, alignItems: "start" }}>
@@ -7776,7 +7751,7 @@ function ProcessTemplateCard({
           </>
         ) : (
           <>
-            <p style={{ margin: "10px 0 0", fontFamily: DT.sans, color: DT.textMuted, fontSize: 13, lineHeight: 1.48, fontWeight: 650 }}>{template.subtitle}</p>
+            <p style={{ margin: "10px 0 0", fontFamily: DT.sans, color: DT.textMuted, fontSize: 13, lineHeight: 1.48, fontWeight: 700 }}>{template.subtitle}</p>
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: DT.textFaint }}>Matching rules</div>
               <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -7794,8 +7769,8 @@ function ProcessTemplateCard({
       {showEditor ? (
         <div style={{ ...processTemplateColumnStyle("tasks"), overflowX: "auto", paddingBottom: 12 }}>
           <div style={{ marginBottom: 7, display: "flex", justifyContent: "space-between", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
-            <div style={{ fontSize: 10, fontWeight: 950, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
-            <div style={{ fontSize: 9, fontWeight: 850, color: DT.textMuted }}>One row links the scheduled task to the visible order-flow stage.</div>
+            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.10em", textTransform: "uppercase", color: DT.textFaint }}>Production path</div>
+            <div style={{ fontSize: 9, fontWeight: 900, color: DT.textMuted }}>One row links the scheduled task to the visible order-flow stage.</div>
           </div>
           <ProcessTemplatePathEditor
             tasks={template.suggestedTasks}
@@ -7828,7 +7803,7 @@ function ProcessTemplateNavigator({
       data-process-template-navigator="true"
       style={{
         border: `1px solid ${DT.border}`,
-        borderRadius: 22,
+        borderRadius: 14,
         background: "linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,253,249,0.70))",
         boxShadow: DT.shadow,
         padding: isNarrow ? 8 : 10,
@@ -7863,7 +7838,7 @@ function ProcessTemplateNavigator({
               border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`,
               background: active ? "linear-gradient(135deg, rgba(255,253,249,0.96), rgba(12,124,122,0.11))" : "rgba(255,255,255,0.66)",
               color: active ? DT.teal : DT.textPrimary,
-              borderRadius: 16,
+              borderRadius: 14,
               padding: "10px 11px",
               textAlign: "left",
               cursor: "pointer",
@@ -7872,8 +7847,8 @@ function ProcessTemplateNavigator({
               touchAction: "manipulation",
             }}
           >
-            <span style={{ display: "block", fontSize: 13, fontWeight: 850, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "nowrap" : "normal" }}>{template.title}</span>
-            <span style={{ display: "block", marginTop: 5, color: active ? DT.teal : DT.textMuted, fontSize: 11, fontWeight: 750, lineHeight: 1.25 }}>
+            <span style={{ display: "block", fontSize: 13, fontWeight: 900, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: isNarrow ? "nowrap" : "normal" }}>{template.title}</span>
+            <span style={{ display: "block", marginTop: 5, color: active ? DT.teal : DT.textMuted, fontSize: 11, fontWeight: 800, lineHeight: 1.25 }}>
               {rowCount} {rowCount === 1 ? "step" : "steps"} · {totalHours.toLocaleString("en-NZ", { maximumFractionDigits: 1 })}h{waitCount ? ` · ${waitCount} waits` : ""}
             </span>
           </button>
@@ -8079,13 +8054,13 @@ function ProcessTemplatesView() {
           }
         }
       `}</style>
-      <div style={{ border: `1px solid ${DT.border}`, borderRadius: 22, background: "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(255,253,249,0.78))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 12px 30px rgba(37,30,20,0.06)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(255,253,249,0.78))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 12px 30px rgba(37,30,20,0.06)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 30, lineHeight: 1.02, letterSpacing: "-0.045em", color: DT.textPrimary }}>Process templates</h2>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <span style={{ border: `1px solid ${isEditingTemplates ? "rgba(12,124,122,0.24)" : source === "error" ? "rgba(154,59,47,0.20)" : DT.border}`, background: isEditingTemplates ? DT.tealSoft : source === "error" ? "rgba(154,59,47,0.08)" : "rgba(255,253,249,0.74)", color: isEditingTemplates ? DT.teal : source === "error" ? DT.clay : DT.textSecondary, borderRadius: 999, padding: "6px 9px", fontSize: 11, fontWeight: 900 }}>{processStatusLabel}</span>
-          <span title={saveStatus} style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: 0, background: "transparent", color: source === "error" ? DT.clay : DT.textMuted, borderRadius: 999, padding: "6px 4px", fontSize: 11, fontWeight: 750 }}>{processStatusDetail}</span>
+          <span title={saveStatus} style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", border: 0, background: "transparent", color: source === "error" ? DT.clay : DT.textMuted, borderRadius: 999, padding: "6px 4px", fontSize: 11, fontWeight: 800 }}>{processStatusDetail}</span>
           {isEditingTemplates && <button type="button" onClick={() => void saveTemplates(false)} style={processTemplateTinyButtonStyle("primary")}>Save now</button>}
           {isEditingTemplates && <button type="button" onClick={() => void saveTemplates(true)} style={processTemplateTinyButtonStyle()}>Reset defaults</button>}
         </div>
@@ -8112,7 +8087,7 @@ function ProcessTemplatesView() {
             updateTemplate={updateTemplate}
           />
         ) : (
-          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 18, background: "rgba(255,255,255,0.70)", padding: 18, color: DT.textMuted, fontSize: 13, fontWeight: 750 }}>No process templates found.</div>
+          <div style={{ border: `1px dashed ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.70)", padding: 18, color: DT.textMuted, fontSize: 13, fontWeight: 800 }}>No process templates found.</div>
         )}
       </div>
       <button
@@ -8213,7 +8188,7 @@ function weekCapacityGauge(totalHours: number, nickHours = 0, dylanHours = 0): W
   const capacityHours = PEOPLE.length * 7;
   const ratio = Math.min(1, totalHours / capacityHours);
   const fillWidth = totalHours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
-  const color = totalHours > capacityHours ? "#9b2f22" : ratio >= 0.82 ? "#9a6a14" : ratio >= 0.45 ? "#6f7d38" : ratio > 0 ? DT.sage : "rgba(124,116,107,0.26)";
+  const color = totalHours > capacityHours ? DT.clay : ratio >= 0.82 ? DT.goldInk : ratio >= 0.45 ? DT.green : ratio > 0 ? DT.sage : "rgba(124,116,107,0.26)";
   const bg = totalHours > capacityHours ? "rgba(155,47,34,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
   return { totalHours, nickHours, dylanHours, capacityHours, fillWidth, color, bg };
 }
@@ -8247,7 +8222,7 @@ function ScheduleWeekBar({
       aria-label={`${label} week`}
       disabled={disabled || !onClick}
       onClick={onClick}
-      style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: `1px solid ${DT.border}`, borderRadius: 9, background: disabled || !onClick ? "rgba(0,0,0,0.025)" : "rgba(255,255,255,0.78)", color: disabled || !onClick ? DT.textFaint : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 17 : 15, fontWeight: 950, lineHeight: 1, padding: 0, cursor: disabled || !onClick ? "not-allowed" : "pointer", touchAction: "manipulation" }}
+      style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: `1px solid ${DT.border}`, borderRadius: 8, background: disabled || !onClick ? "rgba(0,0,0,0.025)" : "rgba(255,255,255,0.78)", color: disabled || !onClick ? DT.textFaint : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 17 : 15, fontWeight: 900, lineHeight: 1, padding: 0, cursor: disabled || !onClick ? "not-allowed" : "pointer", touchAction: "manipulation" }}
     >
       {label === "Previous" ? "‹" : "›"}
     </button>
@@ -8278,7 +8253,7 @@ function ScheduleWeekBar({
     const cellContent = (
       <>
         <span style={{ display: "grid", gap: 1, minWidth: 0, fontFamily: DT.sans, textTransform: "uppercase", lineHeight: 1 }}>
-          <span style={{ fontSize: isNarrow ? 8.5 : 9.5, fontWeight: 950, letterSpacing: isNarrow ? "0.02em" : "0.08em", color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
+          <span style={{ fontSize: isNarrow ? 8.5 : 9.5, fontWeight: 900, letterSpacing: isNarrow ? "0.02em" : "0.08em", color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
           <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: isNarrow ? 0 : "0.04em", color: DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
         </span>
         <span aria-hidden="true" style={{ height: isNarrow ? 5 : 7, width: "100%", borderRadius: 999, background: gauge.bg, overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
@@ -8312,9 +8287,9 @@ function ScheduleWeekBar({
     return (
       <div data-schedule-week-bar="true" style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr) 40px", alignItems: "center", gap: 6, border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.72)", boxShadow: "0 1px 4px rgba(0,0,0,0.025)", overflow: "hidden", padding: 4 }}>
         {navButton("Previous", onPreviousWeek, weekIndex <= 0)}
-        <span style={{ minWidth: 0, textAlign: "center", fontFamily: DT.serif, fontSize: 16, fontWeight: 760, color: DT.textPrimary, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</span>
+        <span style={{ minWidth: 0, textAlign: "center", fontFamily: DT.serif, fontSize: 16, fontWeight: 800, color: DT.textPrimary, lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</span>
         {navButton("Next", onNextWeek, weekIndex >= weekCount - 1)}
-        <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 0, border: `1px solid ${DT.border}`, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 0, border: `1px solid ${DT.border}`, borderRadius: 8, overflow: "hidden" }}>
           {DAYS.map(dayCell)}
         </div>
       </div>
@@ -8336,7 +8311,7 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
   const tasksForDay = (day: DayKey) => rows.flatMap((row) => row.tasks).filter((task) => task.day === day);
   const hoursFor = (tasks: OrderJourneyTask[], person?: Person) => tasks.filter((task) => !person || task.person === person).reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
   const weekNavButton = (label: string, onClick: () => void, disabled: boolean) => (
-    <button type="button" aria-label={`${label} week`} disabled={disabled} onClick={onClick} style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: `1px solid ${DT.border}`, borderRadius: 9, background: disabled ? "rgba(0,0,0,0.025)" : "rgba(255,255,255,0.78)", color: disabled ? DT.textFaint : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 17 : 15, fontWeight: 950, lineHeight: 1, padding: 0, cursor: disabled ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{label === "Previous" ? "‹" : "›"}</button>
+    <button type="button" aria-label={`${label} week`} disabled={disabled} onClick={onClick} style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: `1px solid ${DT.border}`, borderRadius: 8, background: disabled ? "rgba(0,0,0,0.025)" : "rgba(255,255,255,0.78)", color: disabled ? DT.textFaint : DT.textMuted, fontFamily: DT.sans, fontSize: isNarrow ? 17 : 15, fontWeight: 900, lineHeight: 1, padding: 0, cursor: disabled ? "not-allowed" : "pointer", touchAction: "manipulation" }}>{label === "Previous" ? "‹" : "›"}</button>
   );
   const dayGauge = (day: DayKey) => {
     const tasks = tasksForDay(day);
@@ -8355,12 +8330,12 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
       <details data-order-capacity-strip="orders-week-capacity" data-order-day-filter="orders-day-filter" data-mobile-capacity-strip="temperature-pill-row" data-order-capacity-strip-mobile="true" aria-hidden={!isNarrow} style={{ display: "none", border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.72)", boxShadow: "0 1px 4px rgba(0,0,0,0.025)", overflow: "hidden" }}>
         <summary style={{ listStyle: "none", minHeight: 44, display: "grid", gridTemplateColumns: "40px minmax(0, 1fr) 40px auto", alignItems: "center", gap: 6, padding: "4px 7px", cursor: "pointer", fontFamily: DT.sans }}>
           {weekNavButton("Previous", onPreviousWeek, weekIndex <= 0)}
-          <span style={{ minWidth: 0, textAlign: "center", fontSize: 12, fontWeight: 950, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</span>
+          <span style={{ minWidth: 0, textAlign: "center", fontSize: 12, fontWeight: 900, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{weekLabel}</span>
           {weekNavButton("Next", onNextWeek, weekIndex >= weekCount - 1)}
-          <span aria-hidden="true" style={{ fontSize: 10, fontWeight: 950, color: DT.teal }}>View</span>
+          <span aria-hidden="true" style={{ fontSize: 10, fontWeight: 900, color: DT.teal }}>View</span>
         </summary>
         <div style={{ display: "grid", gap: 4, padding: "0 4px 4px" }}>
-        <div style={{ minWidth: 0, textAlign: "center", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 850, color: DT.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mobileCapacitySummary}</div>
+        <div style={{ minWidth: 0, textAlign: "center", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, color: DT.textFaint, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mobileCapacitySummary}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 4 }}>
         {DAYS.map((day) => {
           const option = suggestedDateOptionForWeekDay(week, day);
@@ -8368,8 +8343,8 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
           const gauge = dayGauge(day);
           const dayLabel = scheduleDayLabelParts(day, option);
           return (
-            <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, minHeight: 48, border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 10, background: active ? DT.tealSoft : gauge.bg, padding: "7px 4px 6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3, cursor: "pointer", overflow: "hidden", boxShadow: active ? "0 0 0 2px rgba(12,124,122,0.08)" : "none", touchAction: "manipulation" }}>
-              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.02em", color: active ? DT.teal : DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{dayLabel.day}</span>
+            <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, minHeight: 48, border: `1px solid ${active ? "rgba(12,124,122,0.30)" : DT.border}`, borderRadius: 8, background: active ? DT.tealSoft : gauge.bg, padding: "7px 4px 6px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 3, cursor: "pointer", overflow: "hidden", boxShadow: active ? "0 0 0 2px rgba(12,124,122,0.08)" : "none", touchAction: "manipulation" }}>
+              <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.02em", color: active ? DT.teal : DT.textMuted, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{dayLabel.day}</span>
               <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: active ? DT.teal : DT.textFaint, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip" }}>{dayLabel.date}</span>
               <span aria-hidden="true" style={{ height: 5, width: "100%", borderRadius: 999, background: "rgba(255,255,255,0.70)", overflow: "hidden", boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
                 <span style={{ display: "block", width: `${gauge.fillWidth}%`, height: "100%", borderRadius: 999, background: gauge.color, transition: "width 160ms ease" }} />
@@ -8394,7 +8369,7 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
         return (
           <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, border: 0, borderLeft: day === "monday" ? "none" : `1px solid ${DT.border}`, background: active ? DT.tealSoft : "rgba(247,249,248,0.62)", padding: "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4, cursor: "pointer", overflow: "hidden" }}>
             <span style={{ display: "grid", gap: 1, minWidth: 0, fontFamily: DT.sans, textTransform: "uppercase", lineHeight: 1 }}>
-              <span style={{ fontSize: 9.5, fontWeight: 950, letterSpacing: "0.08em", color: active ? DT.teal : DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
+              <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: "0.08em", color: active ? DT.teal : DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
               <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.04em", color: active ? DT.teal : DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
             </span>
             <span aria-hidden="true" style={{ height: 7, width: "100%", borderRadius: 999, background: gauge.bg, overflow: "hidden", boxShadow: active ? "0 0 0 1px rgba(12,124,122,0.18)" : "inset 0 0 0 1px rgba(0,0,0,0.04)" }}>
@@ -8479,7 +8454,7 @@ function OrderJourneyDropLane({
       style={{ minHeight: compactMobile ? 0 : hasItems || isDropTarget ? 58 : 31, boxSizing: "border-box", display: "flex", flexDirection: "column", borderWidth: compactMobile ? "0 0 0 2px" : "1px 1px 1px 3px", borderStyle: compactMobile ? "solid" : isDropTarget ? "solid solid solid solid" : "dashed dashed dashed solid", borderColor: compactMobile ? (isDropTarget ? DT.teal : personVisual.stripe) : `${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? "rgba(12,124,122,0.58)" : readyBorder} ${isDropTarget ? DT.teal : personVisual.stripe}`, borderRadius: compactMobile ? 5 : 10, background: compactMobile ? "transparent" : isDropTarget ? "rgba(12,124,122,0.12)" : hasItems ? readyBackground : "rgba(255,255,255,0.42)", padding: compactMobile ? "0 0 0 4px" : hasItems || isDropTarget ? 6 : "5px 6px", transition: "background 150ms ease, border-color 150ms ease, box-shadow 150ms ease", boxShadow: compactMobile ? undefined : isDropTarget ? "inset 0 0 0 1px rgba(12,124,122,0.12), 0 8px 18px rgba(12,124,122,0.10)" : hasItems ? "inset 0 0 0 1px rgba(255,255,255,0.42)" : undefined }}
     >
       <div data-order-row-lane-header="true" style={{ marginBottom: hasItems || isDropTarget ? 5 : 0, display: compactMobile ? "none" : "flex", alignItems: "center", justifyContent: "space-between", gap: 6, minWidth: 0 }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0, color: personVisual.text, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.06em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: personVisual.stripe, boxShadow: `0 0 0 2px ${personVisual.taskSoft}`, flex: "0 0 auto" }} />
           {PERSON_LABELS[person]}
         </span>
@@ -8516,7 +8491,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
         data-order-row-drag-surface="order-row-drag-surface"
         data-order-row-task-compact="true"
         title="Drag this task to another day or person"
-        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 7, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 7px rgba(37,30,20,0.045)", padding: "3px 4px", minHeight: 44, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 8, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 7px rgba(37,30,20,0.045)", padding: "3px 4px", minHeight: 44, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
       >
         <div style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr) auto 40px", gap: 5, alignItems: "center", minWidth: 0 }}>
           <button
@@ -8536,11 +8511,11 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
               const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
               onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
             }}
-            style={{ width: compactDoneSize, height: compactDoneSize, minWidth: compactDoneSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${taskDone ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: taskDone ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: taskDone ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, lineHeight: 1, cursor: "pointer", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.72)" }}
+            style={{ width: compactDoneSize, height: compactDoneSize, minWidth: compactDoneSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${taskDone ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: taskDone ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: taskDone ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900, lineHeight: 1, cursor: "pointer", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.72)" }}
           >
             {task.done ? "✓" : ""}
           </button>
-          <button type="button" onClick={() => onTaskSelect(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.05, fontWeight: 900, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", touchAction: "manipulation" }}>{friendlyWorkshopTaskText(task.text)}</button>
+          <button type="button" onClick={() => onTaskSelect(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.05, fontWeight: 900, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(124,116,107,0.68)" : undefined, opacity: taskDone ? 0.74 : 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", touchAction: "manipulation" }}>{friendlyWorkshopTaskText(task.text)}</button>
           <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, lineHeight: 1, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours)}</span>
           <button
             type="button"
@@ -8558,12 +8533,12 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
                 onTaskEdit(task);
               }
             }}
-            style={{ width: compactEditSize, height: compactEditSize, minWidth: compactEditSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 950, cursor: "pointer", lineHeight: 1 }}
+            style={{ width: compactEditSize, height: compactEditSize, minWidth: compactEditSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer", lineHeight: 1 }}
           >
             ✎
           </button>
         </div>
-        {connectionMessage && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 8.5, fontWeight: 850, color: connection.color, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{connectionMessage}</div>}
+        {connectionMessage && <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: connection.color, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{connectionMessage}</div>}
       </div>
     );
   }
@@ -8579,7 +8554,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
       data-order-row-drag-surface="order-row-drag-surface"
       data-order-row-task-compact={compactMobile ? "true" : "false"}
       title="Drag this task to another day or person"
-      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 9, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 8px rgba(37,30,20,0.05)", padding: "6px 7px 6px 6px", minHeight: 56, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 8, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 8px rgba(37,30,20,0.05)", padding: "6px 7px 6px 6px", minHeight: 56, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 6, alignItems: "start" }}>
         <div style={{ minWidth: 0, paddingRight: 1 }}>
@@ -8587,7 +8562,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
             {connectionMessage && <span aria-label={connectionMessage} title={connectionMessage} style={{ width: 7, height: 7, borderRadius: 999, background: connection.color, boxShadow: `0 0 0 2px ${connection.bg}`, flex: "0 0 auto" }} />}
             <span style={{ color: taskDone ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 900 }}>{formatTaskHours(task.estimatedHours)}</span>
           </div>
-          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 2, width: "100%", minWidth: 0, display: "block", padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 11.5, lineHeight: 1.14, fontWeight: 950, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(111,107,99,0.68)" : undefined, opacity: taskDone ? 0.74 : 1, overflowWrap: "anywhere", whiteSpace: "normal" }}>{friendlyWorkshopTaskText(task.text)}</button>
+          <button type="button" onClick={() => onTaskSelect(task)} style={{ marginTop: 2, width: "100%", minWidth: 0, display: "block", padding: 0, border: 0, background: "transparent", color: taskDone ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 11.5, lineHeight: 1.14, fontWeight: 900, cursor: dragCursor, textDecorationLine: taskDone ? "line-through" : "none", textDecorationColor: taskDone ? "rgba(124,116,107,0.68)" : undefined, opacity: taskDone ? 0.74 : 1, overflowWrap: "anywhere", whiteSpace: "normal" }}>{friendlyWorkshopTaskText(task.text)}</button>
         </div>
         <div style={{ display: "grid", gap: 4, justifyItems: "center", alignContent: "start" }}>
           <button
@@ -8607,7 +8582,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
               const cardElement = event.currentTarget.closest("[data-order-row-task-id]") as HTMLElement | null;
               onTaskDoneToggle(task, !task.done, { x: event.clientX, y: event.clientY, cardRect: cardElement?.getBoundingClientRect() });
             }}
-            style={{ width: doneSize, height: doneSize, minWidth: doneSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${taskDone ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: taskDone ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: taskDone ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 7, padding: 0, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, lineHeight: 1, cursor: "pointer", boxShadow: taskDone ? "0 1px 4px rgba(111,107,99,0.18)" : "inset 0 0 0 1px rgba(255,255,255,0.72)" }}
+            style={{ width: doneSize, height: doneSize, minWidth: doneSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1.5px solid ${taskDone ? DONE_TASK_VISUAL.buttonBorder : "rgba(124,116,107,0.42)"}`, background: taskDone ? DONE_TASK_VISUAL.buttonBg : "rgba(255,255,255,0.92)", color: taskDone ? DONE_TASK_VISUAL.title : "transparent", borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 11, fontWeight: 900, lineHeight: 1, cursor: "pointer", boxShadow: taskDone ? "0 1px 4px rgba(124,116,107,0.18)" : "inset 0 0 0 1px rgba(255,255,255,0.72)" }}
           >
             {task.done ? "✓" : ""}
           </button>
@@ -8627,7 +8602,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
                 onTaskEdit(task);
               }
             }}
-            style={{ width: editSize, height: editSize, minWidth: editSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 7, padding: 0, fontFamily: DT.sans, fontSize: 11, fontWeight: 950, cursor: "pointer", lineHeight: 1 }}
+            style={{ width: editSize, height: editSize, minWidth: editSize, display: "inline-flex", alignItems: "center", justifyContent: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer", lineHeight: 1 }}
           >
             ✎
           </button>
@@ -8696,8 +8671,8 @@ function OrderJourneyView({
   const weekLabel = displayWeekTitle(week.title);
   const renderSectionLabel = (label: string, count: number, detail: string) => (
     <div data-order-journey-section-label="true" style={{ padding: isNarrow ? "2px 1px 0" : "5px 2px 2px", display: "flex", flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: isNarrow ? 6 : 10, fontFamily: DT.sans }}>
-      <div style={{ fontSize: isNarrow ? 9.5 : 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: isNarrow ? "0.05em" : "0.08em", whiteSpace: "nowrap" }}>{label}</div>
-      <div style={{ fontSize: isNarrow ? 9.5 : 10, fontWeight: 850, color: DT.textMuted, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{count} {count === 1 ? "order" : "orders"} · {detail}</div>
+      <div style={{ fontSize: isNarrow ? 9.5 : 10, fontWeight: 900, color: DT.textFaint, textTransform: "uppercase", letterSpacing: isNarrow ? "0.05em" : "0.08em", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ fontSize: isNarrow ? 9.5 : 10, fontWeight: 900, color: DT.textMuted, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{count} {count === 1 ? "order" : "orders"} · {detail}</div>
     </div>
   );
   const renderRow = (row: OrderJourneyRow) => {
@@ -8705,7 +8680,7 @@ function OrderJourneyView({
     const healthMeta = row.health === "internal"
       ? { label: "Internal", color: DT.sage, bg: "rgba(110,138,106,0.10)", border: "rgba(110,138,106,0.22)" }
       : row.health === "unlinked"
-        ? { label: "Needs order", color: "#9a6a14", bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.34)" }
+        ? { label: "Needs order", color: DT.goldInk, bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.34)" }
         : HEALTH_META[row.health];
     const canMoveRow = row.health !== "internal" && row.health !== "unlinked";
     const rowPriorityIndex = activeRows.findIndex((candidate) => candidate.id === row.id);
@@ -8734,29 +8709,29 @@ function OrderJourneyView({
       const compactVisibleDays = visibleDays.filter((day) => row.tasks.some((task) => task.day === day && compactTaskIds.has(task.id)));
       const hiddenTaskCount = Math.max(0, row.tasks.length - compactTaskIds.size);
       return (
-        <article key={row.id} data-order-journey-row-card="true" data-order-journey-row-compact="true" style={{ ...rowStyle, borderRadius: 11 }}>
+        <article key={row.id} data-order-journey-row-card="true" data-order-journey-row-compact="true" style={{ ...rowStyle, borderRadius: 8 }}>
           <div data-order-row-summary="true" style={{ padding: "7px 9px 6px", background: "rgba(255,253,249,0.72)" }}>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "start" }}>
               {row.order ? (
-                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 760, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, overflowWrap: "anywhere", touchAction: "manipulation" }}>{row.name}</button>
+                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.08, color: DT.textPrimary, fontWeight: 800, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, overflowWrap: "anywhere", touchAction: "manipulation" }}>{row.name}</button>
               ) : (
-                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 760, overflowWrap: "anywhere" }}>{row.name}</div>
+                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 15.5, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 800, overflowWrap: "anywhere" }}>{row.name}</div>
               )}
               {canMoveRow && (
                 <div data-order-row-priority-controls="order-row-priority-controls" title="Priority: move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 999, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
-                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ width: 40, height: 40, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 15, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1, touchAction: "manipulation" }}>↑</button>
-                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ width: 40, height: 40, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 15, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1, touchAction: "manipulation" }}>↓</button>
+                  <button type="button" title="Move this order earlier" aria-label={`Move ${row.name} earlier in the list`} disabled={!canMoveUp} onClick={() => { const previousRow = activeRows[rowPriorityIndex - 1]; if (previousRow) onMoveRow(row.id, previousRow.id); }} style={{ width: 40, height: 40, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 15, fontWeight: 900, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1, touchAction: "manipulation" }}>↑</button>
+                  <button type="button" title="Move this order later" aria-label={`Move ${row.name} later in the list`} disabled={!canMoveDown} onClick={() => { const nextRow = activeRows[rowPriorityIndex + 1]; if (nextRow) onMoveRow(nextRow.id, row.id); }} style={{ width: 40, height: 40, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: 15, fontWeight: 900, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1, touchAction: "manipulation" }}>↓</button>
                 </div>
               )}
             </div>
             <div style={{ marginTop: 5, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "2px 6px", fontSize: 8.5, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1 }}>{healthMeta.label}</span>
-              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontSize: 8.5, fontFamily: DT.sans, fontWeight: 850, lineHeight: 1 }}>{row.dueLabel}</span>}
-              {row.statusLabel && <span style={{ minWidth: 0, color: DT.textMuted, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 850, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.statusLabel}</span>}
+              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "2px 6px", fontSize: 8.5, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1 }}>{healthMeta.label}</span>
+              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "2px 6px", fontSize: 8.5, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1 }}>{row.dueLabel}</span>}
+              {row.statusLabel && <span style={{ minWidth: 0, color: DT.textMuted, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.statusLabel}</span>}
             </div>
           </div>
           {visibleDays.length === 0 ? (
-            <div data-order-journey-empty-mobile="true" style={{ display: "block", padding: "6px 9px 7px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.52)", fontFamily: DT.sans, fontSize: 10, lineHeight: 1.25, color: DT.textMuted, fontWeight: 850 }}>
+            <div data-order-journey-empty-mobile="true" style={{ display: "block", padding: "6px 9px 7px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.52)", fontFamily: DT.sans, fontSize: 10, lineHeight: 1.25, color: DT.textMuted, fontWeight: 900 }}>
               No tasks scheduled this week.
             </div>
           ) : (
@@ -8770,8 +8745,8 @@ function OrderJourneyView({
                 return (
                   <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible style={{ minHeight: 0, padding: "5px 8px 6px", borderTop: `1px solid ${DT.border}`, background: dayTasks.length ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.24)", display: "flex", flexDirection: "column" }}>
                     <div data-order-row-mobile-day-header="true" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 4 : 0 }}>
-                      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
-                      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>{allDayTasks.length > 0 ? `${allDayTasks.length} · ${formatTaskHours(dayHours)}` : "No tasks"}</span>
+                      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.04em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
+                      <span style={{ fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, color: DT.textMuted, whiteSpace: "nowrap" }}>{allDayTasks.length > 0 ? `${allDayTasks.length} · ${formatTaskHours(dayHours)}` : "No tasks"}</span>
                     </div>
                     <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
                       {visiblePeople.map((person) => {
@@ -8791,7 +8766,7 @@ function OrderJourneyView({
                 );
               })}
               {hiddenTaskCount > 0 && (
-                <button type="button" aria-expanded={mobileRowExpanded} onClick={() => setExpandedMobileRows((current) => { const next = new Set(current); if (mobileRowExpanded) next.delete(row.id); else next.add(row.id); return next; })} style={{ boxSizing: "border-box", minHeight: 40, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, padding: "9px 10px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 950, textAlign: "left", cursor: "pointer", touchAction: "manipulation", transition: "background 180ms ease, color 180ms ease" }}>
+                <button type="button" aria-expanded={mobileRowExpanded} onClick={() => setExpandedMobileRows((current) => { const next = new Set(current); if (mobileRowExpanded) next.delete(row.id); else next.add(row.id); return next; })} style={{ boxSizing: "border-box", minHeight: 40, border: 0, borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.62)", color: DT.teal, padding: "9px 10px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, textAlign: "left", cursor: "pointer", touchAction: "manipulation", transition: "background 180ms ease, color 180ms ease" }}>
                   {mobileRowExpanded ? "Show less" : `Show ${hiddenTaskCount} more`}
                 </button>
               )}
@@ -8806,12 +8781,12 @@ function OrderJourneyView({
           <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "linear-gradient(135deg, rgba(255,253,249,0.86), rgba(247,243,235,0.70))" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
               {row.order ? (
-	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 40 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 750, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
+	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 40 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 800, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
 	              ) : (
-	                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 16, lineHeight: 1.04, color: DT.textPrimary, fontWeight: 750 }}>{row.name}</div>
+	                <div style={{ minWidth: 0, fontFamily: DT.serif, fontSize: 16, lineHeight: 1.04, color: DT.textPrimary, fontWeight: 800 }}>{row.name}</div>
 	              )}
               {canMoveRow && (
-                <div data-order-row-drag-handle="order-row-drag-handle" data-order-row-priority-controls="order-row-priority-controls" title="Move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 9, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
+                <div data-order-row-drag-handle="order-row-drag-handle" data-order-row-priority-controls="order-row-priority-controls" title="Move this order earlier or later in the week list" style={{ flex: "0 0 auto", display: "inline-flex", alignItems: "center", border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", borderRadius: 8, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.025)" }}>
                   <button
                     type="button"
                     title="Move this order earlier"
@@ -8821,7 +8796,7 @@ function OrderJourneyView({
                       const previousRow = activeRows[rowPriorityIndex - 1];
                       if (previousRow) onMoveRow(row.id, previousRow.id);
                     }}
-		                    style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: isNarrow ? 15 : 13, fontWeight: 950, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1, touchAction: isNarrow ? "manipulation" : undefined }}
+		                    style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: 0, borderRight: `1px solid ${DT.border}`, background: canMoveUp ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveUp ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: isNarrow ? 15 : 13, fontWeight: 900, cursor: canMoveUp ? "pointer" : "not-allowed", lineHeight: 1, touchAction: isNarrow ? "manipulation" : undefined }}
 		                  >
 		                    ↑
 		                  </button>
@@ -8834,7 +8809,7 @@ function OrderJourneyView({
                       const nextRow = activeRows[rowPriorityIndex + 1];
                       if (nextRow) onMoveRow(nextRow.id, row.id);
                     }}
-		                    style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: isNarrow ? 15 : 13, fontWeight: 950, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1, touchAction: isNarrow ? "manipulation" : undefined }}
+		                    style={{ width: isNarrow ? 40 : 36, height: isNarrow ? 40 : 36, border: 0, background: canMoveDown ? "transparent" : "rgba(0,0,0,0.025)", color: canMoveDown ? DT.textMuted : DT.textFaint, padding: 0, fontFamily: DT.sans, fontSize: isNarrow ? 15 : 13, fontWeight: 900, cursor: canMoveDown ? "pointer" : "not-allowed", lineHeight: 1, touchAction: isNarrow ? "manipulation" : undefined }}
 		                  >
 		                    ↓
 		                  </button>
@@ -8842,13 +8817,13 @@ function OrderJourneyView({
               )}
             </div>
             <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
-              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 950, lineHeight: 1 }}>{healthMeta.label}</span>
-              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 850, lineHeight: 1 }}>{row.dueLabel}</span>}
+              <span style={{ border: `1px solid ${healthMeta.border}`, background: healthMeta.bg, color: healthMeta.color, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1 }}>{healthMeta.label}</span>
+              {row.dueLabel && <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.78)", color: DT.textMuted, borderRadius: 999, padding: "3px 7px", fontSize: 9, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1 }}>{row.dueLabel}</span>}
             </div>
             {row.statusLabel && <div style={{ marginTop: 7, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800, lineHeight: 1.2 }}>{row.statusLabel}</div>}
           </div>
           {mobileVisibleDayCount === 0 && (
-            <div data-order-journey-empty-mobile="true" style={{ display: "none", padding: "10px 12px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.52)", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: DT.textMuted, fontWeight: 850 }}>
+            <div data-order-journey-empty-mobile="true" style={{ display: "none", padding: "10px 12px", borderTop: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.52)", fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, color: DT.textMuted, fontWeight: 900 }}>
               No tasks scheduled this week.
             </div>
           )}
@@ -8861,8 +8836,8 @@ function OrderJourneyView({
             return (
               <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible={mobileDayVisible} style={{ minHeight: 0, padding: isNarrow ? 8 : 6, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "linear-gradient(135deg, rgba(255,255,255,0.70), rgba(247,243,235,0.40))" : "rgba(255,253,249,0.34)", display: "flex", flexDirection: "column" }}>
                 <div data-order-row-mobile-day-header="true" style={{ display: isNarrow ? "flex" : "none", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
-                  <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
-                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 950, color: DT.textMuted, whiteSpace: "nowrap" }}>
+                  <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
+                  <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted, whiteSpace: "nowrap" }}>
                     {dayTasks.length > 0 ? `${dayTasks.length} ${dayTasks.length === 1 ? "task" : "tasks"} · ${formatTaskHours(dayHours)}` : "No tasks"}
                   </span>
                   </div>
@@ -8885,7 +8860,7 @@ function OrderJourneyView({
                         ))}
                         {isDropTarget && !dropPreview?.overId && dropSlot(`${laneId}:empty`)}
                         {laneTasks.length === 0 && (
-	                          <div data-empty-order-day-cell="empty-order-day-cell" data-order-row-empty-drop-target="order-row-empty-drop-target" style={{ minHeight: activeTaskId ? 24 : 0, border: activeTaskId ? `1px dashed rgba(12,124,122,0.28)` : 0, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", color: activeTaskId ? DT.teal : "transparent", fontFamily: DT.sans, fontSize: 9, fontWeight: 850, fontStyle: "italic", background: activeTaskId ? "rgba(12,124,122,0.045)" : "transparent" }}>
+	                          <div data-empty-order-day-cell="empty-order-day-cell" data-order-row-empty-drop-target="order-row-empty-drop-target" style={{ minHeight: activeTaskId ? 24 : 0, border: activeTaskId ? `1px dashed rgba(12,124,122,0.28)` : 0, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: activeTaskId ? DT.teal : "transparent", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, fontStyle: "italic", background: activeTaskId ? "rgba(12,124,122,0.045)" : "transparent" }}>
 	                            {activeTaskId ? "Drop task" : ""}
 	                          </div>
                         )}
@@ -8922,7 +8897,7 @@ function OrderJourneyView({
       )}
       {needsRows.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ padding: "4px 2px", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>Needs order / internal</div>
+          <div style={{ padding: "4px 2px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.08em" }}>Needs order / internal</div>
           {needsRows.map(renderRow)}
         </div>
       )}
@@ -8952,7 +8927,7 @@ function TuesdayPlanStateLoading({ isNarrow }: { isNarrow: boolean }) {
       </div>
       <div style={{ padding: 10, display: "grid", gap: 8 }}>
         {[0, 1, 2, 3].map((index) => (
-          <div key={index} style={{ height: 52, borderRadius: 10, border: `1px solid ${DT.border}`, background: "linear-gradient(90deg, rgba(245,243,238,0.72), rgba(255,255,255,0.92), rgba(245,243,238,0.72))" }} />
+          <div key={index} style={{ height: 52, borderRadius: 8, border: `1px solid ${DT.border}`, background: "linear-gradient(90deg, rgba(245,243,238,0.72), rgba(255,255,255,0.92), rgba(245,243,238,0.72))" }} />
         ))}
       </div>
     </aside>
@@ -8975,7 +8950,7 @@ function TuesdayPlanStateLoading({ isNarrow }: { isNarrow: boolean }) {
         fontFamily: DT.sans,
       }}
     >
-      <div style={{ fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Production Plan</div>
+      <div style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Production Plan</div>
       <div style={{ fontFamily: DT.serif, fontSize: 24, lineHeight: 1.05, color: DT.textPrimary }}>Loading Tuesday schedule state</div>
       <div style={{ maxWidth: 520, fontSize: 12, lineHeight: 1.45, fontWeight: 800 }}>Checking saved order status, completed-order overrides, task edits, and row order before showing the board.</div>
     </section>
@@ -10302,7 +10277,7 @@ function MonthViewState({
       type="button"
       aria-pressed={showHistory}
       onClick={() => setShowHistory((current) => !current)}
-      style={{ boxSizing: "border-box", minHeight: 40, border: `1px solid ${showHistory ? "rgba(110,138,106,0.26)" : DT.border}`, background: showHistory ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.68)", color: showHistory ? DT.sage : DT.textMuted, borderRadius: 10, padding: "9px 10px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
+      style={{ boxSizing: "border-box", minHeight: 40, border: `1px solid ${showHistory ? "rgba(110,138,106,0.26)" : DT.border}`, background: showHistory ? "rgba(110,138,106,0.10)" : "rgba(255,255,255,0.68)", color: showHistory ? DT.sage : DT.textMuted, borderRadius: 8, padding: "9px 10px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, cursor: "pointer" }}
     >
       {showHistory ? "Hide past weeks" : `Show past weeks · ${previous.length}`}
     </button>
@@ -10311,7 +10286,7 @@ function MonthViewState({
   const liveSyncWarning = planTaskLinksStorage === "supabase" && (planTaskLinksRealtime.status === "error" || planTaskLinksRealtime.status === "disabled") ? (
     <span
       title={planTaskLinksRealtime.message || "Live updates are not connected"}
-      style={{ border: "1px solid rgba(154,106,20,0.30)", background: "rgba(255,246,199,0.80)", color: "#8a5d08", borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 950 }}
+      style={{ border: "1px solid rgba(154,106,20,0.30)", background: "rgba(255,245,223,0.80)", color: DT.goldInk, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900 }}
     >
       Live updates paused
     </span>
@@ -10319,7 +10294,7 @@ function MonthViewState({
   const liveSyncStatus = liveSyncWarning ? null : (
     <span
       title={planTaskLinksStorage === "supabase" ? "Source: Supabase task links and live updates are active." : "Source: local Tuesday task-link state is active."}
-      style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", color: DT.textMuted, borderRadius: 9, padding: "7px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1.15 }}
+      style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.68)", color: DT.textMuted, borderRadius: 8, padding: "7px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900, lineHeight: 1.15 }}
     >
       Source: {planTaskLinksStorage === "supabase" ? "Supabase" : "Local blob"}
     </span>
@@ -10412,7 +10387,7 @@ function MonthViewState({
 
   const historySections = showHistory ? (
     <section style={{ border: "1px solid " + DT.border, borderRadius: DT.radius, background: "rgba(255,253,249,0.72)", boxShadow: DT.shadow, padding: 10, display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ padding: "2px 4px 0", fontFamily: DT.sans, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Previous weeks</div>
+      <div style={{ padding: "2px 4px 0", fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textFaint }}>Previous weeks</div>
       {previous.map((week) => (
         <MonthWeekSection
           key={week.id}
@@ -10533,10 +10508,10 @@ function MonthViewState({
       data-production-view-switch="true"
       style={{
         border: PRODUCTION_PANEL_STYLE.border,
-        borderRadius: 16,
+        borderRadius: 14,
         background: planViewMode === "orderRows"
-          ? "linear-gradient(105deg, rgba(255,255,255,0.98) 0%, rgba(255,253,249,0.92) 49%, rgba(237,248,247,0.58) 100%)"
-          : "linear-gradient(105deg, rgba(237,248,247,0.58) 0%, rgba(255,253,249,0.92) 51%, rgba(255,255,255,0.98) 100%)",
+          ? "linear-gradient(105deg, rgba(255,255,255,0.98) 0%, rgba(255,253,249,0.92) 49%, rgba(231,243,242,0.58) 100%)"
+          : "linear-gradient(105deg, rgba(231,243,242,0.58) 0%, rgba(255,253,249,0.92) 51%, rgba(255,255,255,0.98) 100%)",
         boxShadow: PRODUCTION_PANEL_STYLE.boxShadow,
         padding: isRailNarrow ? 4 : 5,
         display: "grid",
@@ -10563,7 +10538,7 @@ function MonthViewState({
               minWidth: 0,
               minHeight: isRailNarrow ? 54 : 62,
               border: `1px solid ${active ? "rgba(12,124,122,0.30)" : "rgba(0,0,0,0.07)"}`,
-              borderRadius: 11,
+              borderRadius: 8,
               background: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.56)",
               color: active ? DT.textPrimary : DT.textMuted,
               textDecoration: "none",
@@ -10582,7 +10557,7 @@ function MonthViewState({
             <span style={{ fontFamily: DT.serif, fontSize: isRailNarrow ? 24 : 30, lineHeight: 0.98, letterSpacing: "-0.045em", color: active ? DT.textPrimary : DT.textSecondary }}>
               {option.label}
             </span>
-            <span style={{ fontFamily: DT.sans, fontSize: isRailNarrow ? 9.5 : 10, fontWeight: 950, letterSpacing: "0.08em", textTransform: "uppercase", color: active ? DT.teal : DT.textFaint }}>
+            <span style={{ fontFamily: DT.sans, fontSize: isRailNarrow ? 9.5 : 10, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: active ? DT.teal : DT.textFaint }}>
               {active ? "Current view" : `Open ${option.id === "schedule" ? "week board" : "orders list"} →`}
             </span>
           </a>
@@ -10748,14 +10723,14 @@ export default function PlanClient({
             style={{
               marginTop: 12,
               marginBottom: 12,
-              border: "1px solid rgba(190,137,24,0.26)",
-              background: "rgba(255,246,199,0.72)",
-              color: "#8a5d08",
-              borderRadius: 12,
+              border: "1px solid rgba(200,169,110,0.26)",
+              background: "rgba(255,245,223,0.72)",
+              color: DT.goldInk,
+              borderRadius: 14,
               padding: "10px 12px",
               fontFamily: DT.sans,
               fontSize: 12,
-              fontWeight: 850,
+              fontWeight: 900,
             }}
           >
             QA fixture mode: local browser-test data only. No Monday, Supabase, Xero, or customer records are used.
@@ -10785,7 +10760,7 @@ export default function PlanClient({
             <p style={{ margin: "9px auto 0", maxWidth: 640, lineHeight: 1.5 }}>
               Monday remains the current workshop source for production. This empty state means Tuesday could not load that source in this environment; do not treat it as proof that the workshop plan is empty.
             </p>
-            {mondayError && <p style={{ margin: "14px auto 0", maxWidth: 640, border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, background: "rgba(180,107,70,0.08)", color: "#8f3f24", padding: 10, fontWeight: 850 }}>Production source issue: {mondayError}</p>}
+            {mondayError && <p style={{ margin: "14px auto 0", maxWidth: 640, border: "1px solid rgba(180,107,70,0.16)", borderRadius: 8, background: "rgba(180,107,70,0.08)", color: DT.clay, padding: 10, fontWeight: 900 }}>Production source issue: {mondayError}</p>}
           </section>
         ) : (
           <div style={{ marginTop: 12 }}>

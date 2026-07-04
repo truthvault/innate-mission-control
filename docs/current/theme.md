@@ -40,6 +40,12 @@ Rules:
 | `clay` | `#9a3b2f` | Blocked, destructive, overdue — danger only |
 | `textPrimary → textFaint` | `#22201a → #9a9088` | Four-step text hierarchy; never invent a fifth |
 | `border` | `rgba(0,0,0,0.06)` | Default hairline |
+| `surface` / `surfaceSoft` | `#fffdf9` / `#f7f5ef` | Warm panel fills between pageBg and cardBg |
+| `line` / `lineStrong` | `#e8e2d7` / `#d7cdbd` | Visible hairlines on warm surfaces |
+| `tealPale` / `tealLine` | `#e7f3f2` / `#bfdedb` | Teal state: fill / hairline |
+| `sagePale` | `#edf4ed` | Sage state fill |
+| `goldInk` / `goldPale` / `goldLine` | `#8a5b1f` / `#fff5df` / `#ead7a7` | Gold state: text / fill / hairline |
+| `clayPale` / `clayLine` | `#f8e9e6` / `#e7bbb4` | Clay state: fill / hairline |
 | `shadow` / `shadowHover` | see tokens | Cards at rest / interactive lift |
 | `radius` / `radiusSm` | `14` / `8` | Cards / controls. No other radii. |
 

@@ -36,7 +36,7 @@ assert.match(plan, /gridTemplateColumns: "1fr 1fr"/, 'Mobile Week and Today cont
 assert.match(plan, /gridTemplateColumns: "repeat\(5, minmax\(0, 1fr\)\)"/, 'Mobile weekday controls should fit as five compact buttons');
 assert.match(plan, /data-order-capacity-strip-mobile="true" aria-hidden=\{!isNarrow\}/, 'Mobile capacity strip should render only on narrow screens as the compact pill row');
 assert.match(plan, /height: 5/, 'Mobile temperature gauge bars should stay compact but legible');
-assert.match(plan, /totalHours > capacityHours \? "#9b2f22"/, 'Capacity pills should go red when a day is overloaded');
+assert.match(plan, /totalHours > capacityHours \? DT\.clay/, 'Capacity pills should go red when a day is overloaded');
 assert.match(plan, /data-order-row-day-mobile-visible/, 'Mobile order cards should hide empty weekday cells');
 assert.match(plan, /data-order-row-drop-mobile-visible/, 'Mobile order cards should hide empty Nick\/Dylan lanes');
 assert.match(plan, /data-order-journey-empty-mobile/, 'Mobile order cards should show a clear no-task message instead of empty lanes');

@@ -50,9 +50,9 @@
     "offWeights": 1
   },
   "app/production/plan/PlanClient.tsx": {
-    "colours": 766,
-    "offRadii": 141,
-    "offWeights": 304
+    "colours": 671,
+    "offRadii": 0,
+    "offWeights": 0
   },
   "app/production/plan/delight.tsx": {
     "colours": 85,
