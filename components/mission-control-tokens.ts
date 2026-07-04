@@ -24,6 +24,7 @@ export const MC_COLORS = {
   green: "#4f7f59",
   greenBg: "rgba(79,127,89,0.12)",
   border: "rgba(0,0,0,0.06)",
+  scrim: "rgba(20,18,16,0.45)",
   // Surface + hairline scale (promoted from PlanClient's private palette 2026-07-05)
   surface: "#fffdf9",
   surfaceSoft: "#f7f5ef",

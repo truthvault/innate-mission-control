@@ -3615,7 +3615,7 @@ function OrderOverviewOverlay({
 
   if (!workflowLoaded) {
     return (
-      <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 130, background: "rgba(20,18,16,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 130, background: DT.scrim, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: 14, padding: 22, fontFamily: DT.sans, fontSize: 13, fontWeight: 700, color: DT.textMuted }}>
           Loading saved order state…
         </div>

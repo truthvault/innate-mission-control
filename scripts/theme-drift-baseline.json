@@ -15,7 +15,7 @@
     "offWeights": 0
   },
   "app/costings/CostingsClient.tsx": {
-    "colours": 67,
+    "colours": 73,
     "offRadii": 0,
     "offWeights": 0
   },
@@ -25,12 +25,12 @@
     "offWeights": 0
   },
   "app/freight-quotes/page.tsx": {
-    "colours": 46,
+    "colours": 47,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/leads/LeadsClient.tsx": {
-    "colours": 31,
+    "colours": 25,
     "offRadii": 0,
     "offWeights": 0
   },
@@ -50,7 +50,7 @@
     "offWeights": 0
   },
   "app/production/plan/PlanClient.tsx": {
-    "colours": 659,
+    "colours": 660,
     "offRadii": 0,
     "offWeights": 0
   },
@@ -120,7 +120,7 @@
     "offWeights": 0
   },
   "components/mission-control-shell.tsx": {
-    "colours": 53,
+    "colours": 54,
     "offRadii": 0,
     "offWeights": 0
   },
