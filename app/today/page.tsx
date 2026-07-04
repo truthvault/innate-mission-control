@@ -165,8 +165,8 @@ export default async function TodayPage() {
             {riskyOrders.length ? riskyOrders.map(({ order, risk }) => <Row key={order.id} title={order.customer} meta={`${risk.reason} · ${order.rawMondayStatus || order.status}`} tone={risk.tone} />) : <Row title="No obvious order risk" meta="No overdue/no-date/material/payment action surfaced in the current read." tone="green" />}
           </Panel>
 
-          <Panel title="Nick / Dylan can keep moving" subtitle={`${taskCount(weekRows)} visible workshop task fragment${taskCount(weekRows) === 1 ? "" : "s"}`} actionHref="/production/plan?delight=off" actionLabel="Open schedule">
-            {weekRows.slice(0, 2).map((row) => <Row key={row.id} title={row.name} meta={`${row.weekGroupTitle} · ${row.appLinkedOrder?.name || row.linkedOrders[0]?.name || "No linked order"}`} tone={row.hasAppLinkedOrder ? "teal" : "amber"} />)}
+          <Panel title="Nick / Dylan can keep moving" subtitle={`${taskCount(weekRows)} workshop task${taskCount(weekRows) === 1 ? "" : "s"} on the board this week`} actionHref="/production/plan?delight=off" actionLabel="Open schedule">
+            {weekRows.slice(0, 2).map((row) => <Row key={row.id} title={row.name} meta={(() => { const linked = row.appLinkedOrder?.name || row.linkedOrders[0]?.name; return linked && linked !== row.name ? `${row.weekGroupTitle} · ${linked}` : row.weekGroupTitle; })()} tone={row.hasAppLinkedOrder ? "teal" : "amber"} />)}
             {!weekRows.length && <Row title="No production rows loaded" meta="Production Plan source needs checking before relying on today." tone="amber" />}
           </Panel>
         </div>

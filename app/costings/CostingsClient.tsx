@@ -117,7 +117,7 @@ function materialNoApproved(row: CostingMaterialRow) {
 
 function materialAction(row: CostingMaterialRow) {
   if (row.blocker) return row.blocker;
-  if (materialNoApproved(row)) return "No approved current price";
+  if (materialNoApproved(row)) return "Approve a price from the latest supplier invoice";
   if (!sourceBacked(row)) return "Needs source";
   if (materialNeedsReview(row)) return "Needs review before quote";
   return "Approved price is available";

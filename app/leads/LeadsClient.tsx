@@ -145,7 +145,7 @@ function statusTone(status: LeadStatus): "teal" | "amber" | "green" | "grey" | "
 
 function leadWarnings(lead: Lead) {
   const warnings: Warning[] = [];
-  if (isDue(lead)) warnings.push({ label: `Overdue: ${dateLabel(lead.nextFollowUpAt)}`, tone: "red" });
+  if (isDue(lead)) warnings.push({ label: "Overdue", tone: "red" });
   else if (isDueThisWeek(lead)) warnings.push({ label: `Due: ${dateLabel(lead.nextFollowUpAt)}`, tone: "amber" });
   if (needsNextStep(lead)) warnings.push({ label: "Missing next step", tone: "red" });
   if (isCashflowQuote(lead) && isHighValue(lead)) warnings.push({ label: "High value quote", tone: "green" });
