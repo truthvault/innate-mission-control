@@ -27,7 +27,8 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 - `costings.md` or `supabase-costings-schema-2026-06-18.sql` for source-backed supplier/material/product costing data.
 - `../../docs/current/theme.md` — CANONICAL design system (tokens, typography, component rules). Load with the design standard before any UI work.
 - `../../docs/current/tuesday-agent-design-standard.md` — active design standard for Tuesday/Mission Control UI work
-- `orders-board-audit-2026-07-04.md` — current audit of the Orders board: test results, visual failures, silent font/token bugs (fixed), refinement priorities.
+- `orders-board-audit-2026-07-04.md` — current audit of the Orders board: test results, visual failures, silent font/token bugs (fixed), refinement priorities
+- `ui-ux-audit-2026-07-05.md` — board-by-board UI/UX deep-dive: 8 systemic patterns (chip inflation, object duplication, status stacks, mobile squeeze, source gaps), confirmed default-view bug, ranked P1-P3 work order.
 - `../../docs/current/tuesday-visual-audit-protocol.md` — active desktop/tablet/mobile proof protocol and scanner route.
 
 ## Active operating handovers / current prep
@@ -35,6 +36,7 @@ This README is the canonical router for Tuesday reference files. Dated handovers
 - `../../docs/current/theme.md` — CANONICAL design system (tokens, typography, component rules). Load with the design standard before any UI work.
 - `../../docs/current/tuesday-agent-design-standard.md` — active design standard for Tuesday/Mission Control UI work
 - `orders-board-audit-2026-07-04.md` — current audit of the Orders board: test results, visual failures, silent font/token bugs (fixed), refinement priorities
+- `ui-ux-audit-2026-07-05.md` — board-by-board UI/UX deep-dive: 8 systemic patterns (chip inflation, object duplication, status stacks, mobile squeeze, source gaps), confirmed default-view bug, ranked P1-P3 work order
 - `../../docs/current/tuesday-visual-audit-protocol.md` — active desktop/tablet/mobile proof protocol and scanner route
 - `tuesday-simplification-plan-of-plan-2026-07.md` — planning guardrail for the Tuesday simplification master plan. Load before any simplification planning/build so work stays in Pass 1/2/3 and does not sprawl into an unapproved rebuild.
 - `tuesday-simplification-master-plan-2026-07.md` — Pass 1 master skeleton for simplifying Tuesday around stable Supabase read models, collectors/reconciliation, Daily Control, Nick board, Leads, action safety, and verification gates. Draft only until Guido reviews.
