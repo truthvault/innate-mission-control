@@ -22,6 +22,8 @@ jobs:
         run: npm run check:tuesday-page-contracts
       - name: Planning board tests
         run: npm run test:planning
+      - name: Theme drift ratchet
+        run: npm run check:theme-drift
       - name: Lint
         run: npm run lint
       - name: Typecheck

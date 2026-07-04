@@ -45,6 +45,33 @@ Rules:
 
 Status chip tones come only from `chipColors()` in `mission-control-ui.tsx`: `neutral · grey · amber · teal · red · green`.
 
+## 3b. Spacing & size scales
+
+- **Spacing**: 4 / 6 / 8 / 10 / 12 / 14 / 18 / 22 px. Nothing else. Section gaps 22,
+  card padding 12–14, row gaps 8–10, chip/label gaps 4–6.
+- **Font sizes**: 10 (chips/labels) · 11 (secondary labels) · 12 (row meta) ·
+  13 (body/controls) · 15 (emphasis) · 17–18 (card identity) · 26 (page title).
+  No fractional sizes; nothing below 10.
+- **Font weights**: 400 / 500 / 600 (Fraunces identity) · 700 / 800 / 900 (DM Sans
+  operational). Values like 650/760/820/920 do not exist in the loaded fonts — the
+  browser snaps them unpredictably. Never use them.
+- **Radii**: 8 (controls) · 14 (cards) · 999 (pills). Nothing else.
+
+## 3c. Popups, modals, and overlays
+
+Every overlay in Tuesday is the same object:
+
+- Scrim: `rgba(20,18,16,0.45)`, no blur.
+- Panel: `cardBg`, radius 14, `shadowHover`, 1px `border`, max-width 640
+  (forms) or 920 (review surfaces), 18px padding, 22px between sections.
+- Header: Fraunces 18–20 title + optional muted 12px source line; close affordance
+  top-right, min 40px target.
+- Footer: actions right-aligned — primary teal, secondary hairline, destructive clay
+  and never the largest control. One primary per overlay.
+- Confirmation language: verbs, not "OK" ("Add to schedule", "Delete task").
+- Escape and scrim-click close unless data would be lost; then ask.
+- Inline popovers (date pickers, quick-add) use radius 8, same border/shadow tokens.
+
 ## 4. Component rules
 
 - **Chips** (`<Chip/>`): 10px, weight 700, pill radius. One chip = one fact (status, owner, hours, source). Never paragraphs in chips.
@@ -74,9 +101,20 @@ Status chip tones come only from `chipColors()` in `mission-control-ui.tsx`: `ne
 | Guido/admin (leads, costings, freight, quoting) | May show provenance, source labels, denser tables |
 | Public (configurator, freight endpoints) | Follows website brand kit, not this file |
 
-## 8. Enforcement checklist (before calling any UI change done)
+## 8. Enforcement (mechanical, not honour-system)
 
-1. No hex/rgb literal outside `mission-control-tokens.ts` or `globals.css` (existing debt is being burned down — never add more).
+**The ratchet:** `npm run check:theme-drift` (in CI on every push/PR) counts each
+file's hardcoded colour literals, off-scale radii, and off-scale font weights
+against `scripts/theme-drift-baseline.json`. Any increase fails CI. Decreases are
+locked in with `node scripts/check-theme-drift.mjs --update-baseline` in the same
+commit as the cleanup. Debt at baseline creation (2026-07-05): 1,439 colour
+literals · 165 off-scale radii · 324 off-scale weights across 26 files — burn-down
+order: PlanClient (766 colours + private TUESDAY_THEME palette) → ProductionClient
+→ configurator → costings → shell.
+
+Checklist before calling any UI change done:
+
+1. No hex/rgb literal outside `mission-control-tokens.ts` or `globals.css` (existing debt is being burned down — never add more; the ratchet enforces this).
 2. No `font-family` other than the tokens/variables.
 3. Server components import `DT` from **`@/components/mission-control-tokens`** — never from `mission-control-ui` (client module; values silently break in server components).
 4. `npm run audit:tuesday-visual -- --port <port>` — zero failures on the touched routes, all four viewports.
