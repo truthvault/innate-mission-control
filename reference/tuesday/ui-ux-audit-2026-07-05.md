@@ -59,15 +59,22 @@ Wapp"; leads shows "Overdue: Fri 26 Jun" chip next to a red "Fri, 26 Jun" date;
 samples top-up shows "Out" chip + "No stock ready" text. Every duplicated fact is
 paid for in reading time on every visit.
 
-## Confirmed bug (P1)
+## Correction (2026-07-05, after deeper verification)
 
-**Default view inversion on /production/plan.** A plain URL (no `?mode=`) renders
-**Schedule as "Current view"** with the Orders card offering "Open orders list →".
-`page.tsx` correctly passes `initialPlanViewMode="orderRows"`; the client ends up in
-schedule mode anyway (suspect the client-side state/history-restoration around the
-`planViewMode` state or the toggle's active comparison). This contradicts Nick's
-recorded feedback ("Orders should be the default") and silently defeats the repaired
-test, which only guards the URL-parse ternary. Needs a trace + a render-level test.
+**The "default view inversion" was NOT a bug — it was this audit's own tooling.**
+The visual scanner's screenshot filename ignored the `mode` query param, so the
+`?mode=schedule` capture overwrote the plain-URL capture; both SSR and hydrated
+Chromium render Orders as the default correctly (verified with Playwright:
+`orderRows:true`, order-rows grid present). The scanner slug now includes `mode`.
+The same overwrite invalidated the S4 "mobile squeeze" finding for the default
+view: the real mobile Orders view is a proper stacked agenda (toggle + crew filter
+on top, per-order day cards, "Show more" collapse). S4 still applies to the
+secondary schedule week-board mode on mobile, at lower priority.
+
+**Real P1 found in the corrected capture (fixed same day):** the "No tasks this
+week" section rendered ~100 empty dashed Nick/Dylan lane placeholders (10 orders ×
+5 days × 2 people). Now collapsed to identity-only rows via
+`[data-order-journey-section="no-tasks"]` CSS.
 
 ## Board-by-board
 

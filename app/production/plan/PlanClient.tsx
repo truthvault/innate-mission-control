@@ -8123,6 +8123,15 @@ const ORDER_JOURNEY_MOBILE_CSS = `
     border-radius: 6px;
     box-sizing: border-box;
   }
+  /* No-tasks orders: the week grid holds nothing — collapse to the identity
+     card only instead of rendering 10 empty person lanes per order. */
+  [data-order-journey-section="no-tasks"] [data-order-row-week-grid] {
+    grid-template-columns: 1fr !important;
+  }
+  [data-order-journey-section="no-tasks"] [data-order-row-week-grid] > *:not(:first-child) {
+    display: none !important;
+  }
+
   @media (max-width: 879px) {
     [data-process-template-card] {
       grid-template-columns: 1fr !important;
@@ -8890,7 +8899,7 @@ function OrderJourneyView({
         </div>
       )}
       {activeRowsWithoutTasks.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div data-order-journey-section="no-tasks" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {renderSectionLabel("No tasks this week", activeRowsWithoutTasks.length, "active orders needing plan or later work")}
           {activeRowsWithoutTasks.map(renderRow)}
         </div>

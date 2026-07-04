@@ -231,7 +231,8 @@ function slugForUrl(url) {
   const parsed = new URL(url);
   const pathPart = parsed.pathname === "/" ? "home" : parsed.pathname.replace(/^\/+/, "");
   const viewPart = parsed.searchParams.get("view") ? `-${parsed.searchParams.get("view")}` : "";
-  return `${pathPart}${viewPart}`.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "route";
+  const modePart = parsed.searchParams.get("mode") ? `-${parsed.searchParams.get("mode")}` : "";
+  return `${pathPart}${viewPart}${modePart}`.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 96) || "route";
 }
 
 function mdEscape(value) {
