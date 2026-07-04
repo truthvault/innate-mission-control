@@ -388,71 +388,6 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
   );
 }
 
-function DecisionQueue({ leads, limit = 8, compact = false, onSelect }: { leads: Lead[]; limit?: number; compact?: boolean; onSelect: (lead: Lead) => void }) {
-  const fullQueue = leads.filter(doToday).sort(sortByUrgency);
-  const queue = fullQueue.slice(0, limit);
-  if (queue.length === 0) return null;
-  return (
-    <section style={{ background: "linear-gradient(135deg, rgba(248,233,230,0.98), rgba(255,253,249,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "end", marginBottom: 10 }}>
-        <div>
-          <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: compact ? 20 : 24 }}>Do Today</h2>
-          {!compact && <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Start here: protect cashflow and unblock Monday follow-ups.</p>}
-        </div>
-        <Chip label={`Top ${queue.length} of ${fullQueue.length}`} tone="amber" />
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))", gap: 8 }}>
-        {queue.map((lead) => (
-          <button key={lead.id} type="button" onClick={() => onSelect(lead)} style={{ textAlign: "left", border: `1px solid ${DT.border}`, borderRadius: DT.radiusSm, background: DT.cardBg, padding: 10, cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start" }}>
-              <strong title={lead.customerName} style={{ fontFamily: DT.serif, fontSize: 16, color: DT.textPrimary, lineHeight: 1.1 }}>{lead.customerName}</strong>
-              <span style={{ fontFamily: DT.sans, color: lead.estimatedValue ? DT.textSecondary : DT.textFaint, fontWeight: 900, fontSize: 11 }}>{lead.estimatedValue ? money(lead.estimatedValue) : "No value"}</span>
-            </div>
-            <div style={{ marginTop: 5, fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, lineHeight: 1.3 }}>{whyNow(lead)}</div>
-            <div style={{ marginTop: 7, display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {leadWarnings(lead).slice(0, 2).map((warning) => <Chip key={warning.label} label={warning.label} tone={warning.tone} />)}
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function CashFirstStrip({ leads, limit = 4, compact = false, onSelect }: { leads: Lead[]; limit?: number; compact?: boolean; onSelect: (lead: Lead) => void }) {
-  const allCashLeads = cashFirstLeads(leads);
-  const cashLeads = allCashLeads.slice(0, limit);
-  const total = allCashLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
-  if (cashLeads.length === 0) return null;
-  return (
-    <section style={{ background: "linear-gradient(135deg, rgba(247,245,239,0.98), rgba(248,233,230,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", marginBottom: 10, flexWrap: "wrap" }}>
-        <div>
-          <div style={labelStyle}>Cash first</div>
-          <h2 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: compact ? 19 : 24 }}>Protect cash</h2>
-          {!compact && <p style={{ margin: "3px 0 0", fontFamily: DT.sans, fontSize: 12, color: DT.textMuted }}>Read-only: quotes and high-value leads only. No status changes here.</p>}
-        </div>
-        <div style={{ display: "grid", gap: 3, textAlign: "right" }}>
-          <span style={labelStyle}>Top cash value</span>
-          <strong style={{ fontFamily: DT.serif, color: DT.textPrimary, fontSize: 22 }}>{money(total)}</strong>
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
-        {cashLeads.map((lead) => (
-          <button key={lead.id} type="button" onClick={() => onSelect(lead)} style={{ display: "grid", gap: 6, textAlign: "left", border: "1px solid rgba(180,107,70,0.16)", borderRadius: DT.radiusSm, background: DT.cardBg, padding: 10, cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "start" }}>
-              <strong title={lead.customerName} style={{ fontFamily: DT.serif, fontSize: 16, color: DT.textPrimary, lineHeight: 1.1 }}>{lead.customerName}</strong>
-              <span style={{ fontFamily: DT.sans, color: DT.textSecondary, fontWeight: 900, fontSize: 11 }}>{valueLabel(lead.estimatedValue)}</span>
-            </div>
-            <span style={{ ...rowTextStyle, whiteSpace: "normal", overflow: "visible" }}>{whyNow(lead)}</span>
-            <span style={{ fontFamily: DT.sans, color: DT.clay, fontSize: 11, fontWeight: 900 }}>Open context</span>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function NewLeadForm({ onSaved, writesEnabled }: { onSaved: () => void; writesEnabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
@@ -723,8 +658,20 @@ export default function LeadsClient({ result, writesEnabled }: { result: LeadsRe
         </div>
       )}
 
-      <CashFirstStrip leads={activeRows} limit={isNarrow ? 1 : 4} compact={isNarrow} onSelect={(lead) => setSelectedId(lead.id)} />
-      <DecisionQueue leads={activeRows} limit={isNarrow ? 3 : 8} compact={isNarrow} onSelect={(lead) => setSelectedId(lead.id)} />
+      {/* One lead, one place: these buttons filter the list below instead of
+          duplicating lead cards above it. */}
+      <section style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+        <button type="button" onClick={() => setFilter("do_today")} aria-pressed={filter === "do_today"}
+          style={{ flex: "1 1 220px", minHeight: 52, textAlign: "left", cursor: "pointer", border: `1px solid ${filter === "do_today" ? DT.tealLine : DT.border}`, background: filter === "do_today" ? DT.tealPale : DT.cardBg, borderRadius: DT.radius, padding: "10px 14px" }}>
+          <div style={{ fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary }}>Do today · {activeRows.filter(doToday).length}</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 700 }}>Overdue follow-ups and cash to protect, most urgent first</div>
+        </button>
+        <button type="button" onClick={() => setFilter("cashflow")} aria-pressed={filter === "cashflow"}
+          style={{ flex: "1 1 220px", minHeight: 52, textAlign: "left", cursor: "pointer", border: `1px solid ${filter === "cashflow" ? DT.goldLine : DT.border}`, background: filter === "cashflow" ? DT.goldPale : DT.cardBg, borderRadius: DT.radius, padding: "10px 14px" }}>
+          <div style={{ fontFamily: DT.serif, fontSize: 18, color: DT.textPrimary }}>Protect cash · {money(cashFirstLeads(activeRows).reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0))}</div>
+          <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, fontWeight: 700 }}>Open quotes and high-value leads only</div>
+        </button>
+      </section>
 
       <div data-lead-filter-bar="true" style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(247,245,239,0.94)", backdropFilter: "blur(10px)" }}>
         <div data-lead-filter-scroll="true" style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
