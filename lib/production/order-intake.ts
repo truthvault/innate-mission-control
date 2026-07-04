@@ -959,13 +959,21 @@ async function attachBalanceInvoiceToOrder(order: SupabaseOrder, invoice: XeroIn
   const nextAction = balancePaid
     ? `Balance paid on ${invoiceNumber}. Book freight/dispatch.`
     : `Await balance payment for ${invoiceNumber}${amountDue ? ` (${new Intl.NumberFormat("en-NZ", { style: "currency", currency: "NZD" }).format(amountDue)})` : ""}, then book freight/dispatch.`;
+  // A balance invoice only moves the order into the payment stage when the
+  // workshop is actually done. While the job is still active/in production/
+  // paused, the balance is a note on the order, not its status — otherwise
+  // in-flight jobs vanish from workshop lenses (Fowler/Kidd regression,
+  // 2026-07-05).
+  const workshopDone = ["finished", "awaiting_dispatch", "awaiting_payment", "complete"].includes(String(order.status || ""));
+  const statusPatch = workshopDone
+    ? { status: balancePaid ? "finished" : "awaiting_payment", due_date: dueDate || undefined }
+    : {};
   await supabaseRequest(`orders?id=eq.${quote(order.id)}`, {
     method: "PATCH",
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
-      status: balancePaid ? "finished" : "awaiting_payment",
-      priority: balancePaid ? order.status === "awaiting_payment" ? "normal" : undefined : "cash",
-      due_date: dueDate || undefined,
+      ...statusPatch,
+      priority: balancePaid ? (order.status === "awaiting_payment" ? "normal" : undefined) : "cash",
       next_action: nextAction,
     }),
   });
