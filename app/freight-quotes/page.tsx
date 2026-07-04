@@ -171,22 +171,31 @@ function FilterLink({ href, active, children }: { href: string; active?: boolean
   return <a className={`filter-link ${active ? "filter-link--active" : ""}`} href={href}>{children}</a>;
 }
 
+function quoteDayKey(timestamp: string) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Unknown day";
+  return date.toLocaleDateString("en-NZ", { weekday: "long", day: "numeric", month: "long", timeZone: "Pacific/Auckland" });
+}
+
+function quoteTime(timestamp: string) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString("en-NZ", { hour: "numeric", minute: "2-digit", timeZone: "Pacific/Auckland" });
+}
+
 function QuoteCard({ row }: { row: FreightQuoteRow }) {
   return (
-    <article className={`quote-card ${row.manualCheckOffered ? "quote-card--warn" : ""}`}>
-      <div className="quote-card__topline">
-        <span>{formatDate(row.timestamp)}</span>
+    <details className={`quote-row ${row.manualCheckOffered ? "quote-card--warn" : ""}`}>
+      <summary>
+        <span className="quote-row__time">{quoteTime(row.timestamp)}</span>
+        <span className="quote-row__product">{productLabel(row)}</span>
+        <span className="quote-row__dest muted">{destinationLabel(row)}</span>
         <span className={`pill ${row.isInternalTest ? "pill--warn" : row.manualCheckOffered ? "pill--warn" : "pill--ok"}`}>
-          {row.isInternalTest ? "Internal/test" : row.manualCheckOffered ? "Manual check offered" : row.status || "logged"}
+          {row.isInternalTest ? "Internal/test" : row.manualCheckOffered ? "Manual check" : row.status || "logged"}
         </span>
-      </div>
-      <div className="quote-card__main">
-        <div>
-          <h2>{productLabel(row)}</h2>
-          <p className="muted">{destinationLabel(row)}</p>
-        </div>
-        <div className="price">{money(row.estimateInclGst)}</div>
-      </div>
+        <span className="price">{money(row.estimateInclGst)}</span>
+      </summary>
+      <div className="quote-row__body">
       <dl className="grid">
         <div>
           <dt>Size</dt>
@@ -230,7 +239,8 @@ function QuoteCard({ row }: { row: FreightQuoteRow }) {
           Open product page
         </a>
       ) : null}
-    </article>
+      </div>
+    </details>
   );
 }
 
@@ -276,7 +286,18 @@ export default async function FreightQuotesPage({
         .status-list{display:grid;gap:8px}.status-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #e8e2d7;padding-bottom:7px}.status-row:last-child{border-bottom:0;padding-bottom:0}.status-row span{color:#7c746b}.status-row strong{text-align:right}
         .error{background:#f7f5ef;border:1px solid #e7bbb4;color:#783716;padding:14px 16px;border-radius:14px;margin:16px 0}
         .empty{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:28px;color:#5a5549}
-        .quotes{display:grid;gap:14px}
+        .quotes{display:grid;gap:18px}
+        .quote-day__heading{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#7c746b;margin:0 0 8px}
+        .quote-day{display:grid;gap:6px}
+        .quote-row{background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:8px}
+        .quote-row summary{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 14px;cursor:pointer;list-style:none}
+        .quote-row summary::-webkit-details-marker{display:none}
+        .quote-row__time{flex:0 0 62px;font-size:12px;color:#7c746b}
+        .quote-row__product{flex:1 1 40%;min-width:0;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .quote-row__dest{flex:1 1 30%;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .quote-row summary .price{margin:0;font-size:15px}
+        .quote-row__body{padding:4px 14px 14px;border-top:1px solid rgba(0,0,0,0.05)}
+        @media(max-width:850px){.quote-row summary{flex-wrap:wrap}.quote-row__time{flex-basis:48px}.quote-row__product{flex-basis:100%}}
         .quote-card{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:18px;box-shadow:0 14px 34px rgba(39,34,27,.07)}
         .quote-card--warn{border-color:#c8a96e;background:#ffffffdf9}
         .quote-card__topline,.quote-card__main{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.quote-card__topline{font-size:13px;color:#7c746b;margin-bottom:13px}
@@ -329,8 +350,16 @@ export default async function FreightQuotesPage({
         <div className="empty">No quote checks logged yet. Run a freight estimate from the Shopify preview and refresh this page.</div>
       ) : (
         <section className="quotes" aria-label="Recent freight quote events">
-          {rows.map((row) => (
-            <QuoteCard row={row} key={row.id} />
+          {Array.from(rows.reduce((groups, row) => {
+            const key = quoteDayKey(row.timestamp);
+            if (!groups.has(key)) groups.set(key, [] as FreightQuoteRow[]);
+            groups.get(key)!.push(row);
+            return groups;
+          }, new Map<string, FreightQuoteRow[]>())).map(([day, dayRows]) => (
+            <div key={day} className="quote-day">
+              <h2 className="quote-day__heading">{day} · {dayRows.length}</h2>
+              {dayRows.map((row) => <QuoteCard row={row} key={row.id} />)}
+            </div>
           ))}
         </section>
       )}
