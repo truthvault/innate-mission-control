@@ -261,29 +261,29 @@ export default async function FreightQuotesPage({
     >
       <div className="page">
       <style>{`
-        :root{color-scheme:light;background:#f4f1eb;color:#283229;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-        body{margin:0;background:#f4f1eb;color:#283229}
+        :root{color-scheme:light;background:#f5f3ee;color:#27221b;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        body{margin:0;background:#f5f3ee;color:#27221b}
         .page{max-width:1180px;margin:0 auto;padding:34px 20px 56px}
-        .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:#6c7568;margin:0 0 10px}
-        h1{font-family:Georgia,serif;font-size:clamp(34px,6vw,62px);line-height:.95;margin:0 0 12px;font-weight:500;color:#283229}
-        .intro{max-width:760px;color:#586354;font-size:17px;line-height:1.55;margin:0 0 24px}
+        .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:#7c746b;margin:0 0 10px}
+        h1{font-family:Georgia,serif;font-size:clamp(34px,6vw,62px);line-height:.95;margin:0 0 12px;font-weight:500;color:#27221b}
+        .intro{max-width:760px;color:#5a5549;font-size:17px;line-height:1.55;margin:0 0 24px}
         .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:24px 0 26px}
-        .stat{background:#fff;border:1px solid #ded8cd;padding:15px 16px;border-radius:16px;box-shadow:0 12px 30px rgba(40,50,41,.06)}
-        .stat span{display:block;color:#6c7568;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.stat strong{font-size:25px}
-        .stat--warn strong{color:#9a5b20}.stat--good strong{color:#2f6e47}
-        .control-panel{display:grid;grid-template-columns:1.4fr .9fr;gap:14px;margin:0 0 24px}.panel{background:#fff;border:1px solid #ded8cd;border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(40,50,41,.06)}
-        .panel h2{font-size:16px;margin:0 0 8px}.panel p{margin:0;color:#596457;line-height:1.45}.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.filter-link{border:1px solid #cfc7ba;border-radius:999px;padding:7px 11px;color:#283229;text-decoration:none;font-size:13px;background:#f8f5ef}.filter-link--active{background:#283229;color:#fff;border-color:#283229}
-        .status-list{display:grid;gap:8px}.status-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #eee8de;padding-bottom:7px}.status-row:last-child{border-bottom:0;padding-bottom:0}.status-row span{color:#687265}.status-row strong{text-align:right}
-        .error{background:#fff2ed;border:1px solid #f1b89f;color:#783716;padding:14px 16px;border-radius:14px;margin:16px 0}
-        .empty{background:#fff;border:1px solid #ded8cd;border-radius:18px;padding:28px;color:#586354}
+        .stat{background:#ffffff;border:1px solid #e8e2d7;padding:15px 16px;border-radius:16px;box-shadow:0 12px 30px rgba(39,34,27,.06)}
+        .stat span{display:block;color:#7c746b;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.stat strong{font-size:25px}
+        .stat--warn strong{color:#8a5b1f}.stat--good strong{color:#2f6e47}
+        .control-panel{display:grid;grid-template-columns:1.4fr .9fr;gap:14px;margin:0 0 24px}.panel{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(39,34,27,.06)}
+        .panel h2{font-size:16px;margin:0 0 8px}.panel p{margin:0;color:#5a5549;line-height:1.45}.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.filter-link{border:1px solid #d7cdbd;border-radius:999px;padding:7px 11px;color:#27221b;text-decoration:none;font-size:13px;background:#f7f5ef}.filter-link--active{background:#27221b;color:#ffffff;border-color:#27221b}
+        .status-list{display:grid;gap:8px}.status-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #e8e2d7;padding-bottom:7px}.status-row:last-child{border-bottom:0;padding-bottom:0}.status-row span{color:#7c746b}.status-row strong{text-align:right}
+        .error{background:#f7f5ef;border:1px solid #e7bbb4;color:#783716;padding:14px 16px;border-radius:14px;margin:16px 0}
+        .empty{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:28px;color:#5a5549}
         .quotes{display:grid;gap:14px}
-        .quote-card{background:#fff;border:1px solid #ded8cd;border-radius:18px;padding:18px;box-shadow:0 14px 34px rgba(40,50,41,.07)}
-        .quote-card--warn{border-color:#d9aa74;background:#fffaf2}
-        .quote-card__topline,.quote-card__main{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.quote-card__topline{font-size:13px;color:#6c7568;margin-bottom:13px}
-        .quote-card h2{margin:0 0 5px;font-size:20px;line-height:1.2}.muted{margin:0;color:#596457}.price{font-size:34px;font-weight:750;white-space:nowrap}
-        .pill{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700}.pill--ok{background:#e8f0e8;color:#285537}.pill--warn{background:#f7dfbe;color:#76430f}
-        .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0 0}.grid div{background:#f7f4ee;border-radius:12px;padding:10px}.grid dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#777f72;margin-bottom:4px}.grid dd{margin:0;font-weight:650;color:#283229}
-        .packages{margin:13px 0 0;color:#596457;font-size:13px;line-height:1.45}.source-link{display:inline-block;margin-top:12px;color:#283229;text-decoration-thickness:1px;text-underline-offset:3px}
+        .quote-card{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:18px;box-shadow:0 14px 34px rgba(39,34,27,.07)}
+        .quote-card--warn{border-color:#c8a96e;background:#ffffffdf9}
+        .quote-card__topline,.quote-card__main{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.quote-card__topline{font-size:13px;color:#7c746b;margin-bottom:13px}
+        .quote-card h2{margin:0 0 5px;font-size:20px;line-height:1.2}.muted{margin:0;color:#5a5549}.price{font-size:34px;font-weight:750;white-space:nowrap}
+        .pill{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700}.pill--ok{background:#edf4ed;color:#285537}.pill--warn{background:#ead7a7;color:#8a5b1f}
+        .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0 0}.grid div{background:#f7f5ef;border-radius:12px;padding:10px}.grid dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7c746b;margin-bottom:4px}.grid dd{margin:0;font-weight:650;color:#27221b}
+        .packages{margin:13px 0 0;color:#5a5549;font-size:13px;line-height:1.45}.source-link{display:inline-block;margin-top:12px;color:#27221b;text-decoration-thickness:1px;text-underline-offset:3px}
         @media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.control-panel{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quote-card__main{display:block}.price{margin-top:12px}.quote-card__topline{display:block}.pill{margin-top:8px}}
       `}</style>
       <p className="eyebrow">Tuesday · Freight / Shipping</p>

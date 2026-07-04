@@ -131,8 +131,8 @@ function TuesdayMark({ compact = false }: { compact?: boolean }) {
         height: compact ? 24 : 36,
         flex: "0 0 auto",
         borderRadius: compact ? 10 : 14,
-        background: "linear-gradient(145deg, rgba(255,253,249,0.13), rgba(210,174,109,0.10))",
-        border: "1px solid rgba(210,174,109,0.22)",
+        background: "linear-gradient(145deg, rgba(255,253,249,0.13), rgba(200,169,110,0.10))",
+        border: "1px solid rgba(200,169,110,0.22)",
         overflow: "hidden",
       }}
     >
@@ -150,7 +150,7 @@ function TuesdayBrand({ syncedAt, source, mondayError, isNarrow = false }: { syn
       <TuesdayMark compact={isNarrow} />
       <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, lineHeight: 1 }}>
-          <div style={{ fontSize: isNarrow ? 17 : 21, fontWeight: 800, color: "#fff", fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
+          <div style={{ fontSize: isNarrow ? 17 : 21, fontWeight: 800, color: DT.cardBg, fontFamily: DT.serif, letterSpacing: "-0.045em" }}>Tuesday</div>
         </div>
         {!isNarrow && <SyncBadge syncedAt={syncedAt} source={source} mondayError={mondayError} />}
       </div>
@@ -229,7 +229,7 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: compact ? 4 : 8 }}>
-      {!compact && err && <span style={{ fontSize: 10, color: "#fca5a5", fontFamily: DT.sans }} title={err}>Refresh error</span>}
+      {!compact && err && <span style={{ fontSize: 10, color: DT.clayLine, fontFamily: DT.sans }} title={err}>Refresh error</span>}
       {!compact && refreshed && !err && <span style={{ fontSize: 10, color: DT.gold, fontFamily: DT.sans }}>{refreshedLabel}</span>}
       <button
         onClick={onClick}
@@ -244,7 +244,7 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
           background: compact ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.07)",
           color: "rgba(255,255,255,0.84)",
           border: "1px solid rgba(255,255,255,0.12)",
-          fontWeight: 760,
+          fontWeight: 800,
           fontSize: compact ? 10 : 11,
           cursor: isPending ? "wait" : "pointer",
           fontFamily: DT.sans,
@@ -261,14 +261,14 @@ function RefreshButton({ section, compact = false }: { section: MissionControlSe
 function MobileManagementMenu({ section, pathname }: { section: MissionControlSection; pathname: string | null }) {
   return (
     <details style={{ position: "relative", justifySelf: "end", zIndex: 1200 }}>
-      <summary style={{ listStyle: "none", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.90)", borderRadius: 999, minHeight: 32, padding: "0 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 850, fontFamily: DT.sans, cursor: "pointer", whiteSpace: "nowrap" }}>
+      <summary style={{ listStyle: "none", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.90)", borderRadius: 999, minHeight: 32, padding: "0 10px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, fontFamily: DT.sans, cursor: "pointer", whiteSpace: "nowrap" }}>
         Menu
       </summary>
-      <div style={{ position: "absolute", top: 36, right: 0, minWidth: 188, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 16, background: "rgba(33,31,29,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 5, zIndex: 1201, backdropFilter: "blur(18px)" }}>
+      <div style={{ position: "absolute", top: 36, right: 0, minWidth: 188, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, background: "rgba(34,32,26,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 5, zIndex: 1201, backdropFilter: "blur(18px)" }}>
         {ALL_NAV.map((item) => {
           const active = navItemActive(item, section, pathname);
           return (
-            <Link key={item.section} href={item.href} style={{ color: active ? "#fff" : "rgba(255,255,255,0.84)", background: active ? "rgba(255,255,255,0.14)" : "transparent", border: active ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent", borderRadius: 10, minHeight: 40, padding: "0 11px", display: "flex", alignItems: "center", fontSize: 12, textDecoration: "none", fontFamily: DT.sans, fontWeight: active ? 900 : 760 }}>
+            <Link key={item.section} href={item.href} style={{ color: active ? DT.cardBg : "rgba(255,255,255,0.84)", background: active ? "rgba(255,255,255,0.14)" : "transparent", border: active ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent", borderRadius: 8, minHeight: 40, padding: "0 11px", display: "flex", alignItems: "center", fontSize: 12, textDecoration: "none", fontFamily: DT.sans, fontWeight: active ? 900 : 760 }}>
               {item.label}
             </Link>
           );
@@ -284,7 +284,7 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
     <details style={{ position: "relative", zIndex: 1200 }}>
       <summary style={{
         listStyle: "none",
-        color: active ? "#fff" : "rgba(255,255,255,0.78)",
+        color: active ? DT.cardBg : "rgba(255,255,255,0.78)",
         background: active ? "rgba(255,255,255,0.13)" : "rgba(255,255,255,0.055)",
         border: "1px solid rgba(255,255,255,0.12)",
         boxShadow: active ? "inset 0 0 0 1px rgba(255,255,255,0.04)" : "none",
@@ -293,7 +293,7 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
         minWidth: 72,
         fontSize: 11,
         fontFamily: DT.sans,
-        fontWeight: 780,
+        fontWeight: 800,
         letterSpacing: "0.01em",
         textAlign: "center",
         cursor: "pointer",
@@ -301,14 +301,14 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
       }}>
         Guido ▾
       </summary>
-      <div style={{ position: "absolute", top: 38, right: 0, minWidth: 210, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 16, background: "rgba(33,31,29,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201, backdropFilter: "blur(18px)" }}>
+      <div style={{ position: "absolute", top: 38, right: 0, minWidth: 210, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, background: "rgba(34,32,26,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201, backdropFilter: "blur(18px)" }}>
         {GUIDO_NAV.map((item, index) => {
           const itemActive = navItemActive(item, section, pathname);
           const showGroup = item.group && (index === 0 || GUIDO_NAV[index - 1]?.group !== item.group);
           return (
             <div key={item.section} style={{ display: "grid", gap: 4 }}>
               {showGroup && <div style={{ padding: "5px 8px 1px", color: "rgba(255,255,255,0.42)", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{item.group}</div>}
-              <Link href={item.href} style={{ color: itemActive ? "#fff" : "rgba(255,255,255,0.84)", background: itemActive ? "rgba(255,255,255,0.14)" : "transparent", border: itemActive ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent", borderRadius: 10, padding: "8px 10px", fontSize: 11, textDecoration: "none", fontFamily: DT.sans, fontWeight: itemActive ? 900 : 760 }}>
+              <Link href={item.href} style={{ color: itemActive ? DT.cardBg : "rgba(255,255,255,0.84)", background: itemActive ? "rgba(255,255,255,0.14)" : "transparent", border: itemActive ? "1px solid rgba(255,255,255,0.16)" : "1px solid transparent", borderRadius: 8, padding: "8px 10px", fontSize: 11, textDecoration: "none", fontFamily: DT.sans, fontWeight: itemActive ? 900 : 760 }}>
                 {item.label}
               </Link>
             </div>
@@ -345,7 +345,7 @@ export function MissionControlShell({
   const compactMobile = isNarrow;
   const compactPlanMobile = compactMobile && section === "plan";
   return (
-    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(210,174,109,0.16), transparent 32%), radial-gradient(circle at top right, rgba(12,124,122,0.075), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
+    <div style={{ minHeight: "100vh", background: `radial-gradient(circle at top left, rgba(200,169,110,0.16), transparent 32%), radial-gradient(circle at top right, rgba(12,124,122,0.075), transparent 30%), ${DT.pageBg}`, fontFamily: DT.sans }}>
       <style>{`
           .mc-mobile-only { display: none; }
           @media (max-width: 759px) {
@@ -371,7 +371,7 @@ export function MissionControlShell({
           }
         `}</style>
       <header style={{ position: "sticky", top: 0, zIndex: 1000 }}>
-        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, #181716 0%, #24211d 58%, #151312 100%)`, padding: isNarrow ? "5px 8px" : "9px 18px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(176px, 220px) minmax(360px, 1fr) auto", alignItems: "center", gap: isNarrow ? 6 : 14, boxShadow: "0 10px 28px rgba(44,37,32,0.18)", overflow: "visible" }}>
+        <div className="mc-mobile-grid" style={{ background: `linear-gradient(135deg, #1a1a1a 0%, #27221b 58%, #141210 100%)`, padding: isNarrow ? "5px 8px" : "9px 18px", display: "grid", gridTemplateColumns: isNarrow ? "1fr auto" : "minmax(176px, 220px) minmax(360px, 1fr) auto", alignItems: "center", gap: isNarrow ? 6 : 14, boxShadow: "0 10px 28px rgba(39,34,27,0.18)", overflow: "visible" }}>
           <TuesdayBrand syncedAt={syncedAt} source={source} mondayError={mondayError} isNarrow={isNarrow} />
           {compactMobile && (
             <div className="mc-mobile-only" style={{ alignItems: "center", gap: 7 }}>
@@ -387,9 +387,9 @@ export function MissionControlShell({
                   key={item.section}
                   href={item.href}
                   style={{
-                    color: active ? "#1d1a16" : "rgba(255,250,240,0.88)",
-                    background: active ? "linear-gradient(135deg, #fffaf0 0%, rgba(210,174,109,0.92) 100%)" : "linear-gradient(135deg, rgba(255,250,240,0.095), rgba(210,174,109,0.055))",
-                    border: active ? "1px solid rgba(255,255,255,0.42)" : "1px solid rgba(255,250,240,0.13)",
+                    color: active ? DT.headerBg : "rgba(255,253,249,0.88)",
+                    background: active ? "linear-gradient(135deg, #ffffffdf9 0%, rgba(200,169,110,0.92) 100%)" : "linear-gradient(135deg, rgba(255,253,249,0.095), rgba(200,169,110,0.055))",
+                    border: active ? "1px solid rgba(255,255,255,0.42)" : "1px solid rgba(255,253,249,0.13)",
                     boxShadow: active ? "0 1px 0 rgba(255,255,255,0.35), 0 6px 18px rgba(0,0,0,0.16)" : "0 1px 0 rgba(255,255,255,0.05) inset",
                     borderRadius: 999,
                     padding: "7px 13px",

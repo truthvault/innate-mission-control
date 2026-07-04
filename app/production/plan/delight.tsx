@@ -70,8 +70,8 @@ function drawSmokeTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
     ctx.globalAlpha = Math.max(0, (0.42 - age * 0.20) * (1 - flameMix * 0.72) * (1 - t * 0.28));
     const smoke = ctx.createRadialGradient(point.x, point.y, 2, point.x, point.y, puff);
     smoke.addColorStop(0, "rgba(255,255,255,0.78)");
-    smoke.addColorStop(0.46, "rgba(194,184,190,0.36)");
-    smoke.addColorStop(1, "rgba(92,83,94,0)");
+    smoke.addColorStop(0.46, "rgba(215,205,189,0.36)");
+    smoke.addColorStop(1, "rgba(90,85,73,0)");
     ctx.fillStyle = smoke;
     ctx.beginPath();
     ctx.arc(point.x + Math.sin(index * 1.7 + t * 8) * 8, point.y + Math.cos(index * 1.2 + t * 7) * 6, puff, 0, Math.PI * 2);
@@ -92,7 +92,7 @@ function drawFlameTrail(ctx: CanvasRenderingContext2D, points: { x: number; y: n
     const jetY = point.y + age * tight * 28;
     ctx.globalAlpha = flame * (0.34 + age * 0.14) * (1 - tight * age * 0.55);
     const glow = ctx.createRadialGradient(point.x, jetY, 2, point.x, jetY, radius * (1.8 - tight * 0.38));
-    glow.addColorStop(0, "rgba(255,255,220,0.96)");
+    glow.addColorStop(0, "rgba(255,245,223,0.96)");
     glow.addColorStop(0.26, "rgba(255,181,41,0.82)");
     glow.addColorStop(0.62, "rgba(255,73,24,0.40)");
     glow.addColorStop(1, "rgba(255,45,0,0)");
@@ -141,7 +141,7 @@ function drawPineapple(ctx: CanvasRenderingContext2D, x: number, y: number, scal
   ctx.fill();
   ctx.stroke();
   ctx.shadowColor = "transparent";
-  ctx.strokeStyle = "rgba(137,86,18,0.48)";
+  ctx.strokeStyle = "rgba(138,91,31,0.48)";
   ctx.lineWidth = 1.5;
   for (let i = -3; i <= 3; i += 1) {
     ctx.beginPath();
@@ -188,9 +188,9 @@ function drawFrontFacingSunglasses(ctx: CanvasRenderingContext2D, bounce: number
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   const lensGradient = ctx.createLinearGradient(16, -27 + bounce, 69, -9 + bounce);
-  lensGradient.addColorStop(0, "rgba(5,8,15,0.98)");
-  lensGradient.addColorStop(0.48, "rgba(30,38,54,0.99)");
-  lensGradient.addColorStop(1, "rgba(3,5,10,0.98)");
+  lensGradient.addColorStop(0, "rgba(20,18,16,0.98)");
+  lensGradient.addColorStop(0.48, "rgba(39,34,27,0.99)");
+  lensGradient.addColorStop(1, "rgba(20,18,16,0.98)");
   ctx.fillStyle = lensGradient;
   ctx.strokeStyle = "rgba(255,255,255,0.72)";
   ctx.lineWidth = 2.1;
@@ -199,7 +199,7 @@ function drawFrontFacingSunglasses(ctx: CanvasRenderingContext2D, bounce: number
   ctx.roundRect(45, -29 + bounce, 23, 15, 6);
   ctx.fill();
   ctx.stroke();
-  ctx.strokeStyle = "rgba(12,12,17,0.96)";
+  ctx.strokeStyle = "rgba(20,18,16,0.96)";
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(37, -21 + bounce);
@@ -236,7 +236,7 @@ function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: numbe
   ctx.shadowColor = ghost ? "transparent" : "rgba(66,52,94,0.18)";
   ctx.shadowBlur = ghost ? 0 : 18;
 
-  ctx.fillStyle = "rgba(255,213,222,0.78)";
+  ctx.fillStyle = "rgba(248,233,230,0.78)";
   ctx.strokeStyle = "rgba(78,60,86,0.24)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -246,11 +246,11 @@ function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: numbe
   ctx.stroke();
 
   const hornGradient = ctx.createLinearGradient(40, -42 + bounce, 42, -88 + bounce);
-  hornGradient.addColorStop(0, "#fff2a8");
+  hornGradient.addColorStop(0, DT.goldLine);
   hornGradient.addColorStop(0.46, "#f8c64f");
-  hornGradient.addColorStop(1, "#fff9d2");
+  hornGradient.addColorStop(1, DT.goldPale);
   ctx.fillStyle = hornGradient;
-  ctx.strokeStyle = "rgba(137,91,25,0.40)";
+  ctx.strokeStyle = "rgba(138,91,31,0.40)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(31, -39 + bounce);
@@ -259,7 +259,7 @@ function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: numbe
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.strokeStyle = "rgba(160,103,26,0.45)";
+  ctx.strokeStyle = "rgba(138,91,31,0.45)";
   ctx.lineWidth = 1.25;
   for (let i = 0; i < 4; i += 1) {
     ctx.beginPath();
@@ -269,9 +269,9 @@ function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: numbe
   }
 
   const headGradient = ctx.createRadialGradient(32, -34 + bounce, 9, 41, -17 + bounce, 48);
-  headGradient.addColorStop(0, "#ffffff");
-  headGradient.addColorStop(0.50, "#fff3f5");
-  headGradient.addColorStop(1, "#d6c4dc");
+  headGradient.addColorStop(0, DT.cardBg);
+  headGradient.addColorStop(0.50, DT.surfaceSoft);
+  headGradient.addColorStop(1, DT.lineStrong);
   ctx.fillStyle = headGradient;
   ctx.strokeStyle = "rgba(78,60,86,0.28)";
   ctx.lineWidth = 2.3;
@@ -281,9 +281,9 @@ function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: numbe
   ctx.stroke();
 
   const muzzleGradient = ctx.createRadialGradient(41, -2 + bounce, 4, 41, -2 + bounce, 23);
-  muzzleGradient.addColorStop(0, "#fffefd");
-  muzzleGradient.addColorStop(0.72, "#f4dee6");
-  muzzleGradient.addColorStop(1, "#dcc4d4");
+  muzzleGradient.addColorStop(0, DT.cardBg);
+  muzzleGradient.addColorStop(0.72, DT.clayPale);
+  muzzleGradient.addColorStop(1, DT.lineStrong);
   ctx.fillStyle = muzzleGradient;
   ctx.beginPath();
   ctx.ellipse(41, -2 + bounce, 21, 14, 0, 0, Math.PI * 2);
@@ -292,7 +292,7 @@ function drawFrontFacingUnicornFace(ctx: CanvasRenderingContext2D, bounce: numbe
 
   if (!ghost) drawFrontFacingSunglasses(ctx, bounce);
   if (!ghost) {
-    ctx.fillStyle = "rgba(92,63,82,0.68)";
+    ctx.fillStyle = "rgba(90,85,73,0.68)";
     ctx.beginPath();
     ctx.ellipse(34, -1 + bounce, 2.2, 1.7, -0.18, 0, Math.PI * 2);
     ctx.ellipse(48, -1 + bounce, 2.2, 1.7, 0.18, 0, Math.PI * 2);
@@ -308,8 +308,8 @@ function drawUnicornLeg(ctx: CanvasRenderingContext2D, x: number, y: number, lea
   ctx.translate(x, y);
   ctx.rotate(lean + Math.sin(motion) * 0.13);
   const legGradient = ctx.createLinearGradient(0, 0, 8, 38);
-  legGradient.addColorStop(0, rear ? "#eee3ef" : "#fff8fa");
-  legGradient.addColorStop(1, rear ? "#cdbbd2" : "#dacadc");
+  legGradient.addColorStop(0, rear ? DT.clayPale : DT.surface);
+  legGradient.addColorStop(1, rear ? DT.lineStrong : DT.line);
   ctx.fillStyle = legGradient;
   ctx.strokeStyle = "rgba(78,60,86,0.22)";
   ctx.lineWidth = 1.4;
@@ -317,7 +317,7 @@ function drawUnicornLeg(ctx: CanvasRenderingContext2D, x: number, y: number, lea
   ctx.roundRect(-4, -1, 9, 34, 5);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "rgba(94,67,86,0.28)";
+  ctx.fillStyle = "rgba(90,85,73,0.28)";
   ctx.beginPath();
   ctx.ellipse(1, 34, 8, 4, 0.04, 0, Math.PI * 2);
   ctx.fill();
@@ -349,10 +349,10 @@ function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: 
   }
 
   const bodyGradient = ctx.createRadialGradient(24, -22, 6, -4, 8 + bounce, 88);
-  bodyGradient.addColorStop(0, "#ffffff");
-  bodyGradient.addColorStop(0.38, "#fff6f8");
-  bodyGradient.addColorStop(0.74, "#eaddea");
-  bodyGradient.addColorStop(1, "#c9b6ce");
+  bodyGradient.addColorStop(0, DT.cardBg);
+  bodyGradient.addColorStop(0.38, DT.surface);
+  bodyGradient.addColorStop(0.74, DT.clayPale);
+  bodyGradient.addColorStop(1, DT.lineStrong);
   ctx.fillStyle = bodyGradient;
   ctx.strokeStyle = "rgba(78,60,86,0.28)";
   ctx.lineWidth = 2.3;
@@ -369,8 +369,8 @@ function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: 
   ctx.shadowColor = ghost ? "transparent" : "rgba(66,52,94,0.16)";
   ctx.shadowBlur = ghost ? 0 : 16;
   const neckGradient = ctx.createLinearGradient(18, -32, 4, 26);
-  neckGradient.addColorStop(0, "#fffefe");
-  neckGradient.addColorStop(1, "#ddcede");
+  neckGradient.addColorStop(0, DT.cardBg);
+  neckGradient.addColorStop(1, DT.line);
   ctx.fillStyle = neckGradient;
   ctx.beginPath();
   ctx.moveTo(16, -30 + bounce);
@@ -388,7 +388,7 @@ function drawHyperRealisticUnicorn(ctx: CanvasRenderingContext2D, x: number, y: 
     const mx = 14 - index * 8 + Math.sin(motion + index) * 2.3;
     const my = -26 + index * 5 + maneFlow * (1 - index * 0.10);
     const maneGradient = ctx.createRadialGradient(mx, my, 2, mx, my, 22);
-    maneGradient.addColorStop(0, "#ffffff");
+    maneGradient.addColorStop(0, DT.cardBg);
     maneGradient.addColorStop(0.20, colour);
     maneGradient.addColorStop(1, "rgba(96,56,130,0.58)");
     ctx.fillStyle = maneGradient;
@@ -483,7 +483,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
       vx: Math.cos((Math.PI * 2 * index) / shardCount) * (72 + (index % 4) * 27),
       vy: Math.sin((Math.PI * 2 * index) / shardCount) * (58 + (index % 5) * 19) - 42,
       spin: (index % 2 ? 1 : -1) * (1.4 + index * 0.08),
-      color: index % 2 ? "rgba(255,253,249,0.94)" : "rgba(255,246,199,0.90)",
+      color: index % 2 ? "rgba(255,253,249,0.94)" : "rgba(255,245,223,0.90)",
     };
   });
 
@@ -495,7 +495,7 @@ function runPineappleUnicornCanvas(canvas: HTMLCanvasElement, origin: DelightOri
     ctx.clearRect(0, 0, width, height);
 
     const flashAlpha = Math.max(0, 0.24 * (1 - t * 2.2));
-    ctx.fillStyle = `rgba(255,246,199,${flashAlpha})`;
+    ctx.fillStyle = `rgba(255,245,223,${flashAlpha})`;
     ctx.fillRect(0, 0, width, height);
 
     ctx.save();
@@ -639,8 +639,8 @@ export function DelightUnicorn() {
         padding: "7px 10px",
         borderRadius: 999,
         border: "1px solid rgba(211,154,35,0.30)",
-        background: "rgba(255,246,199,0.86)",
-        color: "#8a5d08",
+        background: "rgba(255,245,223,0.86)",
+        color: DT.goldInk,
         fontFamily: DT.sans,
         fontSize: 12,
         fontWeight: 900,

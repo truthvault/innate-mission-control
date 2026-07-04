@@ -28,7 +28,7 @@ export function WorkshopShell({
       <header
         style={{
           background: DT.headerBg,
-          color: "#fff",
+          color: DT.cardBg,
           padding: "10px 16px",
           display: "flex",
           alignItems: "center",
@@ -36,7 +36,7 @@ export function WorkshopShell({
           flexWrap: "wrap",
         }}
       >
-        <Link href="/workshop" style={{ color: "#fff", textDecoration: "none", fontFamily: DT.serif, fontSize: 18, fontWeight: 600 }}>
+        <Link href="/workshop" style={{ color: DT.cardBg, textDecoration: "none", fontFamily: DT.serif, fontSize: 18, fontWeight: 600 }}>
           Tuesday <span style={{ color: DT.gold }}>Workshop</span>
         </Link>
         <nav style={{ display: "flex", gap: 6 }}>
@@ -47,8 +47,8 @@ export function WorkshopShell({
               style={{
                 color: tab.key === active ? DT.headerBg : "rgba(255,255,255,0.85)",
                 background: tab.key === active ? `linear-gradient(135deg, ${DT.gold}, ${DT.sage})` : "rgba(255,253,249,0.08)",
-                border: "1px solid rgba(210,174,109,0.18)",
-                borderRadius: 10,
+                border: "1px solid rgba(200,169,110,0.18)",
+                borderRadius: 8,
                 minHeight: 40,
                 padding: "0 14px",
                 display: "flex",

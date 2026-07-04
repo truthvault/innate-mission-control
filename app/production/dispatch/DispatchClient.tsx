@@ -39,7 +39,7 @@ function checklistFor(order: DisplayOrder): ChecklistItem[] {
 
 function stateStyle(state: ChecklistItem["state"]) {
   if (state === "done") return { bg: DT.tealSoft, color: DT.teal, marker: "Done" };
-  if (state === "check") return { bg: "rgba(200,169,110,0.10)", color: "#9a6b12", marker: "Check" };
+  if (state === "check") return { bg: "rgba(200,169,110,0.10)", color: DT.goldInk, marker: "Check" };
   return { bg: "rgba(217,119,6,0.10)", color: "#b45309", marker: "Needs" };
 }
 
@@ -58,14 +58,14 @@ function DispatchCard({ order }: { order: DisplayOrder }) {
           <div>
             <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: 20 }}>{order.customer}</h2>
             <div style={{ marginTop: 4, fontSize: 12, color: DT.textSecondary, fontFamily: DT.sans }}>{order.rawMondayItem ?? order.product} · {order.displayStatus} · {order.shipDate ? fmtDate(order.shipDate) : "No due date"}</div>
-            {paymentLabel && <div style={{ marginTop: 5, fontSize: 11, color: order.paymentStage === "awaiting_balance_payment" ? "#9a6b12" : DT.teal, fontFamily: DT.sans, fontWeight: 850 }}>{paymentLabel}</div>}
+            {paymentLabel && <div style={{ marginTop: 5, fontSize: 11, color: order.paymentStage === "awaiting_balance_payment" ? DT.goldInk : DT.teal, fontFamily: DT.sans, fontWeight: 900 }}>{paymentLabel}</div>}
           </div>
-          <span style={{ fontSize: 10, color: priority ? "#b45309" : DT.teal, background: priority ? "rgba(217,119,6,0.10)" : DT.tealSoft, borderRadius: 20, padding: "3px 9px", fontWeight: 800, fontFamily: DT.sans, whiteSpace: "nowrap" }}>{priority ? "Needs proof" : "Watch"}</span>
+          <span style={{ fontSize: 10, color: priority ? "#b45309" : DT.teal, background: priority ? "rgba(217,119,6,0.10)" : DT.tealSoft, borderRadius: 14, padding: "3px 9px", fontWeight: 800, fontFamily: DT.sans, whiteSpace: "nowrap" }}>{priority ? "Needs proof" : "Watch"}</span>
         </div>
         <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 7 }}>
           {checklist.map((item) => {
             const s = stateStyle(item.state);
-            return <div key={item.label} style={{ background: s.bg, color: s.color, borderRadius: 9, padding: "7px 10px", fontSize: 12, fontWeight: 700, fontFamily: DT.sans, lineHeight: 1.25, display: "flex", alignItems: "center", gap: 8 }}><span style={{ flex: "0 0 auto", minWidth: 44, textAlign: "center", border: "1px solid currentColor", borderRadius: 999, padding: "2px 6px", fontSize: 9, lineHeight: 1.1 }}>{s.marker}</span><span>{item.label}</span></div>;
+            return <div key={item.label} style={{ background: s.bg, color: s.color, borderRadius: 8, padding: "7px 10px", fontSize: 12, fontWeight: 700, fontFamily: DT.sans, lineHeight: 1.25, display: "flex", alignItems: "center", gap: 8 }}><span style={{ flex: "0 0 auto", minWidth: 44, textAlign: "center", border: "1px solid currentColor", borderRadius: 999, padding: "2px 6px", fontSize: 9, lineHeight: 1.1 }}>{s.marker}</span><span>{item.label}</span></div>;
           })}
         </div>
         <div style={{ marginTop: 12, color: DT.textSecondary, fontSize: 12, fontFamily: DT.sans }}>Next: {order.nextAction}</div>
@@ -89,8 +89,8 @@ export default function DispatchClient({ orders, syncedAt, source, mondayError }
       source={source}
       mondayError={mondayError}
     >
-      <div style={{ background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(210,174,109,0.14) 100%)`, color: DT.textPrimary, border: `1px solid ${DT.border}`, borderRadius: DT.radius, padding: "16px 18px", boxShadow: DT.shadow, marginBottom: 14 }}>
-        <div style={{ fontSize: 10, color: "#8a5b1f", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, fontFamily: DT.sans }}>Read-only proof control</div>
+      <div style={{ background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(200,169,110,0.14) 100%)`, color: DT.textPrimary, border: `1px solid ${DT.border}`, borderRadius: DT.radius, padding: "16px 18px", boxShadow: DT.shadow, marginBottom: 14 }}>
+        <div style={{ fontSize: 10, color: DT.goldInk, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, fontFamily: DT.sans }}>Read-only proof control</div>
         <p style={{ margin: "7px 0 0", color: DT.textSecondary, fontSize: 13, fontFamily: DT.sans }}>Read-only checklist for final proof. Nothing is written from this page yet.</p>
       </div>
       {rows.length === 0 ? <div style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, padding: 20, color: DT.teal, fontFamily: DT.sans }}>No active dispatch/QC candidates found.</div> : <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{rows.map((order) => <DispatchCard key={order.id} order={order} />)}</div>}

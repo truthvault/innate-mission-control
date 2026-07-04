@@ -83,7 +83,7 @@ export function AddTask({ person, scheduledDate }: { person: string; scheduledDa
         <button
           onClick={submit}
           disabled={pending || !title.trim()}
-          style={{ background: DT.teal, color: "#fff", border: "none", borderRadius: DT.radiusSm, minHeight: 34, padding: "0 12px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: DT.sans }}
+          style={{ background: DT.teal, color: DT.cardBg, border: "none", borderRadius: DT.radiusSm, minHeight: 34, padding: "0 12px", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: DT.sans }}
         >
           {pending ? "Saving…" : "Save"}
         </button>

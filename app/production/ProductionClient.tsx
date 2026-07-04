@@ -32,19 +32,19 @@ function toDisplayOrder(o: UiOrder): DisplayOrder {
 
 // ── JOB COLORS ────────────────────────────────────────────────
 const JC: Record<string, {bg:string,border:string,text:string}> = {
-  "Instinct Interiors":{bg:"#FEF3C7",border:"#F59E0B",text:"#92400e"},
-  "Nordzco Joinery":{bg:"#DBEAFE",border:"#3B82F6",text:"#1e40af"},
-  "Blair York":{bg:"#D1FAE5",border:"#10B981",text:"#065f46"},
-  "Michael Kidd":{bg:"#FEF3C7",border:"#D97706",text:"#92400e"},
-  "Aitkens & Co":{bg:"#E0E7FF",border:"#6366F1",text:"#3730a3"},
-  "Michael Calder":{bg:"#F3E8FF",border:"#A855F7",text:"#6b21a8"},
-  "Rebecca Tucker":{bg:"#FCE7F3",border:"#EC4899",text:"#9d174d"},
-  "Trish Rowe":{bg:"#F1F5F9",border:"#94A3B8",text:"#475569"},
-  "Peter & Rosemary Tennent":{bg:"#ECFDF5",border:"#34D399",text:"#047857"},
-  "Xolo Ltd.":{bg:"#F0F9FF",border:"#38BDF8",text:"#0369a1"},
-  "Distinct Studio":{bg:"#FFF7ED",border:"#FB923C",text:"#9a3412"},
+  "Instinct Interiors":{bg:DT.goldPale,border:"#F59E0B",text:DT.goldInk},
+  "Nordzco Joinery":{bg:DT.tealPale,border:"#3B82F6",text:"#1e40af"},
+  "Blair York":{bg:DT.tealPale,border:"#10B981",text:"#065f46"},
+  "Michael Kidd":{bg:DT.goldPale,border:"#D97706",text:DT.goldInk},
+  "Aitkens & Co":{bg:DT.tealPale,border:"#6366F1",text:"#3730a3"},
+  "Michael Calder":{bg:DT.pageBg,border:"#A855F7",text:"#6b21a8"},
+  "Rebecca Tucker":{bg:DT.clayPale,border:"#EC4899",text:"#9d174d"},
+  "Trish Rowe":{bg:DT.surfaceSoft,border:"#94A3B8",text:DT.textSecondary},
+  "Peter & Rosemary Tennent":{bg:DT.tealPale,border:"#34D399",text:DT.teal},
+  "Xolo Ltd.":{bg:DT.cardBg,border:"#38BDF8",text:"#0369a1"},
+  "Distinct Studio":{bg:DT.surfaceSoft,border:"#FB923C",text:DT.clay},
 };
-function jc(c: string){return JC[c]||{bg:"#f5f5f5",border:"#ccc",text:"#666"};}
+function jc(c: string){return JC[c]||{bg:DT.surfaceSoft,border:DT.lineStrong,text:DT.textMuted};}
 
 // ── Helpers ───────────────────────────────────────────────────
 // Week boundaries computed from real today (Mon of this week + next week).
@@ -95,9 +95,9 @@ function daysUntil(d: string | null){
 function trackState(order: DisplayOrder, pct=progressPct(order)): {level: TrackLevel; label: string; reason: string; bg: string; color: string; border: string}{
   const diff=daysUntil(order.shipDate);
   if(!order.shipDate) return {level:"watch",label:"Watch",reason:"No due date",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
-  if(diff!==null&&diff<0) return {level:"blocked",label:"Blocked",reason:"Past due",bg:"#fee2e2",color:"#991b1b",border:"rgba(153,27,27,0.24)"};
-  if(diff===0&&!isComplete(order)) return {level:"blocked",label:"Blocked",reason:"Due today: needs truth check",bg:"#fee2e2",color:"#991b1b",border:"rgba(153,27,27,0.24)"};
-  if(order.rawMondayStatus==="Materials Ordered"&&diff!==null&&diff<=7) return {level:"blocked",label:"Blocked",reason:"Materials not ready and due soon",bg:"#fee2e2",color:"#991b1b",border:"rgba(153,27,27,0.24)"};
+  if(diff!==null&&diff<0) return {level:"blocked",label:"Blocked",reason:"Past due",bg:DT.clayPale,color:DT.clay,border:"rgba(153,27,27,0.24)"};
+  if(diff===0&&!isComplete(order)) return {level:"blocked",label:"Blocked",reason:"Due today: needs truth check",bg:DT.clayPale,color:DT.clay,border:"rgba(153,27,27,0.24)"};
+  if(order.rawMondayStatus==="Materials Ordered"&&diff!==null&&diff<=7) return {level:"blocked",label:"Blocked",reason:"Materials not ready and due soon",bg:DT.clayPale,color:DT.clay,border:"rgba(153,27,27,0.24)"};
   if(order.rawMondayStatus==="Materials Ordered") return {level:"watch",label:"Watch",reason:"Waiting on materials",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
   if(order.rawMondayStatus==="To Process"&&diff!==null&&diff<=14) return {level:"watch",label:"Watch",reason:"Not started inside 2 weeks",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
   if(diff!==null&&diff<=7&&pct<60) return {level:"watch",label:"Watch",reason:"Due soon for current progress",bg:"rgba(217,119,6,0.10)",color:"#b45309",border:"rgba(217,119,6,0.22)"};
@@ -145,7 +145,7 @@ function FeedbackButtons({ scope, id }: { scope: string; id: string | number }) 
   }
   return (
     <details onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%" }}>
-      <summary style={{ listStyle: "none", cursor: "pointer", color: DT.textMuted, fontSize: 10, fontFamily: DT.sans, fontWeight: 850 }}>
+      <summary style={{ listStyle: "none", cursor: "pointer", color: DT.textMuted, fontSize: 10, fontFamily: DT.sans, fontWeight: 900 }}>
         Local feedback{selected.length ? ` · ${selected.length}` : ""}
       </summary>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }} aria-label="Local job feedback">
@@ -197,7 +197,7 @@ function StepTimeline({steps,currentStep,repair}: {steps: Step[], currentStep: n
                 </div>
               ):(
                 <div style={{width:done?10:active?14:10,height:done?10:active?14:10,borderRadius:"50%",background:done?fill:active?fill:"transparent",border:done||active?`2px solid ${fill}`:`2px solid rgba(0,0,0,0.08)`,boxShadow:active?`0 0 0 3px ${fill}18`:"none",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  {done&&<span style={{color:"#fff",fontSize:7,lineHeight:1}}>✓</span>}
+                  {done&&<span style={{color:DT.cardBg,fontSize:7,lineHeight:1}}>✓</span>}
                 </div>
               )}
               {i<steps.length-1&&<div style={{width:2,flex:"1 1 0",minHeight:4,background:done?fill:"rgba(0,0,0,0.06)"}}/>}
@@ -231,7 +231,7 @@ function StepTimeline({steps,currentStep,repair}: {steps: Step[], currentStep: n
 
 // ━━━ SHARED COMPONENTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function StatusPill({status}: {status: string}){
-  const m: Record<string, {bg:string,c:string}>={"In Production":{bg:DT.tealSoft,c:DT.teal},"Not Started":{bg:DT.goldSoft,c:"#8a6d3b"},"Finished":{bg:DT.greenBg,c:DT.green},"Shipped":{bg:DT.greenBg,c:DT.green},"Collected":{bg:"rgba(0,0,0,0.04)",c:DT.textMuted}};
+  const m: Record<string, {bg:string,c:string}>={"In Production":{bg:DT.tealSoft,c:DT.teal},"Not Started":{bg:DT.goldSoft,c:DT.goldInk},"Finished":{bg:DT.greenBg,c:DT.green},"Shipped":{bg:DT.greenBg,c:DT.green},"Collected":{bg:"rgba(0,0,0,0.04)",c:DT.textMuted}};
   const s=m[status]||{bg:"rgba(0,0,0,0.04)",c:DT.textMuted};
   return <span style={{padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:s.bg,color:s.c,fontFamily:DT.sans,whiteSpace:"nowrap"}}>{status}</span>;
 }
@@ -245,7 +245,7 @@ function ShipBadge({shipDate}: {shipDate: string | null}){
   const si=shipInfo(shipDate);
   if(si.level==="none") return <span style={{fontSize:10,color:DT.textFaint,fontFamily:DT.sans,fontStyle:"italic"}}>No date</span>;
   if(si.level==="past") return <span style={{fontSize:10,color:DT.textFaint,fontFamily:DT.sans}}>{si.text}</span>;
-  const bc: Record<string, {bg:string,text:string,bdr:string}>={thisWeek:{bg:"rgba(12,124,122,0.08)",text:DT.teal,bdr:"rgba(12,124,122,0.15)"},nextWeek:{bg:"rgba(200,169,110,0.08)",text:"#8a6d3b",bdr:"rgba(200,169,110,0.15)"},ok:{bg:"rgba(0,0,0,0.03)",text:DT.textMuted,bdr:"rgba(0,0,0,0.06)"},plenty:{bg:"rgba(0,0,0,0.02)",text:DT.textFaint,bdr:"rgba(0,0,0,0.04)"}};
+  const bc: Record<string, {bg:string,text:string,bdr:string}>={thisWeek:{bg:"rgba(12,124,122,0.08)",text:DT.teal,bdr:"rgba(12,124,122,0.15)"},nextWeek:{bg:"rgba(200,169,110,0.08)",text:DT.goldInk,bdr:"rgba(200,169,110,0.15)"},ok:{bg:"rgba(0,0,0,0.03)",text:DT.textMuted,bdr:"rgba(0,0,0,0.06)"},plenty:{bg:"rgba(0,0,0,0.02)",text:DT.textFaint,bdr:"rgba(0,0,0,0.04)"}};
   const c=bc[si.level]||bc.ok;
   return(<div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:1}}>
     <span style={{fontSize:11,fontWeight:600,color:c.text,fontFamily:DT.sans}}>{si.text}</span>
@@ -264,7 +264,7 @@ function OrderCard({order}: {order: DisplayOrder}){
   const pct=progressPct(order);
   const track=trackState(order,pct);
   const colors=jc(order.customer);
-  const borderColor=comp?"rgba(0,0,0,0.08)":track.level==="blocked"?"#991b1b":track.level==="watch"?"#d97706":colors.border;
+  const borderColor=comp?"rgba(0,0,0,0.08)":track.level==="blocked"?DT.clay:track.level==="watch"?"#d97706":colors.border;
   const barColor=comp?DT.green:DT.teal;
   const cardBg=comp?DT.cardBg:`linear-gradient(135deg, ${colors.bg}44 0%, ${DT.cardBg} 60%)`;
   const currentStepLabel=order.steps[Math.min(order.currentStep,order.steps.length-1)]?.label;

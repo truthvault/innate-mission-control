@@ -80,8 +80,8 @@ function taskCount(rows: PlanRow[]) {
 function StatusPill({ tone, children }: { tone: Tone; children: string }) {
   const palette: Record<Tone, { color: string; bg: string; border: string }> = {
     green: { color: "#28633c", bg: "rgba(63,111,63,0.10)", border: "rgba(63,111,63,0.22)" },
-    amber: { color: "#8a5b1f", bg: "rgba(210,174,109,0.16)", border: "rgba(210,174,109,0.35)" },
-    red: { color: "#8f3024", bg: "rgba(180,76,56,0.11)", border: "rgba(180,76,56,0.28)" },
+    amber: { color: DT.goldInk, bg: "rgba(200,169,110,0.16)", border: "rgba(200,169,110,0.35)" },
+    red: { color: DT.clay, bg: "rgba(180,76,56,0.11)", border: "rgba(180,76,56,0.28)" },
     teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.24)" },
     grey: { color: DT.textMuted, bg: "rgba(0,0,0,0.035)", border: DT.border },
   };
@@ -146,7 +146,7 @@ export default async function TodayPage() {
         <section style={{ background: `linear-gradient(135deg, ${DT.cardBg}, rgba(231,243,242,0.72))`, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: 16, display: "grid", gap: 8 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontFamily: DT.sans, color: DT.textFaint, fontSize: 10, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.08em" }}>Daily control</div>
+              <div style={{ fontFamily: DT.sans, color: DT.textFaint, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>Daily control</div>
               <h1 style={{ margin: "2px 0 0", fontFamily: DT.serif, color: DT.textPrimary, fontSize: 30, lineHeight: 1 }}>Guido: {guidoNeeded ? `${guidoNeeded > 3 ? "3+" : guidoNeeded} thing${guidoNeeded === 1 ? "" : "s"} to check` : "no obvious fire"}</h1>
             </div>
             <StatusPill tone={sourceIssues.length ? "amber" : guidoNeeded ? "teal" : "green"}>{sourceIssues.length ? "Source check" : guidoNeeded ? "Action" : "Quiet"}</StatusPill>

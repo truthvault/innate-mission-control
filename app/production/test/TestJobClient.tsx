@@ -148,9 +148,9 @@ function useIsNarrow(breakpoint = 760) {
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div style={{ padding: 12, border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,255,255,0.62)", minHeight: 58 }}>
+    <div style={{ padding: 12, border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.62)", minHeight: 58 }}>
       <TinyLabel>{label}</TinyLabel>
-      <div style={{ marginTop: 5, color: DT.textPrimary, fontSize: 13, lineHeight: 1.35, fontWeight: 750 }}>{value}</div>
+      <div style={{ marginTop: 5, color: DT.textPrimary, fontSize: 13, lineHeight: 1.35, fontWeight: 800 }}>{value}</div>
     </div>
   );
 }
@@ -214,25 +214,25 @@ function SuggestedPlan() {
             {PLAN.map((task, index) => {
               const cap = capacityStyle(task.capacityTone);
               return (
-                <div key={task.title} style={{ display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: 10, padding: 11, borderRadius: 13, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.66)" }}>
+                <div key={task.title} style={{ display: "grid", gridTemplateColumns: "34px minmax(0, 1fr)", gap: 10, padding: 11, borderRadius: 14, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.66)" }}>
                   <div style={{ width: 26, height: 26, borderRadius: 999, display: "grid", placeItems: "center", background: DT.greenBg, color: DT.green, fontSize: 12, fontWeight: 900 }}>{index + 1}</div>
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <strong style={{ color: DT.textPrimary, fontSize: 13 }}>{task.title}</strong>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         <Chip label={task.owner} tone="teal" />
-                        <span style={{ border: `1px solid ${DT.border}`, background: "rgba(0,0,0,0.025)", borderRadius: 999, padding: "2px 7px", color: DT.textSecondary, fontSize: 10, fontWeight: 850 }}>{task.day} {task.date}</span>
+                        <span style={{ border: `1px solid ${DT.border}`, background: "rgba(0,0,0,0.025)", borderRadius: 999, padding: "2px 7px", color: DT.textSecondary, fontSize: 10, fontWeight: 900 }}>{task.day} {task.date}</span>
                       </div>
                     </div>
                     <div style={{ color: DT.textSecondary, fontSize: 12, lineHeight: 1.4, marginTop: 5 }}>{task.detail}</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 8 }}>
-                      <div style={{ padding: "7px 8px", borderRadius: 10, border: `1px solid ${DT.border}`, background: "rgba(0,0,0,0.018)" }}>
+                      <div style={{ padding: "7px 8px", borderRadius: 8, border: `1px solid ${DT.border}`, background: "rgba(0,0,0,0.018)" }}>
                         <TinyLabel>Current capacity</TinyLabel>
-                        <div style={{ marginTop: 3, color: DT.textSecondary, fontSize: 12, fontWeight: 750 }}>{task.capacityBefore}</div>
+                        <div style={{ marginTop: 3, color: DT.textSecondary, fontSize: 12, fontWeight: 800 }}>{task.capacityBefore}</div>
                       </div>
-                      <div style={{ padding: "7px 8px", borderRadius: 10, border: `1px solid ${cap.border}`, background: cap.bg }}>
+                      <div style={{ padding: "7px 8px", borderRadius: 8, border: `1px solid ${cap.border}`, background: cap.bg }}>
                         <TinyLabel>After adding this step</TinyLabel>
-                        <div style={{ marginTop: 3, color: cap.text, fontSize: 12, fontWeight: 850 }}>{task.capacityAfter}</div>
+                        <div style={{ marginTop: 3, color: cap.text, fontSize: 12, fontWeight: 900 }}>{task.capacityAfter}</div>
                       </div>
                     </div>
                   </div>
@@ -267,7 +267,7 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
       source="fresh"
       maxWidth={1280}
     >
-      <Card style={{ marginBottom: 14, background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(210,174,109,0.16) 100%)` }}>
+      <Card style={{ marginBottom: 14, background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(200,169,110,0.16) 100%)` }}>
         <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "minmax(0, 1fr)" : "minmax(0, 1.35fr) minmax(280px, 0.65fr)", gap: isNarrow ? 12 : 18, alignItems: "center" }}>
           <div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -319,7 +319,7 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
                 const done = checked[index];
                 const active = index === activeIndex;
                 return (
-                  <div key={step.title} style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", gap: 8, padding: 12, borderRadius: 14, border: `1px solid ${active ? "rgba(210,174,109,0.5)" : DT.border}`, background: done ? DT.greenBg : active ? DT.goldSoft : "rgba(255,255,255,0.58)" }}>
+                  <div key={step.title} style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr)", gap: 8, padding: 12, borderRadius: 14, border: `1px solid ${active ? "rgba(200,169,110,0.5)" : DT.border}`, background: done ? DT.greenBg : active ? DT.goldSoft : "rgba(255,255,255,0.58)" }}>
                     <input aria-label={step.title} type="checkbox" checked={done} onChange={() => setChecked((prev) => prev.map((v, i) => i === index ? !v : v))} style={{ width: 40, height: 40, accentColor: DT.green, margin: 0, touchAction: "manipulation" }} />
                     <div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -342,8 +342,8 @@ export default function TestJobClient({ syncedAt }: { syncedAt: string }) {
             <TinyLabel>Order Inbox states</TinyLabel>
             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
               {["Awaiting payment", "Paid, needs process confirmation", "Process steps approved", "In production", "Complete"].map((state, index) => (
-                <div key={state} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 11, background: index <= activeIndex ? DT.greenBg : "rgba(0,0,0,0.025)", border: `1px solid ${index === activeIndex ? "rgba(79,95,168,0.24)" : DT.border}` }}>
-                  <span style={{ color: DT.textPrimary, fontWeight: 850, fontSize: 12 }}>{state}</span>
+                <div key={state} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 8, background: index <= activeIndex ? DT.greenBg : "rgba(0,0,0,0.025)", border: `1px solid ${index === activeIndex ? "rgba(79,95,168,0.24)" : DT.border}` }}>
+                  <span style={{ color: DT.textPrimary, fontWeight: 900, fontSize: 12 }}>{state}</span>
                   <Chip label={index < activeIndex ? "done" : index === activeIndex ? "now" : "later"} tone={index < activeIndex ? "green" : index === activeIndex ? "teal" : "grey"} />
                 </div>
               ))}

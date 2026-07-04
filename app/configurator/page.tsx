@@ -322,10 +322,10 @@ const assetFacts = [
 ];
 
 const laneStyles: Record<Lane, string> = {
-  Now: 'border-[#b7791f] bg-[#fff7e6]',
-  Next: 'border-[#4b3b2f] bg-[#f8f2e8]',
-  Later: 'border-stone-300 bg-[#f6f1e8]',
-  'Blocked / Decisions': 'border-[#9f4438] bg-[#fbebe5]',
+  Now: 'border-[#b7791f] bg-[#fff5df]',
+  Next: 'border-[#5a5549] bg-[#f5f3ee]',
+  Later: 'border-stone-300 bg-[#f5f3ee]',
+  'Blocked / Decisions': 'border-[#9a3b2f] bg-[#f8e9e6]',
 };
 
 function percent(done: number, total: number) {
@@ -340,10 +340,10 @@ function keyFor(id: string) {
 function Pill({ children, tone = 'stone' }: { children: ReactNode; tone?: Tone }) {
   const tones: Record<Tone, string> = {
     stone: 'bg-stone-200 text-stone-800',
-    amber: 'bg-[#f2c36b] text-[#332113]',
+    amber: 'bg-[#f2c36b] text-[#27221b]',
     green: 'bg-emerald-200 text-emerald-950',
     red: 'bg-red-200 text-red-950',
-    charcoal: 'bg-[#231c18] text-[#f7ead2]',
+    charcoal: 'bg-[#22201a] text-[#e8e2d7]',
   };
 
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ${tones[tone]}`}>{children}</span>;
@@ -351,9 +351,9 @@ function Pill({ children, tone = 'stone' }: { children: ReactNode; tone?: Tone }
 
 function ProgressBar({ value, large = false }: { value: number; large?: boolean }) {
   return (
-    <div className={`overflow-hidden rounded-full bg-[#d9c8ad] ${large ? 'h-4' : 'h-2.5'}`}>
+    <div className={`overflow-hidden rounded-full bg-[#d7cdbd] ${large ? 'h-4' : 'h-2.5'}`}>
       <div
-        className="h-full rounded-full bg-gradient-to-r from-[#8b5a2b] via-[#c48a3a] to-[#e7bd6d] transition-all duration-500 ease-out"
+        className="h-full rounded-full bg-gradient-to-r from-[#8a5b1f] via-[#c48a3a] to-[#c8a96e] transition-all duration-500 ease-out"
         style={{ width: `${value}%` }}
       />
     </div>
@@ -384,7 +384,7 @@ function CheckboxCard({
   return (
     <article
       className={`group rounded-2xl border p-4 shadow-sm transition hover:shadow-lg ${
-        checked ? 'border-[#d9c8ad] bg-[#f5ead7]' : 'border-[#e6d8c2] bg-white/90'
+        checked ? 'border-[#d7cdbd] bg-[#e8e2d7]' : 'border-[#d7cdbd] bg-white/90'
       }`}
     >
       <div className="flex items-start gap-3">
@@ -393,20 +393,20 @@ function CheckboxCard({
           checked={checked}
           onChange={() => onToggle(id)}
           aria-label={title}
-          className="mt-1 h-5 w-5 shrink-0 rounded border-[#8b5a2b] text-[#8b5a2b] focus:ring-[#c48a3a]"
+          className="mt-1 h-5 w-5 shrink-0 rounded border-[#8a5b1f] text-[#8a5b1f] focus:ring-[#c48a3a]"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className={`text-base font-black ${checked ? 'text-stone-500 line-through' : 'text-[#241b16]'}`}>{title}</h4>
+            <h4 className={`text-base font-black ${checked ? 'text-stone-500 line-through' : 'text-[#22201a]'}`}>{title}</h4>
             {priority ? <Pill tone={priority === 'High' ? 'red' : priority === 'Medium' ? 'amber' : 'stone'}>{priority}</Pill> : null}
           </div>
           <p className="mt-2 text-sm leading-5 text-stone-700">
-            <span className="font-black text-[#6f4320]">Why: </span>
+            <span className="font-black text-[#8a5b1f]">Why: </span>
             {why}
           </p>
           {how ? (
             <p className="mt-1.5 text-sm leading-5 text-stone-700">
-              <span className="font-black text-[#6f4320]">How: </span>
+              <span className="font-black text-[#8a5b1f]">How: </span>
               {how}
             </p>
           ) : null}
@@ -414,7 +414,7 @@ function CheckboxCard({
             value={notes || ''}
             onChange={(event) => onNotesChange(id, event.target.value)}
             placeholder="Add working notes here…"
-            className="mt-3 w-full resize-y rounded-xl border border-[#d9c8ad] bg-white p-3 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#c48a3a]"
+            className="mt-3 w-full resize-y rounded-xl border border-[#d7cdbd] bg-white p-3 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#c48a3a]"
             rows={2}
           />
         </div>
@@ -510,9 +510,9 @@ export default function ConfiguratorDashboard() {
       syncedAt={syncedAt}
       source="snapshot"
     >
-      <main className="min-h-screen bg-[#f3eadc] text-[#241b16]">
-      <section className="relative overflow-hidden border-b border-[#d1b98f] bg-[#1f1712] text-[#f8ead5]">
-        <div className="absolute inset-0 opacity-25 [background:radial-gradient(circle_at_20%_15%,#a66a2d,transparent_32%),radial-gradient(circle_at_78%_0%,#e0af58,transparent_28%),linear-gradient(135deg,#1f1712,#3a281d_55%,#17100d)]" />
+      <main className="min-h-screen bg-[#f8e9e6] text-[#22201a]">
+      <section className="relative overflow-hidden border-b border-[#c8a96e] bg-[#1a1a1a] text-[#fff5df]">
+        <div className="absolute inset-0 opacity-25 [background:radial-gradient(circle_at_20%_15%,#8a5b1f,transparent_32%),radial-gradient(circle_at_78%_0%,#c8a96e,transparent_28%),linear-gradient(135deg,#1a1a1a,#3a281d_55%,#141210)]" />
         <div className="relative mx-auto flex w-full flex-col gap-5 px-4 py-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-4xl">
             <div className="mb-3 flex flex-wrap gap-2">
@@ -520,16 +520,16 @@ export default function ConfiguratorDashboard() {
               <Pill tone="green">Live dashboard</Pill>
               <Pill tone="charcoal">Dining table configurator</Pill>
             </div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-[#e0b15b]">Clear next actions · real assets · lead-gen first</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-[#c8a96e]">Clear next actions · real assets · lead-gen first</p>
             <h1 className="text-2xl font-black tracking-tight md:text-4xl lg:text-3xl">Build the configurator without losing the plot.</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#e7d2b7]">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#ead7a7]">
               A warm little command centre for the table configurator: what matters next, why it matters, who owns it, and how close we are.
             </p>
           </div>
-          <div className="w-full rounded-[2rem] border border-[#7c5734] bg-[#2b2018]/90 p-4 shadow-2xl lg:max-w-xs">
+          <div className="w-full rounded-[2rem] border border-[#8a5b1f] bg-[#27221b]/90 p-4 shadow-2xl lg:max-w-xs">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#d1a65a]">Overall progress</p>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-[#c8a96e]">Overall progress</p>
                 <p className="mt-1 text-4xl font-black text-[#f3c66f]">{overallProgress}%</p>
               </div>
               <Pill tone="amber">{completedOverall}/{allProgressItems.length}</Pill>
@@ -537,30 +537,30 @@ export default function ConfiguratorDashboard() {
             <div className="mt-3">
               <ProgressBar value={overallProgress} large />
             </div>
-            <p className="mt-2 text-xs leading-5 text-[#e7d2b7]">Ticks update this number instantly and save on this browser. Shared team syncing is the next upgrade if useful.</p>
+            <p className="mt-2 text-xs leading-5 text-[#ead7a7]">Ticks update this number instantly and save on this browser. Shared team syncing is the next upgrade if useful.</p>
           </div>
         </div>
       </section>
 
       <div className="mx-auto w-full space-y-6 px-4 py-6 lg:px-8">
         {/* Top command section */}
-        <section className="rounded-[2rem] border border-[#d8c3a0] bg-[#fffaf1] p-4 shadow-sm">
+        <section className="rounded-[2rem] border border-[#e7bbb4] bg-[#fffdf9] p-4 shadow-sm">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">First product</p>
-              <p className="mt-1 text-lg font-black text-[#241b16]">Crossroads/Totara Crossroads</p>
+            <div className="rounded-3xl border border-[#d7cdbd] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#8a5b1f]">First product</p>
+              <p className="mt-1 text-lg font-black text-[#22201a]">Crossroads/Totara Crossroads</p>
             </div>
-            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">Pricing</p>
-              <p className="mt-1 text-lg font-black text-[#241b16]">Current website listings</p>
+            <div className="rounded-3xl border border-[#d7cdbd] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#8a5b1f]">Pricing</p>
+              <p className="mt-1 text-lg font-black text-[#22201a]">Current website listings</p>
             </div>
-            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">Crossroads chosen</p>
-              <p className="mt-1 text-lg font-black text-[#241b16]">Yes</p>
+            <div className="rounded-3xl border border-[#d7cdbd] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#8a5b1f]">Crossroads chosen</p>
+              <p className="mt-1 text-lg font-black text-[#22201a]">Yes</p>
             </div>
-            <div className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-4 shadow-sm backdrop-blur">
-              <p className="text-xs font-bold uppercase tracking-wide text-[#876334]">Next up</p>
-              <p className="mt-1 text-lg font-black text-[#241b16]">
+            <div className="rounded-3xl border border-[#d7cdbd] bg-white/80 p-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-wide text-[#8a5b1f]">Next up</p>
+              <p className="mt-1 text-lg font-black text-[#22201a]">
                 {nextUp.length > 0 ? nextUp[0].title : 'All done!'}
               </p>
             </div>
@@ -574,17 +574,17 @@ export default function ConfiguratorDashboard() {
             ['Asset focus', 'Reverse Angled Steel'],
             ['Tech bet', 'Procedural top + GLB frame'],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-3xl border border-[#e0cfb4] bg-white/80 p-5 shadow-sm backdrop-blur">
-              <p className="text-sm font-bold uppercase tracking-wide text-[#876334]">{label}</p>
-              <p className="mt-2 text-xl font-black text-[#241b16]">{value}</p>
+            <div key={label} className="rounded-3xl border border-[#d7cdbd] bg-white/80 p-5 shadow-sm backdrop-blur">
+              <p className="text-sm font-bold uppercase tracking-wide text-[#8a5b1f]">{label}</p>
+              <p className="mt-2 text-xl font-black text-[#22201a]">{value}</p>
             </div>
           ))}
         </section>
 
-        <section className="rounded-[2rem] border border-[#d8c3a0] bg-[#fffaf1] p-6 shadow-sm">
+        <section className="rounded-[2rem] border border-[#e7bbb4] bg-[#fffdf9] p-6 shadow-sm">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-[#9a6a2e]">This afternoon</p>
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-[#8a5b1f]">This afternoon</p>
               <h2 className="mt-2 text-3xl font-black md:text-4xl">Two clear lanes: commercial and asset pipeline</h2>
               <p className="mt-3 max-w-3xl text-stone-700">Tick these as you go. Each column has its own progress, and every tick contributes to the overall project progress.</p>
             </div>
@@ -593,7 +593,7 @@ export default function ConfiguratorDashboard() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             {people.map((person) => (
-              <article key={person.owner} className="rounded-[2rem] border border-[#e0cfb4] bg-[#f7efe2] p-5 shadow-inner">
+              <article key={person.owner} className="rounded-[2rem] border border-[#d7cdbd] bg-[#f8e9e6] p-5 shadow-inner">
                 <div className="mb-5 flex items-center justify-between gap-4">
                   <div>
                     <h3 className="text-2xl font-black">{person.owner}</h3>
@@ -602,7 +602,7 @@ export default function ConfiguratorDashboard() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-black text-[#8b5a2b]">{person.progress}%</p>
+                    <p className="text-3xl font-black text-[#8a5b1f]">{person.progress}%</p>
                     <p className="text-xs font-bold uppercase text-stone-500">{person.completed}/{person.total} done</p>
                   </div>
                 </div>
@@ -629,39 +629,39 @@ export default function ConfiguratorDashboard() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-          <article className="self-start rounded-[2rem] border border-[#d8c3a0] bg-[#241b16] p-6 text-[#f8ead5] shadow-xl">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#e0b15b]">Do next</p>
+          <article className="self-start rounded-[2rem] border border-[#e7bbb4] bg-[#22201a] p-6 text-[#fff5df] shadow-xl">
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#c8a96e]">Do next</p>
             <h2 className="mt-2 text-3xl font-black">The current choke points</h2>
             <div className="mt-6 space-y-4">
               {nextUp.map((task) => (
-                <div key={task.id} className="rounded-3xl border border-[#6b4a2f] bg-[#34261c] p-5">
+                <div key={task.id} className="rounded-3xl border border-[#5a5549] bg-[#27221b] p-5">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="font-black">{task.title}</h3>
                     <Pill tone="amber">{task.owner}</Pill>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-[#e7d2b7]">{task.how}</p>
+                  <p className="mt-3 text-sm leading-6 text-[#ead7a7]">{task.how}</p>
                 </div>
               ))}
             </div>
           </article>
 
-          <article className="rounded-[2rem] border border-[#d8c3a0] bg-white/85 p-6 shadow-sm">
+          <article className="rounded-[2rem] border border-[#e7bbb4] bg-white/85 p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.25em] text-[#9a6a2e]">Milestones</p>
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-[#8a5b1f]">Milestones</p>
                 <h2 className="mt-2 text-3xl font-black">Plan progress</h2>
               </div>
               <Pill tone="charcoal">Calculated live</Pill>
             </div>
             <div className="grid gap-5 md:grid-cols-2">
               {milestoneProgress.map((milestone) => (
-                <article key={milestone.id} className="rounded-3xl border border-[#e0cfb4] bg-[#fffaf1] p-5">
+                <article key={milestone.id} className="rounded-3xl border border-[#d7cdbd] bg-[#fffdf9] p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9a6a2e]">{milestone.eyebrow}</p>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8a5b1f]">{milestone.eyebrow}</p>
                       <h3 className="mt-2 text-xl font-black">{milestone.title}</h3>
                     </div>
-                    <p className="text-2xl font-black text-[#8b5a2b]">{milestone.progress}%</p>
+                    <p className="text-2xl font-black text-[#8a5b1f]">{milestone.progress}%</p>
                   </div>
                   <p className="mt-3 text-sm leading-6 text-stone-700">{milestone.description}</p>
                   <div className="mt-4">
@@ -704,7 +704,7 @@ export default function ConfiguratorDashboard() {
                   {boardTasks
                     .filter((task) => task.lane === lane)
                     .map((task) => (
-                      <article key={task.title} className="rounded-3xl border border-[#e0cfb4] bg-white/90 p-4 shadow-sm">
+                      <article key={task.title} className="rounded-3xl border border-[#d7cdbd] bg-white/90 p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <h4 className="font-black">{task.title}</h4>
                           <Pill tone={task.priority === 'High' ? 'red' : task.priority === 'Medium' ? 'amber' : 'stone'}>{task.priority}</Pill>
@@ -720,32 +720,32 @@ export default function ConfiguratorDashboard() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1fr_1.25fr]">
-          <article className="rounded-[2rem] border border-[#d8c3a0] bg-white/85 p-6 shadow-sm">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#9a6a2e]">Asset health</p>
+          <article className="rounded-[2rem] border border-[#e7bbb4] bg-white/85 p-6 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#8a5b1f]">Asset health</p>
             <h2 className="mt-2 text-3xl font-black">Totara Crossroads GLB</h2>
             <p className="mt-3 text-sm leading-6 text-stone-700">
               The first model is healthy enough to prototype with. Production risk is the repeatable texture/export pipeline, not polygon count.
             </p>
             <dl className="mt-6 grid gap-3 sm:grid-cols-2">
               {assetFacts.map(([label, value]) => (
-                <div key={label} className="rounded-3xl bg-[#f3eadc] p-4">
-                  <dt className="text-xs font-bold uppercase tracking-wide text-[#876334]">{label}</dt>
-                  <dd className="mt-1 font-black text-[#241b16]">{value}</dd>
+                <div key={label} className="rounded-3xl bg-[#f8e9e6] p-4">
+                  <dt className="text-xs font-bold uppercase tracking-wide text-[#8a5b1f]">{label}</dt>
+                  <dd className="mt-1 font-black text-[#22201a]">{value}</dd>
                 </div>
               ))}
             </dl>
           </article>
 
-          <article className="rounded-[2rem] border border-[#d8c3a0] bg-white/85 p-6 shadow-sm">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#9a6a2e]">Decisions</p>
+          <article className="rounded-[2rem] border border-[#e7bbb4] bg-white/85 p-6 shadow-sm">
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-[#8a5b1f]">Decisions</p>
             <h2 className="mt-2 text-3xl font-black">What is decided</h2>
             <div className="mt-5 space-y-5">
               {decisions.map((decision) => (
-                <div key={decision.title} className="rounded-3xl border border-[#e0cfb4] bg-[#fffaf1] p-5">
+                <div key={decision.title} className="rounded-3xl border border-[#d7cdbd] bg-[#fffdf9] p-5">
                   <h3 className="font-black">{decision.title}</h3>
                   <p className="mt-2 text-sm font-bold text-emerald-800">Chosen: {decision.chosen}</p>
                   <p className="mt-2 text-sm leading-6 text-stone-700">{decision.why}</p>
-                  <p className="mt-3 text-sm leading-6 text-[#6f4320]"><span className="font-black">Next: </span>{decision.next}</p>
+                  <p className="mt-3 text-sm leading-6 text-[#8a5b1f]"><span className="font-black">Next: </span>{decision.next}</p>
                 </div>
               ))}
             </div>

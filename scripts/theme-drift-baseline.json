@@ -5,9 +5,9 @@
     "offWeights": 0
   },
   "app/call-intelligence/CallIntelligenceClient.tsx": {
-    "colours": 7,
+    "colours": 6,
     "offRadii": 0,
-    "offWeights": 1
+    "offWeights": 0
   },
   "app/configurator/page.tsx": {
     "colours": 89,
@@ -15,24 +15,24 @@
     "offWeights": 0
   },
   "app/costings/CostingsClient.tsx": {
-    "colours": 78,
+    "colours": 67,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/costings/page.tsx": {
-    "colours": 6,
+    "colours": 2,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/freight-quotes/page.tsx": {
-    "colours": 47,
+    "colours": 46,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/leads/LeadsClient.tsx": {
-    "colours": 39,
-    "offRadii": 4,
-    "offWeights": 1
+    "colours": 31,
+    "offRadii": 0,
+    "offWeights": 0
   },
   "app/login/page.tsx": {
     "colours": 20,
@@ -40,44 +40,44 @@
     "offWeights": 0
   },
   "app/production/ProductionClient.tsx": {
-    "colours": 101,
+    "colours": 72,
     "offRadii": 0,
-    "offWeights": 1
+    "offWeights": 0
   },
   "app/production/dispatch/DispatchClient.tsx": {
-    "colours": 10,
-    "offRadii": 2,
-    "offWeights": 1
+    "colours": 7,
+    "offRadii": 0,
+    "offWeights": 0
   },
   "app/production/plan/PlanClient.tsx": {
-    "colours": 671,
+    "colours": 659,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/production/plan/delight.tsx": {
-    "colours": 85,
+    "colours": 65,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/production/plan/order-photo-tray.tsx": {
-    "colours": 14,
-    "offRadii": 1,
-    "offWeights": 5
+    "colours": 12,
+    "offRadii": 0,
+    "offWeights": 0
   },
   "app/production/samples/SampleStockClient.tsx": {
-    "colours": 23,
-    "offRadii": 5,
-    "offWeights": 1
+    "colours": 18,
+    "offRadii": 0,
+    "offWeights": 0
   },
   "app/production/stock/StockClient.tsx": {
-    "colours": 6,
-    "offRadii": 1,
+    "colours": 5,
+    "offRadii": 0,
     "offWeights": 0
   },
   "app/production/test/TestJobClient.tsx": {
     "colours": 19,
-    "offRadii": 5,
-    "offWeights": 5
+    "offRadii": 0,
+    "offWeights": 0
   },
   "app/quoting/page.tsx": {
     "colours": 3,
@@ -85,12 +85,12 @@
     "offWeights": 0
   },
   "app/today/page.tsx": {
-    "colours": 12,
+    "colours": 10,
     "offRadii": 0,
-    "offWeights": 1
+    "offWeights": 0
   },
   "app/workshop/add-task.tsx": {
-    "colours": 3,
+    "colours": 2,
     "offRadii": 0,
     "offWeights": 0
   },
@@ -100,33 +100,33 @@
     "offWeights": 0
   },
   "app/workshop/page.tsx": {
-    "colours": 8,
+    "colours": 6,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/workshop/today/page.tsx": {
-    "colours": 5,
+    "colours": 4,
     "offRadii": 0,
     "offWeights": 0
   },
   "app/workshop/workshop-shell.tsx": {
-    "colours": 6,
-    "offRadii": 1,
+    "colours": 4,
+    "offRadii": 0,
     "offWeights": 0
   },
   "app/workshop/workshop-ui.tsx": {
-    "colours": 5,
+    "colours": 4,
     "offRadii": 0,
     "offWeights": 0
   },
   "components/mission-control-shell.tsx": {
-    "colours": 60,
-    "offRadii": 4,
-    "offWeights": 3
+    "colours": 53,
+    "offRadii": 0,
+    "offWeights": 0
   },
   "components/mission-control-ui.tsx": {
-    "colours": 18,
-    "offRadii": 1,
-    "offWeights": 1
+    "colours": 14,
+    "offRadii": 0,
+    "offWeights": 0
   }
 }

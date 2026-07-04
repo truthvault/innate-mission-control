@@ -43,7 +43,7 @@ function EmptyFoundation() {
 }
 
 function DataTable({ children }: { children: ReactNode }) {
-  return <div style={{ overflowX: "auto", border: `1px solid ${DT.border}`, borderRadius: 12 }}>{children}</div>;
+  return <div style={{ overflowX: "auto", border: `1px solid ${DT.border}`, borderRadius: 14 }}>{children}</div>;
 }
 
 const thStyle: CSSProperties = { textAlign: "left", padding: "9px 10px", color: DT.textMuted, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", borderBottom: `1px solid ${DT.border}`, whiteSpace: "nowrap" };
@@ -60,7 +60,7 @@ export default function StockClient({ result }: Props) {
       </div>
 
       {result.errors.length > 0 && (
-        <div style={{ border: "1px solid rgba(180,107,70,0.22)", background: "rgba(180,107,70,0.09)", borderRadius: DT.radius, padding: 12, color: "#8f3f24", fontSize: 12 }}>
+        <div style={{ border: "1px solid rgba(180,107,70,0.22)", background: "rgba(180,107,70,0.09)", borderRadius: DT.radius, padding: 12, color: DT.clay, fontSize: 12 }}>
           {result.errors.map((error) => <div key={error}>{error}</div>)}
         </div>
       )}

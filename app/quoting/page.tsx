@@ -59,7 +59,7 @@ function PolicyCard({ policy, defaultOpen = false }: { policy: QuoteCategoryPoli
           <form action={updatePolicyStatus}>
             <input type="hidden" name="categoryKey" value={policy.categoryKey} />
             <input type="hidden" name="status" value="approved" />
-            <button className="min-h-10 w-full rounded-md bg-[#24201c] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#3a332d] disabled:cursor-not-allowed disabled:bg-stone-300" disabled={isApproved}>
+            <button className="min-h-10 w-full rounded-md bg-[#22201a] px-3 py-2 text-sm font-bold text-white transition hover:bg-[#27221b] disabled:cursor-not-allowed disabled:bg-stone-300" disabled={isApproved}>
               Approve
             </button>
           </form>

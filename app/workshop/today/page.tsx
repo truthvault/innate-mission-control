@@ -57,7 +57,7 @@ export default async function WorkshopTodayPage({
               fontSize: 17,
               fontWeight: 900,
               fontFamily: DT.sans,
-              color: p === person ? "#fff" : DT.textSecondary,
+              color: p === person ? DT.cardBg : DT.textSecondary,
               background: p === person ? DT.teal : DT.cardBg,
               border: p === person ? `1px solid ${DT.teal}` : "1px solid rgba(0,0,0,0.1)",
             }}

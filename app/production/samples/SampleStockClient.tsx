@@ -6,18 +6,18 @@ import { DT } from "@/components/mission-control-ui";
 import { FINISHES, SPECIES, SAMPLE_TYPES, type SampleStockBoard, type SampleStockCell, type StockLevel } from "@/lib/monday/sample-stock-types";
 
 function levelMeta(level: StockLevel) {
-  if (level === "out") return { label: "Out", bg: "#fee2e2", color: "#991b1b", border: "rgba(153,27,27,0.18)" };
+  if (level === "out") return { label: "Out", bg: DT.clayPale, color: DT.clay, border: "rgba(153,27,27,0.18)" };
   if (level === "low") return { label: "Low", bg: "rgba(217,119,6,0.10)", color: "#b45309", border: "rgba(217,119,6,0.16)" };
   return { label: "OK", bg: DT.tealSoft, color: DT.teal, border: "rgba(12,124,122,0.14)" };
 }
 
 function StatusPill({ level }: { level: StockLevel }) {
   const m = levelMeta(level);
-  return <span style={{ fontSize: 10, color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 20, padding: "2px 8px", fontWeight: 700, fontFamily: DT.sans }}>{m.label}</span>;
+  return <span style={{ fontSize: 10, color: m.color, background: m.bg, border: `1px solid ${m.border}`, borderRadius: 14, padding: "2px 8px", fontWeight: 700, fontFamily: DT.sans }}>{m.label}</span>;
 }
 
 function Kpi({ label, value, tone = "neutral" }: { label: string; value: string | number; tone?: "neutral" | "bad" | "warn" | "good" }) {
-  const color = tone === "bad" ? "#991b1b" : tone === "warn" ? "#b45309" : tone === "good" ? DT.teal : DT.textPrimary;
+  const color = tone === "bad" ? DT.clay : tone === "warn" ? "#b45309" : tone === "good" ? DT.teal : DT.textPrimary;
   return (
     <div data-sample-kpi="true" style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: "14px 16px" }}>
       <div style={{ fontSize: 10, color: DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, fontFamily: DT.sans }}>{label}</div>
@@ -30,7 +30,7 @@ function StockMatrixMobile({ title, cells }: { title: string; cells: SampleStock
   return (
     <div data-stock-mobile-matrix="true" style={{ display: "none", padding: "10px 12px 12px", gap: 8, flexDirection: "column" }}>
       {SPECIES.map((species) => (
-        <div key={`${title}-${species}-mobile`} style={{ border: `1px solid ${DT.border}`, borderRadius: 12, background: "rgba(255,252,246,0.82)", overflow: "hidden" }}>
+        <div key={`${title}-${species}-mobile`} style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,253,249,0.82)", overflow: "hidden" }}>
           <div style={{ padding: "9px 10px", background: DT.goldSoft, color: DT.textPrimary, fontFamily: DT.sans, fontSize: 13, fontWeight: 900 }}>
             {species}
           </div>
@@ -113,7 +113,7 @@ function TopUpQueue({ cells }: { cells: SampleStockCell[] }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {cells.map((cell) => (
-            <div data-sample-topup-row="true" key={`${cell.sampleType}-${cell.species}-${cell.finish}`} style={{ textDecoration: "none", border: `1px solid ${DT.border}`, borderRadius: 10, padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", background: cell.level === "out" ? "rgba(153,27,27,0.035)" : "rgba(217,119,6,0.035)" }}>
+            <div data-sample-topup-row="true" key={`${cell.sampleType}-${cell.species}-${cell.finish}`} style={{ textDecoration: "none", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "10px 12px", display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center", background: cell.level === "out" ? "rgba(153,27,27,0.035)" : "rgba(217,119,6,0.035)" }}>
               <div>
                 <div style={{ fontSize: 13, color: DT.textPrimary, fontWeight: 700, fontFamily: DT.sans }}>{cell.sampleType}: {cell.species} / {cell.finish}</div>
                 <div style={{ fontSize: 11, color: DT.textSecondary, fontFamily: DT.sans, marginTop: 2 }}>{cell.count === 0 ? "No stock ready" : `${cell.count} ready, top up soon`}</div>
@@ -129,8 +129,8 @@ function TopUpQueue({ cells }: { cells: SampleStockCell[] }) {
 
 function PromiseRule() {
   return (
-    <section style={{ background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(210,174,109,0.14) 100%)`, color: DT.textPrimary, border: `1px solid ${DT.border}`, borderRadius: DT.radius, padding: "14px 16px", boxShadow: DT.shadow }}>
-      <div style={{ fontSize: 10, color: "#8a5b1f", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, fontFamily: DT.sans }}>Customer promise rule</div>
+    <section style={{ background: `linear-gradient(135deg, ${DT.cardBg} 0%, rgba(200,169,110,0.14) 100%)`, color: DT.textPrimary, border: `1px solid ${DT.border}`, borderRadius: DT.radius, padding: "14px 16px", boxShadow: DT.shadow }}>
+      <div style={{ fontSize: 10, color: DT.goldInk, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800, fontFamily: DT.sans }}>Customer promise rule</div>
       <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 }}>
         <div style={ruleStyle}><strong>Full set ready</strong><span>Can confidently promise this week.</span></div>
         <div style={ruleStyle}><strong>Any key cell out</strong><span>Say following week unless workshop confirms.</span></div>
@@ -140,7 +140,7 @@ function PromiseRule() {
   );
 }
 
-const ruleStyle: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: DT.textSecondary, fontFamily: DT.sans, background: "rgba(255,255,255,0.58)", border: `1px solid ${DT.border}`, borderRadius: 10, padding: 12 };
+const ruleStyle: React.CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: DT.textSecondary, fontFamily: DT.sans, background: "rgba(255,255,255,0.58)", border: `1px solid ${DT.border}`, borderRadius: 8, padding: 12 };
 const SAMPLE_STOCK_MOBILE_CSS = `
   @media (max-width: 759px) {
     [data-sample-stock-layout="true"] {
@@ -235,7 +235,7 @@ export default function SampleStockClient({ board, syncedAt, source, mondayError
             <p style={{ margin: "8px 0 0", maxWidth: 680, fontSize: 13, lineHeight: 1.5 }}>
               Monday remains the current sample-stock source. This page cannot show ready/low/out sample counts until the read-only source is configured, so do not treat this as proof that samples are fully stocked.
             </p>
-            {mondayError && <p style={{ margin: "12px 0 0", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, background: "rgba(180,107,70,0.08)", color: "#8f3f24", padding: 10, fontSize: 12, fontWeight: 850 }}>Sample stock source issue: {mondayError}</p>}
+            {mondayError && <p style={{ margin: "12px 0 0", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 8, background: "rgba(180,107,70,0.08)", color: DT.clay, padding: 10, fontSize: 12, fontWeight: 900 }}>Sample stock source issue: {mondayError}</p>}
           </section>
         )}
     </MissionControlShell>

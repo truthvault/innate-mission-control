@@ -84,14 +84,14 @@ type PlanTaskLinksStorage = "blob" | "supabase";
 
 const newOrderPalette = {
   clayBg: "rgba(110,138,106,0.14)",
-  clayPanel: "rgba(249,251,247,0.98)",
+  clayPanel: "rgba(255,253,249,0.98)",
   clayBorder: "rgba(110,138,106,0.30)",
   clayBorderStrong: "rgba(110,138,106,0.46)",
   clayAccent: DT.green,
   clayAccentDark: DT.green,
   clayStripe: DT.green,
   clayGlow: "rgba(110,138,106,0.18)",
-  clayTaskBg: "linear-gradient(135deg, rgba(249,251,247,0.98) 0%, rgba(110,138,106,0.20) 100%)",
+  clayTaskBg: "linear-gradient(135deg, rgba(255,253,249,0.98) 0%, rgba(110,138,106,0.20) 100%)",
 };
 
 const DAY_LABELS: Record<DayKey, string> = {
@@ -137,14 +137,14 @@ const REVIEW_GLOW = {
 const CAPACITY_STYLES = {
   ok: { color: DT.green, bg: "rgba(63,111,63,0.09)", border: "rgba(63,111,63,0.22)", label: "OK" },
   watch: { color: DT.goldInk, bg: "rgba(200,169,110,0.14)", border: "rgba(200,169,110,0.35)", label: "Full" },
-  over: { color: DT.clay, bg: "rgba(155,47,34,0.10)", border: "rgba(155,47,34,0.34)", label: "Over" },
+  over: { color: DT.clay, bg: "rgba(154,59,47,0.10)", border: "rgba(154,59,47,0.34)", label: "Over" },
 } as const;
 
 const PRODUCTION_PANEL_STYLE = {
   background: "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,253,249,0.88))",
   border: `1px solid ${DT.border}`,
   borderRadius: DT.radius,
-  boxShadow: "0 1px 0 rgba(255,255,255,0.82) inset, 0 8px 22px rgba(37,30,20,0.055)",
+  boxShadow: "0 1px 0 rgba(255,255,255,0.82) inset, 0 8px 22px rgba(34,32,26,0.055)",
 } as const;
 
 const ENABLE_PRODUCTION_PULSE_ROW = true;
@@ -1003,7 +1003,7 @@ function InfoDot({ title }: { title: string }) {
         i
       </button>
       {open && (
-        <span role="tooltip" style={{ position: "absolute", top: 44, right: 0, zIndex: 200, width: 240, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.98)", borderRadius: 8, boxShadow: "0 12px 30px rgba(37,30,20,0.16)", padding: 9, fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.35, fontWeight: 800, color: DT.textMuted, textAlign: "left" }}>
+        <span role="tooltip" style={{ position: "absolute", top: 44, right: 0, zIndex: 200, width: 240, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.98)", borderRadius: 8, boxShadow: "0 12px 30px rgba(34,32,26,0.16)", padding: 9, fontFamily: DT.sans, fontSize: 10.5, lineHeight: 1.35, fontWeight: 800, color: DT.textMuted, textAlign: "left" }}>
           {title}
         </span>
       )}
@@ -1974,7 +1974,7 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
       }}
       onMouseEnter={(event) => {
         event.currentTarget.style.transform = "translateX(-1px)";
-        event.currentTarget.style.boxShadow = "0 8px 18px rgba(37,30,20,0.06)";
+        event.currentTarget.style.boxShadow = "0 8px 18px rgba(34,32,26,0.06)";
       }}
       onMouseLeave={(event) => {
         event.currentTarget.style.transform = "translateX(0)";
@@ -2147,7 +2147,7 @@ function OrderIntakeRailCard({
                   <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.invoiceNumber || "No invoice"} · {formatXeroMoney(item.total)}</div>
                   {lifecycleLabel && <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, color: paymentStageTone(item.paymentLifecycle?.paymentStage) === "warn" ? DT.goldInk : DT.teal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lifecycleLabel}</div>}
                 </div>
-                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: item.reviewState === "paid_needs_review" ? DT.teal : meta.bg, color: item.reviewState === "paid_needs_review" ? "#fff" : meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
+                <span style={{ flex: "0 0 auto", border: `1px solid ${meta.border}`, background: item.reviewState === "paid_needs_review" ? DT.teal : meta.bg, color: item.reviewState === "paid_needs_review" ? DT.cardBg : meta.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, whiteSpace: "nowrap" }}>{item.stateLabel}</span>
               </div>
             </button>
           );
@@ -2177,12 +2177,12 @@ function CompletedTuesdayOrdersCard({
         Completed {items.length}
       </button>
       {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(37,30,20,0.18)", padding: 8 }}>
+        <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 90, width: 292, maxWidth: "calc(100vw - 28px)", border: `1px solid ${DT.border}`, borderRadius: 14, background: "rgba(255,255,255,0.98)", boxShadow: "0 18px 44px rgba(34,32,26,0.18)", padding: 8 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textFaint, letterSpacing: "0.08em", textTransform: "uppercase" }}>Completed in Tuesday</div>
           <div style={{ marginTop: 2, marginBottom: 7, fontFamily: DT.sans, fontSize: 10, fontWeight: 800, color: DT.textMuted }}>Restore if this was marked complete by mistake.</div>
           <div style={{ display: "grid", gap: 6, maxHeight: 230, overflowY: "auto", paddingRight: 2 }}>
           {items.map((item) => (
-            <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 8, background: "rgba(251,250,247,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
+            <div key={item.id} title={item.note || item.detail} style={{ border: `1px solid ${DT.border}`, borderRadius: 8, background: "rgba(255,253,249,0.82)", padding: 8, display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 8, alignItems: "center" }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontFamily: DT.sans, fontSize: 11, lineHeight: 1.15, fontWeight: 900, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</div>
                 <div style={{ marginTop: 3, fontFamily: DT.sans, fontSize: 9.5, lineHeight: 1.2, fontWeight: 800, color: DT.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.reason ? `${item.reason} · ${item.detail}` : item.detail}</div>
@@ -2226,8 +2226,8 @@ function TuesdayCompletionDialog({
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={isRestore ? `Restore ${label}` : `Mark ${label} complete in Tuesday`} style={{ position: "fixed", inset: 0, zIndex: 260, display: "grid", placeItems: "center", background: "rgba(26,22,17,0.38)", padding: 16 }}>
-      <div style={{ width: "min(520px, 100%)", border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(154,59,47,0.18)"}`, background: DT.cardBg, borderRadius: 14, boxShadow: "0 24px 64px rgba(37,30,20,0.22)", overflow: "hidden" }}>
+    <div role="dialog" aria-modal="true" aria-label={isRestore ? `Restore ${label}` : `Mark ${label} complete in Tuesday`} style={{ position: "fixed", inset: 0, zIndex: 260, display: "grid", placeItems: "center", background: "rgba(20,18,16,0.38)", padding: 16 }}>
+      <div style={{ width: "min(520px, 100%)", border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(154,59,47,0.18)"}`, background: DT.cardBg, borderRadius: 14, boxShadow: "0 24px 64px rgba(34,32,26,0.22)", overflow: "hidden" }}>
         <div style={{ padding: "18px 20px 14px", borderBottom: `1px solid ${DT.border}` }}>
           <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, letterSpacing: "0.10em", textTransform: "uppercase", color: isRestore ? DT.teal : DT.clay }}>{isRestore ? "Restore order" : "Complete in Tuesday"}</div>
           <h3 style={{ margin: "4px 0 0", fontFamily: DT.serif, fontSize: 31, lineHeight: 1.02, color: DT.textPrimary, fontWeight: 900, overflowWrap: "anywhere" }}>{label}</h3>
@@ -2251,7 +2251,7 @@ function TuesdayCompletionDialog({
           {isRestore && <div style={{ border: `1px solid rgba(12,124,122,0.18)`, background: DT.tealSoft, borderRadius: 14, padding: "10px 11px", fontFamily: DT.sans, fontSize: 12, lineHeight: 1.45, color: DT.teal, fontWeight: 900 }}>Use this when an order was hidden from Tuesday by mistake and should come back into the active boards.</div>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
             <button type="button" onClick={onCancel} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}>Cancel</button>
-            <button type="button" onClick={confirm} style={{ border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(154,59,47,0.18)"}`, background: isRestore ? DT.teal : "rgba(154,59,47,0.08)", color: isRestore ? "#fff" : DT.clay, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}>{isRestore ? "Restore to active" : "Mark complete"}</button>
+            <button type="button" onClick={confirm} style={{ border: `1px solid ${isRestore ? "rgba(12,124,122,0.22)" : "rgba(154,59,47,0.18)"}`, background: isRestore ? DT.teal : "rgba(154,59,47,0.08)", color: isRestore ? DT.cardBg : DT.clay, borderRadius: 999, padding: "10px 14px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, cursor: "pointer" }}>{isRestore ? "Restore to active" : "Mark complete"}</button>
           </div>
         </div>
       </div>
@@ -2287,7 +2287,7 @@ function IntakeTaskDraftRow({
     <div
       ref={setNodeRef}
       title={task.detail || task.title}
-      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.34)" : "rgba(12,124,122,0.14)"}`, borderRadius: 8, background: isDragging ? "rgba(231,243,242,0.94)" : "rgba(255,255,255,0.92)", padding: 6, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(37,30,20,0.12)" : "0 2px 8px rgba(37,30,20,0.035)", opacity: isDragging ? 0.82 : 1 }}
+      style={{ border: `1px solid ${isDragging ? "rgba(12,124,122,0.34)" : "rgba(12,124,122,0.14)"}`, borderRadius: 8, background: isDragging ? "rgba(231,243,242,0.94)" : "rgba(255,255,255,0.92)", padding: 6, minWidth: 0, transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 24px rgba(34,32,26,0.12)" : "0 2px 8px rgba(34,32,26,0.035)", opacity: isDragging ? 0.82 : 1 }}
     >
       <div style={{ display: "grid", gridTemplateColumns: isNarrow ? "40px 34px minmax(0, 1fr) 74px" : "40px 42px minmax(320px, 1fr) 92px 128px 54px 62px", gap: 5, alignItems: "center" }}>
         <button
@@ -2308,16 +2308,16 @@ function IntakeTaskDraftRow({
           aria-label={`Task ${index + 1} text`}
           title="Edit this task name directly."
           placeholder="Task name"
-          style={{ minHeight: 40, minWidth: 0, width: "100%", border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: "#fff", boxShadow: "inset 3px 0 0 rgba(12,124,122,0.18)" }}
+          style={{ minHeight: 40, minWidth: 0, width: "100%", border: `1px solid rgba(12,124,122,0.18)`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 12, fontWeight: 900, color: DT.textPrimary, background: DT.cardBg, boxShadow: "inset 3px 0 0 rgba(12,124,122,0.18)" }}
         />
-        <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
+        <select value={task.owner} onChange={(event) => onChooseOwner(task.id, event.target.value as OrderIntakeOwner)} aria-label={`Task ${index + 1} owner`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: DT.cardBg }}>
           {(["Nick", "Dylan", "Guido"] as OrderIntakeOwner[]).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
         </select>
-        <select value={task.scheduledDate} onChange={(event) => onChooseDate(task.id, event.target.value)} aria-label={`Task ${index + 1} date`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: "#fff" }}>
+        <select value={task.scheduledDate} onChange={(event) => onChooseDate(task.id, event.target.value)} aria-label={`Task ${index + 1} date`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: DT.cardBg }}>
           {!dateKnown && <option value={task.scheduledDate}>{task.scheduledDate}</option>}
           {dateOptions.map((option) => <option key={`${task.id}:${option.dateIso}`} value={option.dateIso}>{option.dateLabel}</option>)}
         </select>
-        <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => onPatch(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 7px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: "#fff" }} />
+        <input type="number" min={0} step={0.5} value={task.estimatedHours} onChange={(event) => onPatch(task.id, { estimatedHours: Math.max(0, Number(event.target.value || 0)) })} aria-label={`Task ${index + 1} hours`} style={{ minHeight: 40, minWidth: 0, border: `1px solid ${DT.border}`, borderRadius: 8, padding: "9px 7px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textPrimary, background: DT.cardBg }} />
         <button type="button" onClick={() => onDelete(task.id)} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.74)", color: DT.textMuted, borderRadius: 8, padding: "9px 8px", fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, cursor: "pointer" }}>Delete</button>
       </div>
     </div>
@@ -2552,9 +2552,9 @@ function OrderIntakeReviewModal({
   }
 
   return (
-	    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: isNarrow ? 0 : 64, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,19,16,0.42)", display: "flex", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "center", padding: isNarrow ? 0 : "10px 18px 14px", overflow: "hidden" }}>
+	    <div role="dialog" aria-modal="true" aria-label="Pending new order review" style={{ position: "fixed", top: isNarrow ? 0 : 64, right: 0, bottom: 0, left: 0, zIndex: 160, background: "rgba(20,18,16,0.42)", display: "flex", alignItems: isNarrow ? "stretch" : "flex-start", justifyContent: "center", padding: isNarrow ? 0 : "10px 18px 14px", overflow: "hidden" }}>
 	      <section style={{ width: isNarrow ? "100vw" : "min(1480px, calc(100vw - 36px))", height: isNarrow ? "100vh" : "calc(100vh - 88px)", maxHeight: isNarrow ? "100vh" : "calc(100vh - 88px)", overflow: "hidden", display: "flex", flexDirection: "column", border: isNarrow ? "none" : `1px solid ${DT.border}`, borderRadius: isNarrow ? 0 : 16, background: DT.surface, boxShadow: "0 24px 70px rgba(0,0,0,0.26)" }}>
-	        <header style={{ flex: "0 0 auto", background: "rgba(251,250,247,0.98)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "10px 12px" : "10px 18px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 14 }}>
+	        <header style={{ flex: "0 0 auto", background: "rgba(255,253,249,0.98)", borderBottom: `1px solid ${DT.border}`, padding: isNarrow ? "10px 12px" : "10px 18px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: isNarrow ? 8 : 14 }}>
           <div style={{ minWidth: 0, flex: "1 1 auto" }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
 	              <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: isNarrow ? 22 : 28, lineHeight: 1.0, color: DT.textPrimary, overflowWrap: "anywhere" }}>{item.customerName}</h2>
@@ -2568,7 +2568,7 @@ function OrderIntakeReviewModal({
 	        </header>
 	        <div style={{ flex: "1 1 auto", minHeight: 0, padding: isNarrow ? 8 : 10, display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "minmax(280px, 0.64fr) minmax(0, 2.36fr)", gap: isNarrow ? 8 : 12, overflowY: isNarrow ? "auto" : "hidden", overflowX: "hidden", alignItems: "start" }}>
 	          {isNarrow && (
-	            <nav aria-label="Order review sections" style={{ position: "sticky", top: 0, zIndex: 2, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, padding: "0 0 2px", background: "rgba(251,250,247,0.94)", backdropFilter: "blur(10px)" }}>
+	            <nav aria-label="Order review sections" style={{ position: "sticky", top: 0, zIndex: 2, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, padding: "0 0 2px", background: "rgba(255,253,249,0.94)", backdropFilter: "blur(10px)" }}>
 	              {[
 	                ["Details", "#intake-order-details"],
 	                ["Payments", "#intake-payments"],
@@ -2701,7 +2701,7 @@ function OrderIntakeReviewModal({
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" onClick={saveDraft} disabled={busy} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.86)", color: DT.textMuted, borderRadius: 8, padding: "9px 12px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : "pointer" }}>Save draft</button>
-                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ minHeight: 40, border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.30)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,226,215,0.55)", color: canApprove && approvalConfirmed ? "#fff" : DT.textMuted, borderRadius: 8, padding: "9px 14px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed", boxShadow: canApprove && approvalConfirmed ? "0 8px 18px rgba(12,124,122,0.14)" : undefined }}>Add to schedule</button>
+                <button type="button" onClick={approveDraft} disabled={busy || !canApprove || !approvalConfirmed} style={{ minHeight: 40, border: `1px solid ${canApprove && approvalConfirmed ? "rgba(12,124,122,0.30)" : DT.border}`, background: canApprove && approvalConfirmed ? DT.teal : "rgba(232,226,215,0.55)", color: canApprove && approvalConfirmed ? DT.cardBg : DT.textMuted, borderRadius: 8, padding: "9px 14px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: busy ? "wait" : canApprove && approvalConfirmed ? "pointer" : "not-allowed", boxShadow: canApprove && approvalConfirmed ? "0 8px 18px rgba(12,124,122,0.14)" : undefined }}>Add to schedule</button>
               </div>
             </footer>
           </section>
@@ -2774,7 +2774,7 @@ function TaskAssignmentPanel({
 
   return (
     <div style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
-      <div style={{ border: "1px dashed rgba(125,122,115,0.28)", background: "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(232,226,215,0.55))", borderRadius: 8, padding: 10 }}>
+      <div style={{ border: "1px dashed rgba(124,116,107,0.28)", background: "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(232,226,215,0.55))", borderRadius: 8, padding: 10 }}>
         <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: DT.textMuted }}>Assign this task to a job</div>
         <h3 style={{ margin: "5px 0 0", fontFamily: DT.serif, fontSize: 18, lineHeight: 1.1, color: DT.textPrimary }}>{task.text}</h3>
         <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35 }}>
@@ -2874,7 +2874,7 @@ function TaskAssignmentPanel({
             <button
               type="button"
               onClick={() => assignHere()}
-              style={{ marginTop: 9, width: "100%", border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.12)" }}
+              style={{ marginTop: 9, width: "100%", border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: DT.cardBg, borderRadius: 999, padding: "8px 10px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.12)" }}
             >
               Assign here · {placementText()}
             </button>
@@ -3092,7 +3092,7 @@ function OrderRailDetail({
 	          <button
 	            type="button"
 	            onClick={onOpen}
-	            style={{ display: "block", width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: "#fff", borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
+	            style={{ display: "block", width: "100%", border: `1px solid rgba(12,124,122,0.28)`, background: DT.teal, color: DT.cardBg, borderRadius: 999, padding: "12px 14px", fontFamily: DT.sans, fontSize: 13, fontWeight: 900, cursor: "pointer", boxShadow: "0 10px 22px rgba(12,124,122,0.16)" }}
 	          >
 		            Open full order details
 	          </button>
@@ -3120,7 +3120,7 @@ function OrderRailDetail({
           </div>
           <span style={{ color: DT.teal, fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{workflow.tasks.length}</span>
         </div>
-        <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(247,249,248,0.82)", borderRadius: 8, padding: 8 }}>
+        <div style={{ marginTop: 7, border: `1px solid ${DT.border}`, background: "rgba(255,253,249,0.82)", borderRadius: 8, padding: 8 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 900, marginBottom: 6 }}>Quick add order task</div>
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 76px", gap: 6 }}>
             <select value={selectedDraftAction} onChange={(event) => setDraftAction(event.target.value)} style={compactSelectStyle()}>
@@ -3286,7 +3286,7 @@ function OrderCommandMetric({
 }) {
   const color = tone === "good" ? DT.sage : tone === "warn" ? DT.goldInk : tone === "danger" ? DT.clay : tone === "teal" ? DT.teal : DT.textPrimary;
   return (
-    <div style={{ minWidth: 0, border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "14px 15px", boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ minWidth: 0, border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 8, padding: "14px 15px", boxShadow: "0 6px 18px rgba(34,32,26,0.035)" }}>
       <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>{label}</div>
       <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: compact ? 16 : 20, lineHeight: 1.12, fontWeight: 900, color, overflowWrap: "anywhere" }}>{value}</div>
       {detail && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 12, lineHeight: 1.3, color: DT.textMuted }}>{detail}</div>}
@@ -3306,7 +3306,7 @@ function OrderCommandSection({
   children: ReactNode;
 }) {
   return (
-    <section data-order-command-section={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <section data-order-command-section={title.toLowerCase().replace(/[^a-z0-9]+/g, "-")} style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(34,32,26,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
         <div style={{ minWidth: 0 }}>
           {eyebrow && <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>{eyebrow}</div>}
@@ -3607,7 +3607,7 @@ function OrderOverviewOverlay({
         position: "fixed",
         inset: 0,
         zIndex: 1300,
-        background: "rgba(25,23,20,0.58)",
+        background: "rgba(26,26,26,0.58)",
         backdropFilter: "blur(6px)",
         display: "flex",
         justifyContent: "center",
@@ -3681,7 +3681,7 @@ function OrderOverviewOverlay({
             </div>
           </div>
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ flex: 1, height: 5, background: "rgba(40,35,31,0.07)", borderRadius: 999, overflow: "hidden" }}>
+            <div style={{ flex: 1, height: 5, background: "rgba(39,34,27,0.07)", borderRadius: 999, overflow: "hidden" }}>
               <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: DT.teal, transition: "width 450ms ease" }} />
             </div>
             <span style={{ fontFamily: DT.sans, fontSize: 11, fontWeight: 900, color: DT.textMuted, minWidth: 34, textAlign: "right" }}>{progress}%</span>
@@ -3741,7 +3741,7 @@ function CollectionControl({
     collection.by || null,
   ].filter(Boolean).join(" · ");
   return (
-    <div style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(34,32,26,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
         <div>
           <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>Dispatch</div>
@@ -4106,7 +4106,7 @@ function OrderTasksPanel({
 	  }
 
 	  return (
-    <div style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ border: `1px solid ${DT.border}`, background: DT.cardBg, borderRadius: 14, padding: 15, boxShadow: "0 6px 18px rgba(34,32,26,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.textFaint }}>Production path</div>
@@ -4182,7 +4182,7 @@ function OrderTasksPanel({
 	          const waitActive = step.wait && active;
 	          return (
 	            <div key={step.key} style={{ border: `1px solid ${active ? "rgba(12,124,122,0.24)" : waitActive ? DT.goldLine : DT.border}`, background: active ? "rgba(231,243,242,0.70)" : waitActive ? DT.goldPale : "rgba(255,255,255,0.74)", borderRadius: 8, padding: "8px 9px", display: "grid", gridTemplateColumns: "32px minmax(0, 1fr)", gap: 9, alignItems: "start" }}>
-	              <div style={{ width: 28, height: 28, borderRadius: step.wait ? 8 : 999, border: `1px ${step.wait ? "dashed" : "solid"} ${active ? fill : done ? "rgba(95,127,95,0.35)" : DT.border}`, background: done ? "rgba(95,127,95,0.12)" : active ? "rgba(12,124,122,0.10)" : "rgba(255,255,255,0.76)", color: fill, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>
+	              <div style={{ width: 28, height: 28, borderRadius: step.wait ? 8 : 999, border: `1px ${step.wait ? "dashed" : "solid"} ${active ? fill : done ? "rgba(79,127,89,0.35)" : DT.border}`, background: done ? "rgba(79,127,89,0.12)" : active ? "rgba(12,124,122,0.10)" : "rgba(255,255,255,0.76)", color: fill, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>
 	                {done ? "✓" : index + 1}
 	              </div>
 	              <div style={{ minWidth: 0 }}>
@@ -4283,7 +4283,7 @@ function QcChecklist({
     toggle("Final photos uploaded", true);
   }
   return (
-    <div style={{ border: compact ? `1px solid ${complete ? "rgba(79,127,89,0.18)" : "rgba(138,91,31,0.18)"}` : `1px solid ${DT.border}`, background: compact ? (complete ? "rgba(79,127,89,0.06)" : "rgba(250,204,21,0.10)") : DT.cardBg, borderRadius: compact ? 10 : 12, padding: compact ? 8 : 12, boxShadow: compact ? "none" : "0 6px 18px rgba(37,30,20,0.035)" }}>
+    <div style={{ border: compact ? `1px solid ${complete ? "rgba(79,127,89,0.18)" : "rgba(138,91,31,0.18)"}` : `1px solid ${DT.border}`, background: compact ? (complete ? "rgba(79,127,89,0.06)" : "rgba(250,204,21,0.10)") : DT.cardBg, borderRadius: compact ? 10 : 12, padding: compact ? 8 : 12, boxShadow: compact ? "none" : "0 6px 18px rgba(34,32,26,0.035)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
         <div>
           <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>QC</div>
@@ -4565,7 +4565,7 @@ function InvoiceSpecCard({
   const titleSize = compact ? 17 : primary ? 24 : 15;
   const labelWidth = compact ? 74 : primary ? 98 : 78;
   return (
-    <div style={{ border: `1px solid ${primary ? "rgba(12,124,122,0.26)" : DT.border}`, borderRadius: 8, padding: compact ? 9 : primary ? 12 : 8, background: primary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.74)", boxShadow: primary ? "0 8px 18px rgba(37,30,20,0.045)" : "none", minWidth: 0 }}>
+    <div style={{ border: `1px solid ${primary ? "rgba(12,124,122,0.26)" : DT.border}`, borderRadius: 8, padding: compact ? 9 : primary ? 12 : 8, background: primary ? "rgba(255,255,255,0.98)" : "rgba(255,255,255,0.74)", boxShadow: primary ? "0 8px 18px rgba(34,32,26,0.045)" : "none", minWidth: 0 }}>
       <div style={{ display: "grid", gap: compact ? 5 : 6, fontFamily: DT.sans, color: DT.textPrimary, lineHeight: 1.16 }}>
         <div style={{ fontFamily: DT.serif, fontSize: titleSize, fontWeight: 700, color: DT.textPrimary, lineHeight: 1.03, overflowWrap: "anywhere" }}>{parsed.title}</div>
         {specFacts.length === 0 && <div style={{ fontFamily: DT.sans, fontSize: compact ? 10.5 : 11.5, color: DT.textMuted, fontWeight: 900 }}>No structured spec captured yet.</div>}
@@ -4695,7 +4695,7 @@ function WorkshopSpec({
           : "Add the Xero invoice number to unlock exact invoice items here.";
 
   return (
-	    <div style={{ marginTop: prominent ? 0 : 8, border: `1px solid ${DT.border}`, background: prominent ? DT.cardBg : "rgba(255,255,255,0.72)", borderRadius: prominent ? 12 : 9, padding: prominent ? 12 : "8px 9px", boxShadow: prominent ? "0 6px 18px rgba(37,30,20,0.035)" : "none" }}>
+	    <div style={{ marginTop: prominent ? 0 : 8, border: `1px solid ${DT.border}`, background: prominent ? DT.cardBg : "rgba(255,255,255,0.72)", borderRadius: prominent ? 12 : 9, padding: prominent ? 12 : "8px 9px", boxShadow: prominent ? "0 6px 18px rgba(34,32,26,0.035)" : "none" }}>
 	      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
 	        <div>
 	          <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.10em", color: DT.teal }}>Order details</div>
@@ -5163,13 +5163,13 @@ function orderConnectionStyle(state: OrderConnectionState, selected = false) {
 }
 
 const DONE_TASK_VISUAL = {
-  bg: "linear-gradient(135deg, rgba(232,232,228,0.98), rgba(203,202,196,0.92))",
-  border: "rgba(105,104,99,0.44)",
+  bg: "linear-gradient(135deg, rgba(232,226,215,0.98), rgba(215,205,189,0.92))",
+  border: "rgba(124,116,107,0.44)",
   stripe: DT.textMuted,
   text: DT.textMuted,
   title: DT.textSecondary,
-  buttonBg: "rgba(120,118,112,0.13)",
-  buttonBorder: "rgba(105,104,99,0.28)",
+  buttonBg: "rgba(124,116,107,0.13)",
+  buttonBorder: "rgba(124,116,107,0.28)",
   shadow: "inset 0 0 0 1px rgba(255,255,255,0.34), 0 1px 2px rgba(0,0,0,0.012)",
 };
 
@@ -6123,7 +6123,7 @@ function SortablePlanTaskCard({
     : isNextTask && !isUnlinkedTask
       ? "rgba(110,138,106,0.30)"
       : isUnlinkedTask
-        ? "rgba(125,122,115,0.24)"
+        ? "rgba(124,116,107,0.24)"
         : personVisual.taskBorder;
   const taskStripe = task.done ? DONE_TASK_VISUAL.stripe : isUnlinkedTask ? personVisual.stripeMuted : personVisual.stripe;
   const displayTaskText = friendlyWorkshopTaskText(task.text);
@@ -6328,8 +6328,8 @@ function WorkshopTaskEditor({
     onClose();
   }
   return (
-    <div role="dialog" aria-modal="true" aria-label="Edit workshop task" onClick={onClose} style={{ position: "fixed", inset: "58px 0 0", zIndex: 240, display: "grid", alignItems: "start", justifyItems: "center", background: "rgba(25,23,20,0.58)", padding: "12px 18px 18px", backdropFilter: "blur(5px)" }}>
-      <div data-workshop-task-editor="desktop-landscape-task-editor" onClick={(event) => event.stopPropagation()} style={{ width: "min(920px, calc(100vw - 36px))", maxHeight: "calc(100vh - 88px)", display: "flex", flexDirection: "column", borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${DT.border} ${DT.border} ${DT.border} ${DT.teal}`, borderRadius: 14, background: "rgba(255,255,255,0.98)", boxShadow: "0 22px 54px rgba(20,26,24,0.22)", overflow: "hidden" }}>
+    <div role="dialog" aria-modal="true" aria-label="Edit workshop task" onClick={onClose} style={{ position: "fixed", inset: "58px 0 0", zIndex: 240, display: "grid", alignItems: "start", justifyItems: "center", background: "rgba(26,26,26,0.58)", padding: "12px 18px 18px", backdropFilter: "blur(5px)" }}>
+      <div data-workshop-task-editor="desktop-landscape-task-editor" onClick={(event) => event.stopPropagation()} style={{ width: "min(920px, calc(100vw - 36px))", maxHeight: "calc(100vh - 88px)", display: "flex", flexDirection: "column", borderWidth: "1px 1px 1px 5px", borderStyle: "solid", borderColor: `${DT.border} ${DT.border} ${DT.border} ${DT.teal}`, borderRadius: 14, background: "rgba(255,255,255,0.98)", boxShadow: "0 22px 54px rgba(26,26,26,0.22)", overflow: "hidden" }}>
         <div style={{ flex: "0 0 auto", padding: "12px 16px 10px", borderBottom: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.94)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <div style={{ minWidth: 0 }}>
@@ -6468,10 +6468,10 @@ function WorkshopTaskEditor({
               </section>
 
               {editorChecks.length > 0 && (
-                <section style={{ border: "1px solid rgba(154,106,20,0.20)", background: "rgba(255,250,235,0.76)", borderRadius: 14, padding: 10 }}>
+                <section style={{ border: "1px solid rgba(138,91,31,0.20)", background: "rgba(247,245,239,0.76)", borderRadius: 14, padding: 10 }}>
                   <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: DT.goldInk }}>Review before saving</div>
                   <div style={{ marginTop: 7, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {editorChecks.map((check) => <span key={check} style={{ border: "1px solid rgba(154,106,20,0.18)", background: "rgba(255,255,255,0.68)", color: DT.goldInk, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{check}</span>)}
+                    {editorChecks.map((check) => <span key={check} style={{ border: "1px solid rgba(138,91,31,0.18)", background: "rgba(255,255,255,0.68)", color: DT.goldInk, borderRadius: 999, padding: "4px 8px", fontFamily: DT.sans, fontSize: 10, fontWeight: 900 }}>{check}</span>)}
                   </div>
                 </section>
               )}
@@ -6483,7 +6483,7 @@ function WorkshopTaskEditor({
           <span style={{ fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800 }}>Saves this card in Tuesday only. It does not change the source order record.</span>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             <button type="button" onClick={onClose} style={{ minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textMuted, borderRadius: 8, padding: "9px 14px", fontWeight: 900, cursor: "pointer" }}>Cancel</button>
-            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: "#fff", borderRadius: 8, padding: "9px 14px", fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.14)" }}>Save task edits</button>
+            <button type="button" title="Saves this card in Tuesday only" onClick={saveTask} style={{ minHeight: 40, border: `1px solid rgba(12,124,122,0.24)`, background: DT.teal, color: DT.cardBg, borderRadius: 8, padding: "9px 14px", fontWeight: 900, cursor: "pointer", boxShadow: "0 8px 18px rgba(12,124,122,0.14)" }}>Save task edits</button>
           </div>
         </div>
       </div>
@@ -7232,7 +7232,7 @@ function processTemplateTinyButtonStyle(tone: "neutral" | "danger" | "primary" =
   return {
     border: `1px solid ${danger ? "rgba(154,59,47,0.22)" : primary ? "rgba(12,124,122,0.24)" : DT.border}`,
     background: danger ? "rgba(154,59,47,0.07)" : primary ? DT.teal : "rgba(255,255,255,0.74)",
-    color: danger ? DT.clay : primary ? "#ffffff" : DT.textSecondary,
+    color: danger ? DT.clay : primary ? DT.cardBg : DT.textSecondary,
     borderRadius: 999,
     minHeight: 40,
     padding: "9px 14px",
@@ -7327,7 +7327,7 @@ function SortableProcessTemplatePathRow({
       ref={setNodeRef}
       key={row.id}
       data-process-template-row="path"
-      style={{ display: "grid", gridTemplateColumns: "58px minmax(170px, 1.18fr) minmax(96px, 0.5fr) 68px minmax(168px, 1fr) minmax(104px, 0.52fr) 118px minmax(104px, 0.52fr) 150px", gap: 7, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(200,169,110,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 8, padding: "7px 8px", background: isDragging ? "rgba(231,243,242,0.96)" : pathWait ? "rgba(255,245,223,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(37,30,20,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
+      style={{ display: "grid", gridTemplateColumns: "58px minmax(170px, 1.18fr) minmax(96px, 0.5fr) 68px minmax(168px, 1fr) minmax(104px, 0.52fr) 118px minmax(104px, 0.52fr) 150px", gap: 7, alignItems: "start", border: `1px solid ${isDragging ? "rgba(12,124,122,0.38)" : pathWait ? "rgba(200,169,110,0.22)" : "rgba(12,124,122,0.16)"}`, borderRadius: 8, padding: "7px 8px", background: isDragging ? "rgba(231,243,242,0.96)" : pathWait ? "rgba(255,245,223,0.46)" : "rgba(255,255,255,0.88)", boxSizing: "border-box", transform: CSS.Transform.toString(transform), transition, boxShadow: isDragging ? "0 12px 26px rgba(34,32,26,0.14)" : undefined, opacity: isDragging ? 0.9 : 1 }}
     >
       <button
         type="button"
@@ -7352,7 +7352,7 @@ function SortableProcessTemplatePathRow({
       </select>
       <label style={{ position: "relative", minHeight: 40, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, color: DT.textMuted, fontSize: 9, fontWeight: 900, cursor: "pointer", touchAction: "manipulation" }}>
         <input type="checkbox" checked={pathWait} onChange={(event) => onUpdateStep(index, { wait: event.target.checked })} style={{ position: "absolute", opacity: 0, width: 1, height: 1, margin: 0, pointerEvents: "none" }} />
-        <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 8, border: `2px solid ${pathWait ? "rgba(154,106,20,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,245,223,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? DT.goldInk : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 900, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
+        <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 8, border: `2px solid ${pathWait ? "rgba(138,91,31,0.40)" : "rgba(12,124,122,0.28)"}`, background: pathWait ? "rgba(255,245,223,0.82)" : "rgba(255,255,255,0.82)", color: pathWait ? DT.goldInk : "transparent", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, lineHeight: 1, fontWeight: 900, flex: "0 0 auto" }}>{pathWait ? "✓" : ""}</span>
         <span>Supplier wait</span>
       </label>
       <input aria-label={`Production path ${index + 1} wait label`} value={step?.waitLabel || ""} placeholder="Wait label" onChange={(event) => onUpdateStep(index, { waitLabel: event.target.value || undefined })} style={processTemplateInputStyle({ color: DT.textMuted })} />
@@ -7594,7 +7594,7 @@ function ProcessTemplateReviewPath({
             <div
               key={`${template.id}-review-row-${index}`}
               data-process-template-step-editor={isEditingStep ? "open" : "closed"}
-              style={{ border: `1px solid ${isEditingStep ? "rgba(12,124,122,0.30)" : missing ? "rgba(154,59,47,0.16)" : pathWait ? "rgba(200,169,110,0.24)" : "rgba(12,124,122,0.12)"}`, background: isEditingStep ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.06))" : "rgba(255,255,255,0.78)", borderRadius: 14, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 16px 34px rgba(12,124,122,0.10), 0 1px 0 rgba(255,255,255,0.72) inset" : "0 1px 0 rgba(255,255,255,0.68) inset, 0 2px 8px rgba(37,30,20,0.035)" }}
+              style={{ border: `1px solid ${isEditingStep ? "rgba(12,124,122,0.30)" : missing ? "rgba(154,59,47,0.16)" : pathWait ? "rgba(200,169,110,0.24)" : "rgba(12,124,122,0.12)"}`, background: isEditingStep ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.06))" : "rgba(255,255,255,0.78)", borderRadius: 14, padding: isEditingStep ? "10px 11px 12px" : "0", boxShadow: isEditingStep ? "0 16px 34px rgba(12,124,122,0.10), 0 1px 0 rgba(255,255,255,0.72) inset" : "0 1px 0 rgba(255,255,255,0.68) inset, 0 2px 8px rgba(34,32,26,0.035)" }}
             >
               <button
                 type="button"
@@ -7610,7 +7610,7 @@ function ProcessTemplateReviewPath({
                 aria-expanded={isEditingStep}
                 style={{ width: "100%", textAlign: "left", border: 0, background: "transparent", borderRadius: 14, padding: isEditingStep ? 0 : "12px 12px", display: "grid", gridTemplateColumns: "34px minmax(0, 1fr) auto", gap: 10, alignItems: "center", cursor: "pointer", fontFamily: DT.sans }}
               >
-                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isEditingStep ? DT.teal : pathWait ? "rgba(200,169,110,0.15)" : "rgba(12,124,122,0.08)", color: isEditingStep ? "#ffffff" : pathWait ? DT.goldInk : DT.teal, fontSize: 11, fontWeight: 900 }}>{index + 1}</span>
+                <span style={{ width: 28, height: 28, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isEditingStep ? DT.teal : pathWait ? "rgba(200,169,110,0.15)" : "rgba(12,124,122,0.08)", color: isEditingStep ? DT.cardBg : pathWait ? DT.goldInk : DT.teal, fontSize: 11, fontWeight: 900 }}>{index + 1}</span>
                 <span style={{ minWidth: 0 }}>
                   <span style={{ display: "block", color: DT.textPrimary, fontSize: 15, fontWeight: 900, lineHeight: 1.22, letterSpacing: "-0.01em" }}>{task?.title || step?.label || "Untitled step"}</span>
                   <span style={{ display: "block", color: DT.textMuted, fontSize: 12, fontWeight: 800, lineHeight: 1.35, marginTop: 4 }}>
@@ -7707,7 +7707,7 @@ function ProcessTemplateCard({
       data-process-template-card="true"
       data-process-template-expanded={showEditor ? "true" : "false"}
       data-process-template-mode={showEditor ? "edit" : "review"}
-      style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.91), rgba(255,253,249,0.82))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 16px 38px rgba(37,30,20,0.075)", padding: isNarrow ? 12 : 18, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 10 : 16, alignItems: "start" }}
+      style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.91), rgba(255,253,249,0.82))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 16px 38px rgba(34,32,26,0.075)", padding: isNarrow ? 12 : 18, display: "grid", gridTemplateColumns: showEditor ? "minmax(0, 0.42fr) minmax(0, 1fr)" : "1fr", gap: isNarrow ? 10 : 16, alignItems: "start" }}
     >
       <div style={processTemplateColumnStyle("logic")}>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap" }}>
@@ -8054,7 +8054,7 @@ function ProcessTemplatesView() {
           }
         }
       `}</style>
-      <div style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(255,253,249,0.78))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 12px 30px rgba(37,30,20,0.06)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+      <div style={{ border: `1px solid ${DT.border}`, borderRadius: 14, background: "linear-gradient(135deg, rgba(255,255,255,0.90), rgba(255,253,249,0.78))", boxShadow: "0 1px 0 rgba(255,255,255,0.76) inset, 0 12px 30px rgba(34,32,26,0.06)", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0, fontFamily: DT.serif, fontSize: 30, lineHeight: 1.02, letterSpacing: "-0.045em", color: DT.textPrimary }}>Process templates</h2>
         </div>
@@ -8189,7 +8189,7 @@ function weekCapacityGauge(totalHours: number, nickHours = 0, dylanHours = 0): W
   const ratio = Math.min(1, totalHours / capacityHours);
   const fillWidth = totalHours > 0 ? Math.max(8, Math.round(ratio * 100)) : 0;
   const color = totalHours > capacityHours ? DT.clay : ratio >= 0.82 ? DT.goldInk : ratio >= 0.45 ? DT.green : ratio > 0 ? DT.sage : "rgba(124,116,107,0.26)";
-  const bg = totalHours > capacityHours ? "rgba(155,47,34,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
+  const bg = totalHours > capacityHours ? "rgba(154,59,47,0.12)" : ratio >= 0.82 ? "rgba(200,169,110,0.16)" : ratio >= 0.45 ? "rgba(111,125,56,0.12)" : "rgba(110,138,106,0.10)";
   return { totalHours, nickHours, dylanHours, capacityHours, fillWidth, color, bg };
 }
 
@@ -8261,7 +8261,7 @@ function ScheduleWeekBar({
         </span>
       </>
     );
-    const cellStyle: CSSProperties = { minWidth: 0, borderLeft: !isNarrow && day !== "monday" ? `1px solid ${DT.border}` : undefined, borderTop: isNarrow ? `1px solid ${DT.border}` : undefined, background: "rgba(247,249,248,0.62)", padding: isNarrow ? "7px 4px 6px" : "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: isNarrow ? 3 : 4, overflow: "hidden" };
+    const cellStyle: CSSProperties = { minWidth: 0, borderLeft: !isNarrow && day !== "monday" ? `1px solid ${DT.border}` : undefined, borderTop: isNarrow ? `1px solid ${DT.border}` : undefined, background: "rgba(255,253,249,0.62)", padding: isNarrow ? "7px 4px 6px" : "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: isNarrow ? 3 : 4, overflow: "hidden" };
     if (isNarrow) {
       return (
         <div key={day} aria-label={label} title={title} style={cellStyle}>
@@ -8367,7 +8367,7 @@ function OrderCapacityStrip({ rows, week, weekLabel, weekIndex, weekCount, dayFi
         const gauge = dayGauge(day);
         const dayLabel = scheduleDayLabelParts(day, option);
         return (
-          <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, border: 0, borderLeft: day === "monday" ? "none" : `1px solid ${DT.border}`, background: active ? DT.tealSoft : "rgba(247,249,248,0.62)", padding: "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4, cursor: "pointer", overflow: "hidden" }}>
+          <button key={day} type="button" aria-pressed={active} aria-label={`${option?.dateLabel ?? DAY_LABELS[day]} order schedule filter: ${formatTaskHours(gauge.totalHours)} scheduled, Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}`} onClick={() => onDayFilterChange(day)} title={`${option?.dateLabel ?? DAY_LABELS[day]}: ${formatTaskHours(gauge.totalHours)} scheduled. Nick ${formatTaskHours(gauge.nickHours)}, Dylan ${formatTaskHours(gauge.dylanHours)}.`} style={{ minWidth: 0, border: 0, borderLeft: day === "monday" ? "none" : `1px solid ${DT.border}`, background: active ? DT.tealSoft : "rgba(255,253,249,0.62)", padding: "7px 8px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4, cursor: "pointer", overflow: "hidden" }}>
             <span style={{ display: "grid", gap: 1, minWidth: 0, fontFamily: DT.sans, textTransform: "uppercase", lineHeight: 1 }}>
               <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: "0.08em", color: active ? DT.teal : DT.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.day}</span>
               <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.04em", color: active ? DT.teal : DT.textFaint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{dayLabel.date}</span>
@@ -8491,7 +8491,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
         data-order-row-drag-surface="order-row-drag-surface"
         data-order-row-task-compact="true"
         title="Drag this task to another day or person"
-        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 8, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 7px rgba(37,30,20,0.045)", padding: "3px 4px", minHeight: 44, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+        style={{ borderWidth: "1px 1px 1px 3px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 8, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 7px rgba(34,32,26,0.045)", padding: "3px 4px", minHeight: 44, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
       >
         <div style={{ display: "grid", gridTemplateColumns: "40px minmax(0, 1fr) auto 40px", gap: 5, alignItems: "center", minWidth: 0 }}>
           <button
@@ -8554,7 +8554,7 @@ function OrderJourneyTaskCard({ task, selected, compactMobile = false, onTaskSel
       data-order-row-drag-surface="order-row-drag-surface"
       data-order-row-task-compact={compactMobile ? "true" : "false"}
       title="Drag this task to another day or person"
-      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 8, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 8px rgba(37,30,20,0.05)", padding: "6px 7px 6px 6px", minHeight: 56, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
+      style={{ borderWidth: "1px 1px 1px 4px", borderStyle: taskDone ? "dashed" : "solid", borderColor: `${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskBorder} ${orderRowTaskStripe}`, borderRadius: 8, background: orderRowTaskBg, boxShadow: taskDone ? DONE_TASK_VISUAL.shadow : "0 1px 0 rgba(255,255,255,0.78) inset, 0 2px 8px rgba(34,32,26,0.05)", padding: "6px 7px 6px 6px", minHeight: 56, opacity: isDragging ? 0.35 : 1, transform: CSS.Transform.toString(transform), transition: transition ?? "transform 160ms ease, opacity 120ms ease", cursor: dragCursor, touchAction: "none", userSelect: "none" }}
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 6, alignItems: "start" }}>
         <div style={{ minWidth: 0, paddingRight: 1 }}>
@@ -8696,8 +8696,8 @@ function OrderJourneyView({
       borderWidth: "1px 1px 1px 4px",
       borderStyle: "solid",
       borderColor: `${selected ? "rgba(12,124,122,0.22)" : "rgba(0,0,0,0.065)"} ${selected ? "rgba(12,124,122,0.22)" : "rgba(0,0,0,0.065)"} ${selected ? "rgba(12,124,122,0.22)" : "rgba(0,0,0,0.065)"} ${healthMeta.color}`,
-      background: selected ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.075))" : "linear-gradient(135deg, rgba(255,255,255,0.99), rgba(255,253,249,0.88) 56%, rgba(245,241,232,0.58))",
-      boxShadow: selected ? "0 12px 28px rgba(12,124,122,0.12), 0 1px 0 rgba(255,255,255,0.78) inset" : "0 1px 0 rgba(255,255,255,0.78) inset, 0 10px 26px rgba(37,30,20,0.07)",
+      background: selected ? "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(12,124,122,0.075))" : "linear-gradient(135deg, rgba(255,255,255,0.99), rgba(255,253,249,0.88) 56%, rgba(245,243,238,0.58))",
+      boxShadow: selected ? "0 12px 28px rgba(12,124,122,0.12), 0 1px 0 rgba(255,255,255,0.78) inset" : "0 1px 0 rgba(255,255,255,0.78) inset, 0 10px 26px rgba(34,32,26,0.07)",
       borderRadius: DT.radius,
       overflow: "hidden",
     };
@@ -8778,7 +8778,7 @@ function OrderJourneyView({
     return (
       <article key={row.id} data-order-journey-row-card="true" data-order-journey-row-compact="false" style={rowStyle}>
         <div data-order-row-week-grid="order-row-week-grid" style={{ display: "grid", gridTemplateColumns: isNarrow ? "1fr" : "220px repeat(5, minmax(104px, 1fr))", gap: 0 }}>
-          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "linear-gradient(135deg, rgba(255,253,249,0.86), rgba(247,243,235,0.70))" }}>
+          <div style={{ padding: 12, borderRight: isNarrow ? "none" : `1px solid ${DT.border}`, borderBottom: isNarrow ? `1px solid ${DT.border}` : "none", background: "linear-gradient(135deg, rgba(255,253,249,0.86), rgba(245,243,238,0.70))" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
               {row.order ? (
 	                <button type="button" onClick={() => onOrderOpen(row.order!.id)} title={`Open ${row.name} order`} style={{ minWidth: 0, minHeight: isNarrow ? 40 : undefined, display: isNarrow ? "flex" : undefined, alignItems: isNarrow ? "center" : undefined, padding: 0, border: 0, background: "transparent", fontFamily: DT.serif, fontSize: 16, lineHeight: isNarrow ? 1.08 : 1.04, color: DT.textPrimary, fontWeight: 800, textAlign: "left", cursor: "pointer", textDecorationLine: selected ? "underline" : "none", textDecorationColor: "rgba(12,124,122,0.28)", textUnderlineOffset: 3, touchAction: isNarrow ? "manipulation" : undefined }}>{row.name}</button>
@@ -8834,7 +8834,7 @@ function OrderJourneyView({
             const mobileDayVisible = shouldShowDayOnMobile(day);
             const dayHours = dayTasks.reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
             return (
-              <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible={mobileDayVisible} style={{ minHeight: 0, padding: isNarrow ? 8 : 6, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "linear-gradient(135deg, rgba(255,255,255,0.70), rgba(247,243,235,0.40))" : "rgba(255,253,249,0.34)", display: "flex", flexDirection: "column" }}>
+              <OrderJourneyDayDropCell key={`${row.id}:${day}`} id={orderJourneyDayId(row.id, week.id, day)} rowId={row.id} weekId={week.id} day={day} hasTasks={dayTasks.length > 0} mobileVisible={mobileDayVisible} style={{ minHeight: 0, padding: isNarrow ? 8 : 6, borderLeft: isNarrow ? "none" : `1px solid ${DT.border}`, borderTop: isNarrow ? `1px solid ${DT.border}` : "none", background: dayTasks.length ? "linear-gradient(135deg, rgba(255,255,255,0.70), rgba(245,243,238,0.40))" : "rgba(255,253,249,0.34)", display: "flex", flexDirection: "column" }}>
                 <div data-order-row-mobile-day-header="true" style={{ display: isNarrow ? "flex" : "none", justifyContent: "space-between", alignItems: "center", gap: 6, marginBottom: dayTasks.length ? 6 : 0 }}>
                   <span style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>{dateLabelForWeekTitleDay(week.title, day)}</span>
                   <span style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted, whiteSpace: "nowrap" }}>
@@ -10286,7 +10286,7 @@ function MonthViewState({
   const liveSyncWarning = planTaskLinksStorage === "supabase" && (planTaskLinksRealtime.status === "error" || planTaskLinksRealtime.status === "disabled") ? (
     <span
       title={planTaskLinksRealtime.message || "Live updates are not connected"}
-      style={{ border: "1px solid rgba(154,106,20,0.30)", background: "rgba(255,245,223,0.80)", color: DT.goldInk, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900 }}
+      style={{ border: "1px solid rgba(138,91,31,0.30)", background: "rgba(255,245,223,0.80)", color: DT.goldInk, borderRadius: 999, padding: "6px 9px", fontSize: 10, fontFamily: DT.sans, fontWeight: 900 }}
     >
       Live updates paused
     </span>
@@ -10542,7 +10542,7 @@ function MonthViewState({
               background: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.56)",
               color: active ? DT.textPrimary : DT.textMuted,
               textDecoration: "none",
-              boxShadow: active ? "0 1px 0 rgba(255,255,255,0.82) inset, 0 8px 18px rgba(37,30,20,0.07)" : "0 1px 0 rgba(255,255,255,0.72) inset",
+              boxShadow: active ? "0 1px 0 rgba(255,255,255,0.82) inset, 0 8px 18px rgba(34,32,26,0.07)" : "0 1px 0 rgba(255,255,255,0.72) inset",
               cursor: "pointer",
               touchAction: "manipulation",
               display: "flex",

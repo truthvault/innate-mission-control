@@ -228,7 +228,7 @@ function Info({ label, value, strong = false, warn = false }: { label: string; v
   return (
     <div style={{ background: warn ? "rgba(180,107,70,0.07)" : "rgba(0,0,0,0.018)", border: `1px solid ${warn ? "rgba(180,107,70,0.16)" : DT.border}`, borderRadius: DT.radiusSm, padding: "9px 10px" }}>
       <div style={labelStyle}>{label}</div>
-      <div style={{ marginTop: 3, fontSize: strong ? 15 : 12, lineHeight: 1.45, color: warn ? "#8f3f24" : DT.textPrimary, fontWeight: strong ? 900 : 700, fontFamily: DT.sans, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{value}</div>
+      <div style={{ marginTop: 3, fontSize: strong ? 15 : 12, lineHeight: 1.45, color: warn ? DT.clay : DT.textPrimary, fontWeight: strong ? 900 : 700, fontFamily: DT.sans, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{value}</div>
     </div>
   );
 }
@@ -271,7 +271,7 @@ function LeadListHeader() {
 function LeadRow({ lead, selected, onSelect }: { lead: Lead; selected: boolean; onSelect: () => void }) {
   const warnings = leadWarnings(lead);
   return (
-    <article data-lead-row="true" style={{ ...rowStyle, borderColor: selected ? "rgba(210,174,109,0.80)" : isDue(lead) ? "rgba(180,107,70,0.30)" : DT.border }}>
+    <article data-lead-row="true" style={{ ...rowStyle, borderColor: selected ? "rgba(200,169,110,0.80)" : isDue(lead) ? "rgba(180,107,70,0.30)" : DT.border }}>
       <button data-lead-row-button="true" type="button" onClick={onSelect} aria-expanded={selected} aria-label={`Open details for ${lead.customerName}`} style={rowButtonStyle}>
         <div data-lead-row-main="true" style={{ minWidth: 0 }}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", minWidth: 0 }}>
@@ -286,7 +286,7 @@ function LeadRow({ lead, selected, onSelect }: { lead: Lead; selected: boolean; 
           {warnings.slice(0, 2).map((warning) => <Chip key={warning.label} label={warning.label} tone={warning.tone} />)}
         </div>
         <span data-lead-row-next="true" style={rowTextStyle}>{isRecentSampleFollowUp(lead) ? sampleFollowUpLabel(lead) : bookedVisitSummary(lead) || sourceActionLabel(lead)}</span>
-        <span data-lead-row-followup="true" style={{ ...rowTextStyle, color: isDue(lead) ? "#8f3f24" : DT.textPrimary, fontWeight: 900 }}>{dateLabel(lead.nextFollowUpAt)}</span>
+        <span data-lead-row-followup="true" style={{ ...rowTextStyle, color: isDue(lead) ? DT.clay : DT.textPrimary, fontWeight: 900 }}>{dateLabel(lead.nextFollowUpAt)}</span>
         <span data-lead-row-value="true" style={{ ...rowTextStyle, fontWeight: 900, color: lead.estimatedValue ? DT.textPrimary : DT.textFaint }}>{valueLabel(lead.estimatedValue)}</span>
       </button>
       <div data-lead-row-footer="true" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -332,13 +332,13 @@ function LeadDrawer({ lead, visibleIds, onClose, onSaved }: { lead: Lead | null;
           </div>
           <button type="button" onClick={onClose} style={secondaryButtonStyle}>Close</button>
         </div>
-        {hiddenByFilter && <div style={{ ...errorStyle, marginBottom: 10, color: DT.textSecondary, background: "rgba(210,174,109,0.10)", borderColor: "rgba(210,174,109,0.25)" }}>This lead is outside the current filter, but remains open for reference.</div>}
+        {hiddenByFilter && <div style={{ ...errorStyle, marginBottom: 10, color: DT.textSecondary, background: "rgba(200,169,110,0.10)", borderColor: "rgba(200,169,110,0.25)" }}>This lead is outside the current filter, but remains open for reference.</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <Chip label={STATUS_LABELS[lead.status]} tone={statusTone(lead.status)} />
           <Chip label={lead.priority.toUpperCase()} tone={priorityTone(lead.priority)} />
           {leadWarnings(lead).map((warning) => <Chip key={warning.label} label={warning.label} tone={warning.tone} />)}
         </div>
-        <div style={{ background: "rgba(210,174,109,0.10)", border: `1px solid ${DT.border}`, borderRadius: DT.radiusSm, padding: 11, marginBottom: 12 }}>
+        <div style={{ background: "rgba(200,169,110,0.10)", border: `1px solid ${DT.border}`, borderRadius: DT.radiusSm, padding: 11, marginBottom: 12 }}>
           <div style={labelStyle}>Why it matters today</div>
           <div style={{ marginTop: 4, fontFamily: DT.sans, fontWeight: 900, color: DT.textPrimary, fontSize: 14 }}>{whyNow(lead)}</div>
           <div style={{ marginTop: 5, fontFamily: DT.sans, color: DT.textMuted, fontSize: 12 }}>Use this for context here; ask Hermes in chat to draft or run follow-up.</div>
@@ -393,7 +393,7 @@ function DecisionQueue({ leads, limit = 8, compact = false, onSelect }: { leads:
   const queue = fullQueue.slice(0, limit);
   if (queue.length === 0) return null;
   return (
-    <section style={{ background: "linear-gradient(135deg, rgba(248,241,228,0.98), rgba(255,252,246,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
+    <section style={{ background: "linear-gradient(135deg, rgba(248,233,230,0.98), rgba(255,253,249,0.98))", border: `1px solid ${DT.border}`, borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "end", marginBottom: 10 }}>
         <div>
           <h2 style={{ margin: 0, fontFamily: DT.serif, color: DT.textPrimary, fontSize: compact ? 20 : 24 }}>Do Today</h2>
@@ -425,7 +425,7 @@ function CashFirstStrip({ leads, limit = 4, compact = false, onSelect }: { leads
   const total = allCashLeads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
   if (cashLeads.length === 0) return null;
   return (
-    <section style={{ background: "linear-gradient(135deg, rgba(255,250,239,0.98), rgba(246,237,219,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
+    <section style={{ background: "linear-gradient(135deg, rgba(247,245,239,0.98), rgba(248,233,230,0.98))", border: "1px solid rgba(180,107,70,0.18)", borderRadius: DT.radius, boxShadow: DT.shadow, padding: compact ? 10 : 14, marginBottom: compact ? 10 : 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "end", marginBottom: 10, flexWrap: "wrap" }}>
         <div>
           <div style={labelStyle}>Cash first</div>
@@ -445,7 +445,7 @@ function CashFirstStrip({ leads, limit = 4, compact = false, onSelect }: { leads
               <span style={{ fontFamily: DT.sans, color: DT.textSecondary, fontWeight: 900, fontSize: 11 }}>{valueLabel(lead.estimatedValue)}</span>
             </div>
             <span style={{ ...rowTextStyle, whiteSpace: "normal", overflow: "visible" }}>{whyNow(lead)}</span>
-            <span style={{ fontFamily: DT.sans, color: "#8f3f24", fontSize: 11, fontWeight: 900 }}>Open context</span>
+            <span style={{ fontFamily: DT.sans, color: DT.clay, fontSize: 11, fontWeight: 900 }}>Open context</span>
           </button>
         ))}
       </div>
@@ -518,33 +518,33 @@ function EmptyState({ error }: { error?: string }) {
 }
 
 function MetricButton({ label, value, tone, active, onClick }: { label: string; value: string | number; tone?: "good" | "warn" | "bad" | "neutral"; active: boolean; onClick: () => void }) {
-  return <button type="button" onClick={onClick} style={{ border: `1px solid ${active ? "rgba(210,174,109,0.65)" : DT.border}`, borderRadius: DT.radius, background: active ? DT.goldSoft : "transparent", padding: 0, textAlign: "left", cursor: "pointer" }}><KpiCard label={label} value={value} tone={tone} /></button>;
+  return <button type="button" onClick={onClick} style={{ border: `1px solid ${active ? "rgba(200,169,110,0.65)" : DT.border}`, borderRadius: DT.radius, background: active ? DT.goldSoft : "transparent", padding: 0, textAlign: "left", cursor: "pointer" }}><KpiCard label={label} value={value} tone={tone} /></button>;
 }
 
 function MobileMetricButton({ label, value, active, onClick }: { label: string; value: string | number; active: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} style={{ minWidth: 0, minHeight: 44, border: `1px solid ${active ? "rgba(210,174,109,0.58)" : DT.border}`, borderRadius: 10, background: active ? DT.goldSoft : "rgba(255,255,255,0.76)", color: active ? "#8a5b1f" : DT.textSecondary, padding: "7px 6px", textAlign: "center", cursor: "pointer", touchAction: "manipulation" }}>
-      <span style={{ display: "block", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 950, textTransform: "uppercase", letterSpacing: "0.03em", lineHeight: 1.1, color: DT.textFaint }}>{label}</span>
+    <button type="button" onClick={onClick} aria-pressed={active} style={{ minWidth: 0, minHeight: 44, border: `1px solid ${active ? "rgba(200,169,110,0.58)" : DT.border}`, borderRadius: 8, background: active ? DT.goldSoft : "rgba(255,255,255,0.76)", color: active ? DT.goldInk : DT.textSecondary, padding: "7px 6px", textAlign: "center", cursor: "pointer", touchAction: "manipulation" }}>
+      <span style={{ display: "block", fontFamily: DT.sans, fontSize: 8.5, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.03em", lineHeight: 1.1, color: DT.textFaint }}>{label}</span>
       <strong style={{ display: "block", marginTop: 3, fontFamily: DT.serif, fontSize: 17, lineHeight: 1, color: DT.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</strong>
     </button>
   );
 }
 
-const inputStyle: CSSProperties = { width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 10, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: "#fff" };
+const inputStyle: CSSProperties = { width: "100%", boxSizing: "border-box", border: `1px solid ${DT.border}`, borderRadius: 8, padding: "8px 10px", fontFamily: DT.sans, fontSize: 12, color: DT.textPrimary, background: DT.cardBg };
 const fieldStyle: CSSProperties = { display: "grid", gap: 4, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 800, color: DT.textFaint, fontFamily: DT.sans };
 const labelStyle: CSSProperties = { fontSize: 9, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 900, color: DT.textFaint, fontFamily: DT.sans };
 const primaryButtonStyle: CSSProperties = { minHeight: 40, border: "none", background: DT.gold, color: DT.headerBg, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 900, fontFamily: DT.sans, cursor: "pointer", touchAction: "manipulation" };
 const secondaryButtonStyle: CSSProperties = { minHeight: 40, border: `1px solid ${DT.border}`, background: DT.cardBg, color: DT.textSecondary, borderRadius: 999, padding: "8px 13px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer", touchAction: "manipulation" };
 const secondaryTinyButtonStyle: CSSProperties = { ...secondaryButtonStyle, padding: "6px 9px", fontSize: 10 };
 const sourceLinkStyle: CSSProperties = { ...secondaryTinyButtonStyle, display: "inline-flex", gap: 5, alignItems: "center", textDecoration: "none" };
-const errorStyle: CSSProperties = { color: "#8f3f24", background: "rgba(180,107,70,0.08)", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 10, padding: 10, fontFamily: DT.sans, fontSize: 12 };
+const errorStyle: CSSProperties = { color: DT.clay, background: "rgba(180,107,70,0.08)", border: "1px solid rgba(180,107,70,0.16)", borderRadius: 8, padding: 10, fontFamily: DT.sans, fontSize: 12 };
 const smallMutedStyle: CSSProperties = { fontFamily: DT.sans, color: DT.textMuted, fontSize: 11 };
 const headerRowStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(240px, 1.25fr) minmax(210px, 1fr) minmax(145px, 0.75fr) minmax(105px, 0.55fr) minmax(85px, 0.45fr) minmax(150px, 0.65fr)", gap: 10, padding: "0 12px 6px", fontFamily: DT.sans, color: DT.textFaint, fontWeight: 900, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" };
-const rowStyle: CSSProperties = { background: "rgba(255,252,246,0.94)", border: `1px solid ${DT.border}`, borderRadius: 14, padding: 10, display: "grid", gap: 8 };
+const rowStyle: CSSProperties = { background: "rgba(255,253,249,0.94)", border: `1px solid ${DT.border}`, borderRadius: 14, padding: 10, display: "grid", gap: 8 };
 const rowButtonStyle: CSSProperties = { display: "grid", gridTemplateColumns: "minmax(240px, 1.25fr) minmax(210px, 1fr) minmax(145px, 0.75fr) minmax(105px, 0.55fr) minmax(85px, 0.45fr)", gap: 10, alignItems: "center", textAlign: "left", border: "none", background: "transparent", padding: 0, cursor: "pointer", minWidth: 0 };
 const rowTextStyle: CSSProperties = { fontFamily: DT.sans, fontSize: 12, color: DT.textSecondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
-const drawerOverlayStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 80, background: "rgba(38,32,25,0.30)", cursor: "default", display: "grid", placeItems: "center", padding: 18 };
-const drawerStyle: CSSProperties = { width: "min(760px, calc(100vw - 36px))", maxHeight: "min(760px, calc(100vh - 36px))", overflowY: "auto", background: "#fffaf1", border: `1px solid ${DT.border}`, borderRadius: 22, boxShadow: "0 28px 70px rgba(31,24,15,0.28)", padding: 20 };
+const drawerOverlayStyle: CSSProperties = { position: "fixed", inset: 0, zIndex: 80, background: "rgba(39,34,27,0.30)", cursor: "default", display: "grid", placeItems: "center", padding: 18 };
+const drawerStyle: CSSProperties = { width: "min(760px, calc(100vw - 36px))", maxHeight: "min(760px, calc(100vh - 36px))", overflowY: "auto", background: DT.surface, border: `1px solid ${DT.border}`, borderRadius: 14, boxShadow: "0 28px 70px rgba(26,26,26,0.28)", padding: 20 };
 const LEADS_MOBILE_CSS = `
   @media (max-width: 759px) {
     [data-lead-list-header="true"] { display: none !important; }
@@ -609,7 +609,7 @@ const LEADS_MOBILE_CSS = `
       margin-left: -12px !important;
       margin-right: -12px !important;
       padding: 8px 12px !important;
-      background: rgba(248,245,238,0.96) !important;
+      background: rgba(247,245,239,0.96) !important;
     }
     [data-lead-filter-scroll="true"] {
       display: flex !important;
@@ -726,9 +726,9 @@ export default function LeadsClient({ result, writesEnabled }: { result: LeadsRe
       <CashFirstStrip leads={activeRows} limit={isNarrow ? 1 : 4} compact={isNarrow} onSelect={(lead) => setSelectedId(lead.id)} />
       <DecisionQueue leads={activeRows} limit={isNarrow ? 3 : 8} compact={isNarrow} onSelect={(lead) => setSelectedId(lead.id)} />
 
-      <div data-lead-filter-bar="true" style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(248,245,238,0.94)", backdropFilter: "blur(10px)" }}>
+      <div data-lead-filter-bar="true" style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14, padding: "8px 0", background: "rgba(247,245,239,0.94)", backdropFilter: "blur(10px)" }}>
         <div data-lead-filter-scroll="true" style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
-          {filters.map(([key, label]) => <button key={key} onClick={() => setFilter(key)} style={{ border: `1px solid ${filter === key ? "rgba(210,174,109,0.50)" : DT.border}`, background: filter === key ? DT.goldSoft : DT.cardBg, color: filter === key ? "#8a5b1f" : DT.textSecondary, borderRadius: 999, padding: "7px 11px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" }}>{label}</button>)}
+          {filters.map(([key, label]) => <button key={key} onClick={() => setFilter(key)} style={{ border: `1px solid ${filter === key ? "rgba(200,169,110,0.50)" : DT.border}`, background: filter === key ? DT.goldSoft : DT.cardBg, color: filter === key ? DT.goldInk : DT.textSecondary, borderRadius: 999, padding: "7px 11px", fontSize: 11, fontWeight: 800, fontFamily: DT.sans, cursor: "pointer" }}>{label}</button>)}
         </div>
         <NewLeadForm onSaved={refresh} writesEnabled={writesEnabled} />
       </div>

@@ -86,7 +86,7 @@ export default async function WorkshopWeekPage({
                   padding: 8,
                 }}
               >
-                <h2 style={{ margin: "2px 4px 4px", fontSize: 13, fontWeight: 900, color: isToday ? "#8a5b1f" : DT.textSecondary }}>
+                <h2 style={{ margin: "2px 4px 4px", fontSize: 13, fontWeight: 900, color: isToday ? DT.goldInk : DT.textSecondary }}>
                   {DAY_LABELS[dayIndex]} <span style={{ fontWeight: 600, color: DT.textFaint }}>{formatDay(day)}</span>
                 </h2>
                 {PEOPLE.map((person) => {
@@ -95,7 +95,7 @@ export default async function WorkshopWeekPage({
                   return (
                     <div key={person} style={{ opacity: offDay && items.length === 0 ? 0.45 : 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "4px 4px 4px" }}>
-                        <span style={{ fontSize: 11, fontWeight: 900, color: person === "Nick" ? DT.teal : "#8a5b1f" }}>{person}</span>
+                        <span style={{ fontSize: 11, fontWeight: 900, color: person === "Nick" ? DT.teal : DT.goldInk }}>{person}</span>
                         {offDay ? <span style={{ fontSize: 10, color: DT.textFaint }}>off-day</span> : null}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

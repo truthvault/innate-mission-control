@@ -85,7 +85,7 @@ export function TaskRow({
           borderRadius: 999,
           border: localDone ? `2px solid ${DT.sage}` : "2px solid rgba(0,0,0,0.25)",
           background: localDone ? DT.sage : "transparent",
-          color: "#fff",
+          color: DT.cardBg,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

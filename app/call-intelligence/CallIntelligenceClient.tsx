@@ -274,7 +274,7 @@ const cardStyle: CSSProperties = {
   borderRadius: DT.radiusSm,
   padding: 12,
   marginTop: 8,
-  boxShadow: "0 1px 2px rgba(44,37,32,0.03)",
+  boxShadow: "0 1px 2px rgba(39,34,27,0.03)",
 };
 
 const cardHeaderStyle: CSSProperties = {
@@ -296,7 +296,7 @@ const cardTitleStyle: CSSProperties = {
   color: DT.textPrimary,
   fontSize: 15,
   lineHeight: 1.28,
-  fontWeight: 850,
+  fontWeight: 900,
   overflowWrap: "anywhere",
 };
 
@@ -363,7 +363,7 @@ const errorStyle: CSSProperties = {
   border: "1px solid rgba(180,107,70,0.22)",
   borderRadius: DT.radiusSm,
   background: "rgba(180,107,70,0.09)",
-  color: "#8f3f24",
+  color: DT.clay,
   padding: 12,
   fontSize: 13,
   lineHeight: 1.4,
