@@ -279,7 +279,8 @@ function MobileManagementMenu({ section, pathname }: { section: MissionControlSe
 }
 
 function GuidoMenu({ section, pathname }: { section: MissionControlSection; pathname: string | null }) {
-  const active = GUIDO_NAV.some((item) => navItemActive(item, section, pathname));
+  const activeItem = GUIDO_NAV.find((item) => navItemActive(item, section, pathname));
+  const active = Boolean(activeItem);
   return (
     <details style={{ position: "relative", zIndex: 1200 }}>
       <summary style={{
@@ -299,7 +300,7 @@ function GuidoMenu({ section, pathname }: { section: MissionControlSection; path
         cursor: "pointer",
         whiteSpace: "nowrap",
       }}>
-        Guido ▾
+        {activeItem ? `${activeItem.label} ▾` : "Guido ▾"}
       </summary>
       <div style={{ position: "absolute", top: 38, right: 0, minWidth: 210, padding: 7, border: "1px solid rgba(255,255,255,0.16)", borderRadius: 14, background: "rgba(34,32,26,0.96)", boxShadow: "0 18px 44px rgba(0,0,0,0.30)", display: "flex", flexDirection: "column", gap: 4, zIndex: 1201, backdropFilter: "blur(18px)" }}>
         {GUIDO_NAV.map((item, index) => {

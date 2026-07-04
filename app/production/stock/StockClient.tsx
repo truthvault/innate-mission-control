@@ -65,14 +65,14 @@ export default function StockClient({ result }: Props) {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 }}>
+      {!emptyFoundation && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 }}>
         <KpiCard label="Stock items" value={formatNumber(result.summary.stockItems, 0)} />
         <KpiCard label="Value ex GST" value={formatMoney(result.summary.stockValueExGst)} tone={result.summary.stockValueExGst > 0 ? "good" : "neutral"} />
         <KpiCard label="On hand qty" value={formatNumber(result.summary.quantityOnHand)} />
         <KpiCard label="Reserved qty" value={formatNumber(result.summary.quantityReserved)} tone={result.summary.quantityReserved > 0 ? "warn" : "neutral"} />
         <KpiCard label="Open exceptions" value={formatNumber(result.summary.openExceptions, 0)} tone={result.summary.openExceptions > 0 ? "warn" : "neutral"} />
         <KpiCard label="Mapping rules" value={formatNumber(result.summary.activeMappingRules, 0)} />
-      </div>
+      </div>}
 
       {emptyFoundation && <EmptyFoundation />}
 
