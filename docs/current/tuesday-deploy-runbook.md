@@ -27,6 +27,9 @@ After a production deploy, verify:
 1. `curl -s https://innate-mission-control.vercel.app/api/health` → `"ok": true`
 2. Open `/workshop` and `/production/plan` on desktop and phone.
 3. `npm run smoke:tuesday` with `SMOKE_BASE_URL=https://innate-mission-control.vercel.app`.
+4. `SMOKE_BASE_URL=http://localhost:<port> npm run qa:crawl` against the local
+   build before promoting — catches flashes, console errors, broken clicks,
+   and overflow the smoke test cannot see. Zero findings expected.
 
 ## Rollback (target: under one minute)
 
