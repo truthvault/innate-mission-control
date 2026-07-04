@@ -120,7 +120,7 @@ type SupabaseOrder = {
   xero_invoice_number: string | null;
 };
 
-const ORDER_SELECT = "id,customer_name,status,paid_on_date,due_date,product_summary,item_category,xero_invoice_number";
+const ORDER_SELECT = "id,customer_name,status,paid_on_date,due_date,product_summary,item_category,xero_invoice_number,total_incl_gst";
 type IntakeReviewRow = {
   id: string;
   order_id: string;
@@ -638,7 +638,7 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
   const orderIds = reviews.map((review) => review.order_id);
   if (orderIds.length === 0) return [];
   const [orders, documents, payments, tasks, lifecycles] = await Promise.all([
-    supabaseRequest<SupabaseOrder[]>(`orders?select=${ORDER_SELECT}&id=in.(${orderIds.map(quote).join(",")})`),
+    supabaseRequest<SupabaseOrder[]>(`orders?select=${ORDER_SELECT}&archived_at=is.null&id=in.(${orderIds.map(quote).join(",")})`),
     rowsByOrder<FinancialDocumentRow>("order_financial_documents", orderIds),
     rowsByOrder<PaymentRow>("order_payments", orderIds),
     rowsByOrder<ProductionTaskRow>("production_order_tasks", orderIds),
@@ -754,11 +754,62 @@ async function findOrderByInvoice(invoiceNumber: string) {
   return rows[0] || null;
 }
 
+function normalizeContact(value: string | null | undefined) {
+  return String(value || "").toLowerCase().replace(/\b(ltd|limited|co|company)\b\.?/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function sameContact(a: string | null | undefined, b: string | null | undefined) {
+  const na = normalizeContact(a);
+  const nb = normalizeContact(b);
+  if (!na || !nb) return false;
+  return na === nb || na.includes(nb) || nb.includes(na);
+}
+
 async function findBalanceParentOrder(invoice: XeroInvoiceSummary) {
-  if (!isBalanceInvoice(invoice)) return null;
-  for (const referencedInvoice of referencedInvoiceNumbers(invoice)) {
-    const order = await findOrderByInvoice(referencedInvoice);
-    if (order) return order;
+  // 1. Explicit: the balance invoice references the parent's number in its text.
+  if (isBalanceInvoice(invoice)) {
+    for (const referencedInvoice of referencedInvoiceNumbers(invoice)) {
+      const order = await findOrderByInvoice(referencedInvoice);
+      if (order) return order;
+    }
+  }
+
+  // 2. Convention (Guido: deposit+balance = ONE order, invoices usually issued
+  //    back-to-back): the immediately-preceding invoice number belongs to the
+  //    same customer, its order has a paid deposit, and this invoice is about
+  //    half the recorded job total. Kidd INV-1052/1053 and Fowler
+  //    INV-1131/1132 both failed the text-only path and created duplicate
+  //    "new" orders.
+  const currentNumber = normalizeInvoiceNumber(invoice.invoiceNumber);
+  const numeric = currentNumber?.match(/^INV-(\d+)$/i);
+  if (numeric) {
+    const previous = `INV-${Number(numeric[1]) - 1}`;
+    const parent = await findOrderByInvoice(previous);
+    if (parent && parent.paid_on_date && sameContact(parent.customer_name, invoice.contact)) {
+      const parentTotal = Number((parent as { total_incl_gst?: number | null }).total_incl_gst ?? NaN);
+      const invoiceTotal = Number(invoice.total ?? NaN);
+      const halfMatches = Number.isFinite(parentTotal) && Number.isFinite(invoiceTotal) && Math.abs(parentTotal / 2 - invoiceTotal) <= Math.max(2, parentTotal * 0.02);
+      if (halfMatches || isBalanceInvoice(invoice)) return parent;
+    }
+  }
+
+  // 3. Duplicate of an already-paid order (e.g. a Xero invoice raised for a
+  //    Shopify order that is already paid and recorded): same customer, same
+  //    total, parent paid within the last 90 days.
+  const invoiceTotal = Number(invoice.total ?? NaN);
+  if (Number.isFinite(invoiceTotal) && invoice.contact) {
+    const cutoff = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const candidates = await supabaseRequest<SupabaseOrder[]>(
+      `orders?select=${ORDER_SELECT}&paid_on_date=gte.${cutoff}&archived_at=is.null&limit=200`,
+      { method: "GET" }
+    );
+    for (const candidate of candidates || []) {
+      const candidateTotal = Number((candidate as { total_incl_gst?: number | null }).total_incl_gst ?? NaN);
+      if (!Number.isFinite(candidateTotal)) continue;
+      if (Math.abs(candidateTotal - invoiceTotal) <= 1 && sameContact(candidate.customer_name, invoice.contact)) {
+        return candidate;
+      }
+    }
   }
   return null;
 }
@@ -1018,6 +1069,7 @@ export async function saveOrderIntakeDraft(orderId: string, tasks: unknown) {
 
 type ApprovedTaskPatch = {
   done?: unknown;
+  deleted?: unknown;
   scheduledDate?: unknown;
   day?: unknown;
   person?: unknown;
@@ -1060,7 +1112,10 @@ export async function updateApprovedOrderIntakeTask(taskId: string, patch: unkno
     const hours = Math.max(0, Math.round(Number(item.estimatedHours || 0) * 2) / 2);
     if (Number.isFinite(hours)) body.estimated_hours = hours;
   }
-  if (item.done === true) {
+  if ((item as { deleted?: unknown }).deleted === true) {
+    body.status = "deleted";
+    body.notes = `Deleted from the board ${new Date().toISOString().slice(0, 10)}.`;
+  } else if (item.done === true) {
     body.status = "done";
     body.completed_at = new Date().toISOString();
     body.completed_by = owner;

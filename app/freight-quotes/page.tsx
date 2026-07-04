@@ -300,11 +300,11 @@ export default async function FreightQuotesPage({
         .quote-row__body{padding:4px 14px 14px;border-top:1px solid ${DT.line}}
         @media(max-width:850px){.quote-row summary{flex-wrap:wrap}.quote-row__time{flex-basis:48px}.quote-row__product{flex-basis:100%}}
         .quote-card{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:18px;box-shadow:0 14px 34px rgba(39,34,27,.07)}
-        .quote-card--warn{border-color:#c8a96e;background:#ffffffdf9}
+        .quote-card--warn{border-color:#c8a96e;background:#fffdf9}
         .quote-card__topline,.quote-card__main{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.quote-card__topline{font-size:13px;color:#7c746b;margin-bottom:13px}
-        .quote-card h2{margin:0 0 5px;font-size:20px;line-height:1.2}.muted{margin:0;color:#5a5549}.price{font-size:34px;font-weight:750;white-space:nowrap}
+        .quote-card h2{margin:0 0 5px;font-size:20px;line-height:1.2}.muted{margin:0;color:#5a5549}.price{font-size:34px;font-weight:800;white-space:nowrap}
         .pill{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:700}.pill--ok{background:#edf4ed;color:#285537}.pill--warn{background:#ead7a7;color:#8a5b1f}
-        .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0 0}.grid div{background:#f7f5ef;border-radius:12px;padding:10px}.grid dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7c746b;margin-bottom:4px}.grid dd{margin:0;font-weight:650;color:#27221b}
+        .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:17px 0 0}.grid div{background:#f7f5ef;border-radius:12px;padding:10px}.grid dt{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7c746b;margin-bottom:4px}.grid dd{margin:0;font-weight:700;color:#27221b}
         .packages{margin:13px 0 0;color:#5a5549;font-size:13px;line-height:1.45}.source-link{display:inline-block;margin-top:12px;color:#27221b;text-decoration-thickness:1px;text-underline-offset:3px}
         @media(max-width:850px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.control-panel{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.quote-card__main{display:block}.price{margin-top:12px}.quote-card__topline{display:block}.pill{margin-top:8px}}
       `}</style>

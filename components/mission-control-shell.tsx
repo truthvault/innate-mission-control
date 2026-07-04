@@ -389,7 +389,7 @@ export function MissionControlShell({
                   href={item.href}
                   style={{
                     color: active ? DT.headerBg : "rgba(255,253,249,0.88)",
-                    background: active ? "linear-gradient(135deg, #ffffffdf9 0%, rgba(200,169,110,0.92) 100%)" : "linear-gradient(135deg, rgba(255,253,249,0.095), rgba(200,169,110,0.055))",
+                    background: active ? "linear-gradient(135deg, #fffdf9 0%, rgba(200,169,110,0.92) 100%)" : "linear-gradient(135deg, rgba(255,253,249,0.095), rgba(200,169,110,0.055))",
                     border: active ? "1px solid rgba(255,255,255,0.42)" : "1px solid rgba(255,253,249,0.13)",
                     boxShadow: active ? "0 1px 0 rgba(255,255,255,0.35), 0 6px 18px rgba(0,0,0,0.16)" : "0 1px 0 rgba(255,255,255,0.05) inset",
                     borderRadius: 999,

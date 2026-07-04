@@ -314,7 +314,7 @@ type AppPlanTask = {
   estimatedHours?: number;
   source?: "workflow" | "intake";
 };
-type AppTaskPatch = { done?: boolean; scheduledDate?: string; day?: DayKey; person?: Person; estimatedHours?: number };
+type AppTaskPatch = { done?: boolean; deleted?: boolean; scheduledDate?: string; day?: DayKey; person?: Person; estimatedHours?: number };
 type OrderIntakeReviewState = "awaiting_payment" | "paid_needs_review" | "needs_review" | "approved";
 type OrderIntakeOwner = "Nick" | "Dylan" | "Guido" | "Other";
 type OrderIntakeSaveOptions = { quiet?: boolean };
@@ -1506,6 +1506,7 @@ function defaultWorkflowState(orderId: number): OrderWorkflowState {
 function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWorkflowState | null) => void) {
   const realtimeInstanceId = useId();
   const [workflow, setWorkflow] = useState<OrderWorkflowState>(() => defaultWorkflowState(order.id));
+  const [workflowLoaded, setWorkflowLoaded] = useState(false);
   const [workflowStatus, setWorkflowStatus] = useState("");
   const saveInFlightRef = useRef(false);
   const pendingWorkflowRef = useRef<OrderWorkflowState | null>(null);
@@ -1519,6 +1520,7 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
         if (!active) return;
         const next = data.state ?? defaultWorkflowState(order.id);
         setWorkflow(next);
+        setWorkflowLoaded(true);
         onWorkflowChange?.(next);
         setWorkflowStatus(data.disabledReason ?? statusPrefix);
       })
@@ -1600,7 +1602,7 @@ function useOrderWorkflow(order: UiOrder, onWorkflowChange?: (workflow: OrderWor
     saveWorkflow(patch(workflow));
   }
 
-  return { workflow, workflowStatus, updateWorkflow };
+  return { workflow, workflowLoaded, workflowStatus, updateWorkflow };
 }
 
 function dispatchQcItems(order: UiOrder) {
@@ -2938,7 +2940,7 @@ function OrderRailDetail({
 }) {
   const health = HEALTH_META[orderHealth(order)];
   const paymentLabel = paymentStageBadge(order);
-  const { workflow, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
+  const { workflow, workflowLoaded, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
   const today = new Date().toISOString().slice(0, 10);
   const taskOptions = jobTaskOptionsForOrder(order);
   const productionStepIndex = derivedProductionStepIndex(order, workflow.tasks, planTasks);
@@ -3065,6 +3067,16 @@ function OrderRailDetail({
 	  const nextActionLabel = nextJobTask?.title ?? nextPlanTask?.text ?? nextOrderPrompt(order);
 	  const paymentDisplay = paymentLabel || "Payment not tracked";
 	  const costingDisplay = costing?.label || "Costing not linked";
+
+	  if (!workflowLoaded) {
+	    return (
+	      <div data-order-rail-compact-detail="true" style={{ padding: 10 }}>
+	        <div style={{ border: "1px solid " + DT.border, background: DT.cardBg, borderRadius: 8, padding: 14, fontFamily: DT.sans, fontSize: 12, fontWeight: 700, color: DT.textMuted }}>
+	          Loading saved order state…
+	        </div>
+	      </div>
+	    );
+	  }
 
 	  return (
 	    <div data-order-rail-compact-detail="true" style={{ padding: 10, animation: "orderRailIn 1000ms ease both" }}>
@@ -3267,6 +3279,7 @@ function OrderCommandPill({
     danger: { color: DT.clay, bg: DT.clayPale, border: DT.clayLine },
     teal: { color: DT.teal, bg: DT.tealPale, border: DT.tealLine },
   }[tone];
+
   return (
     <span style={{ border: `1px solid ${tones.border}`, background: tones.bg, color: tones.color, borderRadius: 999, padding: "5px 9px", fontFamily: DT.sans, fontSize: 11, fontWeight: 900, whiteSpace: "nowrap" }}>
       {label}
@@ -3558,7 +3571,7 @@ function OrderOverviewOverlay({
   const health = HEALTH_META[orderHealth(order)];
   const mode = deliveryMode(order);
   const freightBookBy = addWorkingDays(order.shipDate, -mode.workingDays);
-  const { workflow, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
+  const { workflow, workflowLoaded, workflowStatus, updateWorkflow } = useOrderWorkflow(order, onWorkflowChange);
   const productionStepIndex = derivedProductionStepIndex(order, workflow.tasks, planTasks);
 	  const activeProductionStep = productionStepForOrder(order, productionStepIndex);
 	  const qcItems = dispatchQcItems(order);
@@ -3599,6 +3612,16 @@ function OrderOverviewOverlay({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  if (!workflowLoaded) {
+    return (
+      <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 130, background: "rgba(20,18,16,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ background: DT.cardBg, border: `1px solid ${DT.border}`, borderRadius: 14, padding: 22, fontFamily: DT.sans, fontSize: 13, fontWeight: 700, color: DT.textMuted }}>
+          Loading saved order state…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -6665,6 +6688,7 @@ function MobileScheduleAgenda({
   onAppTaskSelect,
   onAppTaskOpen,
   onAppTaskDoneToggle,
+  onAppTaskDelete,
   onSuggestedStepSelect,
   onSuggestedStepOpen,
   suggestedStepCustomer,
@@ -6694,6 +6718,7 @@ function MobileScheduleAgenda({
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onAppTaskDoneToggle?: (task: AppPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onAppTaskDelete?: (task: AppPlanTask) => void;
   onSuggestedStepSelect?: () => void;
   onSuggestedStepOpen?: () => void;
   suggestedStepCustomer?: string;
@@ -6755,6 +6780,7 @@ function MobileScheduleAgenda({
           <button type="button" onClick={() => onAppTaskSelect?.(task)} onDoubleClick={() => onAppTaskOpen?.(task)} style={{ minWidth: 0, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.title : DT.textPrimary, textAlign: "left", fontFamily: DT.sans, fontSize: 10.5, fontWeight: 900, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecorationLine: done ? "line-through" : "none" }}>{task.title}</button>
           <span style={{ color: DT.sage, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap" }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
           <button type="button" aria-label="Open task details" onClick={(event) => { event.stopPropagation(); onAppTaskOpen?.(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900 }}>↗</button>
+          {onAppTaskDelete && <button type="button" aria-label="Delete task" title="Delete this task" onClick={(event) => { event.stopPropagation(); if (window.confirm(`Delete "${task.title}"?`)) onAppTaskDelete(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.clayLine}`, background: "rgba(255,255,255,0.76)", color: DT.clay, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 13, fontWeight: 800 }}>✕</button>}
         </div>
         <button type="button" onClick={() => onAppTaskOpen?.(task)} style={{ marginLeft: 23, minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"} · {task.source === "intake" ? "Order" : "Job"}</button>
       </div>
@@ -6829,6 +6855,7 @@ function MonthWeekSection({
   onAppTaskSelect,
   onAppTaskOpen,
   onAppTaskDoneToggle,
+  onAppTaskDelete,
   onSuggestedStepMove,
   onSuggestedStepSelect,
   onSuggestedStepOpen,
@@ -6865,6 +6892,7 @@ function MonthWeekSection({
   onAppTaskSelect?: (task: AppPlanTask) => void;
   onAppTaskOpen?: (task: AppPlanTask) => void;
   onAppTaskDoneToggle?: (task: AppPlanTask, done: boolean, origin?: DelightOrigin) => void;
+  onAppTaskDelete?: (task: AppPlanTask) => void;
   onSuggestedStepMove?: (id: string, day: DayKey, person: Person, dateIso?: string, dateLabel?: string, overStepId?: string, insertAfter?: boolean) => void;
   onSuggestedStepSelect?: () => void;
   onSuggestedStepOpen?: () => void;
@@ -6913,6 +6941,7 @@ function MonthWeekSection({
         onAppTaskSelect={onAppTaskSelect}
         onAppTaskOpen={onAppTaskOpen}
         onAppTaskDoneToggle={onAppTaskDoneToggle}
+        onAppTaskDelete={onAppTaskDelete}
         onSuggestedStepSelect={onSuggestedStepSelect}
         onSuggestedStepOpen={onSuggestedStepOpen}
         suggestedStepCustomer={suggestedStepCustomer}
@@ -9444,7 +9473,7 @@ function MonthViewState({
           scheduledDate: patch.scheduledDate ?? approved.scheduledDate,
           day: patch.day ?? approved.day,
           estimatedHours: patch.estimatedHours ?? approved.estimatedHours,
-          status: patch.done === true ? "done" : patch.done === false ? "planned" : approved.status,
+          status: patch.deleted === true ? "deleted" : patch.done === true ? "done" : patch.done === false ? "planned" : approved.status,
           completedAt: patch.done === true ? now : patch.done === false ? null : approved.completedAt,
           completedBy: patch.done === true ? owner : patch.done === false ? null : approved.completedBy,
         };
@@ -10384,6 +10413,7 @@ function MonthViewState({
       onAppTaskSelect={selectOrderForAppTask}
       onAppTaskOpen={openAppTask}
       onAppTaskDoneToggle={(task, done, origin) => updateAppTask(task, { done }, origin)}
+      onAppTaskDelete={(task) => updateAppTask(task, { deleted: true })}
       onSuggestedStepMove={moveSuggestedStep}
       onSuggestedStepSelect={selectNewOrderReview}
       onSuggestedStepOpen={openNewOrderOverview}
@@ -10419,6 +10449,7 @@ function MonthViewState({
           onAppTaskSelect={selectOrderForAppTask}
           onAppTaskOpen={openAppTask}
           onAppTaskDoneToggle={(task, done, origin) => updateAppTask(task, { done }, origin)}
+          onAppTaskDelete={(task) => updateAppTask(task, { deleted: true })}
           weekIndex={0}
           weekCount={1}
         />
