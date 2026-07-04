@@ -1,6 +1,7 @@
 import { MissionControlShell } from "@/components/mission-control-shell";
 import { getFreightPublicAccessStatus } from "@/lib/freight/publicAccess";
 import { getFreightQuoteLogStatus, listQuoteEvents, type FreightQuoteRow } from "@/lib/freight/quoteLog";
+import { DT } from "@/components/mission-control-tokens";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -287,16 +288,16 @@ export default async function FreightQuotesPage({
         .error{background:#f7f5ef;border:1px solid #e7bbb4;color:#783716;padding:14px 16px;border-radius:14px;margin:16px 0}
         .empty{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:28px;color:#5a5549}
         .quotes{display:grid;gap:18px}
-        .quote-day__heading{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#7c746b;margin:0 0 8px}
+        .quote-day__heading{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:${DT.textMuted};margin:0 0 8px}
         .quote-day{display:grid;gap:6px}
-        .quote-row{background:#fff;border:1px solid rgba(0,0,0,0.07);border-radius:8px}
+        .quote-row{background:${DT.cardBg};border:1px solid ${DT.line};border-radius:8px}
         .quote-row summary{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 14px;cursor:pointer;list-style:none}
         .quote-row summary::-webkit-details-marker{display:none}
-        .quote-row__time{flex:0 0 62px;font-size:12px;color:#7c746b}
+        .quote-row__time{flex:0 0 62px;font-size:12px;color:${DT.textMuted}}
         .quote-row__product{flex:1 1 40%;min-width:0;font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .quote-row__dest{flex:1 1 30%;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .quote-row summary .price{margin:0;font-size:15px}
-        .quote-row__body{padding:4px 14px 14px;border-top:1px solid rgba(0,0,0,0.05)}
+        .quote-row__body{padding:4px 14px 14px;border-top:1px solid ${DT.line}}
         @media(max-width:850px){.quote-row summary{flex-wrap:wrap}.quote-row__time{flex-basis:48px}.quote-row__product{flex-basis:100%}}
         .quote-card{background:#ffffff;border:1px solid #e8e2d7;border-radius:18px;padding:18px;box-shadow:0 14px 34px rgba(39,34,27,.07)}
         .quote-card--warn{border-color:#c8a96e;background:#ffffffdf9}
