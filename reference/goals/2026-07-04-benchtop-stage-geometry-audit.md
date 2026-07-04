@@ -104,3 +104,12 @@ Live push set (after Guido approves): same 3 files to #141308166203.
 **Non-glitch notes for Guido (not bugs):** (1) Rimu clamps thickness 43→33 (Rimu max=33; Totara/Beech=43) — correct; it stays 33 if you then pick Totara (doesn't auto-restore). (2) rotate button shares CSS class `panel-row__duplicate` with Copy — cosmetic code smell, no user impact. (3) mobile keeps the compact surface (full-height camera is desktop-only ≥960px) — by design for portrait. (4) pieces can overlap when snapped — allowed.
 
 Preview serving `atelier=20260705-camera-v10`. Live push set unchanged: 3 files to #141308166203.
+
+---
+## v11 — cutout-on-rotated fix + camera hard-fill (2026-07-05, ON PREVIEW `atelier=20260705-v11-cutout-fill`)
+Guido's new bug list (4 items). Done so far:
+- **#11 cutout drag on rotated panel** — FIXED. Root cause: handler `O` read the pointer through the ROOT svg CTM, but the cutout box `e` lives in the panel's rotate-group LOCAL space (confirmed via DOM: cutout + hit are inside `<g transform=rotate(90 cx cy)>`). Fix: project pointer onto the panel's local axes in SCREEN space via the element's CTM-transformed box corners (affine inverse — rotation+scale exact, orientation-agnostic). Verified: tracks cursor 0px in-bounds flat AND rotated; clamps correctly at edges (the "48px" in an early test was correct edge-clamping, not a miss).
+- **#12 camera tiny-panels/too-much-space** — FIXED. Frame-aspect camera: viewBox now matches the stage frame aspect, targets ~88% fill of the limiting dim (M=.14), hysteresis keep-band fill[.64,.92] + centering check offX/offY<.09. Root cause: stale committed viewBox kept when content drifted off-centre after spread→compress. Verified via spread/compress repro (content re-fits centred).
+- Regression on v11: canary 17/17 (rotated corners intact), verify 8/8, journey 26/26, nudge neighbour ~0px.
+Golden lock stays at v10 until Guido approves v11; then re-cut GOLDEN + re-run VERIFY.
+Remaining: #13 sticky total, #14 condense right column — proposed to Guido (the `.stickybar` is the whole 417px Delivery+summary block, top:118 sticky at column bottom → total hidden until you scroll ~1600px; column is 1704px tall, Material card alone 661px).
