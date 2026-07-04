@@ -29,6 +29,13 @@ const eslintConfig = defineConfig([
     "tmp/**",
     "tmp_*.js",
     "tmp_*.py",
+
+    // One-off QA/dogfood scripts with embedded minified browser bundles —
+    // evidence tooling, not app code. Linting them produces hundreds of
+    // false errors from the minified payloads.
+    "scripts/dogfood-*.mjs",
+    "scripts/audit-benchtop-deep-parity.mjs",
+    "work/**",
   ]),
 ]);
 
