@@ -1986,8 +1986,11 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
           <div style={{ fontFamily: DT.sans, fontSize: 13, fontWeight: 900, color: DT.textPrimary, lineHeight: 1.18, whiteSpace: "normal", overflowWrap: "anywhere" }}>{order.customer}</div>
           <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: DT.textMuted, fontWeight: 800, lineHeight: 1.2, whiteSpace: "normal", overflowWrap: "anywhere" }}>{orderItemLabel(order)} · {orderStatusLabel(order)}</div>
           <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap" }}>
-            <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>
-            <OrderCostingPill costing={costing} />
+            {/* Chip diet: one dominant state per card. The health pill (right) already
+                says Blocked/Watch — only show the trust chip when it does not
+                contradict it, and only show costing when there is a real match. */}
+            {healthLevel !== "blocked" && <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>}
+            {costing ? <OrderCostingPill costing={costing} /> : null}
           </div>
           {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 900, lineHeight: 1.25, whiteSpace: "normal", overflowWrap: "anywhere" }}>{reason}</div>}
         </div>

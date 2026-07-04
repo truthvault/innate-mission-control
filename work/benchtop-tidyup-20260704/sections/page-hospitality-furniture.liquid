@@ -1,0 +1,909 @@
+<style>
+  .innate-hospitality-page {
+    --hosp-ink: #16251f;
+    --hosp-green: #243d34;
+    --hosp-green-dark: #13241e;
+    --hosp-paper: #f4efe7;
+    --hosp-cream: #fbf7ef;
+    --hosp-muted: rgba(22, 37, 31, 0.68);
+    --hosp-line: rgba(22, 37, 31, 0.16);
+    --hosp-display: var(--innate-display);
+    --hosp-body: var(--innate-body);
+    color: var(--hosp-ink);
+    background: var(--hosp-paper);
+    font-family: var(--hosp-body);
+  }
+  .innate-hospitality-page *, .innate-hospitality-page *::before, .innate-hospitality-page *::after { box-sizing: border-box; }
+  .innate-hospitality-page h1,
+  .innate-hospitality-page h2,
+  .innate-hospitality-page h3 { font-family: var(--hosp-display); font-weight: 430; letter-spacing: 0; line-height: 1.04; margin: 0; }
+  .innate-hospitality-page p { margin: 0; line-height: 1.62; }
+  .innate-hospitality-page a { color: inherit; }
+  .hosp-wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+  .hosp-eyebrow { margin: 0 0 12px; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--innate-rust); font-weight: 700; }
+  .hosp-hero { position: relative; min-height: clamp(560px, 72vh, 760px); display: grid; align-items: end; overflow: hidden; background: var(--hosp-green-dark); }
+  .hosp-hero__image { position: absolute; inset: 0; }
+  .hosp-hero__image img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; filter: saturate(0.95) contrast(1.02); }
+  .hosp-hero__image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8,21,16,0.86), rgba(8,21,16,0.58) 48%, rgba(8,21,16,0.24)), linear-gradient(0deg, rgba(8,21,16,0.66), transparent 58%); }
+  .hosp-hero__inner { position: relative; z-index: 1; padding: clamp(72px, 9vw, 118px) 0 clamp(66px, 7.5vw, 104px); color: var(--hosp-cream); }
+  .hosp-hero__content { max-width: 780px; }
+  .hosp-hero .hosp-eyebrow { color: rgba(251,247,239,0.78); }
+  .hosp-hero h1 { font-size: clamp(3rem, 6.15vw, 5.95rem); max-width: 900px; line-height: 1.06; }
+  .hosp-hero__sub { margin-top: 24px; max-width: 650px; color: rgba(251,247,239,0.9); font-size: clamp(1.04rem, 1.35vw, 1.2rem); }
+  .hosp-actions { margin-top: 34px; display: flex; flex-wrap: wrap; gap: 12px; }
+  .hosp-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0.95rem 1.35rem; border: 1px solid rgba(251,247,239,0.72); border-radius: 3px; text-decoration: none; font-weight: 700; letter-spacing: 0; transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease; }
+  .hosp-btn:hover { transform: translateY(-1px); }
+  .hosp-btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(251,247,239,.26); }
+  .innate-hospitality-page .hosp-btn.hosp-btn--primary { background: var(--hosp-cream); color: var(--hosp-green-dark) !important; border-color: var(--hosp-cream); }
+  .innate-hospitality-page .hosp-btn.hosp-btn--ghost { background: transparent; color: var(--hosp-cream) !important; }
+  .hosp-facts { margin: 36px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; max-width: 900px; }
+  .hosp-facts li { border-top: 1px solid rgba(251,247,239,0.48); padding-top: 12px; font-size: 0.95rem; font-weight: 600; color: rgba(251,247,239,0.88); line-height: 1.35; }
+  .hosp-section { padding: clamp(56px, 7vw, 92px) 0; }
+  .hosp-section--cream { background: var(--hosp-cream); }
+  .hosp-section--dark { background: radial-gradient(circle at 18% 0%, rgba(251,247,239,0.075), transparent 34%), linear-gradient(135deg, #10201a 0%, var(--hosp-green-dark) 48%, #0d1a16 100%); color: var(--hosp-cream); }
+  .hosp-section--dark .hosp-eyebrow { color: rgba(251,247,239,0.72); }
+  .hosp-section--dark .hosp-section-head p { color: rgba(251,247,239,0.84); max-width: 720px; }
+  .hosp-intro { display: grid; grid-template-columns: minmax(260px, 0.86fr) minmax(0, 1.02fr); gap: clamp(32px, 5vw, 64px); align-items: start; }
+  .hosp-intro h2, .hosp-section-head h2 { font-size: clamp(2.15rem, 4vw, 4.1rem); }
+  .hosp-copy { display: grid; gap: 16px; color: var(--hosp-muted); font-size: 1.03rem; max-width: 620px; }
+  .hosp-points { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+  .hosp-points li { padding-left: 18px; position: relative; color: var(--hosp-ink); }
+  .hosp-points li::before { content: ""; position: absolute; left: 0; top: 0.72em; width: 6px; height: 6px; border-radius: 50%; background: var(--hosp-green); }
+  .hosp-section-head { max-width: 790px; margin-bottom: 26px; }
+  .hosp-section-head p { color: var(--hosp-muted); margin-top: 12px; }
+  .hosp-section--recent .hosp-section-head { max-width: 1120px; }
+  .hosp-section--recent .hosp-section-head h2 { font-size: clamp(2.15rem, 4vw, 3.85rem); }
+  @media (min-width: 1100px) {
+    .hosp-section--recent .hosp-section-head h2 { white-space: nowrap; }
+  }
+  .hosp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .hosp-card { background: rgba(255,250,243,0.82); border: 1px solid rgba(22,37,31,0.24); padding: 24px; min-height: 100%; display: grid; gap: 13px; box-shadow: 0 1px 0 rgba(22,37,31,0.04); }
+  .hosp-section--cream .hosp-card { background: var(--innate-warm-white); }
+  .hosp-card h3 { font-size: clamp(1.42rem, 2vw, 2rem); }
+  .hosp-card p { color: var(--hosp-muted); }
+  .hosp-card__meta { display: grid; gap: 7px; padding-top: 4px; font-size: 0.92rem; color: rgba(22,37,31,0.78); }
+  .hosp-card__link { align-self: end; margin-top: 4px; text-decoration: none; font-weight: 700; border-bottom: 1px solid currentColor; width: fit-content; }
+  .hosp-size-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .hosp-size { background: rgba(255,250,243,0.92); border: 1px solid rgba(22,37,31,0.2); padding: 24px 24px 22px; box-shadow: 0 1px 0 rgba(22,37,31,0.035); }
+  .hosp-size h3 { font-size: 1.42rem; margin-bottom: 14px; }
+  .hosp-size ul, .hosp-faq-list { margin: 0; padding: 0; list-style: none; }
+  .hosp-size li { padding: 8px 0; border-top: 1px solid rgba(22,37,31,0.075); color: rgba(22,37,31,0.72); line-height: 1.43; font-size: 0.94rem; }
+  .hosp-size li:first-child { border-top-color: rgba(22,37,31,0.13); }
+  .hosp-size strong { display: block; color: var(--hosp-ink); font-weight: 700; letter-spacing: -0.01em; }
+  .hosp-size span { display: block; margin-top: 2px; color: var(--innate-rust); }
+  .hosp-materials { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+  .hosp-material { position: relative; min-height: 100%; padding: 26px 24px 25px; border: 1px solid rgba(251,247,239,0.28); background: linear-gradient(180deg, rgba(251,247,239,0.13), rgba(251,247,239,0.075)); box-shadow: inset 0 1px 0 rgba(251,247,239,0.08), 0 18px 42px rgba(4,11,8,0.16); }
+  .hosp-material::before { content: ""; display: block; width: 44px; height: 4px; margin-bottom: 20px; border-radius: 999px; background: rgba(251,247,239,0.58); box-shadow: 0 0 0 1px rgba(251,247,239,0.08); }
+  .hosp-material--timber::before { background: #9a5f35; }
+  .hosp-material--steel::before { background: #66736e; box-shadow: 0 0 0 1px rgba(251,247,239,0.16), 0 0 18px rgba(251,247,239,0.06); }
+  .hosp-material--porcelain::before { background: #d7d0c3; }
+  .hosp-material--finish::before { background: linear-gradient(90deg, #c48952, #6f4428 54%, #1f1f1d); }
+  .hosp-material h3 { font-size: 1.46rem; line-height: 1.12; margin-bottom: 10px; color: var(--innate-warm-white); }
+  .hosp-material p { color: rgba(251,247,239,0.86); line-height: 1.6; }
+
+  /* hospitality-screenshot5-materials-polish-20260512: richer dark section, clearer material cards, copy unchanged */
+  .hosp-section--proof { padding-bottom: clamp(46px, 5.5vw, 72px); }
+  .hosp-section--process { padding-top: clamp(46px, 5.5vw, 72px); }
+  .hosp-process { counter-reset: step; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+  .hosp-step { counter-increment: step; grid-column: span 2; padding: 24px; border: 1px solid rgba(22,37,31,0.2); background: rgba(255,250,243,0.86); box-shadow: 0 1px 0 rgba(22,37,31,0.035); }
+  .hosp-step:nth-child(4), .hosp-step:nth-child(5) { grid-column: span 3; }
+  .hosp-step::before { content: "0" counter(step); display: block; margin-bottom: 18px; font-family: var(--hosp-display); font-size: 1.45rem; font-weight: 430; color: rgba(22,37,31,0.58); letter-spacing: -0.03em; }
+  .hosp-step h3 { font-size: 1.3rem; margin-bottom: 9px; }
+  .hosp-step p { color: rgba(22,37,31,0.68); font-size: 0.96rem; line-height: 1.52; }
+  .hosp-proof { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .hosp-proof-card { border: 1px solid rgba(22,37,31,0.22); background: rgba(255,250,243,0.82); padding: 28px; box-shadow: 0 1px 0 rgba(22,37,31,0.04); }
+  .hosp-proof-card h3 { font-size: 1.82rem; margin-bottom: 12px; }
+  .hosp-proof-card p { color: rgba(22,37,31,0.7); line-height: 1.58; max-width: 620px; }
+  .hosp-project-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .hosp-project { background: var(--innate-warm-white); border: 1px solid rgba(22,37,31,0.22); overflow: hidden; display: grid; grid-template-rows: auto 1fr; box-shadow: 0 1px 0 rgba(22,37,31,0.035); }
+  .hosp-project__media { aspect-ratio: 1.22 / 1; background: #e9e0d4; overflow: hidden; }
+  .hosp-project__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hosp-project__body { padding: 22px; display: grid; gap: 9px; }
+  .hosp-project__eyebrow { margin: 0; font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(22,37,31,0.6); font-weight: 800; }
+  .hosp-project h3 { font-size: clamp(1.45rem, 2.05vw, 2rem); }
+  .hosp-project p { color: rgba(22,37,31,0.7); font-size: 0.96rem; line-height: 1.52; }
+  .hosp-project__meta { color: rgba(22,37,31,0.82) !important; font-weight: 700; }
+  .hosp-proof-strip { margin-top: 22px; border: 1px solid rgba(22,37,31,0.18); background: rgba(255,250,243,0.72); padding: 18px 20px; color: rgba(22,37,31,0.72); line-height: 1.55; }
+  .hosp-proof-strip strong { color: var(--hosp-ink); }
+  .hosp-faq-list { display: grid; gap: 10px; }
+  .hosp-faq-list details {
+    border: 1px solid rgba(40, 50, 41, .13);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .48);
+    box-shadow: 0 10px 26px rgba(40, 50, 41, .035);
+    overflow: hidden;
+    padding: 0;
+  }
+  .hosp-faq-list details[open] {
+    background: #fffaf2;
+    border-color: rgba(40, 50, 41, .18);
+    box-shadow: 0 16px 34px rgba(40, 50, 41, .055);
+  }
+  .hosp-faq-list summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    font-weight: 700;
+    gap: 16px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 18px 22px;
+    color: var(--hosp-ink);
+  }
+  .hosp-faq-list summary::-webkit-details-marker { display: none; }
+  .hosp-faq-list summary::after {
+    align-items: center;
+    background: rgba(248, 244, 238, .72);
+    border: 1px solid rgba(40, 50, 41, .16);
+    border-radius: 999px;
+    color: rgba(40, 50, 41, .72);
+    content: "+";
+    display: flex;
+    flex: 0 0 28px;
+    font: 600 18px/1 var(--hosp-body);
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+  }
+  .hosp-faq-list details[open] summary::after { content: "-"; }
+  .hosp-faq-list p { margin: 0; padding: 0 22px 20px; color: var(--hosp-muted); }
+  .hosp-final { text-align: center; max-width: 760px; margin: 0 auto; }
+  .hosp-final h2 { font-size: clamp(2.2rem, 5vw, 4.7rem); }
+  .hosp-final p { margin: 18px auto 0; color: rgba(251,247,239,0.74); max-width: 600px; }
+  .hosp-final .hosp-actions { justify-content: center; }
+  .hosp-enquiry { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 62px); align-items: start; }
+  .hosp-enquiry__intro { max-width: 620px; }
+  .hosp-enquiry__intro h2 { font-size: clamp(2.2rem, 4.6vw, 4.4rem); }
+  .hosp-enquiry__intro p { margin-top: 18px; color: rgba(251,247,239,0.76); max-width: 580px; }
+  .hosp-contact-list { display: grid; gap: 10px; margin-top: 26px; }
+  .hosp-contact-link { display: flex; justify-content: space-between; gap: 18px; padding: 14px 0; border-top: 1px solid rgba(251,247,239,.2); color: var(--hosp-cream) !important; text-decoration: none; font-weight: 700; }
+  .hosp-contact-link span:first-child { color: rgba(251,247,239,.68); font-weight: 600; }
+  .hosp-contact-link span:last-child { text-align: right; }
+  .hosp-enquiry-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .hosp-enquiry-form .hosp-form-wide,
+  .hosp-enquiry-form .hosp-form-errors,
+  .hosp-enquiry-form .hosp-form-success,
+  .hosp-enquiry-form button[type="submit"] { grid-column: 1 / -1; }
+  .hosp-enquiry-form input,
+  .hosp-enquiry-form select,
+  .hosp-enquiry-form textarea { width: 100%; box-sizing: border-box; padding: .9rem 1rem; background: rgba(255,250,243,.12); border: 1px solid rgba(255,250,243,.42); color: var(--hosp-cream); font: 400 1rem/1.45 var(--hosp-body); border-radius: 2px; box-shadow: inset 0 1px 0 rgba(255,250,243,.08); transition: background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .hosp-enquiry-form select option { color: var(--hosp-ink); }
+  .hosp-enquiry-form input::placeholder,
+  .hosp-enquiry-form textarea::placeholder { color: rgba(251,247,239,.68); }
+  .hosp-enquiry-form textarea { min-height: 156px; resize: vertical; }
+  .hosp-enquiry-form input:focus-visible,
+  .hosp-enquiry-form select:focus-visible,
+  .hosp-enquiry-form textarea:focus-visible { outline: 0; background: rgba(255,250,243,.16); border-color: rgba(255,250,243,.82); box-shadow: 0 0 0 3px rgba(255,250,243,.2), inset 0 1px 0 rgba(255,250,243,.12); }
+  .hosp-enquiry-form button[type="submit"] { width: fit-content; margin-top: 2px; padding: 1rem 1.75rem; border: 0; border-radius: 2px; background: var(--hosp-cream); color: var(--hosp-ink); font: 700 1rem/1 var(--hosp-body); cursor: pointer; transition: background .2s ease, box-shadow .2s ease; }
+  .hosp-enquiry-form button[type="submit"]:hover { background: var(--innate-warm-white); }
+  .hosp-enquiry-form button[type="submit"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(255,250,243,.28); }
+  .hosp-form-errors { padding: .85rem 1rem; border: 1px solid rgba(255,250,243,.28); background: rgba(160,40,40,.3); color: var(--hosp-cream); }
+  .hosp-form-success { padding: 1.1rem 1.2rem; border: 1px solid rgba(255,250,243,.24); background: rgba(255,250,243,.08); color: var(--hosp-cream); }
+
+  @media (max-width: 980px) {
+    .hosp-facts, .hosp-grid, .hosp-size-grid, .hosp-materials, .hosp-process, .hosp-project-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hosp-step, .hosp-step:nth-child(4), .hosp-step:nth-child(5) { grid-column: auto; }
+    .hosp-intro, .hosp-proof { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .hosp-wrap { width: min(100% - 28px, 1180px); }
+    .hosp-hero { min-height: 680px; }
+    .hosp-hero__inner { padding: 72px 0 42px; }
+    .hosp-hero h1 { font-size: clamp(2.55rem, 12vw, 4.1rem); }
+    .hosp-hero__sub { font-size: 1rem; }
+    .hosp-actions { display: grid; }
+    .hosp-facts, .hosp-grid, .hosp-size-grid, .hosp-materials, .hosp-process, .hosp-project-grid { grid-template-columns: 1fr; }
+    .hosp-card, .hosp-size, .hosp-material, .hosp-step, .hosp-proof-card, .hosp-project__body { padding: 20px; }
+    .hosp-enquiry, .hosp-enquiry-form { grid-template-columns: 1fr; }
+    .hosp-contact-link { display: grid; gap: 4px; }
+    .hosp-contact-link span:last-child { text-align: left; }
+  }
+
+  /* hospitality-cohesion-2026-05-30: map page to approved brand kit without changing copy or structure */
+  .innate-hospitality-page {
+    --hosp-ink: var(--innate-forest-ink);
+    --hosp-green: var(--innate-moss);
+    --hosp-green-dark: var(--innate-forest-ink);
+    --hosp-paper: var(--innate-cream);
+    --hosp-cream: var(--innate-paper);
+    --hosp-panel: var(--innate-warm-white);
+    --hosp-muted: rgba(19, 35, 29, 0.68);
+    --hosp-line: rgba(19, 35, 29, 0.14);
+    --hosp-display: var(--innate-display);
+  }
+  .innate-hospitality-page h1,
+  .innate-hospitality-page h2,
+  .innate-hospitality-page h3 {
+    font-family: var(--hosp-display);
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+  .hosp-hero__image img {
+    filter: saturate(.98) contrast(1.01);
+  }
+  .hosp-hero__image::after {
+    background: linear-gradient(90deg, rgba(19,35,29,.78), rgba(19,35,29,.52) 48%, rgba(19,35,29,.22)), linear-gradient(0deg, rgba(19,35,29,.54), transparent 58%);
+  }
+  .hosp-hero h1 {
+    font-size: clamp(2.8rem, 5.3vw, 5.05rem);
+    line-height: 1.06;
+    max-width: 880px;
+  }
+  .hosp-section--dark {
+    background: var(--hosp-green-dark);
+  }
+  .hosp-card,
+  .hosp-section--cream .hosp-card,
+  .hosp-size,
+  .hosp-step,
+  .hosp-project,
+  .hosp-proof-card,
+  .hosp-faq-list details {
+    background: var(--hosp-panel);
+    border-color: var(--hosp-line);
+    box-shadow: none;
+  }
+  .hosp-material {
+    background: rgba(251, 248, 242, .08);
+    border-color: rgba(251, 248, 242, .24);
+    box-shadow: none;
+  }
+  .hosp-step::before {
+    font-family: var(--hosp-body);
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    color: rgba(19, 35, 29, .72);
+  }
+  .hosp-reviews-slot {
+    background: var(--hosp-cream);
+    padding: clamp(18px, 2vw, 28px) 0 clamp(34px, 4vw, 56px);
+  }
+  .hosp-reviews-slot .shopify-section.apps,
+  .template-sufix-hospitality-furniture .shopify-section.apps {
+    background: transparent !important;
+    overflow: hidden;
+    padding: 0 clamp(16px, 4vw, 52px) !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle--root {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    max-width: 1320px !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-swipper-badge-wrapper {
+    align-items: flex-start !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-rating-container {
+    align-items: center !important;
+    align-self: flex-start !important;
+    background: var(--hosp-panel) !important;
+    border: 1px solid rgba(19, 35, 29, .10) !important;
+    border-radius: 18px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    min-height: 165px !important;
+    min-width: clamp(270px, 20vw, 300px) !important;
+    padding: 1.1rem 1.25rem !important;
+    width: clamp(270px, 20vw, 300px) !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-item {
+    background: var(--hosp-panel) !important;
+    border: 1px solid rgba(19, 35, 29, .08) !important;
+    box-shadow: none !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-head-badge,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge-flex,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge-vertical {
+    align-items: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: .45rem !important;
+    height: auto !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge-title {
+    font-size: 0 !important;
+    line-height: 0 !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge-title::before {
+    color: var(--hosp-ink) !important;
+    content: "100% 5-star reviews";
+    display: block;
+    font-family: var(--hosp-body);
+    font-size: .88rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge-stars {
+    transform: scale(.82);
+    transform-origin: center;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-badge-logo {
+    transform: scale(.72);
+    transform-origin: center;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-main-hyper-link,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-item-date,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-item-body-review {
+    color: rgba(40, 50, 41, .72) !important;
+    font-family: var(--hosp-body) !important;
+  }
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-entangle-item-head-name,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-main-hyper-link b,
+  .template-sufix-hospitality-furniture .shopify-section.apps .grp-main-hyper-link strong {
+    color: var(--hosp-ink) !important;
+  }
+
+  /* hospitality-clean-ui-pass-20260531: quieter first viewport, same key information */
+  .hosp-hero {
+    min-height: clamp(560px, 66vh, 700px);
+    align-items: center;
+  }
+  .hosp-hero__image::after {
+    background: linear-gradient(90deg, rgba(19,35,29,.82), rgba(19,35,29,.56) 46%, rgba(19,35,29,.18)), linear-gradient(0deg, rgba(19,35,29,.48), transparent 60%);
+  }
+  .hosp-hero__inner {
+    padding: clamp(48px, 6vw, 78px) 0 clamp(46px, 5.6vw, 76px);
+  }
+  .hosp-hero__content {
+    max-width: 680px;
+  }
+  .hosp-hero .hosp-eyebrow {
+    margin-bottom: 10px;
+    font-size: .74rem;
+    letter-spacing: .13em;
+  }
+  .hosp-hero h1 {
+    font-size: clamp(2.75rem, 4.35vw, 4.55rem);
+    line-height: 1.07;
+    max-width: 680px;
+  }
+  .hosp-hero__sub {
+    margin-top: 18px;
+    max-width: 590px;
+    font-size: clamp(.98rem, 1.1vw, 1.08rem);
+    line-height: 1.58;
+  }
+  .hosp-hero .hosp-actions {
+    margin-top: 26px;
+    gap: 10px;
+  }
+  .hosp-hero .hosp-btn {
+    min-height: 44px;
+    padding: .78rem 1.12rem;
+    font-size: .92rem;
+  }
+  .hosp-facts {
+    margin-top: 30px;
+    max-width: 780px;
+    gap: 16px;
+  }
+  .hosp-facts li {
+    border-top-color: rgba(251,247,239,.32);
+    color: rgba(251,247,239,.78);
+    font-size: .86rem;
+    line-height: 1.34;
+    padding-top: 10px;
+  }
+  @media (max-width: 640px) {
+    .hosp-hero {
+      min-height: 640px;
+      align-items: end;
+    }
+    .hosp-hero__inner {
+      padding: 64px 0 38px;
+    }
+    .hosp-hero h1 {
+      font-size: clamp(2.3rem, 10.5vw, 3.45rem);
+    }
+    .hosp-facts {
+      gap: 10px;
+      margin-top: 24px;
+    }
+  }
+
+  /* theme-consistency-final-sweep-20260603:
+     keep the approved hospitality structure, but bring repeated headings
+     below hero scale so the page matches Home/Dining hierarchy. */
+  .innate-hospitality-page .hosp-intro h2,
+  .innate-hospitality-page .hosp-section-head h2,
+  .innate-hospitality-page .hosp-section--recent .hosp-section-head h2,
+  .innate-hospitality-page .hosp-enquiry__intro h2,
+  .innate-hospitality-page .hosp-final h2 {
+    font-size: clamp(1.95rem, 3vw, 3.15rem);
+    line-height: 1.08;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+
+  .innate-hospitality-page .hosp-card h3,
+  .innate-hospitality-page .hosp-project h3,
+  .innate-hospitality-page .hosp-proof-card h3 {
+    font-size: clamp(1.35rem, 1.8vw, 1.8rem);
+    line-height: 1.12;
+  }
+
+  .innate-hospitality-page .hosp-faq-list details {
+    border-radius: 3px;
+  }
+</style>
+
+<div class="innate-hospitality-page">
+  <section class="hosp-hero">
+    <div class="hosp-hero__image" aria-hidden="true">
+      {% if section.settings.hero_image != blank %}
+        <img src="{{ section.settings.hero_image | image_url: width: 2200 }}" srcset="{{ section.settings.hero_image | image_url: width: 900 }} 900w, {{ section.settings.hero_image | image_url: width: 1600 }} 1600w, {{ section.settings.hero_image | image_url: width: 2400 }} 2400w" sizes="100vw" alt="{{ section.settings.hero_image.alt | default: 'Custom hospitality furniture in a Christchurch venue with dark timber table tops' | escape }}" loading="eager" fetchpriority="high">
+      {% else %}
+        <img src="https://cdn.shopify.com/s/files/1/0307/3094/4571/files/Cafe_Table_1_a2120841-a192-4dbc-b95e-d2d8fcdf1466.png?v=1743636155" alt="Custom timber cafe table made by Innate Furniture" loading="eager" fetchpriority="high">
+      {% endif %}
+    </div>
+    <div class="hosp-hero__inner hosp-wrap">
+      <div class="hosp-hero__content">
+        <p class="hosp-eyebrow">{{ section.settings.hero_eyebrow | default: 'Hospitality furniture NZ' }}</p>
+        <h1>{{ section.settings.hero_title | default: 'Custom hospitality furniture, made in New Zealand' }}</h1>
+        <p class="hosp-hero__sub">{{ section.settings.hero_text | default: 'Tables, bar leaners and fit-out pieces made to suit your space, your service, and the way people gather. Built to order in Christchurch using timber, steel and outdoor-suitable materials.' }}</p>
+        <div class="hosp-actions">
+          <a class="hosp-btn hosp-btn--primary" href="{{ section.settings.hero_primary_link | default: '#hospitality-enquiry' }}">{{ section.settings.hero_primary_label | default: 'Start a hospitality enquiry' }}</a>
+          <a class="hosp-btn hosp-btn--ghost" href="{{ section.settings.hero_secondary_link | default: '/collections/hospitality' }}">{{ section.settings.hero_secondary_label | default: 'View table options' }}</a>
+        </div>
+        <ul class="hosp-facts">
+          <li>{{ section.settings.hero_fact_1 | default: 'Made in Christchurch' }}</li>
+          <li>{{ section.settings.hero_fact_2 | default: 'Custom dimensions and finishes' }}</li>
+          <li>{{ section.settings.hero_fact_3 | default: 'Indoor and outdoor table options' }}</li>
+          <li>{{ section.settings.hero_fact_4 | default: 'Nationwide delivery available' }}</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--cream hosp-section--recent">
+    <div class="hosp-wrap hosp-intro">
+      <div>
+        <p class="hosp-eyebrow">Cafés, restaurants, bars, lodges and shared spaces</p>
+        <h2>Furniture for places people return to</h2>
+      </div>
+      <div class="hosp-copy">
+        <p>We build custom hospitality tables and commercial furniture for cafés, restaurants, bars, breweries, wineries, lodges, hotels and shared commercial spaces across New Zealand.</p>
+        <p>Most projects start with a practical question: what size, height, material and finish will work in the room? Send us your plans, photos, sketches or early brief and we can help shape the right pieces around the way the space will be used.</p>
+        <ul class="hosp-points">
+          <li>For venue owners, architects, designers and fit-out teams</li>
+          <li>Single hero pieces through to repeatable table runs</li>
+          <li>Sized around seating, service flow, material choice and care expectations</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head">
+        <p class="hosp-eyebrow">What we make</p>
+        <h2>Hospitality tables, bar leaners and commercial pieces</h2>
+        <p>Tables are usually the starting point. From there we can build bar leaners, benches, counters, shelving and other pieces to suit the project.</p>
+      </div>
+      <div class="hosp-grid">
+        <article class="hosp-card"><h3>Café tables</h3><p>Compact tables for cafés, bakeries, courtyards and flexible two-person settings. Made to size in square, round or custom formats.</p><div class="hosp-card__meta"><span>Common sizes: 600–800 mm round or square</span><span>Height: 730–740 mm</span></div><a class="hosp-card__link" href="/products/cafe-table">View café tables</a></article>
+        <article class="hosp-card"><h3>Restaurant tables</h3><p>Dining-height tables for restaurants, bistros, wine bars and full-service venues, built around your floor plan and service style.</p><div class="hosp-card__meta"><span>Common sizes: 1200 x 600 to 2100 x 900 mm</span><span>Seating: 4–8 people approx.</span></div><a class="hosp-card__link" href="/collections/dining-tables">View restaurant tables</a></article>
+        <article class="hosp-card"><h3>Bar leaners and high tables</h3><p>Standing-height or stool-height tables for bars, breweries, tasting rooms, casual dining and breakout spaces.</p><div class="hosp-card__meta"><span>Standard height: 1050 mm</span><span>Lower counter option: 900 mm</span></div><a class="hosp-card__link" href="/products/bar-leaner">View bar leaners</a></article>
+        <article class="hosp-card"><h3>Outdoor and alfresco tables</h3><p>Porcelain and steel tables for courtyards, patios, footpaths, wineries, lodges and outdoor hospitality areas. Normal outdoor care still applies.</p><div class="hosp-card__meta"><span>Dining and bar-height options</span><span>Low-maintenance porcelain options</span></div><a class="hosp-card__link" href="/products/alfresco-cafe-table">View outdoor tables</a></article>
+        <article class="hosp-card"><h3>Communal tables</h3><p>Larger tables for lodges, wineries, hotels, shared dining, commercial dining rooms and workplace crossover spaces.</p><div class="hosp-card__meta"><span>Common sizes: 2400–3600 mm long</span><span>Seating: 8–14 people approx.</span></div><a class="hosp-card__link" href="/collections/dining-tables">View communal tables</a></article>
+        <article class="hosp-card"><h3>Counters and fit-out pieces</h3><p>Timber benchtops, counters, shelving, butcher blocks and one-off commercial pieces when they fit the brief.</p><div class="hosp-card__meta"><span>Custom sizes and finishes</span><span>Built around the room</span></div><a class="hosp-card__link" href="/pages/timber-panels">View benchtops</a></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--cream">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head"><p class="hosp-eyebrow">Size guide</p><h2>Common hospitality table sizes</h2><p>These are starting points only. Chair width, table base, service style and walking space all affect the final layout.</p></div>
+      <div class="hosp-size-grid">
+        <article class="hosp-size"><h3>Café tables</h3><ul><li><strong>600 round or 600 × 600 mm</strong><span>2 people approx.</span></li><li><strong>700 round or 700 × 700 mm</strong><span>2–3 people approx.</span></li><li><strong>800 round or 800 × 800 mm</strong><span>3–4 people approx.</span></li></ul></article>
+        <article class="hosp-size"><h3>Restaurant tables</h3><ul><li><strong>1200 × 600 mm</strong><span>4 people approx.</span></li><li><strong>1400 × 700/800 mm</strong><span>4–6 people approx.</span></li><li><strong>1800 × 800 mm</strong><span>6–8 people approx.</span></li><li><strong>2100 × 900 mm</strong><span>8 people approx.</span></li></ul></article>
+        <article class="hosp-size"><h3>Bar leaners</h3><ul><li><strong>1050 mm high</strong><span>Standard bar leaner height</span></li><li><strong>900 mm high</strong><span>Lower counter or breakout height</span></li><li><strong>1800 × 800 × 1050 mm</strong><span>6–8 people approx.</span></li></ul></article>
+        <article class="hosp-size"><h3>Planning notes</h3><ul><li><strong>600 mm</strong><span>Approx. per seated diner</span></li><li><strong>450–550 mm</strong><span>Behind a seated chair</span></li><li><strong>900 mm</strong><span>For staff service corridors</span></li></ul></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--dark">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head"><p class="hosp-eyebrow">Materials and finishes</p><h2>Materials chosen around the job</h2><p>A café table, an outdoor courtyard table and a large shared dining table do different work. We help choose the material, base and finish around the way the piece will be used.</p></div>
+      <div class="hosp-materials">
+        <article class="hosp-material hosp-material--timber"><h3>Timber</h3><p>New Zealand timber for warm, repairable commercial tables. Best for indoor hospitality, covered spaces and pieces where natural character matters.</p></article>
+        <article class="hosp-material hosp-material--steel"><h3>Steel</h3><p>Powder-coated steel bases for strength, stability and clean commercial detailing. Standard black works for many projects, with other finishes available on request.</p></article>
+        <article class="hosp-material hosp-material--porcelain"><h3>Porcelain and steel for alfresco settings</h3><p>Italian porcelain with steel for outdoor café tables, courtyards and hospitality settings where a low-maintenance surface is useful. Normal outdoor care still applies.</p></article>
+        <article class="hosp-material hosp-material--finish"><h3>Finish and colour</h3><p>Timber colour, oil finish, steel colour and surface choice can be matched to the project where practical. Samples are useful in the venue’s own light.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--proof">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head"><p class="hosp-eyebrow">Daily service</p><h2>Built for daily service</h2><p>Hospitality furniture works harder than residential furniture. Tables are moved, cleaned, leaned on, spilled on and used all day.</p></div>
+      <div class="hosp-proof">
+        <article class="hosp-proof-card"><h3>Practical by design</h3><p>We design around stable bases, solid materials, clean detailing and finishes chosen for the setting. Natural materials need normal care, so we set clear expectations before anything is built.</p></article>
+        <article class="hosp-proof-card"><h3>Built around the project</h3><p>Useful commercial work starts with the room, the seating plan and the service flow. We can work from plans, photos or an early brief, then refine sizes, bases, materials and delivery details before production.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--cream hosp-section--process">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head"><p class="hosp-eyebrow">Process</p><h2>How a hospitality project works</h2></div>
+      <div class="hosp-process">
+        <article class="hosp-step"><h3>Send the brief</h3><p>Plans, dimensions, photos, sketches or early ideas are enough to start.</p></article>
+        <article class="hosp-step"><h3>Shape the right pieces</h3><p>We refine table sizes, base style, material choice, finishes and practical service details.</p></article>
+        <article class="hosp-step"><h3>Quote and confirm</h3><p>We confirm dimensions, materials, finish, quantity, timing and delivery before build.</p></article>
+        <article class="hosp-step"><h3>Made in Christchurch</h3><p>Your furniture is built to order in our Christchurch workshop.</p></article>
+        <article class="hosp-step"><h3>Delivery support</h3><p>Nationwide delivery is available, with install support discussed where appropriate.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--cream">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head"><p class="hosp-eyebrow">Recent work</p><h2>Hospitality and commercial work in use</h2><p>Real project examples are often the clearest starting point. These pieces were made around specific spaces, quantities, service needs and finish requirements.</p></div>
+      <div class="hosp-project-grid" aria-label="Recent hospitality and commercial project examples">
+        <article class="hosp-project">
+          <div class="hosp-project__media"><img src="{{ 'innate-commercial-gin-gin-new-regent.jpg' | asset_url }}" alt="Gin Gin exterior hospitality tables and benches on New Regent Street" loading="lazy"></div>
+          <div class="hosp-project__body"><p class="hosp-project__eyebrow">Christchurch hospitality</p><h3>Gin Gin</h3><p class="hosp-project__meta">6 exterior table-and-bench sets.</p><p>Outdoor hospitality pieces for a New Regent Street setting, made for daily service and a compact public-facing space.</p></div>
+        </article>
+        <article class="hosp-project">
+          <div class="hosp-project__media"><img src="{{ 'innate-commercial-francescas-kitchen-pizza-oven.jpg' | asset_url }}" alt="Francesca’s Italian Kitchen restaurant interior with custom rimu café tables" loading="lazy"></div>
+          <div class="hosp-project__body"><p class="hosp-project__eyebrow">Restaurant tables</p><h3>Francesca’s Italian Kitchen</h3><p class="hosp-project__meta">21 custom rimu café tables.</p><p>Custom café tables with black bases for a busy restaurant dining room, sized and finished around the venue.</p></div>
+        </article>
+        <article class="hosp-project">
+          <div class="hosp-project__media">
+            {% if section.settings.hero_image != blank %}
+              <img src="{{ section.settings.hero_image | image_url: width: 1000 }}" alt="Kokomo hospitality space with darkwash timber table tops" loading="lazy">
+            {% else %}
+              <img src="https://cdn.shopify.com/s/files/1/0307/3094/4571/files/Kokomo.heic" alt="Kokomo hospitality space with darkwash timber table tops" loading="lazy">
+            {% endif %}
+          </div>
+          <div class="hosp-project__body"><p class="hosp-project__eyebrow">Fit-out pieces</p><h3>Kokomo</h3><p class="hosp-project__meta">23 darkwash timber table tops.</p><p>Darkwash timber table tops for a relaxed hospitality space at The Welder. Project details available on request.</p></div>
+        </article>
+      </div>
+      <div class="hosp-proof-strip"><strong>Also supplied:</strong> custom timber furniture through Aitkens for a Christchurch stadium project, plus commercial work for public-facing and shared spaces. Additional project details available on request.</div>
+    </div>
+  </section>
+
+  <section class="hosp-section hosp-section--cream">
+    <div class="hosp-wrap">
+      <div class="hosp-section-head"><p class="hosp-eyebrow">{{ section.settings.faq_eyebrow | default: 'FAQ' }}</p><h2>{{ section.settings.faq_title | default: 'Frequently asked' }}</h2></div>
+      <div class="hosp-faq-list">
+        <details><summary>{{ section.settings.faq_1_question | default: 'Do you make custom café and restaurant tables?' }}</summary><p>{{ section.settings.faq_1_answer | default: 'Yes. Most hospitality tables are made to order, so dimensions, height, top shape, timber, steel colour and finish can be adjusted around the project.' }}</p></details>
+        <details><summary>{{ section.settings.faq_2_question | default: 'What are common café table sizes?' }}</summary><p>{{ section.settings.faq_2_answer | default: 'Common starting points are 600 round, 700 round, 800 round, 600 x 600 mm, 700 x 700 mm and 800 x 800 mm. The right size depends on chair width, service style and layout.' }}</p></details>
+        <details><summary>{{ section.settings.faq_3_question | default: 'What height should a bar leaner be?' }}</summary><p>{{ section.settings.faq_3_answer | default: 'A standard bar leaner is usually around 1050 mm high and pairs with 750 mm stools. A lower 900 mm counter-height table can work with 650 mm stools.' }}</p></details>
+        <details><summary>{{ section.settings.faq_4_question | default: 'Can you make multiple matching tables?' }}</summary><p>{{ section.settings.faq_4_answer | default: 'Yes. We can build repeatable tables for a venue while still adjusting dimensions, bases or finishes to suit different parts of the space.' }}</p></details>
+        <details><summary>{{ section.settings.faq_5_question | default: 'Are your tables suitable for outdoor hospitality spaces?' }}</summary><p>{{ section.settings.faq_5_answer | default: 'For outdoor settings we usually recommend porcelain and steel, or carefully chosen timber options depending on exposure and maintenance expectations. Outdoor timber is natural and needs normal care.' }}</p></details>
+        <details><summary>{{ section.settings.faq_6_question | default: 'Do you deliver outside Christchurch?' }}</summary><p>{{ section.settings.faq_6_answer | default: 'Yes, nationwide delivery is available. We can discuss delivery or install requirements when quoting.' }}</p></details>
+      </div>
+    </div>
+  </section>
+
+  <div class="hosp-reviews-slot" data-hospitality-reviews-slot></div>
+
+  <section id="hospitality-enquiry" class="hosp-section hosp-section--dark">
+    <div class="hosp-wrap hosp-enquiry">
+      <div class="hosp-enquiry__intro">
+        <p class="hosp-eyebrow">{{ section.settings.final_eyebrow | default: 'Start the brief' }}</p>
+        <h2>{{ section.settings.final_title | default: 'Planning a hospitality space?' }}</h2>
+        <p>{{ section.settings.final_text | default: 'Send through your plans, dimensions, photos or early ideas. We can help work out what sizes, materials and finishes make sense before anything is built.' }}</p>
+        <div class="hosp-contact-list" aria-label="Hospitality contact details">
+          <a class="hosp-contact-link" href="tel:+64273502083"><span>Call Guido</span><span>{{ section.settings.contact_phone | default: '027 350 2083' }}</span></a>
+          <a class="hosp-contact-link" href="mailto:{{ section.settings.contact_email | default: 'hello@innatefurniture.co.nz' }}"><span>Email</span><span>{{ section.settings.contact_email | default: 'hello@innatefurniture.co.nz' }}</span></a>
+        </div>
+      </div>
+      {% form 'contact', class: 'hosp-enquiry-form' %}
+        {%- if form.posted_successfully? -%}
+          <p class="hosp-form-success">{{ section.settings.form_success_text | default: 'Thanks — we’ll be in touch shortly.' }}</p>
+        {%- else -%}
+          {%- if form.errors -%}<div class="hosp-form-errors">{{ form.errors | default_errors }}</div>{%- endif -%}
+          <input type="hidden" name="contact[Subject]" value="{{ section.settings.form_subject | default: 'Hospitality project enquiry' }}">
+          <input type="text" name="contact[name]" placeholder="{{ section.settings.form_name_placeholder | default: 'Your name*' }}" autocomplete="name" required>
+          <input type="email" name="contact[email]" placeholder="{{ section.settings.form_email_placeholder | default: 'Email*' }}" autocomplete="email" required>
+          <input type="tel" name="contact[phone]" placeholder="{{ section.settings.form_phone_placeholder | default: 'Phone' }}" autocomplete="tel">
+          <input type="text" name="contact[Business or venue]" placeholder="{{ section.settings.form_business_placeholder | default: 'Business or venue' }}">
+          <select class="hosp-form-wide" name="contact[Project type]">
+            <option value="">{{ section.settings.form_project_placeholder | default: 'Project type' }}</option>
+            <option>Café tables</option>
+            <option>Restaurant tables</option>
+            <option>Bar leaners / high tables</option>
+            <option>Outdoor / alfresco</option>
+            <option>Fit-out / custom pieces</option>
+            <option>Other</option>
+          </select>
+          <textarea class="hosp-form-wide" name="contact[body]" placeholder="{{ section.settings.form_message_placeholder | default: 'Tell us what you know: venue type, location, quantity, timing, dimensions, materials, finish direction or links to plans/photos.' }}" rows="6"></textarea>
+          <button type="submit">{{ section.settings.form_button_label | default: 'Send hospitality enquiry' }}</button>
+        {%- endif -%}
+      {% endform %}
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var attempts = 0;
+    function moveReviews() {
+      attempts += 1;
+      var reviewSlot = document.querySelector('[data-hospitality-reviews-slot]');
+      var reviewSection = document.querySelector('.template-sufix-hospitality-furniture .shopify-section.apps');
+      if (reviewSlot && reviewSection && !reviewSlot.contains(reviewSection)) {
+        reviewSlot.appendChild(reviewSection);
+        return;
+      }
+      if (attempts < 20) {
+        window.setTimeout(moveReviews, 250);
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', moveReviews, { once: true });
+    } else {
+      moveReviews();
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Hospitality furniture",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_eyebrow",
+      "label": "Hero eyebrow",
+      "default": "Hospitality furniture NZ"
+    },
+    {
+      "type": "text",
+      "id": "hero_title",
+      "label": "Hero title",
+      "default": "Custom hospitality furniture, made in New Zealand"
+    },
+    {
+      "type": "textarea",
+      "id": "hero_text",
+      "label": "Hero text",
+      "default": "Tables, bar leaners and fit-out pieces made to suit your space, your service, and the way people gather. Built to order in Christchurch using timber, steel and outdoor-suitable materials."
+    },
+    {
+      "type": "text",
+      "id": "hero_primary_label",
+      "label": "Primary button label",
+      "default": "Start a hospitality enquiry"
+    },
+    {
+      "type": "url",
+      "id": "hero_primary_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "hero_secondary_label",
+      "label": "Secondary button label",
+      "default": "View table options"
+    },
+    {
+      "type": "url",
+      "id": "hero_secondary_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "text",
+      "id": "hero_fact_1",
+      "label": "Hero proof point 1",
+      "default": "Made in Christchurch"
+    },
+    {
+      "type": "text",
+      "id": "hero_fact_2",
+      "label": "Hero proof point 2",
+      "default": "Custom dimensions and finishes"
+    },
+    {
+      "type": "text",
+      "id": "hero_fact_3",
+      "label": "Hero proof point 3",
+      "default": "Indoor and outdoor table options"
+    },
+    {
+      "type": "text",
+      "id": "hero_fact_4",
+      "label": "Hero proof point 4",
+      "default": "Nationwide delivery available"
+    },
+    {
+      "type": "header",
+      "content": "FAQ"
+    },
+    {
+      "type": "text",
+      "id": "faq_eyebrow",
+      "label": "FAQ eyebrow",
+      "default": "FAQ"
+    },
+    {
+      "type": "text",
+      "id": "faq_title",
+      "label": "FAQ title",
+      "default": "Frequently asked"
+    },
+    {
+      "type": "text",
+      "id": "faq_1_question",
+      "label": "FAQ 1 question",
+      "default": "Do you make custom café and restaurant tables?"
+    },
+    {
+      "type": "textarea",
+      "id": "faq_1_answer",
+      "label": "FAQ 1 answer",
+      "default": "Yes. Most hospitality tables are made to order, so dimensions, height, top shape, timber, steel colour and finish can be adjusted around the project."
+    },
+    {
+      "type": "text",
+      "id": "faq_2_question",
+      "label": "FAQ 2 question",
+      "default": "What are common café table sizes?"
+    },
+    {
+      "type": "textarea",
+      "id": "faq_2_answer",
+      "label": "FAQ 2 answer",
+      "default": "Common starting points are 600 round, 700 round, 800 round, 600 x 600 mm, 700 x 700 mm and 800 x 800 mm. The right size depends on chair width, service style and layout."
+    },
+    {
+      "type": "text",
+      "id": "faq_3_question",
+      "label": "FAQ 3 question",
+      "default": "What height should a bar leaner be?"
+    },
+    {
+      "type": "textarea",
+      "id": "faq_3_answer",
+      "label": "FAQ 3 answer",
+      "default": "A standard bar leaner is usually around 1050 mm high and pairs with 750 mm stools. A lower 900 mm counter-height table can work with 650 mm stools."
+    },
+    {
+      "type": "text",
+      "id": "faq_4_question",
+      "label": "FAQ 4 question",
+      "default": "Can you make multiple matching tables?"
+    },
+    {
+      "type": "textarea",
+      "id": "faq_4_answer",
+      "label": "FAQ 4 answer",
+      "default": "Yes. We can build repeatable tables for a venue while still adjusting dimensions, bases or finishes to suit different parts of the space."
+    },
+    {
+      "type": "text",
+      "id": "faq_5_question",
+      "label": "FAQ 5 question",
+      "default": "Are your tables suitable for outdoor hospitality spaces?"
+    },
+    {
+      "type": "textarea",
+      "id": "faq_5_answer",
+      "label": "FAQ 5 answer",
+      "default": "For outdoor settings we usually recommend porcelain and steel, or carefully chosen timber options depending on exposure and maintenance expectations. Outdoor timber is natural and needs normal care."
+    },
+    {
+      "type": "text",
+      "id": "faq_6_question",
+      "label": "FAQ 6 question",
+      "default": "Do you deliver outside Christchurch?"
+    },
+    {
+      "type": "textarea",
+      "id": "faq_6_answer",
+      "label": "FAQ 6 answer",
+      "default": "Yes, nationwide delivery is available. We can discuss delivery or install requirements when quoting."
+    },
+    {
+      "type": "header",
+      "content": "Final call to action"
+    },
+    {
+      "type": "text",
+      "id": "final_eyebrow",
+      "label": "Final eyebrow",
+      "default": "Start the brief"
+    },
+    {
+      "type": "text",
+      "id": "final_title",
+      "label": "Final title",
+      "default": "Planning a hospitality space?"
+    },
+    {
+      "type": "textarea",
+      "id": "final_text",
+      "label": "Final text",
+      "default": "Send through your plans, dimensions, photos or early ideas. We can help work out what sizes, materials and finishes make sense before anything is built."
+    },
+    {
+      "type": "text",
+      "id": "contact_phone",
+      "label": "Phone number",
+      "default": "027 350 2083"
+    },
+    {
+      "type": "text",
+      "id": "contact_email",
+      "label": "Email address",
+      "default": "hello@innatefurniture.co.nz"
+    },
+    {
+      "type": "text",
+      "id": "form_subject",
+      "label": "Email subject",
+      "default": "Hospitality project enquiry"
+    },
+    {
+      "type": "text",
+      "id": "form_name_placeholder",
+      "label": "Name placeholder",
+      "default": "Your name*"
+    },
+    {
+      "type": "text",
+      "id": "form_email_placeholder",
+      "label": "Email placeholder",
+      "default": "Email*"
+    },
+    {
+      "type": "text",
+      "id": "form_phone_placeholder",
+      "label": "Phone placeholder",
+      "default": "Phone"
+    },
+    {
+      "type": "text",
+      "id": "form_business_placeholder",
+      "label": "Business or venue placeholder",
+      "default": "Business or venue"
+    },
+    {
+      "type": "text",
+      "id": "form_project_placeholder",
+      "label": "Project type placeholder",
+      "default": "Project type"
+    },
+    {
+      "type": "textarea",
+      "id": "form_message_placeholder",
+      "label": "Message placeholder",
+      "default": "Tell us what you know: venue type, location, quantity, timing, dimensions, materials, finish direction or links to plans/photos."
+    },
+    {
+      "type": "text",
+      "id": "form_button_label",
+      "label": "Submit button label",
+      "default": "Send hospitality enquiry"
+    },
+    {
+      "type": "text",
+      "id": "form_success_text",
+      "label": "Success message",
+      "default": "Thanks — we’ll be in touch shortly."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Hospitality furniture"
+    }
+  ]
+}
+{% endschema %}

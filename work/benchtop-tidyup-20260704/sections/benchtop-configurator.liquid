@@ -1,0 +1,249 @@
+{{ 'innate-benchtop-configurator.css' | asset_url | stylesheet_tag }}
+{{ 'page-benchtops-concept.css' | asset_url | stylesheet_tag }}
+
+<style>
+  .bench-configurator-section {
+    background: #fbf8f1;
+    padding: clamp(42px, 5vw, 76px) clamp(16px, 5vw, 64px) clamp(58px, 7vw, 106px);
+    scroll-margin-top: 110px;
+  }
+  .bench-configurator-section__intro {
+    align-items: start;
+    display: grid;
+    gap: clamp(18px, 4vw, 54px);
+    grid-template-columns: minmax(0, .92fr) minmax(300px, .58fr);
+    max-width: 1320px;
+    margin: 0 auto clamp(20px, 3vw, 34px);
+  }
+  .bench-configurator-section__eyebrow {
+    margin: 0 0 10px;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .72rem;
+    font-weight: 750;
+    color: #283229;
+  }
+  .bench-configurator-section__intro h2 {
+    margin: 0;
+    font-family: Fraunces, Georgia, serif;
+    font-size: clamp(2.15rem, 4vw, 4.2rem);
+    font-weight: 420;
+    line-height: .98;
+    letter-spacing: 0;
+    color: #283229;
+  }
+  .bench-configurator-section__subheading {
+    max-width: 640px;
+    margin: 14px 0 0;
+    color: rgba(15, 15, 14, .70);
+    font-size: clamp(.98rem, 1.1vw, 1.08rem);
+    line-height: 1.58;
+  }
+  .bench-configurator-section__guide {
+    display: grid;
+    gap: 1px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    gap: 10px;
+  }
+  .bench-configurator-section__guide li {
+    background: rgba(255, 253, 248, .74);
+    border: 1px solid rgba(40, 50, 41, .12);
+    color: rgba(15, 15, 14, .72);
+    display: grid;
+    gap: 4px;
+    min-height: 78px;
+    padding: 15px;
+  }
+  .bench-configurator-section__guide span {
+    color: #8f6148;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .bench-configurator-section__guide strong {
+    color: #283229;
+    font-size: .95rem;
+    line-height: 1.25;
+  }
+  .bench-configurator-section__mount {
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  @media (max-width: 760px) {
+    .bench-configurator-section {
+      padding: 28px 10px 34px;
+      scroll-margin-top: 112px;
+    }
+    .bench-configurator-section__intro {
+      grid-template-columns: 1fr;
+      margin-bottom: 14px;
+    }
+    .bench-configurator-section__intro h2 {
+      font-size: clamp(1.9rem, 9.5vw, 2.75rem);
+      line-height: 1.02;
+    }
+    .bench-configurator-section__subheading {
+      margin-top: 10px;
+      font-size: .95rem;
+      line-height: 1.48;
+    }
+    .bench-configurator-section__guide {
+      grid-template-columns: 1fr 1fr;
+    }
+    .bench-configurator-section__guide li {
+      min-height: 74px;
+      padding: 12px;
+    }
+  }
+  .bench-configurator-section__fallback {
+    max-width: 780px;
+    margin: 14px auto 0;
+    text-align: center;
+    font-size: .88rem;
+    color: rgba(15, 15, 14, .62);
+  }
+  .bench-configurator-section__fallback a { text-decoration: underline; }
+</style>
+
+{%- liquid
+  assign api_base = section.settings.api_base | default: 'https://innate-mission-control.vercel.app'
+  assign asset_base = section.settings.asset_base | default: 'https://innate-mission-control.vercel.app'
+-%}
+
+<section id="innate-benchtop-configurator-section" class="bench-configurator-section bench-configurator-section--{{ section.id }}" aria-labelledby="bench-configurator-heading-{{ section.id }}">
+  <div class="bench-configurator-section__intro">
+    <div>
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="bench-configurator-section__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h2 id="bench-configurator-heading-{{ section.id }}">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <div class="bench-configurator-section__subheading">{{ section.settings.subheading }}</div>
+      {%- endif -%}
+    </div>
+    <ol class="bench-configurator-section__guide" aria-label="Quote builder includes">
+      <li><span>01</span><strong>Size and thickness</strong></li>
+      <li><span>02</span><strong>Material and finish</strong></li>
+      <li><span>03</span><strong>Cut-outs and pieces</strong></li>
+      <li><span>04</span><strong>Delivery and quote</strong></li>
+    </ol>
+  </div>
+
+  <div
+    id="innate-benchtop-configurator"
+    class="bench-configurator-section__mount"
+    data-api-base="{{ api_base | escape }}"
+    data-asset-base="{{ asset_base | escape }}"
+  ></div>
+
+</section>
+
+<script>
+  (function () {
+    var targetId = 'innate-benchtop-configurator-section';
+    function headerOffset() {
+      var fixedBars = Array.prototype.slice.call(document.querySelectorAll('.bar.fixed, .shopify-section-header-sticky, header[style*="fixed"], sticky-header'));
+      var max = 0;
+      fixedBars.forEach(function (el) {
+        var style = window.getComputedStyle(el);
+        var rect = el.getBoundingClientRect();
+        if ((style.position === 'fixed' || style.position === 'sticky') && rect.bottom > 0 && rect.top < 160) {
+          max = Math.max(max, rect.bottom);
+        }
+      });
+      return Math.max(96, Math.min(150, max + 18));
+    }
+    function scrollToBuilder(event) {
+      var link = event.target && event.target.closest ? event.target.closest('a[href="#' + targetId + '"]') : null;
+      if (!link) return;
+      var target = document.getElementById(targetId);
+      if (!target) return;
+      event.preventDefault();
+      var y = target.getBoundingClientRect().top + window.pageYOffset - headerOffset();
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search + '#' + targetId);
+      }
+    }
+    document.addEventListener('click', scrollToBuilder, true);
+  })();
+</script>
+<script type="module" src="{{ 'innate-benchtop-configurator.js' | asset_url }}"></script>
+<script>
+  (function () {
+    var builderHash = '#innate-benchtop-configurator-section';
+    if (window.location.hash === builderHash) return;
+
+    var attempts = 0;
+    var maxAttempts = 24;
+    function cancelInitialAddressFocus() {
+      attempts += 1;
+      var active = document.activeElement;
+      var addressInput = active && active.classList && active.classList.contains('addr-search__input');
+
+      if (addressInput) {
+        active.blur();
+        if (window.pageYOffset > 300) {
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+      }
+
+      if (attempts < maxAttempts) {
+        window.setTimeout(cancelInitialAddressFocus, 150);
+      }
+    }
+
+    window.setTimeout(cancelInitialAddressFocus, 60);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Benchtop configurator",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Benchtop quote builder"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Design and price your custom timber benchtop"
+    },
+    {
+      "type": "richtext",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "<p>Set size, timber, finish, cut-outs and delivery in one place. The quote is indicative until we confirm final details, but it gives you a useful starting point.</p>"
+    },
+    {
+      "type": "text",
+      "id": "api_base",
+      "label": "Backend API base URL",
+      "default": "https://innate-mission-control.vercel.app"
+    },
+    {
+      "type": "text",
+      "id": "asset_base",
+      "label": "Remote asset base URL for timber photos",
+      "default": "https://innate-mission-control.vercel.app"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benchtop configurator"
+    }
+  ]
+}
+{% endschema %}

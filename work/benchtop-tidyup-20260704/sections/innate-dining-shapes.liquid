@@ -1,0 +1,52 @@
+<div class="innate-dining-v16 innate-dining-v16--after-products" data-dining-editor-section="shapes">
+  <section class="d16-shapes" id="dining-shapes" aria-label="{{ section.settings.aria_label | default: section.settings.heading | escape }}" data-draft="v29-enquiry-confirmation">
+    <div class="d16-wrap">
+      <div class="d16-section-head">
+        <div><h2 class="d16-display">{{ section.settings.heading }}</h2></div>
+        {%- if section.settings.text != blank -%}<p class="d16-copy">{{ section.settings.text }}</p>{%- endif -%}
+      </div>
+      <div class="d16-shape-grid">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'shape' -%}
+            {%- liquid
+              assign shape_type = block.settings.shape_type | default: 'rectangle'
+              assign shape_image = 'innate-rimu-tabletop-rectangle.webp'
+              case shape_type
+                when 'round'
+                  assign shape_image = 'innate-rimu-tabletop-circle.webp'
+                when 'pebble'
+                  assign shape_image = 'innate-rimu-tabletop-pebble.webp'
+                when 'danish'
+                  assign shape_image = 'innate-rimu-tabletop-danish.webp'
+                when 'pill'
+                  assign shape_image = 'innate-rimu-tabletop-pill.webp'
+              endcase
+            -%}
+            <article class="d16-shape" {{ block.shopify_attributes }}><div><div class="d16-shape-art d16-shape-art--{{ shape_type }}">
+              <img class="d16-shape-img" src="{{ shape_image | asset_url }}" alt="{{ block.settings.title | default: 'Tabletop shape' | escape }} tabletop shape" width="900" height="437" loading="lazy" decoding="async">
+            </div><h3>{{ block.settings.title | default: 'Tabletop shape' }}</h3><p>{{ block.settings.text }}</p></div></article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Dining shapes",
+  "settings": [
+    {"type":"text","id":"aria_label","label":"Section accessibility label","default":"Tabletop shapes"},
+    {"type":"text","id":"heading","label":"Heading","default":"Tabletop shapes"},
+    {"type":"textarea","id":"text","label":"Text","default":"Most tables are rectangular, but we can make yours almost any shape. Here are a few common starting points."}
+  ],
+  "blocks": [
+    {"type":"shape","name":"Shape card","settings":[
+      {"type":"select","id":"shape_type","label":"Shape drawing","default":"rectangle","options":[{"value":"rectangle","label":"Rectangle"},{"value":"round","label":"Round"},{"value":"pebble","label":"Pebble"},{"value":"danish","label":"Danish oval"},{"value":"pill","label":"Pill"},{"value":"custom","label":"Custom"}]},
+      {"type":"text","id":"title","label":"Card title","default":"Rectangle"},
+      {"type":"textarea","id":"text","label":"Card text","default":"Straight sides and softened corners. The most flexible starting point for everyday family seating, and usually the simplest shape to keep the starting price down."}
+    ]}
+  ],
+  "presets": [{"name":"Dining shapes"}]
+}
+{% endschema %}

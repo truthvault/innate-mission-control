@@ -1,0 +1,52 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "type": "header",
+  "name": "t:sections.header-group.name",
+  "sections": {
+    "announcement_bar_Phfawm": {
+      "type": "announcement-bar",
+      "settings": {
+        "home_page_only": false,
+        "top_banner_text": "Custom furniture lead time: approx. 6-8 weeks. Need it sooner? Let us know.",
+        "announcement_link": "shopify://pages/contact",
+        "color_announcement_text": "#f3f0ee",
+        "color_announcement_bg": "#333533"
+      }
+    },
+    "header": {
+      "type": "header",
+      "custom_css": [],
+      "settings": {
+        "main_nav_linklist": "alternate-header-nav",
+        "show_main_menu_on_mobile": true,
+        "menu_font_size": 14,
+        "menu_letter_spacing": 0,
+        "menu_text_transform": "uppercase",
+        "menu_font_weight": "bold",
+        "side_nav_linklist": "",
+        "enable_side_nav_text": false,
+        "show_social_icons": true,
+        "enable_transparent_header": false,
+        "transparent_header_text_color": "#121212",
+        "enable_sticky_header": true,
+        "enable_search": true,
+        "enable_account": true,
+        "enable_cart": true,
+        "show_language_selector": false,
+        "show_country_selector": false
+      }
+    }
+  },
+  "order": [
+    "announcement_bar_Phfawm",
+    "header"
+  ]
+}

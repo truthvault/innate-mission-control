@@ -1,0 +1,542 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+<div class="bench-page bench-page--{{ section.id }}" data-bench-section data-section-id="{{ section.id }}">
+
+  {%- comment -%} ── Configurator CTA ─────────────────────────────────────── {%- endcomment -%}
+  {%- if section.settings.show_cta_block -%}
+  <section class="bench-cta">
+    <div class="bench-cta__inner">
+      {%- if section.settings.cta_heading != blank -%}
+        {%- assign cta_heading_clean = section.settings.cta_heading | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h2 class="bench-display bench-cta__heading">{{ cta_heading_clean }}</h2>
+      {%- endif -%}
+
+      {%- if section.settings.cta_sub != blank -%}
+        <div class="bench-cta__sub">{{ section.settings.cta_sub }}</div>
+      {%- endif -%}
+
+      {%- if section.settings.cta_url != blank and section.settings.cta_label != blank -%}
+        <p class="bench-cta__action">
+          <a class="bench-cta__btn"
+             href="{{ section.settings.cta_url }}"
+             {% if section.settings.cta_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}>
+            <span class="bench-cta__btn-label">{{ section.settings.cta_label | escape }}</span>
+            <span class="bench-cta__btn-arrow" aria-hidden="true">→</span>
+          </a>
+        </p>
+      {%- endif -%}
+
+      {%- if section.settings.cta_caption != blank -%}
+        <p class="bench-cta__caption">{{ section.settings.cta_caption | escape }}</p>
+      {%- endif -%}
+    </div>
+  </section>
+  {%- endif -%}
+
+  {%- comment -%} ── Timber species — three editorial spreads ─────────────── {%- endcomment -%}
+  {%- if section.settings.show_species_block -%}
+  <section class="bench-species">
+    {%- if section.settings.species_anchor_id != blank -%}
+      <div id="{{ section.settings.species_anchor_id }}" class="bench-species__anchor" aria-hidden="true"></div>
+    {%- endif -%}
+    <header class="bench-species__head">
+      <p class="bench-eyebrow">{{ section.settings.species_eyebrow | default: 'The timbers' | escape }}</p>
+      {%- assign species_heading_clean = section.settings.species_heading | replace: '<p>', '' | replace: '</p>', '' -%}
+      <h2 class="bench-display bench-species__heading">{{ species_heading_clean }}</h2>
+      {%- if section.settings.species_subhead != blank -%}
+        <div class="bench-species__sub">{{ section.settings.species_subhead }}</div>
+      {%- endif -%}
+    </header>
+
+    <article class="bench-spread bench-spread--media-left">
+      <figure class="bench-spread__media">
+        {%- if section.settings.feature_asset_filename != blank -%}
+          <img
+            class="bench-spread__photo"
+            src="{{ section.settings.feature_asset_filename | asset_url }}"
+            alt="{{ section.settings.feature_photo_alt | escape }}"
+            loading="lazy"
+            decoding="async"
+            width="2048"
+            height="1024"
+          />
+        {%- else -%}
+          <img
+            class="bench-spread__photo"
+            src="{{ section.settings.feature_photo_url }}"
+            alt="{{ section.settings.feature_photo_alt | escape }}"
+            loading="lazy"
+            decoding="async"
+            width="2048"
+            height="1024"
+          />
+        {%- endif -%}
+      </figure>
+      <div class="bench-spread__body">
+        <p class="bench-eyebrow">{{ section.settings.feature_origin | escape }}{%- if section.settings.feature_latin != blank %} · {{ section.settings.feature_latin | escape }}{%- endif -%}</p>
+        {%- assign feature_name_clean = section.settings.feature_name | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h3 class="bench-display bench-spread__name">{{ feature_name_clean }}</h3>
+        {%- if section.settings.feature_text != blank -%}
+          <div class="bench-spread__text">{{ section.settings.feature_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.feature_meta != blank -%}
+          <p class="bench-spread__meta">{{ section.settings.feature_meta | escape }}</p>
+        {%- endif -%}
+      </div>
+    </article>
+
+    <article class="bench-spread bench-spread--media-right">
+      <figure class="bench-spread__media">
+        {%- if section.settings.support_a_asset_filename != blank -%}
+          <img
+            class="bench-spread__photo"
+            src="{{ section.settings.support_a_asset_filename | asset_url }}"
+            alt="{{ section.settings.support_a_photo_alt | escape }}"
+            loading="lazy"
+            decoding="async"
+            width="2048"
+            height="1024"
+          />
+        {%- else -%}
+          <img
+            class="bench-spread__photo"
+            src="{{ section.settings.support_a_photo_url }}"
+            alt="{{ section.settings.support_a_photo_alt | escape }}"
+            loading="lazy"
+            decoding="async"
+            width="2048"
+            height="1024"
+          />
+        {%- endif -%}
+      </figure>
+      <div class="bench-spread__body">
+        <p class="bench-eyebrow">{{ section.settings.support_a_origin | escape }}{%- if section.settings.support_a_latin != blank %} · {{ section.settings.support_a_latin | escape }}{%- endif -%}</p>
+        {%- assign support_a_name_clean = section.settings.support_a_name | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h3 class="bench-display bench-spread__name">{{ support_a_name_clean }}</h3>
+        {%- if section.settings.support_a_text != blank -%}
+          <div class="bench-spread__text">{{ section.settings.support_a_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.support_a_meta != blank -%}
+          <p class="bench-spread__meta">{{ section.settings.support_a_meta | escape }}</p>
+        {%- endif -%}
+      </div>
+    </article>
+
+    <article class="bench-spread bench-spread--media-left">
+      <figure class="bench-spread__media">
+        {%- if section.settings.support_b_asset_filename != blank -%}
+          <img
+            class="bench-spread__photo"
+            src="{{ section.settings.support_b_asset_filename | asset_url }}"
+            alt="{{ section.settings.support_b_photo_alt | escape }}"
+            loading="lazy"
+            decoding="async"
+            width="2048"
+            height="1024"
+          />
+        {%- else -%}
+          <img
+            class="bench-spread__photo"
+            src="{{ section.settings.support_b_photo_url }}"
+            alt="{{ section.settings.support_b_photo_alt | escape }}"
+            loading="lazy"
+            decoding="async"
+            width="2048"
+            height="1024"
+          />
+        {%- endif -%}
+      </figure>
+      <div class="bench-spread__body">
+        <p class="bench-eyebrow">{{ section.settings.support_b_origin | escape }}{%- if section.settings.support_b_latin != blank %} · {{ section.settings.support_b_latin | escape }}{%- endif -%}</p>
+        {%- assign support_b_name_clean = section.settings.support_b_name | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h3 class="bench-display bench-spread__name">{{ support_b_name_clean }}</h3>
+        {%- if section.settings.support_b_text != blank -%}
+          <div class="bench-spread__text">{{ section.settings.support_b_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.support_b_meta != blank -%}
+          <p class="bench-spread__meta">{{ section.settings.support_b_meta | escape }}</p>
+        {%- endif -%}
+      </div>
+    </article>
+  </section>
+  {%- endif -%}
+
+  {%- comment -%} ── How it works ─────────────────────────────────────────── {%- endcomment -%}
+  {%- if section.settings.show_steps_block -%}
+  <section class="bench-steps">
+    <header class="bench-steps__head">
+      <p class="bench-eyebrow">{{ section.settings.steps_eyebrow | default: 'How it works' | escape }}</p>
+      {%- assign steps_heading_clean = section.settings.steps_heading | replace: '<p>', '' | replace: '</p>', '' -%}
+      <h2 class="bench-display bench-steps__heading">{{ steps_heading_clean }}</h2>
+    </header>
+    <ol class="bench-steps__list">
+      <li class="bench-steps__step">
+        <span class="bench-steps__num" aria-hidden="true">01</span>
+        <h3 class="bench-steps__title">{{ section.settings.step_one_title | escape }}</h3>
+        {%- if section.settings.step_one_text != blank -%}
+          <p class="bench-steps__text">{{ section.settings.step_one_text }}</p>
+        {%- endif -%}
+      </li>
+      <li class="bench-steps__step">
+        <span class="bench-steps__num" aria-hidden="true">02</span>
+        <h3 class="bench-steps__title">{{ section.settings.step_two_title | escape }}</h3>
+        {%- if section.settings.step_two_text != blank -%}
+          <p class="bench-steps__text">{{ section.settings.step_two_text }}</p>
+        {%- endif -%}
+      </li>
+      <li class="bench-steps__step">
+        <span class="bench-steps__num" aria-hidden="true">03</span>
+        <h3 class="bench-steps__title">{{ section.settings.step_three_title | escape }}</h3>
+        {%- if section.settings.step_three_text != blank -%}
+          <p class="bench-steps__text">{{ section.settings.step_three_text }}</p>
+        {%- endif -%}
+      </li>
+    </ol>
+  </section>
+  {%- endif -%}
+
+  {%- comment -%} ── Delivery band ────────────────────────────────────────── {%- endcomment -%}
+  {%- if section.settings.show_band_block -%}
+  <section class="bench-band">
+    {%- assign band_line_clean = section.settings.band_line | replace: '<p>', '' | replace: '</p>', '' -%}
+    <div class="bench-band__line">{{ band_line_clean }}</div>
+  </section>
+  {%- endif -%}
+
+</div>
+
+{% schema %}
+{
+  "name": "Benchtops landing",
+  "class": "section-benchtops-landing",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Visible sub-sections"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_cta_block",
+      "label": "Show 'Make it yours' CTA block",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_species_block",
+      "label": "Show three-up species/shapes block",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_steps_block",
+      "label": "Show 'How it works' steps block",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_band_block",
+      "label": "Show provenance band",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Configurator CTA"
+    },
+    {
+      "type": "richtext",
+      "id": "cta_heading",
+      "label": "Heading",
+      "default": "<p>Make it <em>yours</em>.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "cta_sub",
+      "label": "Subhead",
+      "default": "<p>Pick your timber, set your size, add cut-outs. Get your full price, freight and GST included, in minutes.</p>"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Button label",
+      "default": "Open the configurator"
+    },
+    {
+      "type": "text",
+      "id": "cta_url",
+      "label": "Button URL",
+      "default": "https://innate-mission-control.vercel.app/"
+    },
+    {
+      "type": "checkbox",
+      "id": "cta_new_tab",
+      "label": "Open in a new tab",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "cta_caption",
+      "label": "Caption below button",
+      "default": "Opens in a new tab."
+    },
+
+    {
+      "type": "header",
+      "content": "Timber species"
+    },
+    {
+      "type": "text",
+      "id": "species_eyebrow",
+      "label": "Eyebrow",
+      "default": "The timbers"
+    },
+    {
+      "type": "richtext",
+      "id": "species_heading",
+      "label": "Heading",
+      "default": "<p>Three native woods,<br/><em>three different stories</em>.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "species_subhead",
+      "label": "Subhead",
+      "default": "<p>Each timber comes from a different part of Aotearoa, with its own grain, tone, and provenance. Pick the one that suits your space.</p>"
+    },
+    {
+      "type": "text",
+      "id": "species_anchor_id",
+      "label": "Species block anchor ID",
+      "info": "Optional. Renders <div id=\"...\"> at the top of this block so other links can scroll-to it."
+    },
+
+    {
+      "type": "header",
+      "content": "Feature timber"
+    },
+    {
+      "type": "text",
+      "id": "feature_asset_filename",
+      "label": "Photo asset filename",
+      "info": "Theme asset filename (e.g. \"Totara Pill Boardroom Table Country Bark.png\"). When set, used in place of the Photo URL field below."
+    },
+    {
+      "type": "text",
+      "id": "feature_origin",
+      "label": "Origin",
+      "default": "West Coast"
+    },
+    {
+      "type": "text",
+      "id": "feature_latin",
+      "label": "Latin name",
+      "default": "Dacrydium cupressinum"
+    },
+    {
+      "type": "richtext",
+      "id": "feature_name",
+      "label": "Display name",
+      "default": "<p><em>Rimu</em></p>"
+    },
+    {
+      "type": "richtext",
+      "id": "feature_text",
+      "label": "Text",
+      "default": "<p>Centuries-old native softwood from the West Coast of the South Island. Warm orange-brown tones, a fine grain that deepens with age, and the timber most kitchens come back to. The classic NZ furniture wood.</p>"
+    },
+    {
+      "type": "text",
+      "id": "feature_meta",
+      "label": "Meta line",
+      "default": "Native softwood · up to 33 mm thick"
+    },
+    {
+      "type": "text",
+      "id": "feature_photo_url",
+      "label": "Photo URL",
+      "default": "https://cdn.shopify.com/s/files/1/0307/3094/4571/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043193"
+    },
+    {
+      "type": "text",
+      "id": "feature_photo_alt",
+      "label": "Photo alt text",
+      "default": "West Coast Rimu grain"
+    },
+
+    {
+      "type": "header",
+      "content": "Supporting timber A"
+    },
+    {
+      "type": "text",
+      "id": "support_a_asset_filename",
+      "label": "Photo asset filename",
+      "info": "Theme asset filename. When set, used in place of the Photo URL field below."
+    },
+    {
+      "type": "text",
+      "id": "support_a_origin",
+      "label": "Origin",
+      "default": "Northland"
+    },
+    {
+      "type": "text",
+      "id": "support_a_latin",
+      "label": "Latin name",
+      "default": "Podocarpus totara"
+    },
+    {
+      "type": "richtext",
+      "id": "support_a_name",
+      "label": "Display name",
+      "default": "<p><em>Tōtara</em></p>"
+    },
+    {
+      "type": "richtext",
+      "id": "support_a_text",
+      "label": "Text",
+      "default": "<p>Slow-grown native softwood, recovered as windfall stock from Northland. Takes thicker pieces than the others, with a quieter, more even grain. The timber for benchtops that want presence without busyness.</p>"
+    },
+    {
+      "type": "text",
+      "id": "support_a_meta",
+      "label": "Meta line",
+      "default": "Native softwood · up to 43 mm thick"
+    },
+    {
+      "type": "text",
+      "id": "support_a_photo_url",
+      "label": "Photo URL",
+      "default": "https://cdn.shopify.com/s/files/1/0307/3094/4571/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043363"
+    },
+    {
+      "type": "text",
+      "id": "support_a_photo_alt",
+      "label": "Photo alt text",
+      "default": "Northland Tōtara grain"
+    },
+
+    {
+      "type": "header",
+      "content": "Supporting timber B"
+    },
+    {
+      "type": "text",
+      "id": "support_b_asset_filename",
+      "label": "Photo asset filename",
+      "info": "Theme asset filename. When set, used in place of the Photo URL field below."
+    },
+    {
+      "type": "text",
+      "id": "support_b_origin",
+      "label": "Origin",
+      "default": "West Coast"
+    },
+    {
+      "type": "text",
+      "id": "support_b_latin",
+      "label": "Latin name",
+      "default": "Nothofagus fusca"
+    },
+    {
+      "type": "richtext",
+      "id": "support_b_name",
+      "label": "Display name",
+      "default": "<p><em>Beech</em></p>"
+    },
+    {
+      "type": "richtext",
+      "id": "support_b_text",
+      "label": "Text",
+      "default": "<p>Lighter-toned native hardwood from the West Coast. The cleanest of the three on grain — paler, more contemporary, with the structural pedigree of a hardwood. The choice when you want timber that reads modern.</p>"
+    },
+    {
+      "type": "text",
+      "id": "support_b_meta",
+      "label": "Meta line",
+      "default": "Native hardwood · up to 43 mm thick"
+    },
+    {
+      "type": "text",
+      "id": "support_b_photo_url",
+      "label": "Photo URL",
+      "default": "https://cdn.shopify.com/s/files/1/0307/3094/4571/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043485"
+    },
+    {
+      "type": "text",
+      "id": "support_b_photo_alt",
+      "label": "Photo alt text",
+      "default": "West Coast Beech grain"
+    },
+
+    {
+      "type": "header",
+      "content": "How it works"
+    },
+    {
+      "type": "text",
+      "id": "steps_eyebrow",
+      "label": "Eyebrow",
+      "default": "How it works"
+    },
+    {
+      "type": "richtext",
+      "id": "steps_heading",
+      "label": "Heading",
+      "default": "<p>Three steps from <em>idea</em> to delivery.</p>"
+    },
+    {
+      "type": "text",
+      "id": "step_one_title",
+      "label": "Step 1 title",
+      "default": "Configure"
+    },
+    {
+      "type": "text",
+      "id": "step_one_text",
+      "label": "Step 1 text",
+      "default": "Pick your timber, set your size, add cut-outs. The price updates as you go — freight and GST included."
+    },
+    {
+      "type": "text",
+      "id": "step_two_title",
+      "label": "Step 2 title",
+      "default": "Quote"
+    },
+    {
+      "type": "text",
+      "id": "step_two_text",
+      "label": "Step 2 text",
+      "default": "Send the quote to yourself or straight to us. We'll come back to talk it through."
+    },
+    {
+      "type": "text",
+      "id": "step_three_title",
+      "label": "Step 3 title",
+      "default": "Made & delivered"
+    },
+    {
+      "type": "text",
+      "id": "step_three_text",
+      "label": "Step 3 text",
+      "default": "Made in our Christchurch workshop and delivered nationwide. Lead time confirmed in your quote."
+    },
+
+    {
+      "type": "header",
+      "content": "Delivery band"
+    },
+    {
+      "type": "richtext",
+      "id": "band_line",
+      "label": "Line",
+      "default": "<p>Made in <em>Christchurch</em>. Delivered nationwide. Freight and GST in every quote.</p>"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops landing"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

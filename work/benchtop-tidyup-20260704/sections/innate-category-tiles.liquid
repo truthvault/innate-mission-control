@@ -1,0 +1,74 @@
+{%- comment -%} Innate category tiles - image-led "areas" with name overlaid (Dining/Benchtops/Outdoor/Boardroom/Commercial). {%- endcomment -%}
+{{ 'innate-home.css' | asset_url | stylesheet_tag }}
+{%- if section.settings.enabled -%}
+<section class="ih-sec ih-sec--paper ih-tiles">
+  <div class="ih-wrap">
+    {%- if section.settings.eyebrow != blank or section.settings.title != blank -%}
+    <div class="ih-head">
+      {%- if section.settings.eyebrow != blank -%}<p class="ih-eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
+      {%- if section.settings.title != blank -%}<h2 class="ih-h2">{{ section.settings.title }}</h2>{%- endif -%}
+    </div>
+    {%- endif -%}
+    <div class="ih-tiles-grid">
+      {%- for block in section.blocks -%}
+        <a class="ih-tile" href="{{ block.settings.link | default: '#' }}" {{ block.shopify_attributes }}>
+          <figure>
+            {%- if block.settings.asset != blank -%}
+              <img src="{{ block.settings.asset | asset_url }}" alt="{{ block.settings.title | escape }} by Innate Furniture" loading="lazy">
+            {%- elsif block.settings.image_url != blank -%}
+              <img src="{{ block.settings.image_url }}" alt="{{ block.settings.title | escape }} by Innate Furniture" loading="lazy">
+            {%- elsif block.settings.image != blank -%}
+              <img src="{{ block.settings.image | image_url: width: 1400 }}" alt="{{ block.settings.title | escape }} by Innate Furniture" loading="lazy">
+            {%- endif -%}
+          </figure>
+          <div class="ih-tile-body">
+            {%- if block.settings.kicker != blank -%}<span class="ih-tile-kicker">{{ block.settings.kicker }}</span>{%- endif -%}
+            <h3 class="ih-tile-name">{{ block.settings.title }}<span class="ih-tile-arrow" aria-hidden="true">&rarr;</span></h3>
+          </div>
+        </a>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+<style>
+  .ih-tiles-grid{display:grid;gap:1rem;grid-template-columns:1fr}
+  @media(min-width:760px){.ih-tiles-grid{grid-template-columns:1.15fr .95fr .95fr;grid-auto-rows:minmax(232px,1fr)}}
+  .ih-tile{position:relative;display:flex;align-items:flex-end;overflow:hidden;border-radius:6px;background:var(--ih-fern,#283229);color:var(--ih-warm)!important;text-decoration:none!important;min-height:240px;transition:transform .35s ease,box-shadow .35s ease}
+  @media(min-width:760px){.ih-tile:first-child{grid-row:span 2}}
+  .ih-tile figure{position:absolute;inset:0;margin:0}
+  .ih-tile figure:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,32,28,.05) 40%,rgba(12,32,28,.74))}
+  .ih-tile img{width:100%;height:100%;object-fit:cover;transition:transform .45s ease}
+  .ih-tile:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(12,32,28,.18)}
+  .ih-tile:hover img{transform:scale(1.04)}
+  .ih-tile-body{position:relative;z-index:1;padding:clamp(1.2rem,2.4vw,1.9rem)}
+  .ih-tile-kicker{display:block;margin-bottom:.5rem;font:800 .7rem/1 var(--ih-body);letter-spacing:.16em;text-transform:uppercase;color:rgba(255,250,243,.76)}
+  .ih-tile-name{margin:0;font:600 clamp(1.5rem,2.2vw,2.15rem)/1 var(--ih-display);letter-spacing:-.01em;color:var(--ih-warm);display:flex;align-items:center;gap:.5rem}
+  .ih-tile-arrow{font-size:.8em;opacity:0;transform:translateX(-6px);transition:opacity .3s ease,transform .3s ease}
+  .ih-tile:hover .ih-tile-arrow{opacity:.85;transform:translateX(0)}
+</style>
+
+{% schema %}
+{
+  "name": "Category tiles",
+  "tag": "section",
+  "settings": [
+    {"type":"checkbox","id":"enabled","label":"Show section","default":true},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Explore the range"},
+    {"type":"text","id":"title","label":"Title","default":"What are you making?"}
+  ],
+  "blocks": [
+    {"type":"tile","name":"Tile","settings":[
+      {"type":"image_picker","id":"image","label":"Image"},
+      {"type":"text","id":"asset","label":"Theme asset filename (overrides image)"},
+      {"type":"text","id":"image_url","label":"Direct image URL (overrides image)"},
+      {"type":"text","id":"kicker","label":"Kicker"},
+      {"type":"text","id":"title","label":"Title","default":"Dining tables"},
+      {"type":"url","id":"link","label":"Link"}
+    ]}
+  ],
+  "max_blocks": 6,
+  "presets": [{"name":"Category tiles","blocks":[{"type":"tile"},{"type":"tile"},{"type":"tile"},{"type":"tile"},{"type":"tile"}]}]
+}
+{% endschema %}

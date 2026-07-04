@@ -1,0 +1,1245 @@
+<style>
+  .template-sufix-commerical .layout,
+  .template-sufix-commerical #MainContent,
+  .template-sufix-commerical .main { padding: 0; max-width: none; }
+  .template-sufix-commerical main,
+  .template-sufix-commerical [role=main] { background: var(--innate-paper); }
+  .template-sufix-commerical .shopify-section + .shopify-section { margin: 0; }
+
+  .commercial-page-v2 {
+    --cp-cream: var(--innate-paper);
+    --cp-paper: var(--innate-cream);
+    --cp-panel: var(--innate-warm-white);
+    --cp-ink: var(--innate-forest-ink);
+    --cp-forest: var(--innate-forest);
+    --cp-fern: var(--innate-moss);
+    --cp-muted: rgba(19,35,29,.68);
+    --cp-line: rgba(19,35,29,.13);
+    --cp-brass: var(--innate-rust);
+    --cp-display: var(--innate-display);
+    --cp-body: var(--bench-body, 'Maven Pro', sans-serif);
+    background: var(--cp-cream);
+    color: var(--cp-ink);
+    font-family: var(--cp-body);
+  }
+  .cp-section { padding: clamp(3.25rem, 6.2vw, 6.25rem) clamp(1.2rem, 4vw, 4rem); }
+  .cp-section--tight { padding-top: clamp(2.5rem, 5vw, 4rem); padding-bottom: clamp(2.5rem, 5vw, 4rem); }
+  .cp-wrap { max-width: 1180px; margin: 0 auto; }
+  .cp-kicker { margin: 0 0 .85rem; font: 700 .76rem/1 var(--cp-body); letter-spacing: .14em; text-transform: uppercase; color: var(--innate-rust); }
+  .cp-heading { margin: 0; font-family: var(--cp-display); font-size: clamp(2.05rem, 4.4vw, 4.2rem); line-height: 1.02; letter-spacing: 0; font-weight: 600; color: var(--cp-ink); }
+  .cp-heading--mid { font-size: clamp(1.9rem, 3.4vw, 3.35rem); max-width: 760px; }
+  .cp-lead { max-width: 58ch; margin: 1rem 0 0; font: 400 clamp(1rem, 1.2vw, 1.13rem)/1.66 var(--cp-body); color: var(--cp-muted); }
+  .cp-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: .95rem 1.35rem; border-radius: 2px; font: 700 .96rem/1 var(--cp-body); text-decoration: none; transition: opacity .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .cp-btn:hover { opacity: .82; }
+  .cp-btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(19,35,29,.22); }
+  .cp-btn--primary { background: var(--cp-forest); color: var(--cp-cream); }
+  .cp-btn--secondary { color: var(--cp-ink); border: 0; background: transparent; padding-left: .2rem; padding-right: .2rem; text-decoration: underline; text-underline-offset: .28em; }
+
+  .cp-hero { padding: clamp(3.5rem, 6.5vw, 6.2rem) clamp(1.2rem, 4vw, 4rem) clamp(3rem, 5.8vw, 5rem); }
+  .cp-hero__grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, .88fr) minmax(360px, 1.12fr); gap: clamp(2.4rem, 5vw, 5.5rem); align-items: center; }
+  .cp-hero__copy { max-width: 590px; }
+  .cp-hero__title { margin: 0; font-family: var(--cp-display); font-size: clamp(2.35rem, 4.1vw, 4.2rem); line-height: 1.02; letter-spacing: 0; font-weight: 600; color: var(--cp-ink); }
+  .cp-hero__text { max-width: 55ch; margin: 1.05rem 0 0; font: 400 clamp(1rem, 1.22vw, 1.12rem)/1.65 var(--cp-body); color: rgba(19,35,29,.72); }
+  .cp-hero__actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1.55rem; }
+  .cp-hero__trust { margin: 1.3rem 0 0; font: 700 .78rem/1.45 var(--cp-body); letter-spacing: .1em; text-transform: uppercase; color: rgba(19,35,29, .72); }
+  .cp-hero__media { margin: 0; aspect-ratio: 1.12 / 1; overflow: hidden; background: rgba(19,35,29,.08); }
+  .cp-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* commercial-proof-outbound-2026-05-20 */
+  .cp-proof-strip { padding: clamp(1.55rem, 3vw, 2.2rem) clamp(1.2rem, 4vw, 4rem); background: var(--cp-paper); border-top: 1px solid var(--cp-line); border-bottom: 1px solid var(--cp-line); }
+  .cp-proof-strip__grid { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: minmax(240px, .46fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3.5rem); align-items: start; }
+  .cp-proof-strip__title { margin: 0; font: 600 clamp(1.35rem, 2vw, 1.9rem)/1.12 var(--cp-display); letter-spacing: 0; color: var(--cp-ink); }
+  .cp-proof-strip__text { margin: .55rem 0 0; max-width: 38ch; font: 400 .96rem/1.55 var(--cp-body); color: var(--cp-muted); }
+  .cp-proof-strip__names { display: flex; flex-wrap: wrap; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+  .cp-proof-strip__names li { border: 1px solid rgba(19,35,29,.16); background: rgba(255,250,243,.62); padding: .55rem .72rem; font: 700 .82rem/1 var(--cp-body); letter-spacing: .035em; text-transform: uppercase; color: rgba(19,35,29,.72); }
+  .cp-proof-strip__note { margin: 1rem 0 0; font: 400 .92rem/1.55 var(--cp-body); color: rgba(19,35,29, .72); }
+  .cp-proof-strip__note strong { color: var(--cp-ink); font-weight: 600; }
+  /* commercial-project-cards-2026-05-20 */
+  .cp-proof-projects { margin-top: clamp(1.2rem, 3vw, 2rem); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; }
+  .cp-proof-project { border: 1px solid rgba(19,35,29,.12); background: var(--cp-panel); display: flex; flex-direction: column; min-width: 0; }
+  .cp-proof-project__media { margin: 0; aspect-ratio: 1.26 / .88; overflow: hidden; background: rgba(19,35,29,.08); }
+  .cp-proof-project__body { padding: .95rem; }
+  .cp-proof-project__meta { margin: 0 0 .35rem; font: 700 .72rem/1.2 var(--cp-body); letter-spacing: .07em; text-transform: uppercase; color: rgba(19,35,29, .72); }
+  .cp-proof-project h3 { margin: 0; font: 600 1.1rem/1.18 var(--cp-display); letter-spacing: 0; color: var(--cp-ink); }
+  .cp-proof-project__body p:last-child { margin: .45rem 0 0; font: 400 .9rem/1.45 var(--cp-body); color: rgba(19,35,29,.72); }
+  .cp-proof-strip__coming { margin: .9rem 0 0; font: 400 .88rem/1.45 var(--cp-body); color: rgba(19,35,29, .72); }
+  .cp-proof-cta { margin-top: 1.15rem; padding: 1rem 1.15rem; border: 1px solid rgba(19,35,29,.12); background: var(--cp-panel); display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .cp-proof-cta p { margin: 0; flex: 1 1 360px; font: 400 .94rem/1.5 var(--cp-body); color: rgba(19,35,29,.72); }
+  .cp-proof-cta a { flex: 0 0 auto; padding: .82rem 1rem; background: var(--cp-forest); color: var(--cp-cream); text-decoration: none; font: 600 .9rem/1 var(--cp-body); }
+  .cp-work-card--text-only .cp-work-card__body { min-height: 100%; padding: clamp(1.25rem, 2.8vw, 1.8rem); }
+  .cp-advantage__grid--text-only { grid-template-columns: minmax(0, 760px); justify-content: center; }
+
+  .cp-pathways { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(280px, .92fr); gap: 1rem; margin-top: clamp(2.5rem, 5vw, 4rem); }
+  .cp-pathways__side { display: grid; gap: 1rem; }
+  .cp-pathway { position: relative; display: flex; min-height: 250px; overflow: hidden; color: var(--cp-cream); text-decoration: none; background: var(--cp-forest); }
+  .cp-pathway--large { min-height: 400px; }
+  .cp-pathway__media { position: absolute; inset: 0; margin: 0; }
+  .cp-pathway__media::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(19,35,29,.08), rgba(19,35,29,.82)); }
+  .cp-pathway__media img { filter: saturate(.95); }
+  .cp-pathway__body { position: relative; z-index: 1; align-self: flex-end; padding: clamp(1.25rem, 2.8vw, 2rem); max-width: 560px; }
+  .cp-pathway__body h3 { margin: 0; font: 600 clamp(1.7rem, 2.6vw, 2.75rem)/1.04 var(--cp-display); letter-spacing: 0; color: var(--cp-cream); }
+  .cp-pathway__body p { margin: .65rem 0 0; font: 400 .98rem/1.55 var(--cp-body); color: rgba(251,248,242,.8); }
+  .cp-pathway__body span { display: inline-block; margin-top: 1rem; font: 600 .9rem/1 var(--cp-body); color: var(--cp-cream); text-decoration: underline; text-underline-offset: .28em; }
+
+  .cp-problem { background: var(--cp-ink); color: var(--cp-cream); }
+  .cp-problem .cp-kicker, .cp-problem .cp-heading { color: var(--cp-cream); }
+  .cp-problem .cp-lead { color: rgba(251,248,242,.72); }
+  .cp-problem__grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr); gap: clamp(2rem, 6vw, 5rem); align-items: start; }
+  .cp-problem__list { margin: .4rem 0 0; border-top: 1px solid rgba(251,248,242,.18); }
+  .cp-problem__item { display: grid; grid-template-columns: 48px 1fr; gap: 1rem; padding: 1.15rem 0; border-bottom: 1px solid rgba(251,248,242,.18); }
+  .cp-problem__num { font: 600 .78rem/1.5 var(--cp-body); letter-spacing: .12em; color: rgba(251,248,242,.44); }
+  .cp-problem__item strong { display: block; font: 500 clamp(1.05rem, 1.4vw, 1.25rem)/1.25 var(--cp-body); color: var(--cp-cream); }
+  .cp-problem__item span { display: block; margin-top: .35rem; font: 400 .95rem/1.55 var(--cp-body); color: rgba(251,248,242,.68); }
+
+  .cp-work-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1rem, 2.5vw, 1.6rem); margin-top: clamp(2rem, 4vw, 3rem); }
+  .cp-selected-work { padding-top: clamp(3rem, 5.8vw, 5.8rem); }
+  .cp-work-card { background: var(--cp-panel); border: 1px solid var(--cp-line); }
+  .cp-work-card__media { margin: 0; aspect-ratio: 1.22 / 1; overflow: hidden; background: rgba(19,35,29,.07); }
+  .cp-work-card__body { padding: 1.1rem; }
+  .cp-work-card__meta { margin: 0 0 .45rem; font: 700 .72rem/1.2 var(--cp-body); letter-spacing: .11em; text-transform: uppercase; color: rgba(19,35,29, .72); }
+  .cp-work-card h3 { margin: 0; font: 600 clamp(1.2rem,1.6vw,1.55rem)/1.1 var(--cp-display); letter-spacing: 0; color: var(--cp-ink); }
+  .cp-work-card p { margin: .65rem 0 0; font: 400 .94rem/1.55 var(--cp-body); color: var(--cp-muted); }
+
+  .cp-advantage__grid { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.08fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; }
+  .cp-advantage__media { margin: 0; aspect-ratio: 1 / .86; overflow: hidden; background: rgba(19,35,29,.07); }
+  .cp-bullets { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem 1.2rem; margin: 1.6rem 0 0; padding: 0; list-style: none; }
+  .cp-bullets li { border-top: 1px solid var(--cp-line); padding-top: .75rem; font: 600 .95rem/1.45 var(--cp-body); color: rgba(19,35,29,.78); }
+
+  .cp-timeline { margin-top: 2rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--cp-line); border-bottom: 1px solid var(--cp-line); }
+  .cp-step { padding: 1.25rem 1rem 1.25rem 0; border-right: 1px solid var(--cp-line); }
+  .cp-step:last-child { border-right: 0; }
+  .cp-step span { display: block; margin-bottom: .8rem; font: 700 .76rem/1 var(--cp-body); letter-spacing: .13em; color: rgba(19,35,29, .72); }
+  .cp-step h3 { margin: 0; font: 500 clamp(1.05rem,1.3vw,1.22rem)/1.2 var(--cp-body); color: var(--cp-ink); }
+  .cp-step p { margin: .45rem 0 0; font: 400 .9rem/1.5 var(--cp-body); color: var(--cp-muted); }
+
+  .cp-materials { background: var(--cp-paper); border-top: 1px solid var(--cp-line); border-bottom: 1px solid var(--cp-line); }
+  .cp-materials__row { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: center; }
+  .cp-material-tags { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.4rem; }
+  .cp-material-tags span { border: 1px solid var(--cp-line); padding: .55rem .75rem; font: 600 .88rem/1 var(--cp-body); color: rgba(19,35,29,.72); background: rgba(255,250,243,.62); }
+
+  .cp-form-section { background: var(--cp-ink); color: var(--cp-cream); }
+  .cp-form-section .cp-kicker, .cp-form-section .cp-heading { color: var(--cp-cream); }
+  .cp-form-section .cp-lead { color: rgba(251,248,242,.72); }
+  .cp-form-grid { display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: start; }
+  .cp-form-section form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .cp-form-section textarea, .cp-form-wide, .cp-form-section button[type="submit"], .cp-form-errors, .cp-form-success { grid-column: 1 / -1; }
+  .cp-form-section input[type="text"], .cp-form-section input[type="email"], .cp-form-section input[type="tel"], .cp-form-section textarea, .cp-form-section select { width: 100%; box-sizing: border-box; padding: .9rem 1rem; background: rgba(255,250,243,.12); border: 1px solid rgba(255,250,243,.42); color: var(--cp-cream); font: 400 1rem/1.45 var(--cp-body); border-radius: 2px; box-shadow: inset 0 1px 0 rgba(255,250,243,.08); transition: background .2s ease, border-color .2s ease, box-shadow .2s ease; }
+  .cp-form-section select option { color: var(--innate-forest-ink); }
+  .cp-form-section input::placeholder, .cp-form-section textarea::placeholder { color: rgba(251,248,242,.68); }
+  .cp-form-section input:focus-visible, .cp-form-section textarea:focus-visible, .cp-form-section select:focus-visible { outline: 0; background: rgba(255,250,243,.16); border-color: rgba(255,250,243,.82); box-shadow: 0 0 0 3px rgba(255,250,243,.2), inset 0 1px 0 rgba(255,250,243,.12); }
+  .cp-form-section textarea { min-height: 140px; resize: vertical; }
+  .cp-form-help { grid-column: 1 / -1; max-width: 720px; margin: -.05rem 0 .35rem; font: 400 .9rem/1.45 var(--cp-body); color: rgba(251,248,242,.68); }
+  .cp-form-section button[type="submit"] { width: fit-content; margin-top: .15rem; padding: 1rem 1.75rem; border: 0; border-radius: 2px; background: var(--cp-cream); color: var(--cp-ink); font: 600 1rem/1 var(--cp-body); cursor: pointer; transition: background .2s ease, box-shadow .2s ease; }
+  .cp-form-section button[type="submit"]:hover { background: var(--innate-warm-white); }
+  .cp-form-section button[type="submit"]:focus-visible { outline: 0; box-shadow: 0 0 0 3px rgba(255,250,243,.28); }
+  .cp-form-success { margin: 0; font: 400 clamp(1.6rem,3vw,2.2rem)/1.2 var(--cp-display); color: var(--cp-cream); }
+  .cp-form-errors { padding: .85rem 1rem; background: rgba(160,40,40,.3); color: var(--cp-cream); }
+
+  .cp-reviews-slot {
+    background: var(--cp-cream);
+    padding: clamp(18px, 2vw, 28px) 0 clamp(34px, 4vw, 56px);
+  }
+  .cp-reviews-slot .shopify-section.apps,
+  .template-sufix-commerical .shopify-section.apps {
+    background: transparent !important;
+    overflow: hidden;
+    padding: 0 clamp(16px, 4vw, 52px) !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle--root {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    max-width: 1320px !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-swipper-badge-wrapper {
+    align-items: flex-start !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-rating-container {
+    align-items: center !important;
+    align-self: flex-start !important;
+    background: var(--cp-panel) !important;
+    border: 1px solid rgba(19, 35, 29, .10) !important;
+    border-radius: 18px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    min-height: 165px !important;
+    min-width: clamp(270px, 20vw, 300px) !important;
+    padding: 1.1rem 1.25rem !important;
+    width: clamp(270px, 20vw, 300px) !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-item {
+    background: var(--cp-panel) !important;
+    border: 1px solid rgba(19, 35, 29, .08) !important;
+    box-shadow: none !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge,
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-head-badge,
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge-flex,
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge-vertical {
+    align-items: center !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: .45rem !important;
+    height: auto !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge-title {
+    font-size: 0 !important;
+    line-height: 0 !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge-title::before {
+    color: var(--cp-forest) !important;
+    content: "100% 5-star reviews";
+    display: block;
+    font-family: var(--cp-body);
+    font-size: .88rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge-stars {
+    transform: scale(.82);
+    transform-origin: center;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-badge-logo {
+    transform: scale(.72);
+    transform-origin: center;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-main-hyper-link,
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-item-date,
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-item-body-review {
+    color: rgba(40, 50, 41, .72) !important;
+    font-family: var(--cp-body) !important;
+  }
+  .template-sufix-commerical .shopify-section.apps .grp-entangle-item-head-name,
+  .template-sufix-commerical .shopify-section.apps .grp-main-hyper-link b,
+  .template-sufix-commerical .shopify-section.apps .grp-main-hyper-link strong {
+    color: var(--cp-ink) !important;
+  }
+
+  @media (max-width: 980px) {
+    .cp-hero__grid, .cp-problem__grid, .cp-advantage__grid, .cp-materials__row, .cp-form-grid { grid-template-columns: 1fr; }
+    .cp-pathways { grid-template-columns: 1fr; }
+    .cp-pathway--large, .cp-pathway { min-height: 360px; }
+    .cp-work-grid { grid-template-columns: 1fr 1fr; }
+    .cp-timeline { grid-template-columns: 1fr; border-bottom: 0; }
+    .cp-step { border-right: 0; border-bottom: 1px solid var(--cp-line); padding-right: 0; }
+  }
+  @media (max-width: 640px) {
+    .cp-section { padding: clamp(2.8rem, 12vw, 4rem) 1rem; }
+    .cp-hero { padding: 2.1rem 1rem 2.6rem; }
+    .cp-hero__title { font-size: clamp(2.05rem, 9.4vw, 3rem); line-height: 1.02; letter-spacing: 0; }
+    .cp-hero__text { margin-top: .95rem; font-size: 1rem; line-height: 1.58; }
+    .cp-hero__media { aspect-ratio: 1 / .92; }
+    .cp-proof-strip__grid { grid-template-columns: 1fr; }
+    .cp-proof-strip__names li { width: 100%; box-sizing: border-box; }
+    .cp-proof-projects { grid-template-columns: 1fr; }
+    .cp-proof-project__media { aspect-ratio: 1.28 / .82; }
+    .cp-hero__actions, .cp-btn { width: 100%; }
+    .cp-pathway, .cp-pathway--large { min-height: 260px; }
+    .cp-work-grid, .cp-bullets, .cp-form-section form { grid-template-columns: 1fr; }
+    .cp-problem__item { grid-template-columns: 38px 1fr; }
+  }
+</style>
+
+<div class="commercial-page-v2">
+  <section class="cp-hero" aria-labelledby="commercial-hero-title">
+    <div class="cp-hero__grid">
+      <div class="cp-hero__copy">
+        <p class="cp-kicker">{{ section.settings.hero_kicker }}</p>
+        <h1 id="commercial-hero-title" class="cp-hero__title">{{ section.settings.hero_title }}</h1>
+        <p class="cp-hero__text">{{ section.settings.hero_text }}</p>
+        <div class="cp-hero__actions">
+          <a class="cp-btn cp-btn--primary" href="{{ section.settings.hero_primary_link }}">{{ section.settings.hero_primary_label }}</a>
+          <a class="cp-btn cp-btn--secondary" href="{{ section.settings.hero_secondary_link }}">{{ section.settings.hero_secondary_label }}</a>
+        </div>
+        <p class="cp-hero__trust">{{ section.settings.hero_trust }}</p>
+      </div>
+      <figure class="cp-hero__media">
+        {%- if section.settings.hero_image != blank -%}
+          <img class="cp-img" src="{{ section.settings.hero_image | image_url: width: 1600 }}" srcset="{{ section.settings.hero_image | image_url: width: 800 }} 800w, {{ section.settings.hero_image | image_url: width: 1400 }} 1400w, {{ section.settings.hero_image | image_url: width: 2200 }} 2200w" sizes="(min-width: 980px) 52vw, 100vw" alt="{{ section.settings.hero_image.alt | default: 'Commercial hospitality furniture made by Innate Furniture' | escape }}" loading="eager" fetchpriority="high">
+        {%- endif -%}
+      </figure>
+    </div>
+  </section>
+
+  <section class="cp-proof-strip" aria-label="Selected hospitality and commercial proof">
+    <div class="cp-proof-strip__grid">
+      <div>
+        <h2 class="cp-proof-strip__title">{{ section.settings.proof_title }}</h2>
+        <p class="cp-proof-strip__text">{{ section.settings.proof_text }}</p>
+      </div>
+      <div>
+        <ul class="cp-proof-strip__names" aria-label="Selected commercial clients and projects">
+          {%- if section.settings.proof_client_1 != blank -%}<li>{{ section.settings.proof_client_1 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_2 != blank -%}<li>{{ section.settings.proof_client_2 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_3 != blank -%}<li>{{ section.settings.proof_client_3 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_4 != blank -%}<li>{{ section.settings.proof_client_4 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_5 != blank -%}<li>{{ section.settings.proof_client_5 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_6 != blank -%}<li>{{ section.settings.proof_client_6 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_7 != blank -%}<li>{{ section.settings.proof_client_7 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_8 != blank -%}<li>{{ section.settings.proof_client_8 }}</li>{%- endif -%}
+          {%- if section.settings.proof_client_9 != blank -%}<li>{{ section.settings.proof_client_9 }}</li>{%- endif -%}
+        </ul>
+        <p class="cp-proof-strip__note"><strong>{{ section.settings.proof_note_label }}</strong> {{ section.settings.proof_note_text }}</p>
+        <div class="cp-proof-projects" aria-label="Selected commercial project examples">
+          <article class="cp-proof-project">
+            <figure class="cp-proof-project__media">
+              {%- if section.settings.proof_project_1_image != blank -%}
+                <img class="cp-img" src="{{ section.settings.proof_project_1_image | image_url: width: 900 }}" alt="{{ section.settings.proof_project_1_image.alt | default: section.settings.proof_project_1_alt | escape }}" loading="lazy" width="720" height="520">
+              {%- else -%}
+                <img class="cp-img" src="{{ 'innate-commercial-gin-gin-new-regent.jpg' | asset_url }}" alt="{{ section.settings.proof_project_1_alt | escape }}" loading="lazy" width="720" height="520">
+              {%- endif -%}
+            </figure>
+            <div class="cp-proof-project__body">
+              <p class="cp-proof-project__meta">{{ section.settings.proof_project_1_meta }}</p>
+              <h3>{{ section.settings.proof_project_1_title }}</h3>
+              <p>{{ section.settings.proof_project_1_text }}</p>
+            </div>
+          </article>
+          <article class="cp-proof-project">
+            <figure class="cp-proof-project__media">
+              {%- if section.settings.proof_project_2_image != blank -%}
+                <img class="cp-img" src="{{ section.settings.proof_project_2_image | image_url: width: 900 }}" alt="{{ section.settings.proof_project_2_image.alt | default: section.settings.proof_project_2_alt | escape }}" loading="lazy" width="720" height="520">
+              {%- else -%}
+                <img class="cp-img" src="{{ 'innate-commercial-francescas-kitchen-pizza-oven.jpg' | asset_url }}" alt="{{ section.settings.proof_project_2_alt | escape }}" loading="lazy" width="720" height="520">
+              {%- endif -%}
+            </figure>
+            <div class="cp-proof-project__body">
+              <p class="cp-proof-project__meta">{{ section.settings.proof_project_2_meta }}</p>
+              <h3>{{ section.settings.proof_project_2_title }}</h3>
+              <p>{{ section.settings.proof_project_2_text }}</p>
+            </div>
+          </article>
+          <article class="cp-proof-project">
+            <figure class="cp-proof-project__media">
+              {%- if section.settings.proof_project_3_image != blank -%}
+                <img class="cp-img" src="{{ section.settings.proof_project_3_image | image_url: width: 900 }}" alt="{{ section.settings.proof_project_3_image.alt | default: section.settings.proof_project_3_alt | escape }}" loading="lazy" width="720" height="520">
+              {%- else -%}
+                <img class="cp-img" src="{{ 'innate-commercial-francescas-kitchen-rimu-cafe-tables.jpg' | asset_url }}" alt="{{ section.settings.proof_project_3_alt | escape }}" loading="lazy" width="720" height="520">
+              {%- endif -%}
+            </figure>
+            <div class="cp-proof-project__body">
+              <p class="cp-proof-project__meta">{{ section.settings.proof_project_3_meta }}</p>
+              <h3>{{ section.settings.proof_project_3_title }}</h3>
+              <p>{{ section.settings.proof_project_3_text }}</p>
+            </div>
+          </article>
+        </div>
+        <p class="cp-proof-strip__coming">{{ section.settings.proof_coming_text }}</p>
+        <div class="cp-proof-cta">
+          <p>{{ section.settings.proof_cta_text }}</p>
+          <a href="{{ section.settings.proof_cta_link }}">{{ section.settings.proof_cta_label }}</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="project-pathways" class="cp-section" aria-labelledby="pathways-title">
+    <div class="cp-wrap">
+      <p class="cp-kicker">{{ section.settings.pathways_kicker }}</p>
+      <h2 id="pathways-title" class="cp-heading cp-heading--mid">{{ section.settings.pathways_title }}</h2>
+      <p class="cp-lead">{{ section.settings.pathways_text }}</p>
+      <div class="cp-pathways">
+        <a class="cp-pathway cp-pathway--large" href="{{ section.settings.pathway_1_link }}">
+          <figure class="cp-pathway__media">{%- if section.settings.hospitality_image != blank -%}<img class="cp-img" src="{{ section.settings.hospitality_image | image_url: width: 1400 }}" alt="{{ section.settings.hospitality_image.alt | default: 'Hospitality furniture project with custom timber table tops' | escape }}" loading="lazy">{%- endif -%}</figure>
+          <div class="cp-pathway__body"><h3>{{ section.settings.pathway_1_title }}</h3><p>{{ section.settings.pathway_1_text }}</p><span>{{ section.settings.pathway_1_label }}</span></div>
+        </a>
+        <div class="cp-pathways__side">
+          <a class="cp-pathway" href="{{ section.settings.pathway_2_link }}">
+            <figure class="cp-pathway__media">{%- if section.settings.office_image != blank -%}<img class="cp-img" src="{{ section.settings.office_image | image_url: width: 1000 }}" alt="{{ section.settings.office_image.alt | default: 'Custom timber boardroom table made by Innate Furniture' | escape }}" loading="lazy">{%- endif -%}</figure>
+            <div class="cp-pathway__body"><h3>{{ section.settings.pathway_2_title }}</h3><p>{{ section.settings.pathway_2_text }}</p><span>{{ section.settings.pathway_2_label }}</span></div>
+          </a>
+          <a class="cp-pathway" href="{{ section.settings.pathway_3_link }}">
+            <figure class="cp-pathway__media">{%- if section.settings.custom_image != blank -%}<img class="cp-img" src="{{ section.settings.custom_image | image_url: width: 1000 }}" alt="{{ section.settings.custom_image.alt | escape }}" loading="lazy">{%- endif -%}</figure>
+            <div class="cp-pathway__body"><h3>{{ section.settings.pathway_3_title }}</h3><p>{{ section.settings.pathway_3_text }}</p><span>{{ section.settings.pathway_3_label }}</span></div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cp-section cp-problem" aria-labelledby="standard-title">
+    <div class="cp-wrap cp-problem__grid">
+      <div>
+        <p class="cp-kicker">{{ section.settings.problem_kicker }}</p>
+        <h2 id="standard-title" class="cp-heading cp-heading--mid">{{ section.settings.problem_title }}</h2>
+        <p class="cp-lead">{{ section.settings.problem_text }}</p>
+      </div>
+      <div class="cp-problem__list">
+        <div class="cp-problem__item"><span class="cp-problem__num">01</span><div><strong>{{ section.settings.problem_1_title }}</strong><span>{{ section.settings.problem_1_text }}</span></div></div>
+        <div class="cp-problem__item"><span class="cp-problem__num">02</span><div><strong>{{ section.settings.problem_2_title }}</strong><span>{{ section.settings.problem_2_text }}</span></div></div>
+        <div class="cp-problem__item"><span class="cp-problem__num">03</span><div><strong>{{ section.settings.problem_3_title }}</strong><span>{{ section.settings.problem_3_text }}</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cp-section cp-selected-work" aria-labelledby="work-title">
+    <div class="cp-wrap">
+      <p class="cp-kicker">{{ section.settings.work_kicker }}</p>
+      <h2 id="work-title" class="cp-heading cp-heading--mid">{{ section.settings.work_title }}</h2>
+      <p class="cp-lead">{{ section.settings.work_text }}</p>
+      <div class="cp-work-grid">
+        <article class="cp-work-card{% if section.settings.outdoor_image == blank and section.settings.hospitality_image == blank %} cp-work-card--text-only{% endif %}">{%- if section.settings.outdoor_image != blank -%}<figure class="cp-work-card__media"><img class="cp-img" src="{{ section.settings.outdoor_image | image_url: width: 1000 }}" alt="{{ section.settings.outdoor_image.alt | default: section.settings.work_1_title | escape }}" loading="lazy"></figure>{%- elsif section.settings.hospitality_image != blank -%}<figure class="cp-work-card__media"><img class="cp-img" src="{{ section.settings.hospitality_image | image_url: width: 1000 }}" alt="{{ section.settings.hospitality_image.alt | default: section.settings.work_1_title | escape }}" loading="lazy"></figure>{%- endif -%}<div class="cp-work-card__body"><p class="cp-work-card__meta">{{ section.settings.work_1_meta }}</p><h3>{{ section.settings.work_1_title }}</h3><p>{{ section.settings.work_1_text }}</p></div></article>
+        <article class="cp-work-card{% if section.settings.office_image == blank %} cp-work-card--text-only{% endif %}">{%- if section.settings.office_image != blank -%}<figure class="cp-work-card__media"><img class="cp-img" src="{{ section.settings.office_image | image_url: width: 1000 }}" alt="{{ section.settings.office_image.alt | default: section.settings.work_2_title | escape }}" loading="lazy"></figure>{%- endif -%}<div class="cp-work-card__body"><p class="cp-work-card__meta">{{ section.settings.work_2_meta }}</p><h3>{{ section.settings.work_2_title }}</h3><p>{{ section.settings.work_2_text }}</p></div></article>
+        <article class="cp-work-card{% if section.settings.shelving_image == blank and section.settings.bench_image == blank %} cp-work-card--text-only{% endif %}">{%- if section.settings.shelving_image != blank -%}<figure class="cp-work-card__media"><img class="cp-img" src="{{ section.settings.shelving_image | image_url: width: 1000 }}" alt="{{ section.settings.shelving_image.alt | escape }}" loading="lazy"></figure>{%- elsif section.settings.bench_image != blank -%}<figure class="cp-work-card__media"><img class="cp-img" src="{{ section.settings.bench_image | image_url: width: 1000 }}" alt="{{ section.settings.bench_image.alt | escape }}" loading="lazy"></figure>{%- endif -%}<div class="cp-work-card__body"><p class="cp-work-card__meta">{{ section.settings.work_3_meta }}</p><h3>{{ section.settings.work_3_title }}</h3><p>{{ section.settings.work_3_text }}</p></div></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="cp-section" aria-labelledby="advantage-title">
+    <div class="cp-wrap cp-advantage__grid{% if section.settings.wild_image == blank and section.settings.custom_image == blank %} cp-advantage__grid--text-only{% endif %}">
+      {%- if section.settings.wild_image != blank -%}<figure class="cp-advantage__media"><img class="cp-img" src="{{ section.settings.wild_image | image_url: width: 1200 }}" alt="{{ section.settings.wild_image.alt | default: section.settings.advantage_title | escape }}" loading="lazy"></figure>{%- elsif section.settings.custom_image != blank -%}<figure class="cp-advantage__media"><img class="cp-img" src="{{ section.settings.custom_image | image_url: width: 1200 }}" alt="{{ section.settings.custom_image.alt | default: section.settings.advantage_title | escape }}" loading="lazy"></figure>{%- endif -%}
+      <div>
+        <p class="cp-kicker">{{ section.settings.advantage_kicker }}</p>
+        <h2 id="advantage-title" class="cp-heading cp-heading--mid">{{ section.settings.advantage_title }}</h2>
+        <p class="cp-lead">{{ section.settings.advantage_text }}</p>
+        <ul class="cp-bullets">
+          <li>{{ section.settings.advantage_bullet_1 }}</li>
+          <li>{{ section.settings.advantage_bullet_2 }}</li>
+          <li>{{ section.settings.advantage_bullet_3 }}</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="cp-section cp-section--tight" aria-labelledby="process-title">
+    <div class="cp-wrap">
+      <p class="cp-kicker">{{ section.settings.process_kicker }}</p>
+      <h2 id="process-title" class="cp-heading cp-heading--mid">{{ section.settings.process_title }}</h2>
+      <p class="cp-lead">{{ section.settings.process_text }}</p>
+      <div class="cp-timeline">
+        <div class="cp-step"><span>01</span><h3>{{ section.settings.process_1_title }}</h3><p>{{ section.settings.process_1_text }}</p></div>
+        <div class="cp-step"><span>02</span><h3>{{ section.settings.process_2_title }}</h3><p>{{ section.settings.process_2_text }}</p></div>
+        <div class="cp-step"><span>03</span><h3>{{ section.settings.process_3_title }}</h3><p>{{ section.settings.process_3_text }}</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cp-section cp-section--tight cp-materials" aria-labelledby="materials-title">
+    <div class="cp-wrap cp-materials__row">
+      <div>
+        <p class="cp-kicker">{{ section.settings.materials_kicker }}</p>
+        <h2 id="materials-title" class="cp-heading cp-heading--mid">{{ section.settings.materials_title }}</h2>
+      </div>
+      <div>
+        <p class="cp-lead">{{ section.settings.materials_text }}</p>
+        <div class="cp-material-tags"><span>{{ section.settings.material_tag_1 }}</span><span>{{ section.settings.material_tag_2 }}</span><span>{{ section.settings.material_tag_3 }}</span><span>{{ section.settings.material_tag_4 }}</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cp-reviews-slot" data-commercial-reviews-slot></div>
+
+  <section id="commercial-brief" class="cp-section cp-form-section" aria-labelledby="brief-title">
+    <div class="cp-wrap cp-form-grid">
+      <div>
+        <p class="cp-kicker">{{ section.settings.form_kicker }}</p>
+        <h2 id="brief-title" class="cp-heading cp-heading--mid">{{ section.settings.form_title }}</h2>
+        <p class="cp-lead">{{ section.settings.form_text }}</p>
+      </div>
+      {% form 'contact' %}
+        {%- if form.posted_successfully? -%}
+          <p class="cp-form-success">{{ section.settings.form_success_text }}</p>
+        {%- else -%}
+          {%- if form.errors -%}<div class="cp-form-errors">{{ form.errors | default_errors }}</div>{%- endif -%}
+          <input type="hidden" name="contact[Subject]" value="{{ section.settings.form_subject }}">
+          <input type="text" name="contact[name]" placeholder="{{ section.settings.form_name_placeholder }}" autocomplete="name" required>
+          <input type="email" name="contact[email]" placeholder="{{ section.settings.form_email_placeholder }}" autocomplete="email" required>
+          <input type="tel" name="contact[phone]" placeholder="{{ section.settings.form_phone_placeholder }}" autocomplete="tel">
+          <input type="text" name="contact[Business or organisation]" placeholder="{{ section.settings.form_business_placeholder }}">
+          <select name="contact[Project type]">
+            <option value="">{{ section.settings.form_project_placeholder }}</option>
+            <option>Hospitality</option>
+            <option>Boardroom / workplace</option>
+            <option>Fit-out / custom</option>
+            <option>Outdoor</option>
+            <option>Other</option>
+          </select>
+          <p class="cp-form-help">{{ section.settings.form_help_text }}</p>
+          <textarea name="contact[body]" placeholder="{{ section.settings.form_brief_placeholder }}" rows="6"></textarea>
+          <button type="submit">{{ section.settings.form_button_label }}</button>
+        {%- endif -%}
+      {% endform %}
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var attempts = 0;
+    function moveReviews() {
+      attempts += 1;
+      var reviewSlot = document.querySelector('[data-commercial-reviews-slot]');
+      var reviewSection = document.querySelector('.template-sufix-commerical .shopify-section.apps');
+      if (reviewSlot && reviewSection && !reviewSlot.contains(reviewSection)) {
+        reviewSlot.appendChild(reviewSection);
+        return;
+      }
+      if (attempts < 20) {
+        window.setTimeout(moveReviews, 250);
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', moveReviews, { once: true });
+    } else {
+      moveReviews();
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Commercial Page",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Hero"
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_kicker",
+      "label": "Hero kicker",
+      "default": "Commercial furniture, made around the space"
+    },
+    {
+      "type": "text",
+      "id": "hero_title",
+      "label": "Hero heading",
+      "default": "Custom commercial furniture, made around the space."
+    },
+    {
+      "type": "textarea",
+      "id": "hero_text",
+      "label": "Hero paragraph",
+      "default": "For hospitality, workplace and fit-out projects where standard pieces do not quite fit. Made to order in Christchurch around your dimensions, finish, quantity and space."
+    },
+    {
+      "type": "text",
+      "id": "hero_primary_label",
+      "label": "Primary button label",
+      "default": "Send a commercial brief"
+    },
+    {
+      "type": "text",
+      "id": "hero_primary_link",
+      "label": "Primary button link",
+      "default": "#commercial-brief"
+    },
+    {
+      "type": "text",
+      "id": "hero_secondary_label",
+      "label": "Secondary link label",
+      "default": "Choose project type →"
+    },
+    {
+      "type": "text",
+      "id": "hero_secondary_link",
+      "label": "Secondary link",
+      "default": "#project-pathways"
+    },
+    {
+      "type": "text",
+      "id": "hero_trust",
+      "label": "Hero proof line",
+      "default": "Christchurch workshop · Custom dimensions · Nationwide delivery"
+    },
+    {
+      "type": "header",
+      "content": "Commercial proof strip"
+    },
+    {
+      "type": "text",
+      "id": "proof_title",
+      "label": "Proof heading",
+      "default": "Selected hospitality and commercial work"
+    },
+    {
+      "type": "textarea",
+      "id": "proof_text",
+      "label": "Proof intro",
+      "default": "Custom timber furniture for restaurants, hotel lounges, rooftop bars, private dining rooms, workplaces, public spaces and commercial fitouts across Christchurch and New Zealand."
+    },
+    {
+      "type": "text",
+      "id": "proof_client_1",
+      "label": "Client/project 1",
+      "default": "Xolo"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_2",
+      "label": "Client/project 2",
+      "default": "Francesca’s Italian Kitchen"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_3",
+      "label": "Client/project 3",
+      "default": "Bar Yoku"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_4",
+      "label": "Client/project 4",
+      "default": "Gin Gin"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_5",
+      "label": "Client/project 5",
+      "default": "Aitkens"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_6",
+      "label": "Client/project 6",
+      "default": "FreshChoice Merivale"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_7",
+      "label": "Client/project 7",
+      "default": "Kokomo"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_8",
+      "label": "Client/project 8",
+      "default": "Venues Ōtautahi"
+    },
+    {
+      "type": "text",
+      "id": "proof_client_9",
+      "label": "Client/project 9",
+      "default": "Imoto"
+    },
+    {
+      "type": "text",
+      "id": "proof_note_label",
+      "label": "Proof note label",
+      "default": "Christchurch stadium project:"
+    },
+    {
+      "type": "textarea",
+      "id": "proof_note_text",
+      "label": "Proof note text",
+      "default": "custom timber furniture supplied through Aitkens. Project details available on request."
+    },
+    {
+      "type": "image_picker",
+      "id": "proof_project_1_image",
+      "label": "Proof project 1 image"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_1_alt",
+      "label": "Proof project 1 fallback alt text",
+      "default": "Exterior timber tables and benches outside Gin Gin on New Regent Street"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_1_meta",
+      "label": "Proof project 1 meta",
+      "default": "Hospitality · New Regent Street"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_1_title",
+      "label": "Proof project 1 title",
+      "default": "Gin Gin"
+    },
+    {
+      "type": "textarea",
+      "id": "proof_project_1_text",
+      "label": "Proof project 1 text",
+      "default": "6 exterior table-and-bench sets for a New Regent Street hospitality setting."
+    },
+    {
+      "type": "image_picker",
+      "id": "proof_project_2_image",
+      "label": "Proof project 2 image"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_2_alt",
+      "label": "Proof project 2 fallback alt text",
+      "default": "Francesca’s Kitchen restaurant interior with timber table set near the open kitchen and brick pizza oven"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_2_meta",
+      "label": "Proof project 2 meta",
+      "default": "Hospitality · Dining room"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_2_title",
+      "label": "Proof project 2 title",
+      "default": "Francesca’s Italian Kitchen"
+    },
+    {
+      "type": "textarea",
+      "id": "proof_project_2_text",
+      "label": "Proof project 2 text",
+      "default": "21 custom rimu café tables with black bases for a busy hospitality dining room."
+    },
+    {
+      "type": "image_picker",
+      "id": "proof_project_3_image",
+      "label": "Proof project 3 image"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_3_alt",
+      "label": "Proof project 3 fallback alt text",
+      "default": "Darkwash timber table tops in a hospitality setting at The Welder"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_3_meta",
+      "label": "Proof project 3 meta",
+      "default": "Hospitality · The Welder"
+    },
+    {
+      "type": "text",
+      "id": "proof_project_3_title",
+      "label": "Proof project 3 title",
+      "default": "Kokomo"
+    },
+    {
+      "type": "textarea",
+      "id": "proof_project_3_text",
+      "label": "Proof project 3 text",
+      "default": "23 darkwash timber table tops for a relaxed hospitality space at The Welder."
+    },
+    {
+      "type": "textarea",
+      "id": "proof_coming_text",
+      "label": "More proof text",
+      "default": "Additional commercial references and project details available on request."
+    },
+    {
+      "type": "textarea",
+      "id": "proof_cta_text",
+      "label": "Proof CTA text",
+      "default": "Have a venue, hotel, workplace or fit-out project coming up? Send a rough brief — drawings, dimensions, photos, quantities or early ideas are enough to start."
+    },
+    {
+      "type": "text",
+      "id": "proof_cta_label",
+      "label": "Proof CTA button label",
+      "default": "Send a commercial brief"
+    },
+    {
+      "type": "text",
+      "id": "proof_cta_link",
+      "label": "Proof CTA button link",
+      "default": "#commercial-brief"
+    },
+    {
+      "type": "header",
+      "content": "Project pathways"
+    },
+    {
+      "type": "text",
+      "id": "pathways_kicker",
+      "label": "Pathways kicker",
+      "default": "Choose the closest path"
+    },
+    {
+      "type": "text",
+      "id": "pathways_title",
+      "label": "Pathways heading",
+      "default": "Start with the type of project."
+    },
+    {
+      "type": "textarea",
+      "id": "pathways_text",
+      "label": "Pathways intro",
+      "default": "Choose the closest starting point. We’ll shape the furniture around the space, quantity and finish from there."
+    },
+    {
+      "type": "image_picker",
+      "id": "hospitality_image",
+      "label": "Pathway 1 image — Hospitality"
+    },
+    {
+      "type": "text",
+      "id": "pathway_1_title",
+      "label": "Pathway 1 title",
+      "default": "Hospitality furniture"
+    },
+    {
+      "type": "textarea",
+      "id": "pathway_1_text",
+      "label": "Pathway 1 text",
+      "default": "Café tables, restaurant tables, leaners and outdoor pieces made around service, layout and atmosphere."
+    },
+    {
+      "type": "text",
+      "id": "pathway_1_label",
+      "label": "Pathway 1 link label",
+      "default": "View hospitality options →"
+    },
+    {
+      "type": "text",
+      "id": "pathway_1_link",
+      "label": "Pathway 1 link",
+      "default": "/pages/hospitality-furniture"
+    },
+    {
+      "type": "image_picker",
+      "id": "office_image",
+      "label": "Pathway 2 image — Boardroom/workplace"
+    },
+    {
+      "type": "text",
+      "id": "pathway_2_title",
+      "label": "Pathway 2 title",
+      "default": "Boardroom & workplace"
+    },
+    {
+      "type": "textarea",
+      "id": "pathway_2_text",
+      "label": "Pathway 2 text",
+      "default": "Custom tables and shared work pieces made to suit the room, team and finish level."
+    },
+    {
+      "type": "text",
+      "id": "pathway_2_label",
+      "label": "Pathway 2 link label",
+      "default": "View boardroom tables →"
+    },
+    {
+      "type": "text",
+      "id": "pathway_2_link",
+      "label": "Pathway 2 link",
+      "default": "/pages/boardroom-tables"
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_image",
+      "label": "Pathway 3 image — Fit-out/custom"
+    },
+    {
+      "type": "text",
+      "id": "pathway_3_title",
+      "label": "Pathway 3 title",
+      "default": "Fit-out & custom pieces"
+    },
+    {
+      "type": "textarea",
+      "id": "pathway_3_text",
+      "label": "Pathway 3 text",
+      "default": "Benches, counters, communal tables and timber features made from a brief or drawing."
+    },
+    {
+      "type": "text",
+      "id": "pathway_3_label",
+      "label": "Pathway 3 link label",
+      "default": "Send a brief →"
+    },
+    {
+      "type": "text",
+      "id": "pathway_3_link",
+      "label": "Pathway 3 link",
+      "default": "#commercial-brief"
+    },
+    {
+      "type": "header",
+      "content": "Where custom helps"
+    },
+    {
+      "type": "text",
+      "id": "problem_kicker",
+      "label": "Problem section kicker",
+      "default": "Where custom helps"
+    },
+    {
+      "type": "text",
+      "id": "problem_title",
+      "label": "Problem section heading",
+      "default": "Good for projects where standard furniture does not quite fit."
+    },
+    {
+      "type": "textarea",
+      "id": "problem_text",
+      "label": "Problem section intro",
+      "default": "Catalogue furniture works when the answer already exists. Innate is useful when the space, material, quantity or finish needs something more specific."
+    },
+    {
+      "type": "text",
+      "id": "problem_1_title",
+      "label": "Problem item 1 title",
+      "default": "The space needs a specific size"
+    },
+    {
+      "type": "textarea",
+      "id": "problem_1_text",
+      "label": "Problem item 1 text",
+      "default": "Tables, benches and leaners can be made around real dimensions, seating, circulation and sightlines."
+    },
+    {
+      "type": "text",
+      "id": "problem_2_title",
+      "label": "Problem item 2 title",
+      "default": "The finish needs to belong in the fit-out"
+    },
+    {
+      "type": "textarea",
+      "id": "problem_2_text",
+      "label": "Problem item 2 text",
+      "default": "Timber, steel colour, edge detail, base style and surface finish can be shaped to feel intentional."
+    },
+    {
+      "type": "text",
+      "id": "problem_3_title",
+      "label": "Problem item 3 title",
+      "default": "The brief is not fully resolved yet"
+    },
+    {
+      "type": "textarea",
+      "id": "problem_3_text",
+      "label": "Problem item 3 text",
+      "default": "Drawings, photos, sketches and early ideas are enough to start a practical furniture direction."
+    },
+    {
+      "type": "header",
+      "content": "Selected work"
+    },
+    {
+      "type": "text",
+      "id": "work_kicker",
+      "label": "Selected work kicker",
+      "default": "Selected work"
+    },
+    {
+      "type": "text",
+      "id": "work_title",
+      "label": "Selected work heading",
+      "default": "A few commercial starting points."
+    },
+    {
+      "type": "textarea",
+      "id": "work_text",
+      "label": "Selected work intro",
+      "default": "Examples of furniture made around real briefs, spaces and venue requirements. Kept short so the page stays focused on your enquiry."
+    },
+    {
+      "type": "image_picker",
+      "id": "outdoor_image",
+      "label": "Selected work image 1"
+    },
+    {
+      "type": "text",
+      "id": "work_1_meta",
+      "label": "Selected work 1 meta",
+      "default": "Hospitality"
+    },
+    {
+      "type": "text",
+      "id": "work_1_title",
+      "label": "Selected work 1 heading",
+      "default": "Restaurant tables and leaners"
+    },
+    {
+      "type": "textarea",
+      "id": "work_1_text",
+      "label": "Selected work 1 text",
+      "default": "Made around venue use, layout, quantity and finish requirements."
+    },
+    {
+      "type": "text",
+      "id": "work_2_meta",
+      "label": "Selected work 2 meta",
+      "default": "Workplace"
+    },
+    {
+      "type": "text",
+      "id": "work_2_title",
+      "label": "Selected work 2 heading",
+      "default": "Desks and boardroom tables"
+    },
+    {
+      "type": "textarea",
+      "id": "work_2_text",
+      "label": "Selected work 2 text",
+      "default": "Sized and finished around the room, seating and the level of presence required."
+    },
+    {
+      "type": "image_picker",
+      "id": "shelving_image",
+      "label": "Selected work image 3"
+    },
+    {
+      "type": "image_picker",
+      "id": "bench_image",
+      "label": "Selected work image 3 fallback"
+    },
+    {
+      "type": "text",
+      "id": "work_3_meta",
+      "label": "Selected work 3 meta",
+      "default": "Public spaces"
+    },
+    {
+      "type": "text",
+      "id": "work_3_title",
+      "label": "Selected work 3 heading",
+      "default": "Bench units and display furniture"
+    },
+    {
+      "type": "textarea",
+      "id": "work_3_text",
+      "label": "Selected work 3 text",
+      "default": "Built around site dimensions, traffic flow and practical commercial use."
+    },
+    {
+      "type": "header",
+      "content": "Workshop advantage"
+    },
+    {
+      "type": "image_picker",
+      "id": "wild_image",
+      "label": "Workshop advantage image"
+    },
+    {
+      "type": "text",
+      "id": "advantage_kicker",
+      "label": "Advantage kicker",
+      "default": "Workshop advantage"
+    },
+    {
+      "type": "text",
+      "id": "advantage_title",
+      "label": "Advantage heading",
+      "default": "Built around the project, not pulled from a catalogue."
+    },
+    {
+      "type": "textarea",
+      "id": "advantage_text",
+      "label": "Advantage paragraph",
+      "default": "Catalogue furniture is useful when the answer already exists. Innate is useful when the table, leaner, bench or fit-out piece needs to suit a particular room, material palette, quantity or commercial use. You deal directly with a Christchurch workshop that can shape the dimensions, timber, steel and finish around the brief."
+    },
+    {
+      "type": "text",
+      "id": "advantage_bullet_1",
+      "label": "Advantage bullet 1",
+      "default": "Made to order in our Christchurch workshop"
+    },
+    {
+      "type": "text",
+      "id": "advantage_bullet_2",
+      "label": "Advantage bullet 2",
+      "default": "Custom dimensions, timber, steel and finish options"
+    },
+    {
+      "type": "text",
+      "id": "advantage_bullet_3",
+      "label": "Advantage bullet 3",
+      "default": "Useful for plans, drawings, photos and early briefs"
+    },
+    {
+      "type": "header",
+      "content": "Process"
+    },
+    {
+      "type": "text",
+      "id": "process_kicker",
+      "label": "Process kicker",
+      "default": "How it starts"
+    },
+    {
+      "type": "text",
+      "id": "process_title",
+      "label": "Process heading",
+      "default": "You do not need final drawings to start."
+    },
+    {
+      "type": "textarea",
+      "id": "process_text",
+      "label": "Process intro",
+      "default": "A rough brief is enough for us to understand the space and suggest a practical way forward."
+    },
+    {
+      "type": "text",
+      "id": "process_1_title",
+      "label": "Step 1 heading",
+      "default": "Send the rough brief"
+    },
+    {
+      "type": "textarea",
+      "id": "process_1_text",
+      "label": "Step 1 text",
+      "default": "Plans, dimensions, photos, sketches or early ideas."
+    },
+    {
+      "type": "text",
+      "id": "process_2_title",
+      "label": "Step 2 heading",
+      "default": "We shape and quote it"
+    },
+    {
+      "type": "textarea",
+      "id": "process_2_text",
+      "label": "Step 2 text",
+      "default": "Sizes, materials, finishes, quantities, timing and delivery."
+    },
+    {
+      "type": "text",
+      "id": "process_3_title",
+      "label": "Step 3 heading",
+      "default": "We build and help deliver"
+    },
+    {
+      "type": "textarea",
+      "id": "process_3_text",
+      "label": "Step 3 text",
+      "default": "Made to order in Christchurch, with nationwide delivery available."
+    },
+    {
+      "type": "header",
+      "content": "Materials"
+    },
+    {
+      "type": "text",
+      "id": "materials_kicker",
+      "label": "Materials kicker",
+      "default": "Materials"
+    },
+    {
+      "type": "text",
+      "id": "materials_title",
+      "label": "Materials heading",
+      "default": "Materials with a story and a job to do."
+    },
+    {
+      "type": "textarea",
+      "id": "materials_text",
+      "label": "Materials paragraph",
+      "default": "We work with real timber, steel and hard-wearing finishes chosen around the use of the space. Some projects need warmth and provenance. Some need repeatable practical tables. Some need outdoor-friendly materials. The right choice depends on the setting, exposure, quantity and maintenance expectations."
+    },
+    {
+      "type": "text",
+      "id": "material_tag_1",
+      "label": "Material tag 1",
+      "default": "Native timber options"
+    },
+    {
+      "type": "text",
+      "id": "material_tag_2",
+      "label": "Material tag 2",
+      "default": "Steel commercial formats"
+    },
+    {
+      "type": "text",
+      "id": "material_tag_3",
+      "label": "Material tag 3",
+      "default": "Alfresco/porcelain options"
+    },
+    {
+      "type": "text",
+      "id": "material_tag_4",
+      "label": "Material tag 4",
+      "default": "Repairable thinking where suitable"
+    },
+    {
+      "type": "header",
+      "content": "Commercial brief form"
+    },
+    {
+      "type": "text",
+      "id": "form_kicker",
+      "label": "Form kicker",
+      "default": "Commercial brief"
+    },
+    {
+      "type": "text",
+      "id": "form_title",
+      "label": "Form heading",
+      "default": "Send us the commercial brief."
+    },
+    {
+      "type": "textarea",
+      "id": "form_text",
+      "label": "Form intro",
+      "default": "You do not need perfect drawings to start. Send whatever you know and we’ll help narrow the practical details."
+    },
+    {
+      "type": "text",
+      "id": "form_subject",
+      "label": "Email subject",
+      "default": "Commercial project enquiry"
+    },
+    {
+      "type": "text",
+      "id": "form_name_placeholder",
+      "label": "Name placeholder",
+      "default": "Your name"
+    },
+    {
+      "type": "text",
+      "id": "form_email_placeholder",
+      "label": "Email placeholder",
+      "default": "Email"
+    },
+    {
+      "type": "text",
+      "id": "form_phone_placeholder",
+      "label": "Phone placeholder",
+      "default": "Phone"
+    },
+    {
+      "type": "text",
+      "id": "form_business_placeholder",
+      "label": "Business placeholder",
+      "default": "Business / organisation"
+    },
+    {
+      "type": "text",
+      "id": "form_project_placeholder",
+      "label": "Project type placeholder",
+      "default": "Project type"
+    },
+    {
+      "type": "textarea",
+      "id": "form_help_text",
+      "label": "Form helper text",
+      "default": "Tell us what you know: project type, location, quantity, timing, dimensions, materials or finish direction. If you have plans or reference images, mention them and we’ll reply so you can send attachments."
+    },
+    {
+      "type": "textarea",
+      "id": "form_brief_placeholder",
+      "label": "Brief field placeholder",
+      "default": "Example: We need restaurant tables for a new fit-out in Christchurch. Around 12 tables, warm timber, black steel bases, timing around August. Unsure on exact sizes."
+    },
+    {
+      "type": "text",
+      "id": "form_button_label",
+      "label": "Submit button label",
+      "default": "Send commercial enquiry"
+    },
+    {
+      "type": "text",
+      "id": "form_success_text",
+      "label": "Success message",
+      "default": "Thanks — we’ll be in touch shortly."
+    }
+  ],
+  "presets": [
+    {
+      "name": "Commercial Page"
+    }
+  ]
+}
+{% endschema %}

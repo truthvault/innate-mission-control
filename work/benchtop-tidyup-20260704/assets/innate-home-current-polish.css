@@ -1,0 +1,291 @@
+/* Homepage-only visual polish.
+   Existing homepage sections, wording, imagery and order stay intact. */
+
+.template-index {
+  --home-forest-ink: var(--innate-forest-ink);
+  --home-fern: var(--innate-moss);
+  --home-paper: var(--innate-paper);
+  --home-warm-white: var(--innate-warm-white);
+  --home-cream: var(--innate-cream);
+  --home-line: rgba(22, 56, 50, .14);
+  --home-display: var(--innate-display);
+  --home-body: var(--innate-body);
+}
+
+.template-index .main,
+.template-index .layout,
+.template-index .layout > .shopify-section {
+  background: var(--home-paper);
+}
+
+.template-index .content.hero {
+  background: var(--home-forest-ink);
+}
+
+.template-index .hero .info {
+  text-shadow: 0 2px 18px rgba(12, 32, 28, .38);
+}
+
+.template-index .hero .info .blocks {
+  max-width: min(900px, calc(100vw - 40px));
+}
+
+.template-index .hero .info h1.hero-heading {
+  font-family: var(--home-display);
+  font-weight: 600;
+  letter-spacing: -.026em;
+  line-height: .96;
+  text-transform: none;
+  color: var(--home-warm-white) !important;
+  font-size: clamp(2.8rem, 4.2vw, 4.2rem);
+}
+
+.template-index .hero .info h2 {
+  font-family: var(--home-body);
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: rgba(255, 250, 243, .86) !important;
+  font-size: clamp(1.05rem, 1.45vw, 1.35rem);
+  line-height: 1.45;
+  text-transform: none;
+}
+
+.template-index .rich-text,
+.template-index .text-columns-with-images,
+.template-index .newsletter,
+.template-index .footer {
+  font-family: var(--home-body);
+  color: var(--home-fern);
+}
+
+.template-index .rich-text {
+  background: var(--home-paper);
+}
+
+.template-index .rich-text .rte,
+.template-index .rich-text .subheading,
+.template-index .rich-text p {
+  color: rgba(19, 19, 17, .74);
+  font-size: clamp(1.05rem, 1.3vw, 1.18rem);
+  line-height: 1.66;
+}
+
+.template-index .btn,
+.template-index button,
+.template-index input[type="submit"] {
+  border-radius: var(--innate-radius);
+  font-family: var(--home-body);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.template-index .btn.solid,
+.template-index .rich-text .btn.solid {
+  background: var(--home-forest-ink);
+  border-color: var(--home-forest-ink);
+  color: var(--home-warm-white) !important;
+}
+
+.template-index .shopify-section.apps {
+  background: var(--home-paper);
+  overflow: hidden;
+}
+
+.template-index .shopify-section.apps .grp-entangle-rating-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: clamp(270px, 20vw, 300px) !important;
+  min-width: clamp(270px, 20vw, 300px) !important;
+  min-height: 170px !important;
+  margin: 0 !important;
+  padding: 1.1rem 1.25rem !important;
+  background: var(--home-warm-white) !important;
+  border: 1px solid rgba(22, 56, 50, .10) !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  transform: translateY(-12px);
+}
+
+.template-index .shopify-section.apps .grp-entangle-item {
+  background: var(--home-warm-white) !important;
+  border: 1px solid rgba(22, 56, 50, .08) !important;
+  box-shadow: none !important;
+}
+
+.template-index .shopify-section.apps .grp-entangle-badge,
+.template-index .shopify-section.apps .grp-entangle-head-badge,
+.template-index .shopify-section.apps .grp-entangle-badge-flex,
+.template-index .shopify-section.apps .grp-entangle-badge-vertical {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: .45rem !important;
+  width: 100% !important;
+  height: auto !important;
+  text-align: center !important;
+}
+
+.template-index .shopify-section.apps .grp-entangle-badge-title {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+.template-index .shopify-section.apps .grp-entangle-badge-title::before {
+  content: "100% 5-star reviews";
+  display: block;
+  font-family: var(--home-body);
+  font-size: .88rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--home-forest-ink);
+}
+
+.template-index .shopify-section.apps .grp-entangle-badge-stars {
+  transform: scale(.82);
+  transform-origin: center;
+}
+
+.template-index .shopify-section.apps .grp-main-hyper-link {
+  font-family: var(--home-body) !important;
+  font-size: .9rem !important;
+  line-height: 1.35 !important;
+  color: rgba(19, 19, 17, .72) !important;
+}
+
+.template-index .shopify-section.apps .grp-entangle-badge-logo {
+  transform: scale(.72);
+  transform-origin: center;
+}
+
+.template-index .slideshow {
+  background: var(--home-forest-ink);
+}
+
+.template-index .text-columns-with-images {
+  background: var(--home-cream) !important;
+  border-top: 1px solid var(--home-line);
+  border-bottom: 1px solid var(--home-line);
+}
+
+.template-index .text-columns-with-images h2,
+.template-index .newsletter h2 {
+  font-family: var(--home-display);
+  font-weight: 600;
+  letter-spacing: -.022em;
+  line-height: 1;
+  color: var(--home-forest-ink);
+  text-transform: none;
+}
+
+.template-index .text-columns-with-images h3,
+.template-index .text-columns-with-images .title {
+  font-family: var(--home-display);
+  font-weight: 600;
+  letter-spacing: -.018em;
+  color: var(--home-forest-ink);
+}
+
+.template-index .text-columns-with-images p,
+.template-index .newsletter p {
+  color: rgba(19, 19, 17, .72);
+  line-height: 1.62;
+}
+
+.template-index .text-columns-with-images a {
+  color: var(--home-fern);
+  text-underline-offset: .24em;
+}
+
+.template-index .newsletter {
+  background: var(--home-paper);
+}
+
+.template-index .newsletter input[type="email"],
+.template-index .newsletter input[type="text"] {
+  border: 1px solid rgba(22, 56, 50, .22);
+  border-radius: var(--innate-radius);
+  background: var(--home-warm-white);
+  color: var(--home-fern);
+  font-family: var(--home-body);
+}
+
+.template-index .shopify-section-group-footer-group .footer .top {
+  padding: clamp(2rem, 3.4vw, 3rem) var(--page-padding);
+  gap: clamp(1.4rem, 3vw, 2.5rem);
+  align-items: flex-start;
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col h2 {
+  margin: 0 0 .75rem;
+  font-family: var(--home-body);
+  font-size: .82rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--home-warm-white);
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col .rte p,
+.template-index .shopify-section-group-footer-group .footer .top .col p,
+.template-index .shopify-section-group-footer-group .footer .top .col li {
+  font-family: var(--home-body);
+  font-size: .88rem;
+  line-height: 1.55;
+  color: rgba(255, 250, 243, .82);
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col.contact {
+  max-width: 340px;
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col.contact .rte p + p {
+  margin-top: .7rem;
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col .rte p a,
+.template-index .shopify-section-group-footer-group .footer .top .col p a,
+.template-index .shopify-section-group-footer-group .footer .top .col li a {
+  color: rgba(255, 250, 243, .9);
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col .connect {
+  gap: .65rem;
+}
+
+.template-index .shopify-section-group-footer-group .footer .top .col .connect a i.fc {
+  font-size: 1.55rem;
+}
+
+@media (max-width: 720px) {
+  .template-index .hero .info h1.hero-heading {
+    font-size: clamp(2.45rem, 9.8vw, 3.35rem);
+    line-height: .96;
+  }
+
+  .template-index .hero .info h2 {
+    font-size: 1rem;
+  }
+
+  .template-index .shopify-section-group-footer-group .footer .top {
+    padding: 2.2rem 1.35rem;
+    gap: 1.35rem;
+  }
+
+  .template-index .shopify-section-group-footer-group .footer .top .col h2 {
+    font-size: .78rem;
+    line-height: 1.25;
+    margin-bottom: .55rem;
+  }
+
+  .template-index .shopify-section-group-footer-group .footer .top .col .rte p,
+  .template-index .shopify-section-group-footer-group .footer .top .col p,
+  .template-index .shopify-section-group-footer-group .footer .top .col li {
+    font-size: .9rem;
+    line-height: 1.5;
+  }
+}

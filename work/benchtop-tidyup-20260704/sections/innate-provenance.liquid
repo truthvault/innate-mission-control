@@ -1,0 +1,58 @@
+{%- comment -%} Innate provenance - the three named NZ native timbers. {%- endcomment -%}
+{{ 'innate-home.css' | asset_url | stylesheet_tag }}
+{%- if section.settings.enabled -%}
+{%- assign prov_link = section.settings.link | default: '/pages/materials' -%}
+<section class="ih-sec ih-sec--cream ih-prov">
+  <div class="ih-wrap">
+    <div class="ih-head">
+      <p class="ih-eyebrow">{{ section.settings.eyebrow | default: 'Provenance' }}</p>
+      <h2 class="ih-h2">{{ section.settings.title | default: 'Every table starts in a forest we can name.' }}</h2>
+      <p class="ih-lead">{{ section.settings.intro | default: 'We mostly work with three New Zealand natives, each chosen for their appearance, functionality, and responsible harvesting methods. We can also source practically any other responsibly harvested species and finish them in nearly any colour.' }}</p>
+    </div>
+    <div class="ih-prov-grid">
+      <a class="ih-prov-card" href="{{ prov_link }}">
+        <img src="https://innatefurniture.co.nz/cdn/shop/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=800" srcset="https://innatefurniture.co.nz/cdn/shop/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=500 500w, https://innatefurniture.co.nz/cdn/shop/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=800 800w, https://innatefurniture.co.nz/cdn/shop/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=1100 1100w" sizes="(min-width:760px) 400px, 90vw" width="800" height="400" alt="West Coast Rimu timber by Innate Furniture" loading="lazy">
+        <div class="ih-prov-body"><span class="ih-prov-place">West Coast</span><h3 class="ih-prov-name">Rimu</h3></div>
+      </a>
+      <a class="ih-prov-card" href="{{ prov_link }}">
+        <img src="https://innatefurniture.co.nz/cdn/shop/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=800" srcset="https://innatefurniture.co.nz/cdn/shop/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=500 500w, https://innatefurniture.co.nz/cdn/shop/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=800 800w, https://innatefurniture.co.nz/cdn/shop/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=1100 1100w" sizes="(min-width:760px) 400px, 90vw" width="800" height="400" alt="West Coast Beech timber by Innate Furniture" loading="lazy">
+        <div class="ih-prov-body"><span class="ih-prov-place">West Coast</span><h3 class="ih-prov-name">Beech</h3></div>
+      </a>
+      <a class="ih-prov-card" href="{{ prov_link }}">
+        <img src="https://innatefurniture.co.nz/cdn/shop/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=800" srcset="https://innatefurniture.co.nz/cdn/shop/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=500 500w, https://innatefurniture.co.nz/cdn/shop/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=800 800w, https://innatefurniture.co.nz/cdn/shop/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?width=1100 1100w" sizes="(min-width:760px) 400px, 90vw" width="800" height="400" alt="Northland t&#333;tara timber by Innate Furniture" loading="lazy">
+        <div class="ih-prov-body"><span class="ih-prov-place">Northland</span><h3 class="ih-prov-name">T&#333;tara</h3></div>
+      </a>
+    </div>
+    <a class="ih-link ih-prov-more" href="{{ prov_link }}">{{ section.settings.link_label | default: 'See all timbers, finishes and colours' }}</a>
+  </div>
+</section>
+{%- endif -%}
+
+<style>
+  .ih-prov-grid{display:grid;gap:1.1rem;margin-top:0}
+  @media(min-width:760px){.ih-prov-grid{grid-template-columns:repeat(3,1fr)}}
+  .ih-prov-card{background:var(--ih-warm);border:1px solid var(--ih-line);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none!important;color:inherit;transition:transform .35s ease,box-shadow .35s ease}
+  .ih-prov-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(12,32,28,.12)}
+  .ih-prov-card img{display:block;width:100%;height:200px;object-fit:cover;transition:transform .45s ease}
+  .ih-prov-card:hover img{transform:scale(1.03)}
+  .ih-prov-body{padding:1.3rem 1.4rem}
+  .ih-prov-place{display:block;margin-bottom:.5rem;font:600 .68rem/1 var(--ih-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ih-rust)}
+  .ih-prov-name{margin:0;font:600 1.45rem/1 var(--ih-display);color:var(--ih-forest-ink)}
+  .ih-prov-more{margin-top:1.6rem}
+</style>
+
+{% schema %}
+{
+  "name": "Provenance",
+  "tag": "section",
+  "settings": [
+    {"type":"checkbox","id":"enabled","label":"Show section","default":true},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Provenance"},
+    {"type":"text","id":"title","label":"Title","default":"Every table starts in a forest we can name."},
+    {"type":"textarea","id":"intro","label":"Intro"},
+    {"type":"text","id":"link_label","label":"Link label","default":"See all timbers, finishes and colours"},
+    {"type":"url","id":"link","label":"Link"}
+  ],
+  "presets":[{"name":"Provenance"}]
+}
+{% endschema %}

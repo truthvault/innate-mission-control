@@ -1,0 +1,183 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "atelier_load_fix": {
+      "type": "benchtops-atelier",
+      "settings": {
+        "hero_primary_label": "Design your own benchtop",
+        "customer_install_asset_filename": "beech-kitchen-island-hero-2026-05-23.jpg",
+        "hero_image": "shopify://shop_images/IMG_1168.jpg",
+        "hero_image_alt": "Custom NZ native timber benchtop on a kitchen island",
+        "rimu_asset_filename": "innate-dining-timber-rimu-clear-temp-v53.jpg",
+        "totara_asset_filename": "innate-dining-timber-totara-clear-temp-v53.jpg",
+        "beech_asset_filename": "innate-dining-timber-beech-clear-temp-v53.jpg",
+        "api_base": "https://innate-mission-control.vercel.app",
+        "asset_base": "https://innate-mission-control.vercel.app"
+      }
+    },
+    "google_reviews": {
+      "type": "apps",
+      "blocks": {
+        "google_reviews_plus_app_block_mtqyih": {
+          "type": "shopify://apps/google-reviews-rocket/blocks/app-block/d11c8893-a181-4aff-a280-7446d42cec3b",
+          "settings": {
+            "widget_layout": "default"
+          }
+        }
+      },
+      "block_order": [
+        "google_reviews_plus_app_block_mtqyih"
+      ],
+      "settings": {
+        "show_on_desktop": true,
+        "show_on_mobile": true
+      }
+    },
+    "faq_benchtops": {
+      "type": "faq",
+      "blocks": {
+        "q_measure": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "How do I measure for a timber benchtop?",
+            "content": "<p>Start with overall length, depth and thickness. Then note overhangs, joins, end panels, sink or tap cut-outs and whether the top needs to work around walls or appliances. Rough dimensions are fine for a first quote; final dimensions need checking before cutting.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_colour": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "How do I choose the timber colour?",
+            "content": "<p>Use the colour grid to compare Clear, Country Bark and Blackwash across Rimu, Tōtara and Beech. For a real-world decision, order timber samples and view them beside your flooring, cabinetry and wall colour.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_cutouts": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Can I add sink and tap cut-outs?",
+            "content": "<p>Yes. The configurator covers common sink and tap cut-outs. If the shape, join, overhang or cut-out is unusual, use the quote as a starting point and send through your plan or sketch.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_finish": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "How are the benchtops finished?",
+            "content": "<p>Our standard finish is a hardwax oil that keeps the timber feeling natural and can be refreshed over time. It still needs sensible care: wipe spills, avoid standing water, use boards and trivets, and clean with suitable products.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_samples": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Can I get a sample?",
+            "content": "<p>Yes. Sample sets ship nationwide so you can see the timber in your space before committing. <a href=\"/products/product-sample\" title=\"Timber Samples\"><strong>Order them here.</strong></a></p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_lead_time": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "How long does it take?",
+            "content": "<p>Lead time is confirmed in your quote - typically 4 to 8 weeks from order to delivery, depending on timber stock and your sizing. We'll tell you exactly when we come back to you.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_shapes": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Can I order an unusual shape?",
+            "content": "<p>Most shapes work, including L-shapes, peninsulas, irregular angles and live-edge profiles. Use the configurator for the basic outline, and reply to your quote with anything bespoke. We'll work it out together.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_quote_final": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Is the configurator quote final?",
+            "content": "<p>No. It is an indicative quote to give you a serious starting point before we talk. We still confirm timber availability, final dimensions, joins, support, cut-outs, finish, delivery and any site details before anything is made.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_dimensions_check": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "Can you check my dimensions?",
+            "content": "<p>Yes. Send the quote through with rough dimensions, photos, sketches or plans. We will come back with the practical questions and confirm the final dimensions before cutting.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        },
+        "q_after_send": {
+          "type": "collapsible_tab",
+          "settings": {
+            "heading": "What happens after I send the quote?",
+            "content": "<p>It comes to our workshop team for review. We check the timber choice, size, finish, joins, cut-outs and delivery details, then reply with next steps. No payment is taken from the quote builder.</p>",
+            "page": "",
+            "icon": "none",
+            "is_open": false
+          }
+        }
+      },
+      "block_order": [
+        "q_measure",
+        "q_colour",
+        "q_cutouts",
+        "q_quote_final",
+        "q_dimensions_check",
+        "q_after_send",
+        "q_finish",
+        "q_samples",
+        "q_lead_time",
+        "q_shapes"
+      ],
+      "settings": {
+        "title": "Common benchtop questions",
+        "subtitle": "",
+        "show_background": false,
+        "expanded": true,
+        "content_max_width": 800,
+        "expanded_content": true,
+        "collapsed": false,
+        "show_on_desktop": true,
+        "show_on_mobile": true
+      }
+    },
+    "final_cta": {
+      "type": "benchtops-atelier-final-cta",
+      "settings": {}
+    }
+  },
+  "order": [
+    "atelier_load_fix",
+    "google_reviews",
+    "faq_benchtops",
+    "final_cta"
+  ]
+}

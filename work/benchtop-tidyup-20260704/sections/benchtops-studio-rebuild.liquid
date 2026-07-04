@@ -1,0 +1,237 @@
+{{ 'innate-benchtop-configurator.css' | asset_url | stylesheet_tag }}
+{{ 'page-benchtops-studio.css' | asset_url | append: '&studio=202605262222' | stylesheet_tag }}
+
+<script>
+  document.documentElement.classList.add('bench-studio-template');
+</script>
+
+{%- liquid
+  assign hero_alt = section.settings.hero_image_alt | default: 'Custom NZ native timber benchtop in a kitchen'
+  assign api_base = section.settings.api_base | default: 'https://innate-mission-control.vercel.app'
+  assign asset_base = section.settings.asset_base | default: 'https://innate-mission-control.vercel.app'
+-%}
+
+<div class="bench-studio-draft" data-section-id="{{ section.id }}">
+  <section class="studio-hero" aria-label="Custom timber benchtop quote studio">
+    <div class="studio-hero__copy">
+      <p class="studio-kicker">Custom timber benchtops NZ</p>
+      <h1>Design the benchtop first. We’ll craft it properly after.</h1>
+      <p class="studio-lead">A made-to-size quote studio for Rimu, Tōtara and West Coast Beech benchtops. Set the practical details, see an indicative price, then send the brief to our Christchurch workshop.</p>
+      <div class="studio-actions" aria-label="Benchtop actions">
+        <a class="studio-button studio-button--primary" href="#studio-builder">Open quote studio</a>
+        <a class="studio-button studio-button--secondary" href="/products/product-sample">Order timber samples</a>
+      </div>
+    </div>
+
+    {%- if section.settings.hero_image != blank -%}
+      {%- capture hero_srcset -%}
+        {%- assign widths = '720,1080,1440,1920,2400' | split: ',' -%}
+        {%- for w in widths -%}
+          {{ section.settings.hero_image | image_url: width: w }} {{ w }}w{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      {%- endcapture -%}
+      <figure class="studio-hero__image">
+        {{ section.settings.hero_image | image_url: width: 2400 | image_tag:
+          alt: hero_alt,
+          class: 'studio-hero__photo',
+          sizes: '(min-width: 960px) 48vw, 100vw',
+          srcset: hero_srcset,
+          loading: 'eager',
+          fetchpriority: 'high',
+          width: section.settings.hero_image.width,
+          height: section.settings.hero_image.height
+        }}
+      </figure>
+    {%- endif -%}
+
+    <div class="studio-hero__proof" aria-label="Why Innate benchtops are different">
+      <span><strong>Quote in minutes</strong><em>Size, timber, finish, cut-outs and delivery</em></span>
+      <span><strong>Native timber</strong><em>Rimu, Tōtara and West Coast Beech</em></span>
+      <span><strong>Workshop reviewed</strong><em>No payment until details are confirmed</em></span>
+      <span><strong>Nationwide delivery</strong><em>Made in Christchurch, sent across NZ</em></span>
+    </div>
+  </section>
+
+  <section id="studio-builder" class="studio-builder" aria-labelledby="studio-builder-heading">
+    <div class="studio-builder__intro">
+      <div>
+        <p class="studio-kicker">Quote studio</p>
+        <h2 id="studio-builder-heading">Shape the practical brief. See the price while you decide.</h2>
+      </div>
+      <p>The builder is for real decisions: dimensions, timber, thickness, finish, cut-outs, pieces and delivery. The price is indicative until we check the details, but it gives you a useful starting point before emails begin.</p>
+    </div>
+
+    <div class="studio-builder__workspace">
+      <aside class="studio-builder__rail" aria-label="How the benchtop quote works">
+        <p class="studio-kicker">How it works</p>
+        <ol>
+          <li><strong>Measure</strong><span>Use rough sizes now or confirmed joinery dimensions later.</span></li>
+          <li><strong>Choose timber</strong><span>Compare Rimu, Tōtara and Beech in three finish looks.</span></li>
+          <li><strong>Add details</strong><span>Include thickness, extra pieces and common rectangular cut-outs.</span></li>
+          <li><strong>Send for review</strong><span>We check joins, support, delivery and anything unusual.</span></li>
+        </ol>
+        <div class="studio-builder__note">
+          <strong>Indicative, not vague.</strong>
+          <span>The quote is a strong starting point. We still confirm the final spec before cutting timber.</span>
+        </div>
+      </aside>
+
+      <div
+        id="innate-benchtop-configurator"
+        class="studio-configurator-mount"
+        data-api-base="{{ api_base | escape }}"
+        data-asset-base="{{ asset_base | escape }}"
+      ></div>
+    </div>
+  </section>
+
+  <section class="studio-materials" aria-label="Compare native timber benchtop materials">
+    <div class="studio-section-head">
+      <p class="studio-kicker">Material choice</p>
+      <h2>Three native timbers. Three different moods.</h2>
+      <p>Order samples before committing. Timber changes with light, cabinetry, flooring and finish.</p>
+    </div>
+
+    <div class="studio-materials__grid" role="list">
+      <article role="listitem">
+        <figure><img src="{{ section.settings.rimu_asset_filename | asset_url }}" alt="Rimu benchtop timber grain sample" loading="lazy" width="900" height="253"></figure>
+        <div>
+          <span>West Coast</span>
+          <h3>Rimu</h3>
+          <p>Warm and lively. Choose it when the benchtop should become a feature.</p>
+          <dl><div><dt>Character</dt><dd>Rich amber grain</dd></div><div><dt>Thickness</dt><dd>Up to 33 mm</dd></div></dl>
+        </div>
+      </article>
+
+      <article role="listitem">
+        <figure><img src="{{ section.settings.totara_asset_filename | asset_url }}" alt="Tōtara benchtop timber grain sample" loading="lazy" width="900" height="347"></figure>
+        <div>
+          <span>Northland</span>
+          <h3>Tōtara</h3>
+          <p>Golden and calmer. A native timber story without a busy surface.</p>
+          <dl><div><dt>Character</dt><dd>Honeyed, quieter grain</dd></div><div><dt>Thickness</dt><dd>Up to 43 mm</dd></div></dl>
+        </div>
+      </article>
+
+      <article role="listitem">
+        <figure><img src="{{ section.settings.beech_asset_filename | asset_url }}" alt="West Coast Beech timber benchtop in a kitchen" loading="lazy" width="1200" height="1764"></figure>
+        <div>
+          <span>West Coast</span>
+          <h3>Beech</h3>
+          <p>Clean and practical. Often the easiest native timber for contemporary kitchens.</p>
+          <dl><div><dt>Character</dt><dd>Light red to warm brown</dd></div><div><dt>Thickness</dt><dd>Up to 43 mm</dd></div></dl>
+        </div>
+      </article>
+    </div>
+
+    <aside class="studio-samples">
+      <p><strong>Not sure which timber belongs in the room?</strong> Order samples, view them beside cabinetry and flooring, then return to the quote with confidence.</p>
+      <a href="/products/product-sample">Order samples</a>
+    </aside>
+  </section>
+
+  <section class="studio-uses" aria-label="Where custom timber benchtops work">
+    <div class="studio-uses__copy">
+      <p class="studio-kicker">Made to size</p>
+      <h2>Wooden kitchen benchtops, islands, laundries, vanities, desks and counters.</h2>
+      <p>Timber is warm, repairable and honest. It is not stone. It needs sensible care around heat, standing water and spills, but it can be refreshed over time and made to fit the space properly.</p>
+    </div>
+    <div class="studio-uses__list" role="list">
+      <span role="listitem">Kitchen runs</span>
+      <span role="listitem">Island tops</span>
+      <span role="listitem">Laundry tops</span>
+      <span role="listitem">Bathroom vanities</span>
+      <span role="listitem">Commercial counters</span>
+      <span role="listitem">Desks and shelves</span>
+    </div>
+  </section>
+
+  <section class="studio-review" aria-label="What happens after a quote">
+    <figure><img src="{{ section.settings.beech_asset_filename | asset_url }}" alt="Finished West Coast Beech timber benchtop before workshop review" loading="lazy" width="1200" height="1764"></figure>
+    <div>
+      <p class="studio-kicker">After the quote</p>
+      <h2>We check the details before anything is cut.</h2>
+      <p>Send the quote when the practical shape feels close. We review support, joins, cut-outs, delivery, finish and anything unusual before confirming the final price.</p>
+      <ul>
+        <li>Made in Christchurch from NZ native timber</li>
+        <li>Samples available before commitment</li>
+        <li>Nationwide delivery quoted before order confirmation</li>
+      </ul>
+      <a class="studio-button studio-button--primary" href="#studio-builder">Return to quote studio</a>
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var targetId = 'studio-builder';
+    document.addEventListener('click', function (event) {
+      var link = event.target && event.target.closest ? event.target.closest('a[href="#' + targetId + '"]') : null;
+      if (!link) return;
+      var target = document.getElementById(targetId);
+      if (!target) return;
+      event.preventDefault();
+      var y = target.getBoundingClientRect().top + window.pageYOffset - 112;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search + '#' + targetId);
+      }
+    }, true);
+  })();
+</script>
+<script type="module" src="{{ 'innate-benchtop-configurator.js' | asset_url }}"></script>
+
+{% schema %}
+{
+  "name": "Benchtops studio rebuild",
+  "class": "section-benchtops-studio-rebuild",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Hero image alt text",
+      "default": "Custom NZ native timber benchtop in a kitchen"
+    },
+    {
+      "type": "text",
+      "id": "rimu_asset_filename",
+      "label": "Rimu image asset filename",
+      "default": "innate-benchtops-rimu-live-20260521.jpg"
+    },
+    {
+      "type": "text",
+      "id": "totara_asset_filename",
+      "label": "Tōtara image asset filename",
+      "default": "innate-benchtops-totara-live-20260521.jpg"
+    },
+    {
+      "type": "text",
+      "id": "beech_asset_filename",
+      "label": "Beech image asset filename",
+      "default": "innate-benchtops-beech-kitchen-island-20260526.jpg"
+    },
+    {
+      "type": "text",
+      "id": "api_base",
+      "label": "Backend API base URL",
+      "default": "https://innate-mission-control.vercel.app"
+    },
+    {
+      "type": "text",
+      "id": "asset_base",
+      "label": "Remote asset base URL for timber photos",
+      "default": "https://innate-mission-control.vercel.app"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops studio rebuild"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,367 @@
+{% comment %}
+  Tōtara Editorial section
+  Single custom section for the Northland Tōtara landing page.
+  Block types: hero, story, toc, chapter_heading, paragraph, image, drawer, pull_quote, cta, care_drawer.
+  Scoped CSS lives in assets/page-totara.css.
+{% endcomment %}
+
+{{ 'page-totara.css' | asset_url | stylesheet_tag }}
+
+<article class="totara-page" id="totara-article">
+  {% for block in section.blocks %}
+    {% case block.type %}
+
+      {% when 'hero' %}
+        <section class="totara-hero" {{ block.shopify_attributes }}>
+          {% if block.settings.image != blank %}
+            <div class="totara-hero__image">
+              {{ block.settings.image
+                | image_url: width: 2400
+                | image_tag:
+                    loading: 'eager',
+                    fetchpriority: 'high',
+                    widths: '600,900,1200,1600,2000,2400',
+                    sizes: '100vw',
+                    alt: block.settings.image_alt
+              }}
+            </div>
+          {% endif %}
+          {%- if block.settings.hero_caption != blank -%}
+            <figure class="totara-figure totara-figure--constrained">
+              <figcaption class="totara-figure__caption">{{ block.settings.hero_caption | escape | newline_to_br }}</figcaption>
+            </figure>
+          {%- endif -%}
+          <div class="totara-hero__text">
+            {% if block.settings.eyebrow != blank %}
+              <p class="totara-hero__eyebrow">{{ block.settings.eyebrow | escape }}</p>
+            {% endif %}
+            {% if block.settings.title != blank %}
+              <h1 class="totara-hero__title">{{ block.settings.title | escape }}</h1>
+            {% endif %}
+          </div>
+        </section>
+
+      {% when 'story' %}
+        <section class="totara-story" {{ block.shopify_attributes }}>
+          <div class="totara-story__body totara-prose">
+            {{ block.settings.body }}
+          </div>
+        </section>
+
+      {% when 'toc' %}
+        <nav class="totara-toc" aria-label="Chapters" {{ block.shopify_attributes }}>
+          {% if block.settings.heading != blank %}
+            <p class="totara-toc__heading">{{ block.settings.heading | escape }}</p>
+          {% endif %}
+          <ol class="totara-toc__list">
+            {% for i in (1..8) %}
+              {% assign label_key = 'item_' | append: i | append: '_label' %}
+              {% assign anchor_key = 'item_' | append: i | append: '_anchor' %}
+              {% assign label = block.settings[label_key] %}
+              {% assign anchor = block.settings[anchor_key] %}
+              {% if label != blank and anchor != blank %}
+                <li class="totara-toc__item">
+                  <a href="#{{ anchor }}" class="totara-toc__link">
+                    <span class="totara-toc__num">{{ i }}</span>
+                    <span class="totara-toc__label">{{ label | escape }}</span>
+                  </a>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ol>
+        </nav>
+
+        <details class="totara-toc-mini" aria-label="Chapters quick-jump">
+          <summary class="totara-toc-mini__summary">
+            <span class="totara-toc-mini__heading">{{ block.settings.heading | default: 'Chapters' | escape }}</span>
+            <span class="totara-toc-mini__chevron" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </summary>
+          <ol class="totara-toc-mini__list">
+            {% for i in (1..8) %}
+              {% assign label_key = 'item_' | append: i | append: '_label' %}
+              {% assign anchor_key = 'item_' | append: i | append: '_anchor' %}
+              {% assign label = block.settings[label_key] %}
+              {% assign anchor = block.settings[anchor_key] %}
+              {% if label != blank and anchor != blank %}
+                <li class="totara-toc-mini__item">
+                  <a href="#{{ anchor }}" class="totara-toc-mini__link">
+                    <span class="totara-toc-mini__num">{{ i }}</span>
+                    <span>{{ label | escape }}</span>
+                  </a>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ol>
+        </details>
+
+      {% when 'chapter_heading' %}
+        <header class="totara-chapter" {{ block.shopify_attributes }}>
+          {% if block.settings.anchor != blank %}
+            <a class="totara-chapter__anchor" id="{{ block.settings.anchor }}" aria-hidden="true"></a>
+          {% endif %}
+          {% if block.settings.eyebrow != blank %}
+            <p class="totara-chapter__eyebrow">{{ block.settings.eyebrow | escape }}</p>
+          {% endif %}
+          {% if block.settings.title != blank %}
+            <h2 class="totara-chapter__title">{{ block.settings.title | escape }}</h2>
+          {% endif %}
+        </header>
+
+      {% when 'paragraph' %}
+        <div class="totara-paragraph totara-prose{% if block.settings.emphasise %} totara-paragraph--emphasise{% endif %}" {{ block.shopify_attributes }}>
+          {% if block.settings.subheading != blank %}
+            <h3 class="totara-paragraph__subheading">{{ block.settings.subheading | escape }}</h3>
+          {% endif %}
+          {{ block.settings.body }}
+        </div>
+
+      {% when 'image' %}
+        <figure class="totara-figure totara-figure--{{ block.settings.size }}" {{ block.shopify_attributes }}>
+          {% if block.settings.image != blank %}
+            {% assign img_sizes = '(min-width: 1200px) 1000px, (min-width: 750px) 80vw, 100vw' %}
+            {% if block.settings.size == 'full' %}
+              {% assign img_sizes = '100vw' %}
+            {% elsif block.settings.size == 'wide' %}
+              {% assign img_sizes = '(min-width: 1200px) 1200px, 100vw' %}
+            {% endif %}
+            {{ block.settings.image
+              | image_url: width: 2400
+              | image_tag:
+                  loading: 'lazy',
+                  widths: '400,600,800,1200,1600,2000,2400',
+                  sizes: img_sizes,
+                  alt: block.settings.image_alt
+            }}
+          {% endif %}
+          {% if block.settings.caption != blank %}
+            <figcaption class="totara-figure__caption">{{ block.settings.caption | escape }}</figcaption>
+          {% endif %}
+        </figure>
+
+      {% when 'drawer' %}
+        <details class="totara-drawer" {{ block.shopify_attributes }}>
+          <summary class="totara-drawer__summary">
+            <span class="totara-drawer__label">{{ block.settings.summary | escape }}</span>
+            <span class="totara-drawer__chevron" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </summary>
+          <div class="totara-drawer__body totara-prose">
+            {{ block.settings.body }}
+          </div>
+        </details>
+
+      {% when 'pull_quote' %}
+        <blockquote class="totara-pullquote" {{ block.shopify_attributes }}>
+          <p class="totara-pullquote__text">{{ block.settings.quote | escape }}</p>
+          {% if block.settings.attribution != blank %}
+            <cite class="totara-pullquote__attribution">{{ block.settings.attribution | escape }}</cite>
+          {% endif %}
+        </blockquote>
+
+      {% when 'cta' %}
+        <section class="totara-cta" {{ block.shopify_attributes }}>
+          <div class="totara-cta__body totara-prose">
+            {{ block.settings.body }}
+          </div>
+          {% if block.settings.button_label != blank %}
+            <a class="totara-cta__button button button--primary"
+               href="{{ block.settings.button_url | default: '/pages/contact' }}">
+              {{ block.settings.button_label | escape }}
+            </a>
+          {% endif %}
+        </section>
+
+      {% when 'care_drawer' %}
+        <details class="totara-drawer totara-drawer--care" open {{ block.shopify_attributes }}>
+          <summary class="totara-drawer__summary">
+            <span class="totara-drawer__label">{{ block.settings.summary | escape }}</span>
+            <span class="totara-drawer__chevron" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </summary>
+          <div class="totara-drawer__body totara-prose">
+            {{ block.settings.body }}
+          </div>
+        </details>
+
+    {% endcase %}
+  {% endfor %}
+
+  <button
+    type="button"
+    class="totara-backtotop"
+    aria-label="Back to top"
+    onclick="window.scrollTo({top:0,behavior:'smooth'});"
+  >
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M8 13V3M8 3L3 8M8 3L13 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+</article>
+
+<script>
+  (function () {
+    var hero = document.querySelector('.totara-hero');
+    var btn = document.querySelector('.totara-backtotop');
+    if (!hero || !btn || typeof IntersectionObserver === 'undefined') {
+      if (btn) btn.classList.add('is-visible');
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        btn.classList.toggle('is-visible', !e.isIntersecting);
+      });
+    }, { threshold: 0 });
+    io.observe(hero);
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Tōtara Editorial",
+  "tag": "section",
+  "class": "totara-section-wrapper",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "hero",
+      "name": "Hero",
+      "limit": 1,
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Hero image" },
+        { "type": "text", "id": "image_alt", "label": "Image alt text" },
+        { "type": "textarea", "id": "hero_caption", "label": "Caption (under banner image, optional)" },
+        { "type": "text", "id": "eyebrow", "label": "Eyebrow (above heading)" },
+        { "type": "text", "id": "title", "label": "H1 heading" }
+      ]
+    },
+    {
+      "type": "story",
+      "name": "Story block",
+      "limit": 1,
+      "settings": [
+        { "type": "richtext", "id": "body", "label": "Body" }
+      ]
+    },
+    {
+      "type": "toc",
+      "name": "Table of contents",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "heading", "label": "ToC heading", "default": "Chapters" },
+        { "type": "header", "content": "Chapter 1" },
+        { "type": "text", "id": "item_1_label", "label": "Label" },
+        { "type": "text", "id": "item_1_anchor", "label": "Anchor (matches chapter anchor)" },
+        { "type": "header", "content": "Chapter 2" },
+        { "type": "text", "id": "item_2_label", "label": "Label" },
+        { "type": "text", "id": "item_2_anchor", "label": "Anchor" },
+        { "type": "header", "content": "Chapter 3" },
+        { "type": "text", "id": "item_3_label", "label": "Label" },
+        { "type": "text", "id": "item_3_anchor", "label": "Anchor" },
+        { "type": "header", "content": "Chapter 4" },
+        { "type": "text", "id": "item_4_label", "label": "Label" },
+        { "type": "text", "id": "item_4_anchor", "label": "Anchor" },
+        { "type": "header", "content": "Chapter 5" },
+        { "type": "text", "id": "item_5_label", "label": "Label" },
+        { "type": "text", "id": "item_5_anchor", "label": "Anchor" },
+        { "type": "header", "content": "Chapter 6" },
+        { "type": "text", "id": "item_6_label", "label": "Label" },
+        { "type": "text", "id": "item_6_anchor", "label": "Anchor" },
+        { "type": "header", "content": "Chapter 7" },
+        { "type": "text", "id": "item_7_label", "label": "Label" },
+        { "type": "text", "id": "item_7_anchor", "label": "Anchor" },
+        { "type": "header", "content": "Chapter 8" },
+        { "type": "text", "id": "item_8_label", "label": "Label" },
+        { "type": "text", "id": "item_8_anchor", "label": "Anchor" }
+      ]
+    },
+    {
+      "type": "chapter_heading",
+      "name": "Chapter heading",
+      "settings": [
+        { "type": "text", "id": "eyebrow", "label": "Eyebrow (e.g. Chapter 1)" },
+        { "type": "text", "id": "title", "label": "Chapter title" },
+        { "type": "text", "id": "anchor", "label": "Anchor ID (matches ToC)" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "name": "Paragraph",
+      "settings": [
+        { "type": "text", "id": "subheading", "label": "Subheading (optional)" },
+        { "type": "richtext", "id": "body", "label": "Body" },
+        { "type": "checkbox", "id": "emphasise", "label": "Emphasise (slightly larger text)", "default": false }
+      ]
+    },
+    {
+      "type": "image",
+      "name": "Image",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_alt", "label": "Alt text" },
+        { "type": "text", "id": "caption", "label": "Caption (optional)" },
+        {
+          "type": "select",
+          "id": "size",
+          "label": "Width",
+          "options": [
+            { "value": "constrained", "label": "Text width" },
+            { "value": "wide", "label": "Wider than text" },
+            { "value": "full", "label": "Full bleed" }
+          ],
+          "default": "constrained"
+        }
+      ]
+    },
+    {
+      "type": "drawer",
+      "name": "Drawer (collapsible)",
+      "settings": [
+        { "type": "text", "id": "summary", "label": "Summary (visible label)" },
+        { "type": "richtext", "id": "body", "label": "Body" }
+      ]
+    },
+    {
+      "type": "pull_quote",
+      "name": "Pull quote",
+      "settings": [
+        { "type": "textarea", "id": "quote", "label": "Quote" },
+        { "type": "text", "id": "attribution", "label": "Attribution (optional)" }
+      ]
+    },
+    {
+      "type": "cta",
+      "name": "CTA",
+      "limit": 1,
+      "settings": [
+        { "type": "richtext", "id": "body", "label": "Body" },
+        { "type": "text", "id": "button_label", "label": "Button label" },
+        { "type": "url", "id": "button_url", "label": "Button URL" }
+      ]
+    },
+    {
+      "type": "care_drawer",
+      "name": "Care drawer",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "summary", "label": "Summary (visible label)" },
+        { "type": "richtext", "id": "body", "label": "Body" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Tōtara Editorial"
+    }
+  ]
+}
+{% endschema %}

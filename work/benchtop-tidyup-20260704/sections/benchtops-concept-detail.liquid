@@ -1,0 +1,147 @@
+<div class="bench-concept bench-concept--detail bench-studio-support" data-section-id="{{ section.id }}">
+  <section id="bench-concept-timbers" class="bench-material-board" aria-label="Compare NZ native benchtop timbers">
+    <div class="bench-material-board__inner">
+      <header class="bench-studio-heading">
+        <p class="bench-concept__eyebrow">Material library</p>
+        <h2>Pick the timber for its character. Confirm the colour with samples.</h2>
+        <p>The configurator prices Rimu benchtops, Tōtara benchtops and Beech benchtops in Clear, Country Bark and Blackwash. The final decision should happen with real samples in your room.</p>
+      </header>
+
+      <div class="bench-material-board__grid" role="list">
+        <article class="bench-material-card bench-material-card--rimu" role="listitem">
+          <figure>
+            <img src="{{ section.settings.rimu_asset_filename | asset_url }}" alt="Full clear Rimu tabletop reference for a custom timber benchtop" loading="lazy" width="900" height="253">
+          </figure>
+          <div>
+            <span>West Coast</span>
+            <h3>Rimu</h3>
+            <p>Warm, lively and recognisably New Zealand. Good when the benchtop should feel like a feature.</p>
+            <ul>
+              <li>Rich amber to reddish tones</li>
+              <li>Up to 33 mm</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="bench-material-card bench-material-card--totara" role="listitem">
+          <figure>
+            <img src="{{ section.settings.totara_asset_filename | asset_url }}" alt="Full clear Tōtara tabletop reference for a custom timber benchtop" loading="lazy" width="900" height="347">
+          </figure>
+          <div>
+            <span>Northland</span>
+            <h3>Tōtara</h3>
+            <p>Calmer and golden. A strong Aotearoa provenance story without a busy surface.</p>
+            <ul>
+              <li>Honeyed, quieter grain</li>
+              <li>Up to 43 mm</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="bench-material-card bench-material-card--beech" role="listitem">
+          <figure>
+            <img src="{{ section.settings.beech_asset_filename | asset_url }}" alt="West Coast Beech timber benchtop kitchen island in a Christchurch home" loading="lazy" width="1200" height="1764">
+          </figure>
+          <div>
+            <span>West Coast</span>
+            <h3>Beech</h3>
+            <p>Clean, practical and modern. Often the easiest native timber to place in contemporary kitchens.</p>
+            <ul>
+              <li>Light red to warm brown</li>
+              <li>Up to 43 mm</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+
+      <aside class="bench-material-board__samples">
+        <p><strong>Not sure which timber works at home?</strong> Order samples, compare them against cabinetry and flooring, then come back to the builder with confidence.</p>
+        <a href="/products/product-sample">Order timber samples</a>
+      </aside>
+    </div>
+  </section>
+
+  <section class="bench-decision-map" aria-label="What the benchtop quote builder decides">
+    <div class="bench-decision-map__inner">
+      <header class="bench-studio-heading">
+        <p class="bench-concept__eyebrow">What the quote covers</p>
+        <h2>A simple path through the decisions that usually slow custom work down.</h2>
+      </header>
+      <ol class="bench-decision-map__list">
+        <li><span>01</span><strong>Size and thickness</strong><p>Start with rough dimensions or confirmed joinery measurements.</p></li>
+        <li><span>02</span><strong>Timber and finish</strong><p>Choose the native timber, colour direction and oiled or raw finish.</p></li>
+        <li><span>03</span><strong>Cut-outs and pieces</strong><p>Add common rectangular cut-outs and multiple benchtop pieces.</p></li>
+        <li><span>04</span><strong>Delivery and review</strong><p>Estimate freight nationwide, then send the quote for workshop confirmation.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="bench-fit-board" aria-label="Where custom timber benchtops work">
+    <div class="bench-fit-board__inner">
+      <div class="bench-fit-board__copy">
+        <p class="bench-concept__eyebrow">Where it works</p>
+        <h2>Wooden kitchen benchtops, islands, laundries, vanities and work surfaces made to size.</h2>
+        <p>Timber is warm, repairable and honest. It is not stone. It needs sensible care around heat, standing water and spills, but it can be refreshed over time and made to suit the room properly.</p>
+      </div>
+      <div class="bench-fit-board__tags" role="list">
+        <span role="listitem">Kitchen runs</span>
+        <span role="listitem">Island tops</span>
+        <span role="listitem">Laundry tops</span>
+        <span role="listitem">Bathroom vanities</span>
+        <span role="listitem">Commercial counters</span>
+        <span role="listitem">Desks and shelves</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="bench-workshop-check" aria-label="What happens after a benchtop quote">
+    <div class="bench-workshop-check__inner">
+      <figure>
+        <img src="{{ section.settings.beech_asset_filename | asset_url }}" alt="Finished West Coast Beech kitchen benchtop before workshop review" loading="lazy" width="1200" height="1764">
+      </figure>
+      <div>
+        <p class="bench-concept__eyebrow">After the quote</p>
+        <h2>We check the details before timber is cut.</h2>
+        <p>The price is useful early, but it is still indicative. Once you send the quote, we review support, joins, cut-outs, delivery notes and anything that needs a proper workshop conversation.</p>
+        <ul>
+          <li>Made in Christchurch</li>
+          <li>Samples available before commitment</li>
+          <li>Nationwide delivery quoted before order confirmation</li>
+        </ul>
+        <a class="bench-concept__btn bench-concept__btn--primary" href="#innate-benchtop-configurator-section">Return to quote builder</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Benchtops concept detail",
+  "class": "section-benchtops-concept-detail",
+  "settings": [
+    {
+      "type": "text",
+      "id": "rimu_asset_filename",
+      "label": "Rimu image asset filename",
+      "default": "innate-benchtops-rimu-live-20260521.jpg"
+    },
+    {
+      "type": "text",
+      "id": "totara_asset_filename",
+      "label": "Tōtara image asset filename",
+      "default": "innate-benchtops-totara-live-20260521.jpg"
+    },
+    {
+      "type": "text",
+      "id": "beech_asset_filename",
+      "label": "Beech image asset filename",
+      "default": "innate-benchtops-beech-kitchen-island-20260526.jpg"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops concept detail"
+    }
+  ]
+}
+{% endschema %}

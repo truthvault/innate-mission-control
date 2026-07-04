@@ -1,0 +1,205 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+<style>
+  .boardroom-directions {
+    background: var(--bench-paper);
+    padding: clamp(3.25rem, 7vw, 6rem) var(--bench-pad-x);
+    border-top: 1px solid var(--bench-line);
+  }
+
+  .boardroom-directions__inner {
+    max-width: var(--bench-max-wide);
+    margin: 0 auto;
+  }
+
+  .boardroom-directions__head {
+    display: grid;
+    gap: .9rem;
+    max-width: 48rem;
+    margin: 0 0 clamp(1.75rem, 4vw, 3rem);
+  }
+
+  .boardroom-directions__title {
+    margin: 0;
+    color: var(--bench-forest-ink);
+    font-size: clamp(1.95rem, 3vw, 3.05rem);
+    line-height: 1.08;
+    letter-spacing: 0;
+  }
+
+  .boardroom-directions__intro {
+    margin: 0;
+    color: var(--bench-ink-soft);
+    font-size: clamp(1rem, 1.25vw, 1.12rem);
+    line-height: 1.62;
+    max-width: 42rem;
+  }
+
+  .boardroom-directions__grid {
+    display: grid;
+    gap: clamp(1rem, 2.5vw, 1.4rem);
+  }
+
+  @media (min-width: 900px) {
+    .boardroom-directions__grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: stretch;
+    }
+  }
+
+  .boardroom-direction-card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: var(--bench-cream-soft);
+    border: 1px solid var(--bench-line);
+    min-width: 0;
+  }
+
+  .boardroom-direction-card__media {
+    margin: 0;
+    aspect-ratio: 1.34 / 1;
+    background: var(--bench-cream);
+    overflow: hidden;
+  }
+
+  .boardroom-direction-card__media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .boardroom-direction-card__body {
+    padding: clamp(1.05rem, 2vw, 1.35rem);
+    display: grid;
+    gap: .8rem;
+    align-content: start;
+  }
+
+  .boardroom-direction-card__body .bench-eyebrow {
+    margin: 0;
+  }
+
+  .boardroom-direction-card__title {
+    margin: 0;
+    color: var(--bench-forest-ink);
+    font-size: clamp(1.35rem, 2vw, 1.75rem);
+    line-height: 1.12;
+    letter-spacing: 0;
+  }
+
+  .boardroom-direction-card__body p {
+    margin: 0;
+    color: var(--bench-ink-soft);
+    line-height: 1.56;
+    font-size: .96rem;
+  }
+
+  .boardroom-direction-card__fit {
+    padding-top: .8rem;
+    border-top: 1px solid var(--bench-line);
+  }
+
+  .boardroom-direction-card__caption {
+    font-size: .86rem !important;
+    line-height: 1.45 !important;
+    color: rgba(43, 45, 38, .68) !important;
+  }
+
+  .boardroom-directions__action {
+    margin: clamp(1.6rem, 3vw, 2.25rem) 0 0;
+  }
+
+  @media (max-width: 699px) {
+    .boardroom-directions {
+      padding-top: 3rem;
+      padding-bottom: 3.25rem;
+    }
+
+    .boardroom-directions__head {
+      margin-bottom: 1.5rem;
+    }
+
+    .boardroom-direction-card__media {
+      aspect-ratio: 1.28 / 1;
+    }
+  }
+</style>
+
+<section id="{{ section.settings.anchor_id | default: 'recent-boardroom-directions' | escape }}" class="boardroom-directions" aria-labelledby="recent-boardroom-directions-title" data-section-id="{{ section.id }}">
+  <div class="boardroom-directions__inner">
+    <header class="boardroom-directions__head">
+      {% if section.settings.eyebrow != blank %}<p class="bench-eyebrow">{{ section.settings.eyebrow | escape }}</p>{% endif %}
+      {% if section.settings.heading != blank %}<h2 id="recent-boardroom-directions-title" class="bench-display boardroom-directions__title">{{ section.settings.heading | escape }}</h2>{% endif %}
+      {% if section.settings.intro != blank %}<p class="boardroom-directions__intro">{{ section.settings.intro | escape }}</p>{% endif %}
+    </header>
+
+    <div class="boardroom-directions__grid">
+      {% for i in (1..3) %}
+        {% capture image_setting %}card_{{ i }}_image_asset{% endcapture %}
+        {% capture alt_setting %}card_{{ i }}_alt{% endcapture %}
+        {% capture label_setting %}card_{{ i }}_label{% endcapture %}
+        {% capture title_setting %}card_{{ i }}_title{% endcapture %}
+        {% capture body_setting %}card_{{ i }}_body{% endcapture %}
+        {% capture fit_setting %}card_{{ i }}_fit{% endcapture %}
+        {% capture caption_setting %}card_{{ i }}_caption{% endcapture %}
+        <article class="boardroom-direction-card">
+          {% if section.settings[image_setting] != blank %}
+            <figure class="boardroom-direction-card__media">
+              <img src="{{ section.settings[image_setting] | asset_url }}" alt="{{ section.settings[alt_setting] | escape }}" loading="eager" decoding="async">
+            </figure>
+          {% endif %}
+          <div class="boardroom-direction-card__body">
+            {% if section.settings[label_setting] != blank %}<p class="bench-eyebrow">{{ section.settings[label_setting] | escape }}</p>{% endif %}
+            {% if section.settings[title_setting] != blank %}<h3 class="bench-display boardroom-direction-card__title">{{ section.settings[title_setting] | escape }}</h3>{% endif %}
+            {% if section.settings[body_setting] != blank %}<p>{{ section.settings[body_setting] | escape }}</p>{% endif %}
+            {% if section.settings[fit_setting] != blank %}<p class="boardroom-direction-card__fit">{{ section.settings[fit_setting] | escape }}</p>{% endif %}
+            {% if section.settings[caption_setting] != blank %}<p class="boardroom-direction-card__caption">{{ section.settings[caption_setting] | escape }}</p>{% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    {% if section.settings.cta_label != blank and section.settings.cta_url != blank %}
+      <p class="boardroom-directions__action"><a class="bench-cta__btn" href="{{ section.settings.cta_url | escape }}"><span class="bench-cta__btn-label">{{ section.settings.cta_label | escape }}</span><span class="bench-cta__btn-arrow" aria-hidden="true">→</span></a></p>
+    {% endif %}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Boardroom directions",
+  "settings": [
+    {"type":"text","id":"anchor_id","label":"Anchor ID","default":"recent-boardroom-directions"},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"RECENT DIRECTIONS"},
+    {"type":"text","id":"heading","label":"Heading","default":"Recent boardroom table directions"},
+    {"type":"textarea","id":"intro","label":"Intro","default":"The top shape is only one part of the decision. These examples show how timber, finish and base style change the feel of a boardroom table."},
+    {"type":"text","id":"cta_label","label":"CTA label","default":"Talk through the best direction"},
+    {"type":"text","id":"cta_url","label":"CTA URL","default":"#commercial-enquiry"},
+    {"type":"header","content":"Card 1"},
+    {"type":"text","id":"card_1_image_asset","label":"Image asset filename","default":"boardroom-double-crossroads-black-steel-example.jpg"},
+    {"type":"text","id":"card_1_label","label":"Label","default":"Straightforward custom direction"},
+    {"type":"text","id":"card_1_title","label":"Title","default":"Double Crossroads / black steel base"},
+    {"type":"textarea","id":"card_1_body","label":"Body","default":"A rectangular boardroom table with a dark timber top and black steel trestle-style bases. This is the most familiar custom boardroom format: practical, strong and easy to scale, but made more substantial through real timber and architectural steelwork."},
+    {"type":"textarea","id":"card_1_fit","label":"Best for","default":"Best for practical meeting rooms, professional services, construction, infrastructure and commercial offices that want a durable custom table without overcomplicating the shape or base."},
+    {"type":"textarea","id":"card_1_caption","label":"Caption","default":"Style shown as an example. Final dimensions and seating capacity are made to suit the room."},
+    {"type":"text","id":"card_1_alt","label":"Alt text","default":"Rectangular dark timber boardroom table with black trestle-style bases in a warm meeting room"},
+    {"type":"header","content":"Card 2"},
+    {"type":"text","id":"card_2_image_asset","label":"Image asset filename","default":"boardroom-timber-asterix-sculptural-base-example.jpg"},
+    {"type":"text","id":"card_2_label","label":"Label","default":"Architectural upgrade"},
+    {"type":"text","id":"card_2_title","label":"Title","default":"Timber Asterix / sculptural base"},
+    {"type":"textarea","id":"card_2_body","label":"Body","default":"A rectangular boardroom table with a sculptural crossed timber base. It keeps the familiar usefulness of a rectangle, but gives the base enough presence to feel architectural rather than standard office furniture."},
+    {"type":"textarea","id":"card_2_fit","label":"Best for","default":"Best for heritage, civic, architectural and flagship commercial rooms where the table needs to anchor the space."},
+    {"type":"textarea","id":"card_2_caption","label":"Caption","default":"A timber-base direction for rooms where the table should feel like part of the architecture."},
+    {"type":"text","id":"card_2_alt","label":"Alt text","default":"Rectangular natural timber boardroom table with sculptural crossed timber base in a formal meeting room"},
+    {"type":"header","content":"Card 3"},
+    {"type":"text","id":"card_3_image_asset","label":"Image asset filename","default":"Totara Boardroom Hero.webp"},
+    {"type":"text","id":"card_3_label","label":"Label","default":"Softer executive option"},
+    {"type":"text","id":"card_3_title","label":"Title","default":"Timber pedestal / integrated power"},
+    {"type":"textarea","id":"card_3_body","label":"Body","default":"A warm timber boardroom table with rounded ends, timber pedestal bases and integrated tabletop access points. The softer shape makes the room feel less corporate, while the built-in cable and power planning keeps laptops, screens and meeting tools tidy."},
+    {"type":"textarea","id":"card_3_fit","label":"Best for","default":"Best for executive rooms, client-facing meeting spaces and teams that want a serious table without sharp corners."},
+    {"type":"textarea","id":"card_3_caption","label":"Caption","default":"Power and cable details are planned around the room, seating layout and AV requirements."},
+    {"type":"text","id":"card_3_alt","label":"Alt text","default":"Rounded timber boardroom table with cylindrical timber pedestal bases and circular tabletop access points"}
+  ],
+  "presets": [{"name":"Boardroom directions"}]
+}
+{% endschema %}

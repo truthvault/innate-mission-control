@@ -1,0 +1,156 @@
+{%- unless template.suffix == 'table-maintain' -%}
+<div class="content collection featured-collection {% render 'content-classes', scope: section %}" data-section-id="{{ section.id }}" data-section-type="collection">
+  {% render 'collection', collection: section.settings.collection %}
+</div>
+
+{%- endunless -%}
+
+{% schema %}
+{
+  "name": "t:sections.featured-collection.name",
+  "class": "section-featured-collection",
+  "settings": [
+    {
+      "id": "collection",
+      "type": "collection",
+      "label": "t:sections.featured-collection.settings.collection.label"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:sections.main-collection.settings.paragraph__1.content"
+    },
+    {
+      "id": "show_collection_title",
+      "type": "checkbox",
+      "label": "t:sections.featured-collection.settings.show_collection_title.label",
+      "default": true
+    },
+    {
+      "id": "show_collection_description",
+      "type": "checkbox",
+      "default": true,
+      "label": "t:sections.main-collection.settings.show_collection_description.label"
+    },
+    {
+      "id": "show_collection_image",
+      "type": "checkbox",
+      "default": false,
+      "label": "t:sections.main-collection.settings.show_collection_image.label",
+      "info": "t:sections.main-collection.settings.show_collection_image.info"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-collection.settings.header__1.content"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "default": 4,
+      "label": "t:sections.main-collection.settings.columns_desktop.label"
+    },
+    {
+      "type": "range",
+      "id": "columns_tablet",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 3,
+      "label": "t:sections.main-collection.settings.columns_tablet.label"
+    },
+    {
+      "type": "range",
+      "id": "columns_mobile",
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "default": 2,
+      "label": "t:sections.main-collection.settings.columns_mobile.label"
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 1,
+      "max": 48,
+      "step": 1,
+      "default": 12,
+      "label": "t:sections.featured-collection.settings.products_per_page.label"
+    },
+    {
+      "type": "checkbox",
+      "id": "product_grid_preview_enable",
+      "label": "t:sections.main-collection.settings.product_grid_preview_enable.label",
+      "info": "t:sections.main-collection.settings.product_grid_preview_enable.info"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-collection.settings.header__2.content"
+    },
+    {
+      "id": "enable_filtering",
+      "type": "checkbox",
+      "label": "t:sections.featured-collection.settings.enable_filtering.label",
+      "info": "t:sections.featured-collection.settings.enable_filtering.info",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-collection.settings.header__3.content"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:sections.main-collection.settings.paragraph.content"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded_content",
+      "label": "t:sections.settings.expanded_content.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_desktop",
+      "label": "t:sections.settings.show_on_desktop.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "t:sections.settings.show_on_mobile.label",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.featured-collection.presets.name"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

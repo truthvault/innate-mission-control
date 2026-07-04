@@ -1,0 +1,569 @@
+/* Innate theme consistency layer - staging sweep 2026-06-03.
+   Purpose: shared guardrails for older page templates that still drift from
+   the approved Home/Dining/About/Contact direction. Content stays unchanged. */
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about,
+  .template-page,
+  .template-product
+) {
+  --innate-consistency-forest: var(--innate-forest-ink);
+  --innate-consistency-fern: var(--innate-moss);
+  --innate-consistency-paper: var(--innate-paper);
+  --innate-consistency-warm-white: var(--innate-warm-white);
+  --innate-consistency-cream: var(--innate-cream);
+  --innate-consistency-line: rgba(22, 56, 50, .14);
+  --innate-consistency-display: var(--innate-display);
+  --innate-consistency-body: var(--innate-body);
+}
+
+body#outdoor,
+.template-sufix-outdoor-furniture,
+.template-blog {
+  --innate-consistency-forest: var(--innate-forest-ink);
+  --innate-consistency-fern: var(--innate-moss);
+  --innate-consistency-paper: var(--innate-paper);
+  --innate-consistency-warm-white: var(--innate-warm-white);
+  --innate-consistency-cream: var(--innate-cream);
+  --innate-consistency-line: rgba(22, 56, 50, .14);
+  --innate-consistency-display: var(--innate-display);
+  --innate-consistency-body: var(--innate-body);
+}
+
+/* Google Reviews app: match the homepage proof treatment on polished pages. */
+body .shopify-section.apps:has(.grp-entangle--root) {
+  background: var(--innate-consistency-paper, var(--innate-paper)) !important;
+  overflow: hidden;
+  padding: clamp(18px, 2.5vw, 30px) clamp(16px, 4vw, 52px) clamp(34px, 4vw, 56px) !important;
+}
+
+body .shopify-section.apps:has(.grp-entangle--root) > .content.apps,
+body .shopify-section.apps:has(.grp-entangle--root) > .content.apps.color-section-bg-is-white,
+body .shopify-section.apps:has(.grp-entangle--root) > .content.apps.color-body-bg-is-white {
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+body .shopify-section.apps:has(.grp-entangle--root) :is(
+  .grp-entangle--root,
+  .grp-widget,
+  .grp-entangle-swipper-badge-wrapper,
+  .grp-entangle-swipper-wrapper,
+  .grp-entangle-swiper-container
+) {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps {
+  background: var(--innate-consistency-paper) !important;
+  overflow: hidden;
+  padding: clamp(18px, 2.5vw, 30px) clamp(16px, 4vw, 52px) clamp(34px, 4vw, 56px) !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .content.apps {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle--root {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: 1320px !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-rating-container {
+  align-items: center !important;
+  align-self: flex-start !important;
+  background: var(--innate-consistency-warm-white) !important;
+  border: 1px solid rgba(22, 56, 50, .10) !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  min-height: 170px !important;
+  min-width: clamp(270px, 20vw, 300px) !important;
+  padding: 1.1rem 1.25rem !important;
+  width: clamp(270px, 20vw, 300px) !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-item {
+  background: var(--innate-consistency-warm-white) !important;
+  border: 1px solid rgba(22, 56, 50, .08) !important;
+  box-shadow: none !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge,
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-head-badge,
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge-flex,
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge-vertical {
+  align-items: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: .45rem !important;
+  height: auto !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge-title {
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge-title::before {
+  color: var(--innate-consistency-forest) !important;
+  content: "100% 5-star reviews";
+  display: block;
+  font-family: var(--innate-consistency-body);
+  font-size: .88rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge-stars {
+  transform: scale(.82);
+  transform-origin: center;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-badge-logo {
+  transform: scale(.72);
+  transform-origin: center;
+}
+
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-main-hyper-link,
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-item-date,
+:is(
+  .template-sufix-benchtops,
+  .template-sufix-boardroom-tables,
+  .template-sufix-commerical,
+  .template-sufix-hospitality-furniture,
+  .template-sufix-contact,
+  .template-sufix-about
+) .shopify-section.apps .grp-entangle-item-body-review {
+  color: rgba(40, 50, 41, .72) !important;
+  font-family: var(--innate-consistency-body) !important;
+}
+
+/* Outdoor collection and blog are still on older generic theme sections. */
+body#outdoor .layout,
+.template-sufix-outdoor-furniture .layout,
+.template-blog .layout {
+  background: var(--innate-consistency-paper);
+}
+
+body#outdoor :is(h1, .shopify-section-title),
+.template-sufix-outdoor-furniture :is(h1, .shopify-section-title),
+.template-blog .section-header .shopify-section-title {
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(2.15rem, 3vw, 3.25rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.08 !important;
+  text-transform: none !important;
+}
+
+body#outdoor :is(.content.image-with-text h2, .content.rich-text h2),
+.template-sufix-outdoor-furniture :is(.content.image-with-text h2, .content.rich-text h2),
+.template-blog .post > h2 {
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(1.6rem, 2.2vw, 2.1rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.12 !important;
+  text-transform: none !important;
+}
+
+body#outdoor :is(.outdoor-page h2, .outdoor-close h2),
+.template-sufix-outdoor-furniture :is(.outdoor-page h2, .outdoor-close h2) {
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(1.95rem, 3vw, 3.15rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.08 !important;
+  text-transform: none !important;
+}
+
+body#outdoor :is(.btn, button, input[type="submit"]),
+.template-sufix-outdoor-furniture :is(.btn, button, input[type="submit"]),
+.template-blog :is(.btn, button, input[type="submit"]) {
+  border-radius: 3px !important;
+  font-family: var(--innate-consistency-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+body#outdoor :is(.outdoor-btn, .outdoor-range-link),
+.template-sufix-outdoor-furniture :is(.outdoor-btn, .outdoor-range-link),
+body#outdoor .outdoor-faq details,
+.template-sufix-outdoor-furniture .outdoor-faq details {
+  border-radius: 3px !important;
+}
+
+.template-blog .post-meta {
+  color: rgba(19, 35, 29, .58);
+  font-family: var(--innate-consistency-body);
+  font-size: .86rem;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: .35rem 0 .85rem;
+}
+
+/* Benchtops atelier page: the current staging template uses a newer quote-builder
+   section, so keep its typography/components inside the shared page scale. */
+.template-sufix-benchtops .bench-atelier .atelier-hero__copy h1 {
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(2.45rem, 3.55vw, 4rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.06 !important;
+  max-width: 11.4em !important;
+}
+
+.template-sufix-benchtops .bench-atelier :is(
+  .atelier-premise__statement,
+  .atelier-uses__intro,
+  .atelier-material-wall__intro,
+  .atelier-after__copy,
+  .atelier-review-intro__inner,
+  .atelier-final-cta__inner
+) h2,
+.template-sufix-benchtops .faq .faq-title {
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(1.9rem, 2.7vw, 3.05rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.1 !important;
+}
+
+.template-sufix-benchtops .bench-atelier #atelier-builder-heading {
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(1.75rem, 2.4vw, 2.35rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.12 !important;
+}
+
+.template-sufix-benchtops .bench-atelier :is(.atelier-button, .atelier-sample-bar a, .panel-editor__add) {
+  border-radius: 3px !important;
+  font-family: var(--innate-consistency-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.template-sufix-benchtops .faq .accordion details {
+  background: var(--innate-consistency-warm-white) !important;
+  border: 1px solid var(--innate-consistency-line) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+}
+
+.template-sufix-benchtops .faq .accordion summary {
+  font-family: var(--innate-consistency-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.template-blog .section-header--blog-title {
+  margin-bottom: clamp(22px, 3vw, 34px) !important;
+}
+
+@media screen and (max-width: 749px) {
+  .template-sufix-benchtops .bench-atelier .atelier-hero__copy h1 {
+    font-size: clamp(2.25rem, 10vw, 2.75rem) !important;
+    max-width: 100% !important;
+  }
+
+  .template-sufix-benchtops .bench-atelier :is(
+    .atelier-premise__statement,
+    .atelier-uses__intro,
+    .atelier-material-wall__intro,
+    .atelier-after__copy,
+    .atelier-review-intro__inner,
+    .atelier-final-cta__inner
+  ) h2,
+  .template-sufix-benchtops .faq .faq-title {
+    font-size: clamp(1.75rem, 9vw, 2.45rem) !important;
+  }
+}
+
+/* Generic public pages should have one clear, modest page H1. */
+.template-page .content.page .shopify-section-title {
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-display) !important;
+  font-size: clamp(2rem, 3vw, 3.15rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.08 !important;
+  text-transform: none !important;
+}
+
+body#lifetime-structural-warranty .innate-warranty-h1 {
+  max-width: min(1040px, calc(100vw - 40px));
+  margin: clamp(3.5rem, 7vw, 6rem) auto clamp(1rem, 2vw, 1.5rem);
+  text-align: center;
+  font-size: clamp(2.35rem, 4.8vw, 4.25rem);
+  line-height: .98;
+}
+
+body#lifetime-structural-warranty .section-page .content.page > .inner > h2.shopify-section-title {
+  display: none !important;
+}
+
+.template-page .content.page .rte :is(h1, h2, h3),
+.template-page .content.rich-text :is(h1, h2, h3) {
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-display) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.12 !important;
+  text-transform: none !important;
+}
+
+/* Product pages: restrained consistency layer, not a redesign. */
+.template-product :is(.main, .layout, .shopify-section, .content, .product, .newsletter) {
+  background-color: var(--innate-consistency-paper);
+}
+
+.template-product :is(.product .item-info h1, .product-details h1, h1.without-link, .product h1) {
+  color: var(--innate-consistency-forest) !important;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif !important;
+  font-size: clamp(2.05rem, 2.8vw, 3.25rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.06 !important;
+  text-wrap: balance !important;
+  text-transform: none !important;
+}
+
+body.template-product h1,
+body.template-product .product-details h1,
+body.template-product h1.without-link.innate-preview-product-title {
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif !important;
+}
+
+.template-product :is(.product .item-info, .product-details, .product .rte, .selector-wrapper, .newsletter) {
+  color: rgba(19, 35, 29, .82);
+  font-family: var(--innate-consistency-body);
+  letter-spacing: 0;
+}
+
+.template-product :is(.product h2, .product h3, .content.newsletter h2) {
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-display) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.12 !important;
+  text-transform: none !important;
+}
+
+.template-product .content.newsletter {
+  border-top: 1px solid var(--innate-consistency-line);
+  border-bottom: 1px solid var(--innate-consistency-line);
+}
+
+.template-product .content.newsletter .inner {
+  max-width: 980px !important;
+}
+
+.template-product :is(
+  .btn,
+  button,
+  input[type="submit"],
+  .shopify-payment-button__button,
+  .variant-input label
+) {
+  border-radius: 3px !important;
+  font-family: var(--innate-consistency-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.template-product :is(input[type="email"], input[type="text"], input[type="number"], select, textarea) {
+  background: var(--innate-consistency-warm-white) !important;
+  border: 1px solid rgba(19, 35, 29, .26) !important;
+  color: var(--innate-consistency-forest) !important;
+  font-family: var(--innate-consistency-body) !important;
+}
+
+.template-product :is(input, select, textarea, button, .btn):focus-visible {
+  outline: 2px solid rgba(19, 35, 29, .72) !important;
+  outline-offset: 2px !important;
+}
+
+.template-product .newsletter .btn.solid,
+.template-product .newsletter input[type="submit"],
+.template-product :is(.product .btn.solid, .product input[type="submit"], .product button[type="submit"], .product .add-to-cart) {
+  background: var(--innate-forest) !important;
+  border-color: var(--innate-forest) !important;
+  color: var(--innate-consistency-warm-white) !important;
+}
+
+@media screen and (max-width: 749px) {
+  .template-product :is(.product .item-info h1, .product-details h1, h1.without-link, .product h1) {
+    font-size: clamp(2rem, 10vw, 2.65rem) !important;
+  }
+
+  .template-product .content.newsletter form {
+    display: grid;
+    gap: 10px;
+  }
+}
+
+.section-header a[href="/collections/home-living"],
+.section-header a[href*="/collections/home-living"] {
+  display: none !important;
+}
+
+
+/* FAQ standard (UI-consistency pass 1, 2026-07-04): section title = display 600;
+   accordion questions = Maven 600 (utility H3 allowance). Boardroom rule aligned separately. */
+.faq-title {
+  font-family: var(--innate-display) !important;
+  font-weight: 600 !important;
+}
+.faq .accordion .title {
+  font-weight: 600 !important;
+}
+/* Hero subtitle: rendered as <p> since pass 1 (was a hardcoded h2); preserve prior look. */
+.hero-subheading {
+  margin: 0;
+  font: 600 21px/1.35 var(--innate-body);
+}
+
+
+/* UI-consistency Pass 6 stragglers (2026-07-04) */
+.newsletter-section .btn.solid,
+.newsletter-section input[type="submit"] {
+  background: var(--innate-forest) !important;
+  border-color: var(--innate-forest) !important;
+  color: var(--innate-warm-white) !important;
+}
+.newsletter-section .btn.solid:hover,
+.newsletter-section input[type="submit"]:hover {
+  background: var(--innate-forest-ink) !important;
+  border-color: var(--innate-forest-ink) !important;
+}
+.product-related-products .shopify-section-title,
+h2.shopify-section-title {
+  font-family: var(--innate-display) !important;
+  font-weight: 600 !important;
+}

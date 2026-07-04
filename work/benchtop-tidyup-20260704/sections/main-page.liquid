@@ -1,0 +1,68 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+{%- unless template.suffix == 'table-maintain' and page.handle == 'design-partners' -%}
+<div class="content page {% render 'content-classes', scope: section %}">
+  <div class="inner with-layout-options {{ settings.content_layout }}">
+    {% if section.settings.show_heading %}
+      {%- liquid
+        assign main_page_heading_tag = 'h2'
+        if template.suffix == 'table-maintain' and page.handle == 'maintaining-your-table'
+          assign main_page_heading_tag = 'h1'
+        elsif page.handle == 'warranty' or page.handle == 'lifetime-structural-warranty' or page.handle == 'our-customers' or page.handle == 'blogs'
+          assign main_page_heading_tag = 'h1'
+        endif
+      -%}
+      {%- if main_page_heading_tag == 'h1' -%}
+        <h1 class="shopify-section-title">{{ page.title }}</h1>
+      {%- else -%}
+        <h2 class="shopify-section-title">{{ page.title }}</h2>
+      {%- endif -%}
+    {% endif %}
+    <div class="rte">
+      {{ page.content }}
+    </div>
+  </div>
+</div>
+{%- endunless -%}
+
+{% schema %}
+{
+  "name": "t:sections.main-page.name",
+  "class": "section-page",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_heading",
+      "label": "t:sections.settings.show_heading.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded_content",
+      "label": "t:sections.settings.expanded_content.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

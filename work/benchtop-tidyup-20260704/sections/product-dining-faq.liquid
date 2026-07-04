@@ -1,0 +1,132 @@
+{%- liquid
+  assign innate_is_dining_table_product = false
+  assign innate_dining_handles = 'custom-crossroads-dining-table|reverse-angled-steel-dining-table|angled-steel-dining-table|straight-steel-dining-table|oval-solid-wood-dining-table-nz|pebble-crossroads-dining-table|steel-asterix-dining-table|round-asterix-dining-table|reverse-angled-timber-dining-table|modern-homestead-dining-table' | split: '|'
+
+  if product.type == 'Dining Table'
+    assign innate_is_dining_table_product = true
+  else
+    for innate_dining_handle in innate_dining_handles
+      if product.handle == innate_dining_handle
+        assign innate_is_dining_table_product = true
+      endif
+    endfor
+  endif
+
+  assign innate_show_dining_faq = false
+-%}
+
+{%- if innate_is_dining_table_product -%}
+  {%- capture q_deposit -%}What are your deposit and balance terms?{%- endcapture -%}
+  {%- capture a_deposit -%}<p>Most customers pay in full when they order. If you would rather split it, we can usually work with a 50% deposit at order and the balance due when the table is complete, before pickup or delivery is booked. Get in touch if you would like us to set that up.</p>{%- endcapture -%}
+
+  {%- capture q_lead_time -%}How long does a custom dining table take?{%- endcapture -%}
+  {%- capture a_lead_time -%}<p>The current dining-table lead time is shown at the top of the page. Standard custom builds are usually around six weeks from order confirmation to dispatch.</p><p>If you need a table sooner, please ask. We sometimes have suitable tabletops or popular frame styles already in progress, which can shorten the timeline.</p>{%- endcapture -%}
+
+  {%- capture q_custom -%}Can you build a custom size or shape?{%- endcapture -%}
+  {%- capture a_custom -%}<p>Yes. The online options cover the common sizes, but we regularly build custom lengths, widths, edge profiles, rounded corners, and project-specific shapes. Send us the room size or a simple sketch and we can talk through what will work.</p>{%- endcapture -%}
+
+  {%- capture q_timber -%}How should I choose the timber?{%- endcapture -%}
+  {%- capture a_timber -%}<p>West Coast Rimu, Northland Tōtara, and West Coast Beech are our core dining timbers. Each has its own colour, grain, and level of natural variation.</p><p>All three are available in Clear, Country Bark, and Blackwash finish options. The safest way to choose is to compare timber samples in your own light, or visit the Christchurch showroom. If you are unsure, send us photos of the room and we can help narrow the options.</p>{%- endcapture -%}
+
+  {%- capture q_care -%}How do I care for the table?{%- endcapture -%}
+  {%- capture a_care -%}<p>The natural hardwax oil finish is made for normal daily dining use. Wipe spills promptly, clean with a mild timber-safe cleaner, and use common sense with very hot pans, sharp objects, or heavy abrasion.</p><p>Over time the finish can be refreshed rather than replaced. We can supply the right care products and talk you through the simple process when the table needs it.</p>{%- endcapture -%}
+
+  {%- capture q_warranty -%}What is covered by the warranty?{%- endcapture -%}
+  {%- capture a_warranty -%}<p>We back the structural build against manufacturing defects for the original owner. Joinery, frame welds, and the integrity of the build are covered. Everyday wear, accidental damage, and finish refreshes are not warranty issues, but we will still help you sort them where we can.</p><p>Full terms are on our <a href="/pages/warranty">warranty page</a>.</p>{%- endcapture -%}
+
+  {%- capture q_delivery -%}Do you deliver nationwide?{%- endcapture -%}
+  {%- capture a_delivery -%}<p>Yes. Christchurch deliveries are handled locally, and tables for the rest of New Zealand are usually sent through a specialist home-delivery freight service.</p><p>Use the freight estimator on the page for a guide. If the address, table size, or access needs a manual check, we will confirm the freight before order confirmation.</p>{%- endcapture -%}
+
+  {%- capture q_showroom -%}Can I see a table before ordering?{%- endcapture -%}
+  {%- capture a_showroom -%}<p>Yes. Our showroom is beside the workshop on QEII Drive in Christchurch. If you are outside Christchurch, timber samples are the next best step, and we can also help by email or phone before you order.</p>{%- endcapture -%}
+
+  {%- if innate_show_dining_faq -%}
+  <div class="content faq {% render 'content-classes', scope: section %}" data-section-id="{{ section.id }}" data-section-type="product-dining-faq">
+    <div class="inner with-layout-options centered" style="max-width: 950px;">
+      <div class="faq-header">
+        <h2 class="faq-title">Dining table questions</h2>
+      </div>
+
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_deposit }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_deposit }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_lead_time }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_lead_time }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_custom }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_custom }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_timber }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_timber }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_care }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_care }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_warranty }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_warranty }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_delivery }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_delivery }}</div>
+        </details>
+      </div>
+      <div class="accordion">
+        <details>
+          <summary><div class="accordion-header">{% render 'icon-accordion', icon: 'none' %}<h3 class="title">{{ q_showroom }}</h3><span class="plus" aria-hidden="true">+</span></div></summary>
+          <div class="rte">{{ a_showroom }}</div>
+        </details>
+      </div>
+    </div>
+  </div>
+  {%- endif -%}
+
+  {%- if innate_show_dining_faq -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type":"Question","name":{{ q_deposit | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_deposit | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_lead_time | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_lead_time | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_custom | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_custom | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_timber | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_timber | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_care | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_care | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_warranty | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_warranty | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_delivery | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_delivery | strip_html | strip_newlines | strip | json }}}},
+        {"@type":"Question","name":{{ q_showroom | strip | json }},"acceptedAnswer":{"@type":"Answer","text":{{ a_showroom | strip_html | strip_newlines | strip | json }}}}
+      ]
+    }
+  </script>
+  {%- endif -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Dining product FAQ",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Dining product FAQ"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,32 @@
+<section class="atelier-final-cta" aria-label="Start a custom timber benchtop quote">
+  <div class="atelier-final-cta__inner">
+    <p class="atelier-kicker">{{ section.settings.kicker | default: 'Ready when you are' | escape }}</p>
+    <h2>{{ section.settings.heading | default: 'Ready to send a benchtop brief?' | escape }}</h2>
+    <p>{{ section.settings.body | default: 'Use rough dimensions if that is what you have. We will check the practical details with you before anything is made.' | escape }}</p>
+    <div class="atelier-actions" aria-label="Benchtop final actions">
+      <a class="atelier-button atelier-button--primary" href="{{ section.settings.primary_link | default: '#atelier-builder' }}">{{ section.settings.primary_label | default: 'Design your benchtop' | escape }}</a>
+      <a class="atelier-button atelier-button--secondary" href="{{ section.settings.secondary_link | default: '/products/product-sample' }}">{{ section.settings.secondary_label | default: 'Order timber samples' | escape }}</a>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Benchtops final CTA",
+  "class": "section-benchtops-atelier-final-cta",
+  "settings": [
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "Ready when you are" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Ready to send a benchtop brief?" },
+    { "type": "textarea", "id": "body", "label": "Body", "default": "Use rough dimensions if that is what you have. We will check the practical details with you before anything is made." },
+    { "type": "text", "id": "primary_label", "label": "Primary button label", "default": "Design your benchtop" },
+    { "type": "url", "id": "primary_link", "label": "Primary button link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary button label", "default": "Order timber samples" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary button link" }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops final CTA"
+    }
+  ]
+}
+{% endschema %}

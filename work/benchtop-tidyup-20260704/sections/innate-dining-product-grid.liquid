@@ -1,0 +1,132 @@
+{% liquid
+  assign products_per_page = section.settings.products_per_page | default: 24
+  assign columns_mobile = section.settings.columns_mobile | default: 1
+  assign columns_tablet = section.settings.columns_tablet | default: 3
+  assign columns_desktop = section.settings.columns_desktop | default: 3
+  assign mobile_size = 100 | divided_by: columns_mobile | round | append: "vw"
+  assign tablet_size = 100 | divided_by: columns_tablet | round | append: "vw"
+  assign desktop_size = 100 | divided_by: columns_desktop | round | append: "vw"
+  assign sizes = "(max-width: 620px) " | append: mobile_size | append: ", (max-width: 960px) " | append: tablet_size | append: ", " | append: desktop_size
+  if collection.handle == 'all'
+    assign collection_url = routes.all_products_collection_url
+  else
+    assign collection_url = collection.url
+  endif
+  capture collection_products_classes
+    render 'get-collection-products-classes'
+  endcapture
+%}
+<div class="content collection featured-collection {% render 'content-classes', scope: section %}" data-section-id="{{ section.id }}" data-section-type="collection">
+  <div data-collection-url="{{ collection_url }}" data-collection-id="{{ collection.id }}">
+    <div class="inner">
+      {%- if section.settings.show_collection_title -%}
+        <h2 class="shopify-section-title">{{ collection.title }}</h2>
+      {%- endif -%}
+      {%- if section.settings.show_collection_description and collection.description != blank -%}
+        <div class="rte">{{ collection.description }}</div>
+      {%- endif -%}
+      {%- if section.settings.show_collection_image and collection.image -%}
+        <div class="image">{% render 'resp-img', image: collection.image, loading: 'eager' %}</div>
+      {%- endif -%}
+      {% if collection and collection.products_count == 0 %}
+        <h3 class="empty">{{ 'collections.general.no_products' | t }}</h3>
+      {% else %}
+        {% render 'sorting-and-filtering', collection: collection %}
+        {% if collection != blank %}
+          {% paginate collection.products by products_per_page %}
+            <div class="collection-products {{ collection_products_classes }}"{% if collection.handle == 'dining-tables' %} id="dining-table-products"{% endif %} data-count="{{ collection.products_count }}">
+              {% liquid
+                assign dining_block_handles = ''
+                if collection.handle == 'dining-tables' and section.blocks.size > 0
+                  for block in section.blocks
+                    if block.type == 'product_card'
+                      assign dining_block_product = block.settings.product
+                      if dining_block_product != blank
+                        assign dining_handle_token = '|' | append: dining_block_product.handle | append: '|'
+                        assign dining_block_handles = dining_block_handles | append: dining_handle_token
+                        if block.settings.show_card
+                          render 'collection-product', collection: collection, product: dining_block_product, sizes: sizes, dining_card_block: block
+                        endif
+                      endif
+                    endif
+                  endfor
+                  for product in collection.products
+                    assign dining_skip_product = false
+                    assign dining_handle_token = '|' | append: product.handle | append: '|'
+                    if product.handle == 'product-sample'
+                      assign dining_skip_product = true
+                    endif
+                    if dining_block_handles contains dining_handle_token
+                      assign dining_skip_product = true
+                    endif
+                    unless dining_skip_product
+                      render 'collection-product', collection: collection, product: product, sizes: sizes
+                    endunless
+                  endfor
+                else
+                  for product in collection.products
+                    unless collection.handle == 'dining-tables' and product.handle == 'product-sample'
+                      render 'collection-product', collection: collection, product: product, sizes: sizes
+                    endunless
+                  endfor
+                endif
+              %}
+              {% render 'pagination' with paginate as paginate %}
+            </div>
+          {% endpaginate %}
+        {% else %}
+          <div class="collection-products {{ collection_products_classes }}" data-count="{{ collection.products_count }}">
+            {% for i in (1..products_per_page) %}
+              {% capture index %}{% cycle 'collection-index': '1', '2', '3', '4', '5', '6' %}{% endcapture %}
+              {% render 'dummie-collection-product', index: index %}
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {%- if collection.handle == 'dining-tables' -%}
+    {% render 'innate-dining-runtime', collection: collection, card_blocks: section.blocks %}
+  {%- endif -%}
+</div>
+
+{% schema %}
+{
+  "name": "Dining product grid",
+  "settings": [
+    {"type":"checkbox","id":"show_collection_title","label":"Show default collection title","default":false},
+    {"type":"checkbox","id":"show_collection_description","label":"Show default collection description","default":false},
+    {"type":"checkbox","id":"show_collection_image","label":"Show default collection image","default":false},
+    {"type":"range","id":"columns_desktop","min":1,"max":6,"step":1,"default":3,"label":"Product columns on desktop"},
+    {"type":"range","id":"columns_tablet","min":1,"max":4,"step":1,"default":3,"label":"Product columns on tablet"},
+    {"type":"range","id":"columns_mobile","min":1,"max":3,"step":1,"default":1,"label":"Product columns on mobile"},
+    {"type":"range","id":"products_per_page","min":8,"max":24,"step":4,"default":24,"label":"Products per page"},
+    {"type":"checkbox","id":"enable_filtering","label":"Enable theme filtering","default":false},
+    {"type":"select","id":"filter_type","label":"Filter type","default":"regular","options":[{"value":"regular","label":"Regular"},{"value":"tags","label":"Tags"}]},
+    {"type":"checkbox","id":"enable_sorting","label":"Enable theme sorting","default":true},
+    {"type":"checkbox","id":"show_labels","label":"Show product labels","default":true},
+    {"type":"checkbox","id":"show_background","label":"Show background","default":false},
+    {"type":"checkbox","id":"expanded","label":"Expanded","default":false},
+    {"type":"checkbox","id":"expanded_content","label":"Expanded content","default":false},
+    {"type":"checkbox","id":"collapsed","label":"Collapsed","default":true}
+  ],
+  "blocks": [
+    {
+      "type": "product_card",
+      "name": "Product listing",
+      "settings": [
+        {"type":"checkbox","id":"show_card","label":"Show this listing","default":true},
+        {"type":"product","id":"product","label":"Product"},
+        {"type":"text","id":"title_override","label":"Title override"},
+        {"type":"text","id":"signal_1","label":"Signal 1"},
+        {"type":"text","id":"signal_2","label":"Signal 2"},
+        {"type":"text","id":"signal_3","label":"Signal 3"},
+        {"type":"textarea","id":"choice_note","label":"Choice note"},
+        {"type":"text","id":"filter_values","label":"Filter values","info":"Space-separated filter values, for example: rectangular steel-base"}
+      ]
+    }
+  ],
+  "max_blocks": 24,
+  "presets": [{"name":"Dining product grid"}]
+}
+{% endschema %}

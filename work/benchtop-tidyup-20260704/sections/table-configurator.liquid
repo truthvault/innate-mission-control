@@ -1,0 +1,376 @@
+{%- comment -%} Innate 3D table configurator (Crossroads / Northland tōtara). {%- endcomment -%}
+{{ 'innate-home.css' | asset_url | stylesheet_tag }}
+{%- if section.settings.enabled -%}
+<section id="cfg" class="ih-sec ih-sec--cream" data-glb="{{ 'Crossroads_3_Species_web.glb' | asset_url }}" data-three="{{ 'three-configurator-bundle.js' | asset_url }}" data-sw-tot="{{ 'innate-dining-swatch-totara.jpg' | asset_url }}" data-sw-rimu="{{ 'innate-dining-swatch-rimu.jpg' | asset_url }}" data-sw-bee="{{ 'innate-dining-swatch-beech.jpg' | asset_url }}">
+  <div class="ih-wrap">
+    <div class="ih-head">
+      <p class="ih-eyebrow">{{ section.settings.eyebrow | default: 'Early preview' }}</p>
+      <h2 class="ih-h2">{{ section.settings.title | default: 'Hard to picture? Have a play.' }}</h2>
+      <p class="ih-lead">{{ section.settings.intro | default: "We get it. With every table made to order, there are thousands of combinations of size, shape, timber and finish, and that's a lot to picture. So we built a 3D preview to help. It's set to our most popular base — the Crossroads — with a solid rectangular top. Choose your timber, set the length, drag to spin it, and picture your own." }}</p>
+    </div>
+    <div class="itc-stage">
+      <div>
+        <div class="itc-viewer">
+          <img class="itc-poster" src="https://innatefurniture.co.nz/cdn/shop/files/custom-totara-dining-table-crossroads-innate.png?width=1100" width="1100" height="733" alt="Crossroads dining table with a Northland tōtara top by Innate Furniture" loading="lazy">
+          <span class="itc-loading" aria-hidden="true">Loading</span>
+          <div class="itc-canvas"></div>
+          <span class="itc-hint">drag to spin</span>
+        </div>
+        <span class="itc-caption" id="cfgCaption">Shown: Crossroads base, rectangular Northland tōtara top.</span>
+      </div>
+      <div class="itc-panel">
+        <div class="itc-sec-lab">Timber</div>
+        <div class="itc-species" id="cfgSpecies" role="radiogroup" aria-label="Timber species"></div>
+        <div class="itc-lenrow"><span class="itc-lab">Length</span><span class="itc-len" id="cfgLen">2.2 m</span></div>
+        <input class="itc-slider" id="cfgSlider" type="range" min="160" max="280" step="10" value="220" aria-label="Table length">
+        <div class="itc-ticks"><span>1.6 m</span><span>2.8 m</span></div>
+        <div class="itc-price">
+          <strong id="cfgPrice">$3,700</strong>
+          <span class="itc-dims" id="cfgDims">2200 x 1000 mm - seats about 8</span>
+          <span class="itc-meta">Price includes GST for this selection.</span>
+        </div>
+        <p class="itc-after">The preview stops at 2.8m, but our tables don't - we build longer and wider, and a 4.5m table is well within our capabilities. Tell us your room and we'll shape it with you.</p>
+        <div class="itc-actions">
+          <a class="ih-btn ih-btn--primary" href="{{ section.settings.primary_link | default: '/pages/contact' }}">{{ section.settings.primary_label | default: 'Tell us about your table' }}</a>
+          <a class="ih-btn" href="{{ section.settings.secondary_link | default: '/collections/dining-tables' }}">{{ section.settings.secondary_label | default: 'Browse dining tables' }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+<style>
+  #cfg{scroll-margin-top:90px}
+  @media(max-width:749px){#cfg{scroll-margin-top:12px}}
+  #cfg .ih-h2{max-width:24ch}
+  #cfg .ih-lead{max-width:none}
+  .itc-stage{margin-top:clamp(1.6rem,3vw,2.6rem);display:grid;gap:clamp(1.4rem,3vw,2.6rem);align-items:start}
+  @media(min-width:900px){.itc-stage{grid-template-columns:1.35fr 1fr}.itc-panel{padding-top:.5rem}}
+  .itc-viewer{position:relative;overflow:hidden;border-radius:6px;border:1px solid var(--ih-line);background:radial-gradient(120% 100% at 50% 22%,var(--ih-warm),var(--ih-cream-deep));aspect-ratio:4/3}
+  @media(min-width:900px){.itc-viewer{aspect-ratio:16/12}}
+  .itc-canvas{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .7s ease}
+  .itc-viewer.ready .itc-canvas{opacity:1}
+  .itc-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .6s ease;pointer-events:none}
+  .itc-viewer.fallback .itc-poster{opacity:1}
+  .itc-viewer.fallback .itc-loading{opacity:0}
+  .itc-viewer.ready .itc-poster{opacity:0}
+  .itc-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:600 .72rem/1 var(--ih-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ih-ink-faint);transition:opacity .4s}
+  .itc-viewer.ready .itc-loading{opacity:0}
+  .itc-canvas canvas{display:block;width:100%;height:100%;touch-action:pan-y}
+  .itc-hint{position:absolute;left:50%;bottom:.85rem;transform:translateX(-50%);font:600 .7rem/1 var(--ih-body);letter-spacing:.16em;text-transform:uppercase;color:var(--ih-ink-soft);background:rgba(251,248,242,.82);padding:.32rem .85rem;border-radius:999px;pointer-events:none;opacity:0;transition:opacity .4s}
+  .itc-viewer.ready .itc-hint{opacity:1}
+  .itc-caption{display:block;margin-top:.7rem;font-size:.78rem;color:var(--ih-ink-faint)}
+  .itc-panel{display:flex;flex-direction:column}
+  .itc-lenrow{display:flex;justify-content:space-between;align-items:baseline}
+  .itc-lab{font:800 .74rem/1 var(--ih-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ih-ink-soft)}
+  .itc-len{font-size:1.2rem;font-weight:600;color:var(--ih-ink)}
+  .itc-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:999px;background:var(--ih-line2);margin:1.1rem 0 .5rem;cursor:pointer}
+  .itc-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:var(--ih-forest-ink);border:3px solid var(--ih-warm);box-shadow:0 1px 5px rgba(0,0,0,.3);cursor:pointer}
+  .itc-slider::-moz-range-thumb{width:24px;height:24px;border:3px solid var(--ih-warm);border-radius:50%;background:var(--ih-forest-ink);cursor:pointer}
+  .itc-slider:focus-visible{outline:2px solid var(--ih-forest-ink);outline-offset:4px}
+  .itc-ticks{display:flex;justify-content:space-between;font-size:.72rem;color:var(--ih-ink-soft)}
+  .itc-price{border-top:1px solid var(--ih-line);margin-top:1.5rem;padding-top:1.3rem}
+  .itc-price strong{display:block;font:400 clamp(2.3rem,4.5vw,3rem)/1 var(--ih-display);color:var(--ih-forest-ink)}
+  .itc-dims{display:block;margin-top:.55rem;font-size:.95rem;color:var(--ih-ink)}
+  .itc-meta{display:block;margin-top:.2rem;font-size:.8rem;color:var(--ih-ink-faint)}
+  .itc-after{margin-top:1.4rem;font-size:.92rem;color:var(--ih-ink-soft);max-width:46ch;line-height:1.55}
+  .itc-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-top:1.3rem}
+  @media(max-width:560px){.itc-actions .ih-btn{flex:1 1 auto}}
+  .itc-sec-lab{font:800 .74rem/1 var(--ih-body);letter-spacing:.2em;text-transform:uppercase;color:var(--ih-ink-soft);margin-bottom:1.1rem}
+  .itc-species{display:flex;gap:clamp(.8rem,4vw,2rem);margin-bottom:1.9rem}
+  .itc-sp{flex:1;display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:.25rem;border:0;background:none;cursor:pointer;transition:transform .18s ease}
+  .itc-sp:hover{transform:translateY(-2px)}
+  .itc-sp .sw{width:clamp(54px,15vw,66px);aspect-ratio:1;border-radius:50%;background-size:cover;background-position:center;box-shadow:inset 0 0 0 1px rgba(12,32,28,.10);outline:1.5px solid transparent;outline-offset:4px;transition:outline-color .18s ease,outline-offset .18s ease}
+  .itc-sp:hover .sw{outline-color:var(--ih-line2)}
+  .itc-sp.active .sw{outline-color:var(--ih-forest-ink);outline-offset:5px}
+  .itc-sp .nm{font:600 .9rem/1.1 var(--ih-body);color:var(--ih-ink-soft);transition:color .15s ease}
+  .itc-sp.active .nm{color:var(--ih-forest-ink)}
+  .itc-sp .rg{font:500 .62rem/1 var(--ih-body);letter-spacing:.12em;text-transform:uppercase;color:var(--ih-ink-faint)}
+  .itc-sp:focus-visible{outline:none}
+  .itc-sp:focus-visible .sw{outline-color:var(--ih-forest-ink)}
+</style>
+{% raw %}
+<script type="module">
+
+(() => {
+  const root    = document.getElementById('cfg');
+  const viewer  = root.querySelector('.itc-viewer');
+  const host    = root.querySelector('.itc-canvas');
+  const slider  = document.getElementById('cfgSlider');
+  const caption = document.getElementById('cfgCaption');
+  const speciesGrid = document.getElementById('cfgSpecies');
+
+  // Timber options (display order). tok maps to the GLB material prefixes (TOT/Rimu/BEE).
+  // Swatch images are the actual model albedo textures, served as theme assets (set on #cfg).
+  const SW = { TOT: root.dataset.swTot, Rimu: root.dataset.swRimu, BEE: root.dataset.swBee };
+  const SPECIES = [
+    { tok:'TOT',  name:'Tōtara', region:'Northland',       caption:'Northland tōtara' },
+    { tok:'Rimu', name:'Rimu',   region:'Cyclone salvage', caption:'Cyclone-salvaged rimu' },
+    { tok:'BEE',  name:'Beech',  region:'West Coast',      caption:'West Coast beech' },
+  ];
+  // face -> species token -> material name in the GLB (Beech ends reuse the Beech top material)
+  const FACE_MAT = {
+    Top:   { TOT:'mat_TOT_Clear_Top',   Rimu:'mat_Rimu_Clear_Top',   BEE:'mat_BEE_Clear_Top'  },
+    Sides: { TOT:'mat_TOT_Clear_Sides', Rimu:'mat_Rimu_Clear_Sides', BEE:'mat_BEE_Clear_Sides' },
+    Ends:  { TOT:'mat_TOT_Clear_Ends',  Rimu:'mat_Rimu_Clear_Ends',  BEE:'mat_BEE_Clear_Top'   },
+  };
+
+  const MIN_CM = 160, MAX_CM = 280;
+  const SCHED_L = [160,180,200,220,240,260,280];
+  const SCHED_P = [3100,3300,3500,3700,4000,4300,4700];
+  const fmt = n => '$' + n.toLocaleString('en-NZ');
+  const meters = cm => (cm/100).toFixed(1).replace(/\.0$/,'') + ' m';
+  const SEATS = {160:6,170:6,180:6,190:8,200:8,210:8,220:8,230:8,240:8,250:10,260:10,270:10,280:10};
+  const seats = cm => SEATS[cm] ?? (2*Math.floor(cm/61) + 2);
+  function priceFor(cm){
+    if (cm <= SCHED_L[0]) return SCHED_P[0];
+    if (cm >= SCHED_L[SCHED_L.length-1]) return SCHED_P[SCHED_P.length-1];
+    for (let i=0;i<SCHED_L.length-1;i++){
+      if (cm <= SCHED_L[i+1]){
+        const t = (cm-SCHED_L[i])/(SCHED_L[i+1]-SCHED_L[i]);
+        return Math.round((SCHED_P[i] + t*(SCHED_P[i+1]-SCHED_P[i]))/50)*50;
+      }
+    }
+  }
+
+  const state = { length: 220, species: 'TOT' };
+  let applyLength3D = null, setSpecies3D = null;
+  function renderPanel(){
+    document.getElementById('cfgPrice').textContent = fmt(priceFor(state.length));
+    document.getElementById('cfgLen').textContent = meters(state.length);
+    document.getElementById('cfgDims').textContent = `${state.length*10} x 1000 mm - seats about ${seats(state.length)}`;
+  }
+  slider.addEventListener('input', () => {
+    state.length = Math.min(MAX_CM, Math.max(MIN_CM, Number(slider.value)));
+    renderPanel();
+    if (applyLength3D) applyLength3D();
+  });
+  renderPanel();
+
+  // Build timber buttons
+  SPECIES.forEach(sp => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'itc-sp' + (sp.tok === state.species ? ' active' : '');
+    b.dataset.tok = sp.tok;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', sp.tok === state.species ? 'true' : 'false');
+    b.innerHTML = `<span class="sw" style="background-image:url('${SW[sp.tok]}')"></span><span class="nm">${sp.name}</span><span class="rg">${sp.region}</span>`;
+    b.addEventListener('click', () => {
+      state.species = sp.tok;
+      [...speciesGrid.children].forEach(c => { const a = c.dataset.tok === sp.tok; c.classList.toggle('active', a); c.setAttribute('aria-checked', a ? 'true' : 'false'); });
+      if (caption) caption.textContent = 'Shown: Crossroads base, rectangular ' + sp.caption + ' top.';
+      if (setSpecies3D) setSpecies3D(sp.tok);
+    });
+    speciesGrid.appendChild(b);
+  });
+
+  const io = new IntersectionObserver((es) => { if (es[0].isIntersecting){ io.disconnect(); init3D(); } }, { rootMargin: '300px' });
+  io.observe(viewer);
+
+  async function init3D(){
+    const failTimer = setTimeout(() => { if (!viewer.classList.contains('ready')) viewer.classList.add('fallback'); }, 12000);
+    try {
+      const M = await import(root.dataset.three);
+      const THREE = M.THREE;
+      const { OrbitControls, GLTFLoader, RoomEnvironment } = M;
+
+      const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 0.88;
+      renderer.shadowMap.enabled = false;
+      host.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+      const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 60);
+      camera.position.set(3.1, 1.7, 3.6);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0.5, 0);
+      controls.enableDamping = true;
+      controls.enablePan = false;
+      controls.maxPolarAngle = Math.PI * 0.49;
+      controls.minDistance = 1.2; controls.maxDistance = 8;
+      controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
+      viewer.addEventListener('pointerenter', () => { controls.autoRotate = false; });
+      viewer.addEventListener('pointerleave', () => { controls.autoRotate = true; });
+
+      const key = new THREE.DirectionalLight(0xfff6e8, 1.05);
+      key.position.set(2.6, 7, 3);
+      scene.add(key, new THREE.HemisphereLight(0xfffaf3, 0xcfc6b4, 0.40));
+
+      const sc = document.createElement('canvas'); sc.width = sc.height = 256;
+      const sg = sc.getContext('2d');
+      const grad = sg.createRadialGradient(128, 128, 6, 128, 128, 128);
+      grad.addColorStop(0, 'rgba(32,24,16,0.30)');
+      grad.addColorStop(0.45, 'rgba(32,24,16,0.13)');
+      grad.addColorStop(1, 'rgba(32,24,16,0)');
+      sg.fillStyle = grad; sg.fillRect(0, 0, 256, 256);
+      const shadowTex = new THREE.CanvasTexture(sc); shadowTex.colorSpace = THREE.SRGBColorSpace;
+      const shadow = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.renderOrder = -1;
+      scene.add(shadow);
+      function updateShadow() {
+        const b = new THREE.Box3().setFromObject(model);
+        shadow.scale.set((b.max.x - b.min.x) * 1.55, (b.max.z - b.min.z) * 2.1, 1);
+        shadow.position.set((b.max.x + b.min.x) / 2, 0.012, (b.max.z + b.min.z) / 2);
+      }
+
+      function fit(){
+        const w = host.clientWidth, h = host.clientHeight;
+        if (!w || !h) return;
+        renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix();
+      }
+      new ResizeObserver(fit).observe(host);
+
+      let topMeshes = [], nativeLen = 2200, lenAxis = 0;
+      function prepStretch(mesh){
+        if (mesh.geometry.index) mesh.geometry = mesh.geometry.toNonIndexed();
+        const g = mesh.geometry;
+        const pos = g.attributes.position, nor = g.attributes.normal, uv = g.attributes.uv;
+        if (!uv) return;
+        const buckets = new Map();
+        for (let t=0; t<pos.count; t+=3){
+          const n = [nor.getX(t)+nor.getX(t+1)+nor.getX(t+2), nor.getY(t)+nor.getY(t+1)+nor.getY(t+2), nor.getZ(t)+nor.getZ(t+1)+nor.getZ(t+2)];
+          const m = Math.hypot(...n) || 1;
+          const k = n.map(v => Math.round(v/m*4)/4).join(',');
+          if (!buckets.has(k)) buckets.set(k, { n: n.map(v => v/m), verts: [] });
+          buckets.get(k).verts.push(t, t+1, t+2);
+        }
+        const stretchy = [];
+        const L = lenAxis, getP = [i => pos.getX(i), i => pos.getY(i), i => pos.getZ(i)][L];
+        for (const b of buckets.values()){
+          if (Math.abs(b.n[L]) > 0.5) continue;
+          let best = 0, bi = b.verts[0], bj = b.verts[0];
+          for (const i of b.verts) for (const j of b.verts){ const d = Math.abs(getP(i)-getP(j)); if (d > best){ best = d; bi = i; bj = j; } }
+          if (best < 1) continue;
+          const du = Math.abs(uv.getX(bi)-uv.getX(bj)), dv = Math.abs(uv.getY(bi)-uv.getY(bj));
+          const axis = du >= dv ? 0 : 1;
+          let c = 0; for (const i of b.verts) c += axis ? uv.getY(i) : uv.getX(i);
+          c /= b.verts.length;
+          stretchy.push({ verts: b.verts, axis, c });
+        }
+        mesh.userData.stretchy = stretchy;
+        mesh.userData.origUV = uv.array.slice();
+      }
+      function applyLength(){
+        const ratio = (state.length * 10) / nativeLen;
+        for (const mesh of topMeshes){
+          mesh.scale.setComponent(lenAxis, ratio);
+          const uv = mesh.geometry.attributes.uv;
+          if (!uv || !mesh.userData.stretchy) continue;
+          const o = mesh.userData.origUV;
+          for (const b of mesh.userData.stretchy) for (const i of b.verts){ const j = 2*i + b.axis; uv.array[j] = b.c + (o[j]-b.c)*ratio; }
+          uv.needsUpdate = true;
+        }
+        updateShadow();
+      }
+
+      const gltf = await new GLTFLoader().loadAsync(root.dataset.glb);
+      const model = gltf.scene;
+      scene.add(model);
+
+      // ---- timber switching (Rimu/Beech are variant-only materials, loaded lazily) ----
+      const parser = gltf.parser, gjson = parser.json;
+      const matByName = {};
+      await Promise.all((gjson.materials || []).map(async (m, i) => { if (m.name) matByName[m.name] = await parser.getDependency('material', i); }));
+      const swap = [];
+      model.traverse(o => {
+        if (!o.isMesh || !o.material) return;
+        const mm = (o.material.name || '').match(/^mat_(?:TOT|Rimu|BEE)_Clear_(Top|Sides|Ends)/);
+        if (mm) swap.push({ mesh: o, face: mm[1] });
+      });
+      function setSpecies(tok){
+        for (const { mesh, face } of swap){ const target = FACE_MAT[face] && FACE_MAT[face][tok]; if (target && matByName[target]) mesh.material = matByName[target]; }
+      }
+      setSpecies3D = setSpecies;
+      if (state.species !== 'TOT') setSpecies(state.species); // honour a pre-load selection
+
+      // Matte hand-oiled-timber finish: tame gloss + environment reflection so the
+      // light timbers don't blow out / wash to white.
+      // Per-species albedo lift: Rimu's texture reads darker than Tōtara/Beech, so lift it back up.
+      const SPECIES_LIFT = { TOT: 1.0, Rimu: 1.2, BEE: 1.0 };
+      for (const mat of Object.values(matByName)){
+        if ('envMapIntensity' in mat) mat.envMapIntensity = 0.55;
+        if (/Clear/.test(mat.name || '')) mat.roughness = 0.72;
+        const sp = (mat.name || '').match(/_(TOT|Rimu|BEE)_/);
+        if (sp && mat.color) mat.color.multiplyScalar(SPECIES_LIFT[sp[1]] ?? 1.0);
+        mat.needsUpdate = true;
+      }
+
+      let meshes = [];
+      model.traverse(o => {
+        if (o.isMesh){
+          o.castShadow = true;
+          o.geometry.computeBoundingBox();
+          const s = new THREE.Vector3(); o.geometry.boundingBox.getSize(s);
+          meshes.push({ mesh:o, size:s, max:Math.max(s.x, s.y, s.z) });
+        }
+      });
+      const longest = Math.max(...meshes.map(m => m.max));
+      const tops = meshes.filter(m => m.max > longest * 0.95);
+      nativeLen = longest;
+      lenAxis = [tops[0].size.x, tops[0].size.y, tops[0].size.z].indexOf(tops[0].max);
+      for (const t of tops){ topMeshes.push(t.mesh); prepStretch(t.mesh); }
+
+      applyLength();
+      applyLength3D = applyLength;
+
+      let box = new THREE.Box3().setFromObject(model);
+      model.position.y -= box.min.y;
+
+      const dflt = state.length;
+      state.length = 280; applyLength();
+      box = new THREE.Box3().setFromObject(model);
+      const sphere = box.getBoundingSphere(new THREE.Sphere());
+      state.length = dflt; applyLength();
+      const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+      const dist = (sphere.radius / Math.sin(halfFov)) * 0.88;
+      const dir = new THREE.Vector3(2.0, 1.12, 2.45).normalize();
+      camera.position.copy(sphere.center).add(dir.multiplyScalar(dist));
+      controls.target.copy(sphere.center);
+      controls.update();
+      fit();
+
+      let visible = true;
+      new IntersectionObserver(es => { visible = es[0].isIntersecting; }, { threshold: 0 }).observe(viewer);
+      renderer.setAnimationLoop(() => { if (!visible) return; controls.update(); renderer.render(scene, camera); });
+
+      clearTimeout(failTimer);
+      requestAnimationFrame(() => { viewer.classList.remove('fallback'); viewer.classList.add('ready'); });
+    } catch (e) {
+      clearTimeout(failTimer);
+      viewer.classList.add('fallback');
+      console.warn('[configurator] 3D init failed:', e);
+    }
+  }
+})();
+
+</script>
+{% endraw %}
+
+{% schema %}
+{
+  "name": "Table configurator",
+  "tag": "section",
+  "settings": [
+    {"type":"checkbox","id":"enabled","label":"Show section","default":true},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Early preview"},
+    {"type":"text","id":"title","label":"Title","default":"Hard to picture? Have a play."},
+    {"type":"textarea","id":"intro","label":"Intro paragraph"},
+    {"type":"header","content":"Buttons"},
+    {"type":"text","id":"primary_label","label":"Primary label","default":"Tell us about your table"},
+    {"type":"url","id":"primary_link","label":"Primary link"},
+    {"type":"text","id":"secondary_label","label":"Secondary label","default":"Browse dining tables"},
+    {"type":"url","id":"secondary_link","label":"Secondary link"}
+  ],
+  "presets":[{"name":"Table configurator"}]
+}
+{% endschema %}

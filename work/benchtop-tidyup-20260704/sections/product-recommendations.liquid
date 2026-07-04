@@ -1,0 +1,135 @@
+{%- liquid
+  assign innate_hide_product_recommendations = false
+  assign innate_related_handles = ''
+  assign innate_related_heading = section.settings.heading
+
+  if product.type == 'Bean Bag Fill' or product.gift_card?
+    assign innate_hide_product_recommendations = true
+  elsif product.handle == 'product-sample'
+    assign innate_related_heading = 'Popular dining tables'
+    assign innate_related_handles = 'custom-crossroads-dining-table|oval-solid-wood-dining-table-nz|pebble-crossroads-dining-table|straight-steel-dining-table'
+  elsif product.type == 'Dining Table'
+    assign innate_related_handles = 'custom-crossroads-dining-table|oval-solid-wood-dining-table-nz|pebble-crossroads-dining-table|straight-steel-dining-table|steel-asterix-dining-table|round-asterix-dining-table'
+  elsif product.type == 'Panel' or product.type == 'Flooring' or product.type == 'Decking'
+    assign innate_related_heading = 'Related timber options'
+    assign innate_related_handles = 'product-sample|totara|west-coast-beech|west-coast-rimu-panels|end-grain-panels'
+  elsif product.type == 'Bar Leaner' or product.type == 'Bar Stool' or product.type == 'Café Table'
+    assign innate_related_heading = 'Related bar furniture'
+    assign innate_related_handles = 'contrast-bar-leaner|curved-bar-leaner|bar-leaner|heavy-duty-bar-leaner|bar-stool'
+  elsif product.type == 'Coffee Table'
+    assign innate_related_handles = 'grand-coffee-table|coffee-table|round-coffee-table|oval-coffee-table|timber-japandi-coffee-table'
+  elsif product.type == 'Console' or product.type == 'Entertainment Unit' or product.type == 'Shelving' or product.type == 'Desk' or product.type == 'Bedside Table' or product.type == 'Side Table'
+    assign innate_related_heading = 'Related Home & Living pieces'
+    assign innate_related_handles = 'timber-console-unit|hallway-unit|entertainment-unit|entertainment-unit-1|shelving-unit|desk|bedside-table|clearance-side-table'
+  elsif product.type == 'Bench' or product.type == 'Chair'
+    assign innate_related_handles = 'heirloom-chair|dining-chair|bench|clearance-custom-steel-frame-benches|dining-table-and-benches-unit'
+  elsif product.type == 'Chopping Board' or product.type == 'Mirror' or product.type == 'Kitchen Island'
+    assign innate_related_handles = 'butchers-block|native-timber-chopping-block|custom-mirror|kitchen-island|product-sample'
+  endif
+-%}
+
+{%- if section.settings.show_product_recommendations and innate_hide_product_recommendations == false -%}
+  <div data-section-id="{{ section.id }}" data-section-type="related-products">
+    <div class="content collection product-related-products {% render 'content-classes', scope: section %}" data-base-url="{{ routes.product_recommendations_url }}" data-product-id="{{ product.id }}" data-limit="4">
+      {%- if innate_related_heading != blank -%}
+        <h2 class="shopify-section-title">{{ innate_related_heading }}</h2>
+      {%- endif -%}
+      {%- capture collection_products_classes -%}
+        {%- render 'get-collection-products-classes' -%}
+      {%- endcapture -%}
+      <div class="collection-products {{ collection_products_classes }}">
+        {%- assign innate_rendered_related_count = 0 -%}
+        {%- if innate_related_handles != blank -%}
+          {%- assign innate_related_handle_list = innate_related_handles | split: '|' -%}
+          {%- for innate_related_handle in innate_related_handle_list -%}
+            {%- if innate_rendered_related_count < 4 and innate_related_handle != product.handle -%}
+              {%- assign innate_related_product = all_products[innate_related_handle] -%}
+              {%- if innate_related_product != blank and innate_related_product.available -%}
+                {% render 'collection-product', product: innate_related_product %}
+                {%- assign innate_rendered_related_count = innate_rendered_related_count | plus: 1 -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+        {%- if innate_rendered_related_count == 0 and recommendations.products_count > 0 -%}
+          {%- for recommendation_product in recommendations.products -%}
+            {%- if forloop.index <= 4 -%}
+              {% render 'collection-product', product: recommendation_product %}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "t:sections.product-recommendations.name",
+  "class": "section-related-products",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_product_recommendations",
+      "label": "t:sections.product-recommendations.settings.show_product_recommendations.label",
+      "info": "t:sections.product-recommendations.settings.show_product_recommendations.info",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-collection.settings.header__3.content"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:sections.main-collection.settings.paragraph.content"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:sections.settings.heading.label",
+      "info": "t:sections.settings.heading.info",
+      "default": "You may also like"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded_content",
+      "label": "t:sections.settings.expanded_content.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_desktop",
+      "label": "t:sections.settings.show_on_desktop.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "t:sections.settings.show_on_mobile.label",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

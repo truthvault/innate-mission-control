@@ -1,0 +1,45 @@
+{%- comment -%} Innate closing CTA - centred final call to action. {%- endcomment -%}
+{{ 'innate-home.css' | asset_url | stylesheet_tag }}
+{%- if section.settings.enabled -%}
+<section class="ih-sec ih-sec--cream ih-close">
+  <div class="ih-wrap">
+    <p class="ih-eyebrow">{{ section.settings.eyebrow | default: 'Ready when you are' }}</p>
+    <h2 class="ih-h2">{{ section.settings.title | default: 'Tell us what you are after.' }}</h2>
+    <p class="ih-lead">{{ section.settings.intro | default: 'Send your room size, a rough idea, or just a photo of the space. We will come back with indicative pricing within a day - usually with a suggestion or two.' }}</p>
+    <div class="ih-close-actions">
+      <a class="ih-btn ih-btn--primary" href="{{ section.settings.primary_link | default: '/pages/contact' }}">{{ section.settings.primary_label | default: 'Talk to us about a table' }}</a>
+      <a class="ih-btn" href="{{ section.settings.secondary_link | default: '/products/product-sample' }}">{{ section.settings.secondary_label | default: 'Order timber samples' }}</a>
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+<style>
+  .ih-close{text-align:center}
+  .ih-close .ih-wrap{max-width:680px}
+  .ih-close .ih-head,.ih-close .ih-eyebrow{margin-left:auto;margin-right:auto}
+  .ih-close .ih-h2{margin:0 auto;max-width:none}
+  .ih-close .ih-lead{margin:1.1rem auto 0;text-align:center}
+  .ih-close-actions{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-top:1.9rem}
+  .ih-close-note{margin:1.6rem auto 0;font-size:.82rem;color:var(--ih-ink-faint);max-width:46ch}
+  @media(max-width:560px){.ih-close-actions .ih-btn{flex:1 1 auto}}
+</style>
+
+{% schema %}
+{
+  "name": "Closing CTA",
+  "tag": "section",
+  "settings": [
+    {"type":"checkbox","id":"enabled","label":"Show section","default":true},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Ready when you are"},
+    {"type":"text","id":"title","label":"Title","default":"Tell us what you are after."},
+    {"type":"textarea","id":"intro","label":"Intro"},
+    {"type":"text","id":"primary_label","label":"Primary label","default":"Talk to us about a table"},
+    {"type":"url","id":"primary_link","label":"Primary link"},
+    {"type":"text","id":"secondary_label","label":"Secondary label","default":"Order timber samples"},
+    {"type":"url","id":"secondary_link","label":"Secondary link"},
+    {"type":"textarea","id":"note","label":"Footnote"}
+  ],
+  "presets":[{"name":"Closing CTA"}]
+}
+{% endschema %}

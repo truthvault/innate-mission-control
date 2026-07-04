@@ -1,0 +1,930 @@
+{{ 'page-materials.css' | asset_url | stylesheet_tag }}
+
+{%- liquid
+  assign hero_asset = section.settings.hero_asset_filename | strip
+  if hero_asset == blank
+    assign hero_asset = 'materials-workshop-hero.jpg'
+  endif
+  assign hero_position = section.settings.hero_image_position | default: '50% 50%'
+  assign hero_style = 'object-position: ' | append: hero_position | append: ';'
+  assign native_story_asset = section.settings.native_story_asset_filename | strip
+  if native_story_asset == blank
+    assign native_story_asset = 'materials-laminating-press.jpg'
+  endif
+  assign native_story_position = section.settings.native_story_image_position | default: '50% 50%'
+  assign native_story_style = 'object-position: ' | append: native_story_position | append: ';'
+  assign steel_asset = section.settings.steel_asset_filename | strip
+  if steel_asset == blank
+    assign steel_asset = 'materials-steel-welding.jpg'
+  endif
+  assign steel_position = section.settings.steel_image_position | default: '50% 50%'
+  assign steel_style = 'object-position: ' | append: steel_position | append: ';'
+  assign finish_hero_asset = section.settings.finish_hero_asset_filename | strip
+  if finish_hero_asset == blank
+    assign finish_hero_asset = 'materials-osmo-polyx-oil.png'
+  endif
+  assign finish_hero_position = section.settings.finish_hero_image_position | default: '50% 50%'
+  assign finish_hero_style = 'object-position: ' | append: finish_hero_position | append: ';'
+  assign ingredients_asset = section.settings.ingredients_asset_filename | strip
+  if ingredients_asset == blank
+    assign ingredients_asset = 'materials-natural-oil-ingredients.jpg'
+  endif
+  assign ingredients_position = section.settings.ingredients_image_position | default: '50% 50%'
+  assign ingredients_style = 'object-position: ' | append: ingredients_position | append: ';'
+-%}
+
+<section class="materials-page" aria-labelledby="materials-title">
+  <div class="materials-hero">
+    <div class="materials-wrap materials-hero__grid">
+      <div class="materials-hero__copy">
+        {%- if section.settings.hero_kicker != blank -%}
+          <p class="materials-kicker">{{ section.settings.hero_kicker | escape }}</p>
+        {%- endif -%}
+        <h1 id="materials-title">{{ section.settings.hero_title | escape }}</h1>
+        {%- if section.settings.hero_text != blank -%}
+          <div class="materials-hero__text">{{ section.settings.hero_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.hero_chips != blank -%}
+          <div class="materials-hero__chips" aria-label="Core material areas">
+            {%- assign chips = section.settings.hero_chips | split: '|' -%}
+            {%- for chip in chips -%}
+              {%- assign chip_text = chip | strip -%}
+              {%- if chip_text != blank -%}
+                <span class="materials-chip">{{ chip_text | escape }}</span>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <figure class="materials-hero__media">
+        {%- if section.settings.hero_image != blank -%}
+          {{ section.settings.hero_image | image_url: width: 1600 | image_tag: loading: 'eager', fetchpriority: 'high', alt: section.settings.hero_image_alt, style: hero_style }}
+        {%- elsif hero_asset != blank -%}
+          <img
+            src="{{ hero_asset | asset_url }}"
+            alt="{{ section.settings.hero_image_alt | escape }}"
+            width="1600"
+            height="1200"
+            loading="eager"
+            fetchpriority="high"
+            style="object-position: {{ hero_position }};">
+        {%- endif -%}
+      </figure>
+    </div>
+  </div>
+
+  <nav class="materials-section materials-section--cream" aria-label="Materials page sections">
+    <div class="materials-wrap materials-anchor-grid">
+      <a class="materials-anchor" href="#timber">
+        <span>01</span>
+        <strong>Timber</strong>
+        <p>Rimu, West Coast Beech, Northland Tōtara and other responsibly sourced timbers.</p>
+      </a>
+      <a class="materials-anchor" href="#steel">
+        <span>02</span>
+        <strong>NZ steel</strong>
+        <p>Local steel used for strong frames, bases and commercial furniture details.</p>
+      </a>
+      <a class="materials-anchor" href="#finishes">
+        <span>03</span>
+        <strong>Natural finishes</strong>
+        <p>Interior hardwax oil, exterior oil and colour choices that suit the timber and use.</p>
+      </a>
+    </div>
+  </nav>
+
+  <section class="materials-section" id="timber">
+    <div class="materials-wrap">
+      <div class="materials-split-head">
+        <div>
+          {%- if section.settings.timber_kicker != blank -%}
+            <p class="materials-kicker">{{ section.settings.timber_kicker | escape }}</p>
+          {%- endif -%}
+          <h2 class="materials-heading">{{ section.settings.timber_title | escape }}</h2>
+        </div>
+        {%- if section.settings.timber_text != blank -%}
+          <div class="materials-lead">{{ section.settings.timber_text }}</div>
+        {%- endif -%}
+      </div>
+
+      <div class="materials-timber-grid">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'timber_species' -%}
+            {%- liquid
+              assign timber_image_url = block.settings.fallback_image_url | strip
+              assign timber_position = block.settings.image_position | default: '50% 50%'
+              assign timber_style = 'object-position: ' | append: timber_position | append: ';'
+            -%}
+            <article class="materials-timber-card{% if block.settings.title contains 'Tōtara' %} materials-timber-card--feature{% endif %}" {{ block.shopify_attributes }}>
+              <figure class="materials-timber-card__media">
+                {%- if block.settings.image != blank -%}
+                  {{ block.settings.image | image_url: width: 1000 | image_tag: loading: 'lazy', alt: block.settings.image_alt, style: timber_style }}
+                {%- elsif timber_image_url != blank -%}
+                  <img src="{{ timber_image_url }}" alt="{{ block.settings.image_alt | escape }}" width="1000" height="700" loading="lazy" style="object-position: {{ timber_position }};">
+                {%- endif -%}
+              </figure>
+              <div class="materials-timber-card__body">
+                {%- if block.settings.subtitle != blank -%}
+                  <p class="materials-timber-card__subtitle">{{ block.settings.subtitle | escape }}</p>
+                {%- endif -%}
+                <h3>{{ block.settings.title | escape }}</h3>
+                {%- if block.settings.body != blank -%}
+                  <div>{{ block.settings.body }}</div>
+                {%- endif -%}
+                <div class="materials-facts">
+                  {%- if block.settings.source != blank -%}
+                    <div class="materials-fact">
+                      <span>Source</span>
+                      <strong>{{ block.settings.source }}</strong>
+                    </div>
+                  {%- endif -%}
+                  {%- if block.settings.best_for != blank -%}
+                    <div class="materials-fact">
+                      <span>Character</span>
+                      <strong>{{ block.settings.best_for }}</strong>
+                    </div>
+                  {%- endif -%}
+                </div>
+                {%- if block.settings.note != blank -%}
+                  <div class="materials-note">{{ block.settings.note }}</div>
+                {%- endif -%}
+                {%- if block.settings.link_label != blank and block.settings.link_url != blank -%}
+                  <a class="materials-card-link" href="{{ block.settings.link_url }}">{{ block.settings.link_label | escape }}</a>
+                {%- endif -%}
+              </div>
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      <div class="materials-native-story">
+        <div class="materials-native-story__copy">
+          {%- if section.settings.native_story_kicker != blank -%}
+            <p class="materials-kicker">{{ section.settings.native_story_kicker | escape }}</p>
+          {%- endif -%}
+          <h3>{{ section.settings.native_story_title | escape }}</h3>
+          {%- if section.settings.native_story_text != blank -%}
+            <div>{{ section.settings.native_story_text }}</div>
+          {%- endif -%}
+          {%- if section.settings.native_story_points != blank -%}
+            <ul>
+              {%- assign native_story_points = section.settings.native_story_points | split: '|' -%}
+              {%- for point in native_story_points -%}
+                {%- assign point_text = point | strip -%}
+                {%- if point_text != blank -%}
+                  <li>{{ point_text | escape }}</li>
+                {%- endif -%}
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        </div>
+        {%- if section.settings.native_story_image != blank or native_story_asset != blank -%}
+          <figure class="materials-native-story__media">
+            <div class="materials-native-story__image">
+              {%- if section.settings.native_story_image != blank -%}
+                {{ section.settings.native_story_image | image_url: width: 1400 | image_tag: loading: 'lazy', alt: section.settings.native_story_image_alt, style: native_story_style }}
+              {%- elsif native_story_asset != blank -%}
+                <img src="{{ native_story_asset | asset_url }}" alt="{{ section.settings.native_story_image_alt | escape }}" width="1400" height="1050" loading="lazy" style="object-position: {{ native_story_position }};">
+              {%- endif -%}
+            </div>
+            {%- if section.settings.native_story_caption != blank -%}
+              <figcaption>{{ section.settings.native_story_caption | escape }}</figcaption>
+            {%- endif -%}
+          </figure>
+        {%- endif -%}
+      </div>
+
+      <div class="materials-origin-strip" aria-label="Material provenance points">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'source_point' -%}
+            <div class="materials-origin" {{ block.shopify_attributes }}>
+              <span>{{ block.settings.kicker | escape }}</span>
+              <strong>{{ block.settings.title | escape }}</strong>
+              {%- if block.settings.text != blank -%}
+                <p>{{ block.settings.text | escape }}</p>
+              {%- endif -%}
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="materials-section materials-section--dark" id="steel">
+    <div class="materials-wrap materials-steel-grid">
+      <div>
+        {%- if section.settings.steel_kicker != blank -%}
+          <p class="materials-kicker">{{ section.settings.steel_kicker | escape }}</p>
+        {%- endif -%}
+        <h2 class="materials-heading">{{ section.settings.steel_title | escape }}</h2>
+        {%- if section.settings.steel_text != blank -%}
+          <div class="materials-lead">{{ section.settings.steel_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.steel_points != blank -%}
+          <ul class="materials-plain-list">
+            {%- assign steel_points = section.settings.steel_points | split: '|' -%}
+            {%- for point in steel_points -%}
+              {%- assign point_text = point | strip -%}
+              {%- if point_text != blank -%}
+                <li>{{ point_text | escape }}</li>
+              {%- endif -%}
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+      </div>
+      <div class="materials-steel-media">
+        {%- if section.settings.steel_image != blank or steel_asset != blank -%}
+          <figure class="materials-steel-image">
+            {%- if section.settings.steel_image != blank -%}
+              {{ section.settings.steel_image | image_url: width: 1300 | image_tag: loading: 'lazy', alt: section.settings.steel_image_alt, style: steel_style }}
+            {%- elsif steel_asset != blank -%}
+              <img src="{{ steel_asset | asset_url }}" alt="{{ section.settings.steel_image_alt | escape }}" width="1200" height="1500" loading="lazy" style="object-position: {{ steel_position }};">
+            {%- endif -%}
+          </figure>
+        {%- endif -%}
+        {%- if section.settings.steel_video_embed_url != blank -%}
+          <figure class="materials-steel-video">
+            <iframe
+              src="{{ section.settings.steel_video_embed_url | escape }}"
+              title="{{ section.settings.steel_video_title | escape }}"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen></iframe>
+          </figure>
+        {%- endif -%}
+        {%- if section.settings.steel_video_caption != blank -%}
+          <p class="materials-video-caption">{{ section.settings.steel_video_caption | escape }}</p>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="materials-section" id="finishes">
+    <div class="materials-wrap">
+      <div class="materials-split-head">
+        <div>
+          {%- if section.settings.finishes_kicker != blank -%}
+            <p class="materials-kicker">{{ section.settings.finishes_kicker | escape }}</p>
+          {%- endif -%}
+          <h2 class="materials-heading">{{ section.settings.finishes_title | escape }}</h2>
+        </div>
+        {%- if section.settings.finishes_text != blank -%}
+          <div class="materials-lead">{{ section.settings.finishes_text }}</div>
+        {%- endif -%}
+      </div>
+
+      <div class="materials-finish-media-grid">
+        {%- if section.settings.finish_hero_image != blank or finish_hero_asset != blank -%}
+          <figure class="materials-finish-media materials-finish-media--contain">
+            {%- if section.settings.finish_hero_image != blank -%}
+              {{ section.settings.finish_hero_image | image_url: width: 1300 | image_tag: loading: 'lazy', alt: section.settings.finish_hero_image_alt, style: finish_hero_style }}
+            {%- elsif finish_hero_asset != blank -%}
+              <img src="{{ finish_hero_asset | asset_url }}" alt="{{ section.settings.finish_hero_image_alt | escape }}" width="1300" height="867" loading="lazy" style="object-position: {{ finish_hero_position }};">
+            {%- endif -%}
+          </figure>
+        {%- endif -%}
+        {%- if section.settings.ingredients_image != blank or ingredients_asset != blank -%}
+          <figure class="materials-finish-media">
+            {%- if section.settings.ingredients_image != blank -%}
+              {{ section.settings.ingredients_image | image_url: width: 1300 | image_tag: loading: 'lazy', alt: section.settings.ingredients_image_alt, style: ingredients_style }}
+            {%- elsif ingredients_asset != blank -%}
+              <img src="{{ ingredients_asset | asset_url }}" alt="{{ section.settings.ingredients_image_alt | escape }}" width="1300" height="867" loading="lazy" style="object-position: {{ ingredients_position }};">
+            {%- endif -%}
+          </figure>
+        {%- endif -%}
+      </div>
+
+      <div class="materials-finish-cards">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'finish_card' -%}
+            <article class="materials-finish-card" {{ block.shopify_attributes }}>
+              {%- if block.settings.kicker != blank -%}
+                <span>{{ block.settings.kicker | escape }}</span>
+              {%- endif -%}
+              <h3>{{ block.settings.title | escape }}</h3>
+              {%- if block.settings.text != blank -%}
+                <div>{{ block.settings.text }}</div>
+              {%- endif -%}
+              {%- if block.settings.link_label != blank and block.settings.link_url != blank -%}
+                <a class="materials-card-link materials-card-link--small" href="{{ block.settings.link_url }}" target="_blank" rel="noopener">{{ block.settings.link_label | escape }}</a>
+              {%- endif -%}
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+
+      <div class="materials-colours">
+        <h3 class="materials-heading">{{ section.settings.colour_title | escape }}</h3>
+        {%- if section.settings.colour_text != blank -%}
+          <div class="materials-lead">{{ section.settings.colour_text }}</div>
+        {%- endif -%}
+        {%- if section.settings.colour_tags != blank -%}
+          <div class="materials-colour-tags" aria-label="Core finish colours">
+            {%- assign colour_tags = section.settings.colour_tags | split: '|' -%}
+            {%- for colour_tag in colour_tags -%}
+              {%- assign colour_text = colour_tag | strip -%}
+              {%- if colour_text != blank -%}
+                <span>{{ colour_text | escape }}</span>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+        {%- if section.settings.colour_cta_label != blank and section.settings.colour_cta_link != blank -%}
+          <div class="materials-colour-cta">
+            <a class="materials-button materials-button--primary" href="{{ section.settings.colour_cta_link }}">{{ section.settings.colour_cta_label | escape }}</a>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="materials-section materials-section--cream" id="choosing">
+    <div class="materials-wrap">
+      <div class="materials-split-head">
+        <div>
+          {%- if section.settings.choosing_kicker != blank -%}
+            <p class="materials-kicker">{{ section.settings.choosing_kicker | escape }}</p>
+          {%- endif -%}
+          <h2 class="materials-heading">{{ section.settings.choosing_title | escape }}</h2>
+        </div>
+        {%- if section.settings.choosing_text != blank -%}
+          <div class="materials-lead">{{ section.settings.choosing_text }}</div>
+        {%- endif -%}
+      </div>
+
+      <div class="materials-how">
+        <article class="materials-how-card">
+          <span>01</span>
+          <h3>Start with the room</h3>
+          <p>Light, flooring, joinery and existing furniture usually narrow the timber choice quickly.</p>
+        </article>
+        <article class="materials-how-card">
+          <span>02</span>
+          <h3>Match the practical brief</h3>
+          <p>Dimensions, exposure, finish, maintenance and the feel of the room all shape the right direction.</p>
+        </article>
+        <article class="materials-how-card">
+          <span>03</span>
+          <h3>Check samples in place</h3>
+          <p>Samples are finished like the final piece, so compare them in your own daylight and evening light.</p>
+        </article>
+        <article class="materials-how-card">
+          <span>04</span>
+          <h3>Ask if unsure</h3>
+          <p>A rough photo and a few notes are enough for us to suggest a practical direction.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="materials-section" id="questions">
+    <div class="materials-wrap">
+      <div class="materials-split-head">
+        <div>
+          {%- if section.settings.faq_kicker != blank -%}
+            <p class="materials-kicker">{{ section.settings.faq_kicker | escape }}</p>
+          {%- endif -%}
+          <h2 class="materials-heading">{{ section.settings.faq_title | escape }}</h2>
+        </div>
+        {%- if section.settings.faq_text != blank -%}
+          <div class="materials-lead">{{ section.settings.faq_text }}</div>
+        {%- endif -%}
+      </div>
+
+      <div class="materials-faq">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'faq' -%}
+            <details {{ block.shopify_attributes }}>
+              <summary>{{ block.settings.question | escape }}</summary>
+              {%- if block.settings.answer != blank -%}
+                <div class="materials-faq__body">{{ block.settings.answer }}</div>
+              {%- endif -%}
+            </details>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+
+  <section class="materials-section materials-section--dark materials-final">
+    <div class="materials-wrap">
+      {%- if section.settings.final_kicker != blank -%}
+        <p class="materials-kicker">{{ section.settings.final_kicker | escape }}</p>
+      {%- endif -%}
+      <h2 class="materials-heading">{{ section.settings.final_title | escape }}</h2>
+      {%- if section.settings.final_text != blank -%}
+        <div class="materials-lead">{{ section.settings.final_text }}</div>
+      {%- endif -%}
+      <div class="materials-button-row">
+        {%- if section.settings.primary_label != blank and section.settings.primary_link != blank -%}
+          <a class="materials-button materials-button--primary" href="{{ section.settings.primary_link }}">{{ section.settings.primary_label | escape }}</a>
+        {%- endif -%}
+        {%- if section.settings.secondary_label != blank and section.settings.secondary_link != blank -%}
+          <a class="materials-button materials-button--secondary" href="{{ section.settings.secondary_link }}">{{ section.settings.secondary_label | escape }}</a>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+</section>
+
+{% schema %}
+{
+  "name": "Materials page",
+  "settings": [
+    {
+      "type": "text",
+      "id": "hero_kicker",
+      "label": "Hero kicker",
+      "default": "Materials"
+    },
+    {
+      "type": "text",
+      "id": "hero_title",
+      "label": "Hero title",
+      "default": "Materials we know, trust and work with every day."
+    },
+    {
+      "type": "richtext",
+      "id": "hero_text",
+      "label": "Hero text",
+      "default": "<p>We use New Zealand timber, local steel and natural finishes because we understand how they behave in real furniture. The right choice comes down to the room, the colour, the build, and how you want the piece to age.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_asset_filename",
+      "label": "Fallback theme asset filename",
+      "default": "materials-workshop-timber-machining.jpg"
+    },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Hero image alt text",
+      "default": "Solid timber being machined in the Innate Furniture Christchurch workshop."
+    },
+    {
+      "type": "text",
+      "id": "hero_image_position",
+      "label": "Hero image focus point",
+      "default": "50% 50%"
+    },
+    {
+      "type": "text",
+      "id": "hero_chips",
+      "label": "Hero chips separated by |",
+      "default": "West Coast Rimu|West Coast Beech|Northland Tōtara|NZ steel|Natural finishes"
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "Primary button label",
+      "default": "Order timber samples"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "Secondary button label",
+      "default": "Ask about materials"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "text",
+      "id": "timber_kicker",
+      "label": "Timber kicker",
+      "default": "Timber"
+    },
+    {
+      "type": "text",
+      "id": "timber_title",
+      "label": "Timber title",
+      "default": "Choose timber by character, story and finish."
+    },
+    {
+      "type": "richtext",
+      "id": "timber_text",
+      "label": "Timber text",
+      "default": "<p>Most Innate pieces start with one of three New Zealand timbers: West Coast Rimu, West Coast Beech or Northland Tōtara. They can all be used across tables, benchtops and furniture when the project suits. The choice is usually about colour, grain, story, thickness, construction and finish.</p>"
+    },
+    {
+      "type": "text",
+      "id": "native_story_kicker",
+      "label": "Native timber story kicker",
+      "default": "Responsible native timber"
+    },
+    {
+      "type": "text",
+      "id": "native_story_title",
+      "label": "Native timber story title",
+      "default": "Using native timber well means caring for the forest it came from."
+    },
+    {
+      "type": "richtext",
+      "id": "native_story_text",
+      "label": "Native timber story text",
+      "default": "<p>We choose New Zealand native timber because it belongs to this place, carries a deeper story, and can support good land stewardship when it is legally and carefully sourced. The important part is provenance, long-term forest care and where the timber came from.</p>"
+    },
+    {
+      "type": "textarea",
+      "id": "native_story_points",
+      "label": "Native timber story points separated by |",
+      "default": "MPI sustainable forest management plans and permits under the Forests Act set long-term harvest limits and protect natural values.|Continuous-cover forestry keeps forest structure in place instead of treating native forest like a clear-fell crop.|Windfall, salvage and naturally regenerating farm tōtara can turn existing material into lasting furniture without pretending every source is the same.|Good native timber use should support the guardians of the land, not disconnect timber from the forest it came from."
+    },
+    {
+      "type": "image_picker",
+      "id": "native_story_image",
+      "label": "Native timber story image"
+    },
+    {
+      "type": "text",
+      "id": "native_story_asset_filename",
+      "label": "Native timber story fallback asset filename",
+      "default": "materials-laminating-press.jpg"
+    },
+    {
+      "type": "text",
+      "id": "native_story_image_alt",
+      "label": "Native timber story image alt text",
+      "default": "West Coast Beech boards being loaded into the laminating press."
+    },
+    {
+      "type": "text",
+      "id": "native_story_image_position",
+      "label": "Native timber story image focus point",
+      "default": "50% 55%"
+    },
+    {
+      "type": "text",
+      "id": "native_story_caption",
+      "label": "Native timber story image caption",
+      "default": "West Coast Beech being loaded into the laminating press."
+    },
+    {
+      "type": "text",
+      "id": "steel_kicker",
+      "label": "Steel kicker",
+      "default": "New Zealand steel"
+    },
+    {
+      "type": "text",
+      "id": "steel_title",
+      "label": "Steel title",
+      "default": "A local industrial material, used honestly."
+    },
+    {
+      "type": "richtext",
+      "id": "steel_text",
+      "label": "Steel text",
+      "default": "<p>Steel gives timber furniture strength, quiet structure and long service life. We use it for frames, bases and custom details where the design benefits from a strong local industrial material.</p>"
+    },
+    {
+      "type": "textarea",
+      "id": "steel_points",
+      "label": "Steel points separated by |",
+      "default": "Made in New Zealand at Glenbrook.|Ironsand is processed into steel through a local supply chain.|Welded and finished to suit the piece, with clean structure and long service life.|Steel has a local industrial story, and we present it honestly: traceable, practical and made close to home."
+    },
+    {
+      "type": "image_picker",
+      "id": "steel_image",
+      "label": "Steel image"
+    },
+    {
+      "type": "text",
+      "id": "steel_asset_filename",
+      "label": "Steel fallback asset filename",
+      "default": "materials-steel-welding.jpg"
+    },
+    {
+      "type": "text",
+      "id": "steel_image_alt",
+      "label": "Steel image alt text",
+      "default": "A steel table frame being welded."
+    },
+    {
+      "type": "text",
+      "id": "steel_image_position",
+      "label": "Steel image focus point",
+      "default": "48% 48%"
+    },
+    {
+      "type": "url",
+      "id": "steel_video_embed_url",
+      "label": "Steel video embed URL"
+    },
+    {
+      "type": "text",
+      "id": "steel_video_title",
+      "label": "Steel video title",
+      "default": "How New Zealand Steel is made"
+    },
+    {
+      "type": "text",
+      "id": "steel_video_caption",
+      "label": "Steel video caption",
+      "default": "New Zealand Steel's overview of the local ironsand-to-steel process."
+    },
+    {
+      "type": "text",
+      "id": "finishes_kicker",
+      "label": "Finishes kicker",
+      "default": "Natural finishes"
+    },
+    {
+      "type": "text",
+      "id": "finishes_title",
+      "label": "Finishes title",
+      "default": "Finishes that protect the timber without hiding it."
+    },
+    {
+      "type": "richtext",
+      "id": "finishes_text",
+      "label": "Finishes text",
+      "default": "<p>We choose finishes that let timber still feel like timber. Interior pieces are finished for everyday use and future refreshes. Exterior pieces are finished for weather exposure, with a clear maintenance expectation.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "finish_hero_image",
+      "label": "Finish process image"
+    },
+    {
+      "type": "text",
+      "id": "finish_hero_asset_filename",
+      "label": "Finish process fallback asset filename",
+      "default": "materials-osmo-polyx-oil.png"
+    },
+    {
+      "type": "text",
+      "id": "finish_hero_image_alt",
+      "label": "Finish process image alt text",
+      "default": "Natural timber oil finish product used by Innate Furniture."
+    },
+    {
+      "type": "text",
+      "id": "finish_hero_image_position",
+      "label": "Finish process image focus point",
+      "default": "50% 50%"
+    },
+    {
+      "type": "image_picker",
+      "id": "ingredients_image",
+      "label": "Natural oil ingredients image"
+    },
+    {
+      "type": "text",
+      "id": "ingredients_asset_filename",
+      "label": "Natural oil ingredients fallback asset filename",
+      "default": "materials-natural-oil-ingredients.jpg"
+    },
+    {
+      "type": "text",
+      "id": "ingredients_image_alt",
+      "label": "Natural oil ingredients image alt text",
+      "default": "Natural oil ingredients including plant oils, waxes, seeds and nuts."
+    },
+    {
+      "type": "text",
+      "id": "ingredients_image_position",
+      "label": "Natural oil ingredients focus point",
+      "default": "50% 50%"
+    },
+    {
+      "type": "text",
+      "id": "colour_title",
+      "label": "Colour title",
+      "default": "Colour is a conversation, not a fixed menu."
+    },
+    {
+      "type": "richtext",
+      "id": "colour_text",
+      "label": "Colour text",
+      "default": "<p>Our three main colours are Clear, Country Bark and Blackwash. Because timber species, grain and finish all affect the final result, we can also combine a wider range of timbers and custom colour work to get closer to the look a space needs.</p>"
+    },
+    {
+      "type": "text",
+      "id": "colour_tags",
+      "label": "Colour tags separated by |",
+      "default": "Clear|Country Bark|Blackwash|Custom colours"
+    },
+    {
+      "type": "text",
+      "id": "colour_cta_label",
+      "label": "Colour CTA label",
+      "default": "Order timber and finish samples"
+    },
+    {
+      "type": "url",
+      "id": "colour_cta_link",
+      "label": "Colour CTA link"
+    },
+    {
+      "type": "text",
+      "id": "choosing_kicker",
+      "label": "Choosing kicker",
+      "default": "How to choose"
+    },
+    {
+      "type": "text",
+      "id": "choosing_title",
+      "label": "Choosing title",
+      "default": "A material decision should feel practical, not mysterious."
+    },
+    {
+      "type": "richtext",
+      "id": "choosing_text",
+      "label": "Choosing text",
+      "default": "<p>If you are in Christchurch, <a href=\"/pages/contact\">book a visit to the workshop</a> and compare timber and finish samples in person. If you are outside Christchurch, <a href=\"/products/product-sample\">order samples</a> and check them in your own light before choosing.</p>"
+    },
+    {
+      "type": "text",
+      "id": "faq_kicker",
+      "label": "FAQ kicker",
+      "default": "Questions"
+    },
+    {
+      "type": "text",
+      "id": "faq_title",
+      "label": "FAQ title",
+      "default": "Useful things to know before choosing."
+    },
+    {
+      "type": "richtext",
+      "id": "faq_text",
+      "label": "FAQ text",
+      "default": "<p>A few honest answers before you get too far down the rabbit hole.</p>"
+    },
+    {
+      "type": "text",
+      "id": "final_kicker",
+      "label": "Final kicker",
+      "default": "Next step"
+    },
+    {
+      "type": "text",
+      "id": "final_title",
+      "label": "Final title",
+      "default": "See the materials in person, or test them at home."
+    },
+    {
+      "type": "richtext",
+      "id": "final_text",
+      "label": "Final text",
+      "default": "<p>If you are in Christchurch, <a href=\"/pages/contact\">book a workshop visit</a> and handle the materials before choosing. If you are outside Christchurch, <a href=\"/products/product-sample\">order samples</a> and compare the timber, colour and finish in your own room.</p>"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "timber_species",
+      "name": "Timber species",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "label": "Subtitle"
+        },
+        {
+          "type": "richtext",
+          "id": "body",
+          "label": "Body"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Image"
+        },
+        {
+          "type": "url",
+          "id": "fallback_image_url",
+          "label": "Fallback image URL"
+        },
+        {
+          "type": "text",
+          "id": "image_alt",
+          "label": "Image alt text"
+        },
+        {
+          "type": "text",
+          "id": "image_position",
+          "label": "Image focus point",
+          "default": "50% 50%"
+        },
+        {
+          "type": "text",
+          "id": "source",
+          "label": "Source"
+        },
+        {
+          "type": "text",
+          "id": "best_for",
+          "label": "Character note"
+        },
+        {
+          "type": "richtext",
+          "id": "note",
+          "label": "Practical note"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "label": "Link label"
+        },
+        {
+          "type": "url",
+          "id": "link_url",
+          "label": "Link URL"
+        }
+      ]
+    },
+    {
+      "type": "source_point",
+      "name": "Source point",
+      "settings": [
+        {
+          "type": "text",
+          "id": "kicker",
+          "label": "Kicker"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title"
+        },
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text"
+        }
+      ]
+    },
+    {
+      "type": "finish_card",
+      "name": "Finish card",
+      "settings": [
+        {
+          "type": "text",
+          "id": "kicker",
+          "label": "Kicker"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Text"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "label": "Link label"
+        },
+        {
+          "type": "url",
+          "id": "link_url",
+          "label": "Link URL"
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Materials page"
+    }
+  ]
+}
+{% endschema %}

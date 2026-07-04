@@ -1,0 +1,38 @@
+<div class="innate-dining-v16 innate-dining-v16--after-products" data-dining-editor-section="faqs">
+  <section class="d16-info" id="dining-common-details" aria-label="{{ section.settings.aria_label | escape }}">
+    <div class="d16-wrap d16-info-grid">
+      <div>
+        {%- if section.settings.eyebrow != blank -%}<p class="d38-info-kicker">{{ section.settings.eyebrow }}</p>{%- endif -%}
+        <h2 class="d16-display">{{ section.settings.heading }}</h2>
+        {%- if section.settings.text != blank -%}<p class="d38-info-copy">{{ section.settings.text }}</p>{%- endif -%}
+      </div>
+      <div class="d16-accordion">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'faq' -%}
+            <details {{ block.shopify_attributes }}><summary>{{ block.settings.summary }}</summary><div class="d16-detail-body">{{ block.settings.body }}</div></details>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+  <div id="dining-reviews" style="scroll-margin-top:160px;" aria-hidden="true"></div>
+</div>
+
+{% schema %}
+{
+  "name": "Dining FAQs",
+  "settings": [
+    {"type":"text","id":"aria_label","label":"Section accessibility label","default":"Helpful before you choose"},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Optional reading"},
+    {"type":"text","id":"heading","label":"Heading","default":"Dining table FAQs"},
+    {"type":"textarea","id":"text","label":"Text","default":"These are the questions we usually help narrow down after you enquire. Read what’s useful, skip the rest."}
+  ],
+  "blocks": [
+    {"type":"faq","name":"FAQ row","settings":[
+      {"type":"text","id":"summary","label":"Question","default":"Can you make a table to our size?"},
+      {"type":"richtext","id":"body","label":"Answer","default":"<p>Yes. We make dining tables to order, so the length, width and height can be adjusted to suit your room, chairs and everyday use.</p>"}
+    ]}
+  ],
+  "presets": [{"name":"Dining FAQs"}]
+}
+{% endschema %}

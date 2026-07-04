@@ -1,0 +1,207 @@
+<div class="innate-dining-v16 innate-dining-v16--after-products" data-dining-editor-section="timber-colour">
+  <section class="d53-timber-colour" aria-label="{{ section.settings.aria_label | escape }}">
+    <div class="d53-timber-colour__inner">
+      <div>
+        <h2>{{ section.settings.heading | escape }}</h2>
+        {%- if section.settings.text != blank -%}<p>{{ section.settings.text | escape }}</p>{%- endif -%}
+      </div>
+      <div>
+        <div class="innate-dining-timber-grid innate-dining-timber-grid--collection" aria-label="{{ section.settings.grid_aria_label | escape }}">
+          <style>
+            .innate-dining-timber-grid{margin:0 0 1.15rem;padding:.9rem;border:1px solid rgba(40,50,41,.16);background:#fff;border-radius:3px}
+            .innate-dining-timber-grid,.innate-dining-timber-grid *{box-sizing:border-box}
+            .innate-dining-timber-grid__heading{margin:0 0 .35rem;font-weight:700;color:#283229;line-height:1.25}
+            .innate-dining-timber-grid__copy{margin:0 0 1rem;color:#4b554d;font-size:14px;line-height:1.45;max-width:42rem}
+            .innate-dining-timber-grid__species-list{display:grid;gap:clamp(18px,2.6vw,30px)}
+            .innate-dining-timber-grid__species-card{min-width:0;padding-bottom:clamp(18px,2.6vw,28px);border-bottom:1px solid rgba(40,50,41,.14)}
+            .innate-dining-timber-grid__species-card:last-child{border-bottom:0;padding-bottom:0}
+            .innate-dining-timber-grid__species-name{margin:0 0 .35rem;font-size:15px;font-weight:780;color:#283229;line-height:1.3}
+            .innate-dining-timber-grid__species-note{margin:0 0 .75rem;color:#4b554d;font-size:13px;line-height:1.45;max-width:38rem}
+            .innate-dining-timber-grid__visuals{display:grid;grid-template-columns:minmax(0,4fr) minmax(54px,.88fr);gap:8px;align-items:start}
+            .innate-dining-timber-grid__clear-option,.innate-dining-timber-grid__swatch-option{display:grid;gap:6px;min-width:0}
+            .innate-dining-timber-grid__preview{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:zoom-in}
+            .innate-dining-timber-grid__preview:focus-visible,.innate-dining-timber-grid__variant-link:focus-visible{outline:2px solid #283229;outline-offset:3px}
+            .innate-dining-timber-grid__preview img,.innate-dining-timber-grid__swatch-image{display:block;width:100%;height:100%;object-fit:cover;border:1px solid rgba(40,50,41,.12);border-radius:2px;background-color:#f7f4ee;transition:filter .18s ease,transform .18s ease}
+            .innate-dining-timber-grid__swatch-image{background-image:url('{{ section.settings.swatch_sprite_url | escape }}');background-size:300% 300%;background-repeat:no-repeat}
+            .innate-dining-timber-grid__preview:hover img,.innate-dining-timber-grid__preview:hover .innate-dining-timber-grid__swatch-image{filter:brightness(.97);transform:translateY(-1px)}
+            .innate-dining-timber-grid__preview--clear{aspect-ratio:2 / 1}
+            .innate-dining-timber-grid__swatch-stack{display:grid;grid-template-rows:auto auto;gap:8px;min-width:0}
+            .innate-dining-timber-grid__preview--swatch{aspect-ratio:1 / 1;min-height:0}
+            .innate-dining-timber-grid__variant-link{display:flex;align-items:flex-start;min-width:0;color:#283229;text-decoration:none}
+            .innate-dining-timber-grid__variant-link strong{display:block;font-size:13px;line-height:1.15;font-weight:760}
+            .innate-dining-timber-grid__variant-link span{display:block;color:#4b554d;font-size:12px;line-height:1.2}
+            .innate-dining-timber-grid__link{margin:clamp(16px,2.3vw,24px) 0 0;font-size:14px;line-height:1.4}
+            .innate-dining-timber-grid__link a{color:#283229;text-decoration:underline;text-underline-offset:2px}
+            .innate-dining-timber-grid__lightbox{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(21,25,22,.82)}
+            .innate-dining-timber-grid__lightbox[aria-hidden="false"]{display:flex}
+            .innate-dining-timber-grid__lightbox-panel{position:relative;max-width:92vw;max-height:90vh;padding:clamp(10px,2vw,16px);background:#fffaf6;box-shadow:0 18px 60px rgba(0,0,0,.32)}
+            .innate-dining-timber-grid__lightbox-close{position:absolute;top:10px;right:10px;z-index:1;width:38px;height:38px;border:1px solid rgba(40,50,41,.24);background:#fffaf6;color:#283229;font-size:13px;line-height:1;cursor:pointer}
+            .innate-dining-timber-grid__lightbox-image{display:block;width:min(92vw,2048px);aspect-ratio:2 / 1;max-height:76vh;border:1px solid rgba(40,50,41,.14);background-color:#f7f4ee;background-size:contain;background-repeat:no-repeat;background-position:center}
+            .innate-dining-timber-grid__lightbox-swatch{display:none;width:min(92vw,424px);aspect-ratio:1 / 1;background-image:url('{{ section.settings.swatch_sprite_url | escape }}');background-size:300% 300%;background-repeat:no-repeat;border:1px solid rgba(40,50,41,.14);background-color:#f7f4ee}
+            .innate-dining-timber-grid__lightbox-caption{display:block;margin-top:10px;padding-right:42px;color:#283229;font-size:14px;line-height:1.35;font-weight:700}
+            .innate-dining-timber-grid--collection{margin:0;padding:0;border:0;background:transparent}
+            .innate-dining-timber-grid--collection .innate-dining-timber-grid__heading{font-size:15px}
+            .innate-dining-timber-grid--collection .innate-dining-timber-grid__copy{font-size:13.5px}
+            .innate-dining-timber-grid--collection .innate-dining-timber-grid__species-name{font-size:16px}
+            @media(min-width:900px){.innate-dining-timber-grid:not(.innate-dining-timber-grid--collection) .innate-dining-timber-grid__species-list{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}.innate-dining-timber-grid:not(.innate-dining-timber-grid--collection) .innate-dining-timber-grid__species-card{border-bottom:0;padding-bottom:0}}
+            @media(max-width:600px){.innate-dining-timber-grid{padding:.75rem}.innate-dining-timber-grid--collection{padding:0}.innate-dining-timber-grid__visuals{grid-template-columns:minmax(0,4fr) 45px;gap:7px}.innate-dining-timber-grid__swatch-stack{gap:5px}.innate-dining-timber-grid__clear-option,.innate-dining-timber-grid__swatch-option{gap:3px}.innate-dining-timber-grid__variant-link strong{font-size:10.5px}.innate-dining-timber-grid__variant-link span{font-size:10px}}
+          </style>
+          <div class="innate-dining-timber-grid__heading">{{ section.settings.grid_heading | escape }}</div>
+          {%- if section.settings.grid_text != blank -%}<p class="innate-dining-timber-grid__copy">{{ section.settings.grid_text | escape }}</p>{%- endif -%}
+          <div class="innate-dining-timber-grid__species-list">
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'species' -%}
+                <div class="innate-dining-timber-grid__species-card" {{ block.shopify_attributes }}>
+                  <div class="innate-dining-timber-grid__species-name">{{ block.settings.species_name | escape }}</div>
+                  {%- if block.settings.species_description != blank -%}<p class="innate-dining-timber-grid__species-note">{{ block.settings.species_description | escape }}</p>{%- endif -%}
+                  <div class="innate-dining-timber-grid__visuals">
+                    <div class="innate-dining-timber-grid__clear-option">
+                      <button class="innate-dining-timber-grid__preview innate-dining-timber-grid__preview--clear" type="button" aria-label="{{ block.settings.clear_preview_label | escape }}" data-timber-preview data-image-src="{{ block.settings.clear_image_url | escape }}" data-image-max-width="{{ block.settings.clear_image_max_width | escape }}" data-timber-caption="{{ block.settings.clear_caption | escape }}">
+                        {%- if block.settings.clear_image_url != blank -%}<img src="{{ block.settings.clear_image_url | escape }}" alt="{{ block.settings.clear_alt | escape }}" width="2048" height="1024" loading="lazy">{%- endif -%}
+                      </button>
+                      {%- if block.settings.clear_label != blank -%}<a class="innate-dining-timber-grid__variant-link" href="{{ block.settings.clear_url }}"><span><strong>{{ block.settings.clear_label | escape }}</strong></span></a>{%- endif -%}
+                    </div>
+                    <div class="innate-dining-timber-grid__swatch-stack">
+                      <div class="innate-dining-timber-grid__swatch-option">
+                        <button class="innate-dining-timber-grid__preview innate-dining-timber-grid__preview--swatch" type="button" aria-label="{{ block.settings.country_bark_preview_label | escape }}" data-timber-preview data-bg-position="{{ block.settings.country_bark_bg_position | escape }}" data-timber-caption="{{ block.settings.country_bark_caption | escape }}"><span class="innate-dining-timber-grid__swatch-image" style="background-position:{{ block.settings.country_bark_bg_position | escape }};" aria-hidden="true"></span></button>
+                        {%- if block.settings.country_bark_label != blank -%}<a class="innate-dining-timber-grid__variant-link" href="{{ block.settings.country_bark_url }}"><span><strong>{{ block.settings.country_bark_label | escape }}</strong></span></a>{%- endif -%}
+                      </div>
+                      <div class="innate-dining-timber-grid__swatch-option">
+                        <button class="innate-dining-timber-grid__preview innate-dining-timber-grid__preview--swatch" type="button" aria-label="{{ block.settings.blackwash_preview_label | escape }}" data-timber-preview data-bg-position="{{ block.settings.blackwash_bg_position | escape }}" data-timber-caption="{{ block.settings.blackwash_caption | escape }}"><span class="innate-dining-timber-grid__swatch-image" style="background-position:{{ block.settings.blackwash_bg_position | escape }};" aria-hidden="true"></span></button>
+                        {%- if block.settings.blackwash_label != blank -%}<a class="innate-dining-timber-grid__variant-link" href="{{ block.settings.blackwash_url }}"><span><strong>{{ block.settings.blackwash_label | escape }}</strong></span></a>{%- endif -%}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+          {%- if section.settings.samples_link_label != blank -%}
+            <p class="innate-dining-timber-grid__link"><a href="{{ section.settings.samples_link_url }}">{{ section.settings.samples_link_label | escape }}</a>{{ section.settings.samples_link_suffix | escape }}</p>
+          {%- endif -%}
+          <div class="innate-dining-timber-grid__lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="{{ section.settings.lightbox_label | escape }}">
+            <div class="innate-dining-timber-grid__lightbox-panel">
+              <button class="innate-dining-timber-grid__lightbox-close" type="button" aria-label="{{ section.settings.lightbox_close_label | escape }}">{{ section.settings.lightbox_close_label | escape }}</button>
+              <div class="innate-dining-timber-grid__lightbox-image" role="img" aria-label=""></div>
+              <div class="innate-dining-timber-grid__lightbox-swatch" role="img" aria-label=""></div>
+              <span class="innate-dining-timber-grid__lightbox-caption"></span>
+            </div>
+          </div>
+          <script>
+            (function(){
+              var roots = document.querySelectorAll('.innate-dining-timber-grid');
+              roots.forEach(function(root){
+                if (root.dataset.timberGridReady === 'true') return;
+                root.dataset.timberGridReady = 'true';
+                var lightbox = root.querySelector('.innate-dining-timber-grid__lightbox');
+                if (!lightbox) return;
+                var preview = lightbox.querySelector('.innate-dining-timber-grid__lightbox-image');
+                var swatchPreview = lightbox.querySelector('.innate-dining-timber-grid__lightbox-swatch');
+                var caption = lightbox.querySelector('.innate-dining-timber-grid__lightbox-caption');
+                var close = lightbox.querySelector('.innate-dining-timber-grid__lightbox-close');
+                var panel = lightbox.querySelector('.innate-dining-timber-grid__lightbox-panel');
+                var lastTrigger = null;
+                function open(trigger){
+                  lastTrigger = trigger;
+                  var imageSrc = trigger.getAttribute('data-image-src');
+                  var bgPosition = trigger.getAttribute('data-bg-position');
+                  var maxWidth = trigger.getAttribute('data-image-max-width') || '1273';
+                  var label = trigger.getAttribute('data-timber-caption') || 'Timber sample';
+                  if (bgPosition) {
+                    preview.style.display = 'none';
+                    preview.style.backgroundImage = '';
+                    swatchPreview.style.display = 'block';
+                    swatchPreview.style.backgroundPosition = bgPosition;
+                    swatchPreview.setAttribute('aria-label', label);
+                    panel.style.maxWidth = 'min(92vw, 456px)';
+                  } else {
+                    swatchPreview.style.display = 'none';
+                    preview.style.display = 'block';
+                    preview.style.backgroundImage = 'url(' + imageSrc + ')';
+                    preview.setAttribute('aria-label', label);
+                    preview.style.maxWidth = 'min(92vw, ' + maxWidth + 'px)';
+                    panel.style.maxWidth = 'min(92vw, ' + (parseInt(maxWidth, 10) + 32) + 'px)';
+                  }
+                  caption.textContent = label;
+                  lightbox.setAttribute('aria-hidden','false');
+                  document.documentElement.style.overflow = 'hidden';
+                  close.focus();
+                }
+                function closeLightbox(){
+                  lightbox.setAttribute('aria-hidden','true');
+                  document.documentElement.style.overflow = '';
+                  preview.style.backgroundImage = '';
+                  swatchPreview.style.display = 'none';
+                  if (lastTrigger) lastTrigger.focus();
+                }
+                root.querySelectorAll('[data-timber-preview]').forEach(function(trigger){
+                  trigger.addEventListener('click', function(){ open(trigger); });
+                });
+                close.addEventListener('click', closeLightbox);
+                lightbox.addEventListener('click', function(event){
+                  if (event.target === lightbox) closeLightbox();
+                });
+                document.addEventListener('keydown', function(event){
+                  if (event.key === 'Escape' && lightbox.getAttribute('aria-hidden') === 'false') closeLightbox();
+                });
+              });
+            })();
+          </script>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Dining timber colour",
+  "settings": [
+    {"type":"text","id":"aria_label","label":"Section accessibility label","default":"Timber and colour"},
+    {"type":"text","id":"heading","label":"Left heading","default":"Timber and colour"},
+    {"type":"textarea","id":"text","label":"Left text","default":"Start with one of three New Zealand native timbers, then compare colour options. Samples are useful if you want to see them in your own light."},
+    {"type":"header","content":"Right timber grid"},
+    {"type":"text","id":"grid_aria_label","label":"Grid accessibility label","default":"Dining timber species and colour options"},
+    {"type":"text","id":"grid_heading","label":"Grid heading","default":"Timber species and colour options"},
+    {"type":"textarea","id":"grid_text","label":"Grid text","default":"Start with one of three New Zealand timbers, then choose Clear, Country Bark or Blackwash. Tap an image to view it larger, or use the label to open the matching timber sample."},
+    {"type":"text","id":"swatch_sprite_url","label":"Country Bark and Blackwash swatch sprite URL","default":"https://cdn.shopify.com/s/files/1/0307/3094/4571/files/innate-timber-samples-grid.jpg?v=1778634625"},
+    {"type":"text","id":"samples_link_label","label":"Samples link label","default":"Order timber samples"},
+    {"type":"url","id":"samples_link_url","label":"Samples link"},
+    {"type":"text","id":"samples_link_suffix","label":"Samples link suffix","default":" to compare the options in your own light."},
+    {"type":"text","id":"lightbox_label","label":"Lightbox accessibility label","default":"Timber image preview"},
+    {"type":"text","id":"lightbox_close_label","label":"Lightbox close button label","default":"Close"}
+  ],
+  "blocks": [
+    {
+      "type": "species",
+      "name": "Timber species",
+      "settings": [
+        {"type":"text","id":"species_name","label":"Species name","default":"Timber species"},
+        {"type":"textarea","id":"species_description","label":"Species description","default":"Describe the tone, grain and character."},
+        {"type":"header","content":"Clear finish"},
+        {"type":"text","id":"clear_label","label":"Clear label","default":"Clear"},
+        {"type":"url","id":"clear_url","label":"Clear sample link"},
+        {"type":"text","id":"clear_image_url","label":"Clear image URL"},
+        {"type":"text","id":"clear_image_max_width","label":"Clear lightbox max width","default":"2048"},
+        {"type":"text","id":"clear_alt","label":"Clear image alt text"},
+        {"type":"text","id":"clear_preview_label","label":"Clear preview button label"},
+        {"type":"text","id":"clear_caption","label":"Clear lightbox caption"},
+        {"type":"header","content":"Country Bark finish"},
+        {"type":"text","id":"country_bark_label","label":"Country Bark label","default":"Country Bark"},
+        {"type":"url","id":"country_bark_url","label":"Country Bark sample link"},
+        {"type":"text","id":"country_bark_bg_position","label":"Country Bark swatch position","default":"50% 50%"},
+        {"type":"text","id":"country_bark_preview_label","label":"Country Bark preview button label"},
+        {"type":"text","id":"country_bark_caption","label":"Country Bark lightbox caption"},
+        {"type":"header","content":"Blackwash finish"},
+        {"type":"text","id":"blackwash_label","label":"Blackwash label","default":"Blackwash"},
+        {"type":"url","id":"blackwash_url","label":"Blackwash sample link"},
+        {"type":"text","id":"blackwash_bg_position","label":"Blackwash swatch position","default":"100% 50%"},
+        {"type":"text","id":"blackwash_preview_label","label":"Blackwash preview button label"},
+        {"type":"text","id":"blackwash_caption","label":"Blackwash lightbox caption"}
+      ]
+    }
+  ],
+  "max_blocks": 12,
+  "presets": [{"name":"Dining timber colour"}]
+}
+{% endschema %}

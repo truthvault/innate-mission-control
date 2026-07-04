@@ -1,0 +1,52 @@
+/* ============================================================
+   Innate homepage - shared design system (single source of truth)
+   Used by all custom homepage sections so they read as one page.
+   Tokens per reference/brand-kit.md.
+   ============================================================ */
+.ih-sec{
+  --ih-forest:var(--innate-forest);
+  --ih-forest-ink:var(--innate-forest-ink);
+  --ih-ink:var(--innate-ink);
+  --ih-ink-soft:rgba(19,19,17,.7);
+  --ih-ink-faint:rgba(19,19,17,.66);
+  --ih-paper:var(--innate-paper);
+  --ih-cream:var(--innate-cream-soft);
+  --ih-cream-deep:var(--innate-cream);
+  --ih-warm:var(--innate-warm-white);
+  --ih-rust:var(--innate-rust);
+  --ih-line:rgba(22,56,50,.14);
+  --ih-line2:rgba(22,56,50,.28);
+  --ih-display:var(--innate-display);
+  --ih-body:var(--innate-body);
+  --ih-pad-y:clamp(3rem,6vw,5rem);
+  font-family:var(--ih-body);
+  color:var(--ih-ink);
+  background:var(--ih-paper);
+  padding:var(--ih-pad-y) 0;
+}
+.ih-sec--cream{background:var(--ih-cream)}
+.ih-sec--paper{background:var(--ih-paper)}
+.ih-sec *{box-sizing:border-box}
+
+.ih-wrap{width:min(1280px,calc(100% - clamp(2rem,7vw,7rem)));margin:0 auto}
+
+/* section header: rust eyebrow + Cormorant H2, left-aligned */
+.ih-head{margin-bottom:clamp(1.6rem,3vw,2.6rem)}
+.ih-eyebrow{margin:0 0 .7rem;font:500 .78rem/1 var(--ih-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ih-rust)}
+.ih-h2{margin:0;font:600 clamp(2rem,4vw,3rem)/1.06 var(--ih-display);color:var(--ih-forest-ink);letter-spacing:-.01em}
+.ih-lead{margin:1rem 0 0;color:var(--ih-ink-soft);font-size:1.02rem;line-height:1.62;max-width:60ch}
+
+/* one button system (title-case, matches the live hero buttons) */
+.ih-btn{display:inline-flex;min-height:50px;align-items:center;justify-content:center;padding:.95rem 1.7rem;border:1px solid var(--ih-forest);border-radius: var(--innate-radius);font:700 .92rem/1 var(--ih-body);color:var(--ih-forest);text-decoration:none;cursor:pointer;transition:background .18s ease,color .18s ease,border-color .18s ease}
+.ih-btn:hover{background:var(--ih-forest);color:var(--ih-warm)}
+.ih-btn--primary{background:var(--ih-forest);border-color:var(--ih-forest);color:var(--ih-warm)}
+.ih-btn--primary:hover{background:var(--ih-forest-ink);border-color:var(--ih-forest-ink)}
+
+.ih-link{display:inline-block;color:var(--ih-forest);font:700 .92rem/1 var(--ih-body);text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:3px;transition:opacity .18s ease}
+.ih-link:hover{opacity:.7}
+
+.ih-btn:focus-visible,.ih-link:focus-visible,.ih-sec a:focus-visible{outline:2px solid var(--ih-forest);outline-offset:3px;border-radius: var(--innate-radius)}
+
+@media (prefers-reduced-motion: reduce){
+  .ih-sec *,.ih-sec *::before,.ih-sec *::after{transition:none!important;animation:none!important}
+}

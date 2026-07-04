@@ -1,0 +1,237 @@
+{% liquid
+  assign columns_mobile = section.settings.columns_mobile | default: 2
+  assign columns_tablet = section.settings.columns_tablet | default: 3
+  assign columns_desktop = section.settings.columns_desktop | default: 4
+
+  assign mobile_size = 100 | divided_by: columns_mobile | round | append: "vw"
+  assign tablet_size = 100 | divided_by: columns_tablet | round | append: "vw"
+  assign desktop_size = 100 | divided_by: columns_desktop | round | append: "vw"
+
+  assign sizes = "(max-width: 620px) " | append: mobile_size | append: ", (max-width: 960px) " | append: tablet_size | append: ", " | append: desktop_size
+%}
+
+<style>
+  .content.search .section-header.search-header {
+    display: block;
+    white-space: normal;
+  }
+
+  .content.search .search-title-line {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .content.search .search-prompt {
+    color: #283229;
+    line-height: 1.5;
+    margin: 0 0 12px;
+    max-width: 620px;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .content.search .search-bar-wrapper,
+  .content.search .search-bar,
+  .content.search input.text {
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  @media screen and (max-width: 700px) {
+    .section-search .content.search {
+      box-sizing: border-box;
+      margin-left: 30px;
+      margin-right: 30px;
+      max-width: calc(100vw - 60px);
+      width: calc(100vw - 60px);
+    }
+  }
+</style>
+
+<div class="content search {% render 'content-classes', scope: section %}" data-section-id="{{ section.id }}" data-section-type="collection">
+  <div class="section-header search-header">
+    <div class="search-title-line">
+      <h1 class="shopify-section-title">{{ 'general.search.title' | t }}</h1>
+    </div>
+    {% unless search.performed %}
+      <p class="search-prompt">{{ section.settings.prompt_text | default: 'Search products, pages and articles.' }}</p>
+    {% endunless %}
+    <div class="search-bar-wrapper">
+      <form action="{{ routes.search_url }}" method="get" class="search-bar" role="search">
+        <input type="hidden" name="options[prefix]" value="last" />
+        <input type="hidden" name="type" value="product,page,article">
+        <input type="search" name="q" class="text" value="{{ search.terms }}" autocorrect="off" autocomplete="off" autocapitalize="none" aria-label="{{ 'general.search.title' | t }}" placeholder="{{ section.settings.prompt_text | default: 'Search products, pages and articles.' | escape }}" {% unless search.performed %}autofocus{% endunless %}>
+        <input type="hidden" class="btn" value="Search">
+      </form>
+    </div>
+  </div>
+  {% if search.performed %}
+    {% if search.results_count > 0 %}
+      <div class="search-products">
+        <h2>{{ 'general.search.results_with_count' | t: count: search.results_count, terms: search.terms }}</h2>
+        {% render 'sorting-and-filtering', collection: search %}
+        {% paginate search.results by section.settings.products_per_page %}
+          {% liquid
+            capture collection_products_classes
+              render 'get-collection-products-classes'
+            endcapture
+            assign collection_products_classes = collection_products_classes | remove: "with-interactions"
+          %}
+          <div class="collection-products {{ collection_products_classes }}">
+            {% liquid
+              for item in search.results
+                case item.object_type
+                when 'product'
+                  render 'collection-product', product: item, sizes: sizes
+                when 'article'
+                  render 'collection-non-product', item: item, sizes: sizes
+                when 'page'
+                  render 'collection-non-product', item: item, sizes: sizes
+                endcase
+              endfor
+            %}
+          </div>
+          {% render 'pagination' with paginate as paginate %}
+        {% endpaginate %}      
+      </div>
+    {% else %}
+      <div class="search-empty">
+        <h3 class="empty">{{ 'general.search.no_results_for' | t: terms: search.terms }}</h3>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "t:sections.search.name",
+  "class": "section-search",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.search.settings.header__1.content"
+    },
+    {
+      "id": "collection",
+      "type": "collection",
+      "label": "t:sections.search.settings.collection.label",
+      "info": "t:sections.search.settings.collection.info"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "default": 4,
+      "label": "t:sections.main-collection.settings.columns_desktop.label"
+    },
+    {
+      "type": "range",
+      "id": "columns_tablet",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 3,
+      "label": "t:sections.main-collection.settings.columns_tablet.label"
+    },
+    {
+      "type": "range",
+      "id": "columns_mobile",
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "default": 2,
+      "label": "t:sections.main-collection.settings.columns_mobile.label"
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 24,
+      "step": 4,
+      "default": 12,
+      "label": "t:sections.search.settings.products_per_page.label"
+    },
+    {
+      "type": "textarea",
+      "id": "prompt_text",
+      "label": "Search prompt text",
+      "default": "Search products, pages and articles."
+    },
+    {
+      "type": "checkbox",
+      "id": "product_grid_preview_enable",
+      "label": "t:sections.main-collection.settings.product_grid_preview_enable.label",
+      "info": "t:sections.main-collection.settings.product_grid_preview_enable.info"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-collection.settings.header__2.content"
+    },
+    {
+      "id": "enable_filtering",
+      "type": "checkbox",
+      "label": "t:sections.main-collection.settings.enable_filtering.label",
+      "default": false,
+      "info": "t:sections.main-collection.settings.enable_filtering.info"
+    },
+    {
+      "type": "select",
+      "id": "filter_type",
+      "label": "t:sections.main-collection.settings.filter_type.label",
+      "default": "regular",
+      "options": [
+        {
+          "value": "regular",
+          "label": "t:sections.main-collection.settings.filter_type.options__1"
+        }
+      ]
+    },
+    {
+      "id": "enable_sorting",
+      "type": "checkbox",
+      "label": "t:sections.main-collection.settings.enable_sorting.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_labels",
+      "label": "t:sections.main-collection.settings.show_labels.label",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-collection.settings.header__3.content"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:sections.main-collection.settings.paragraph.content"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

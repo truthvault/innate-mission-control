@@ -1,0 +1,535 @@
+<div class="content collection featured-collection {% render 'content-classes', scope: section %}" data-section-id="{{ section.id }}" data-section-type="collection">
+  {%- comment -%}Build dining block HTML in section scope so Shopify editor blocks render reliably inside the collection snippet.{%- endcomment -%}
+  {% capture dining_shape_cards_html %}
+{%- for block in section.blocks -%}
+                {%- if block.type == 'dining_shape' -%}
+                  {%- assign shape_type = block.settings.shape_type | default: 'rectangle' -%}
+                  {%- assign shape_image = 'innate-rimu-tabletop-rectangle.webp' -%}
+                  {%- case shape_type -%}
+                    {%- when 'round' -%}{%- assign shape_image = 'innate-rimu-tabletop-circle.webp' -%}
+                    {%- when 'pebble' -%}{%- assign shape_image = 'innate-rimu-tabletop-pebble.webp' -%}
+                    {%- when 'danish' -%}{%- assign shape_image = 'innate-rimu-tabletop-danish.webp' -%}
+                    {%- when 'pill' -%}{%- assign shape_image = 'innate-rimu-tabletop-pill.webp' -%}
+                  {%- endcase -%}
+                  <article class="d16-shape" {{ block.shopify_attributes }}><div><div class="d16-shape-art d16-shape-art--{{ shape_type }}">
+                    <img class="d16-shape-img" src="{{ shape_image | asset_url }}" alt="{{ block.settings.title | default: 'Tabletop shape' | escape }} tabletop shape" width="900" height="437" loading="lazy" decoding="async">
+                  </div><h3>{{ block.settings.title | default: 'Tabletop shape' }}</h3><p>{{ block.settings.text | default: 'Add a short note for this shape.' }}</p></div></article>
+                {%- endif -%}
+              {%- endfor -%}
+              {% endcapture %}
+
+  {% capture dining_detail_accordion_html %}
+{%- for block in section.blocks -%}
+                {%- if block.type == 'dining_detail' -%}
+                  <details {{ block.shopify_attributes }}><summary>{{ block.settings.summary | default: 'Detail' }}</summary><div class="d16-detail-body">{{ block.settings.body }}</div></details>
+                {%- endif -%}
+              {%- endfor -%}
+              {% endcapture %}
+
+  {% render 'collection', collection: collection, section_settings: section.settings, dining_shape_cards_html: dining_shape_cards_html, dining_detail_accordion_html: dining_detail_accordion_html %}
+  <script>
+    (function(){
+      function fixDiningContactFormEncoding(){
+        var form = document.querySelector('#dining-contact-form form');
+        if (form && form.getAttribute('enctype') === 'multipart/form-data') form.removeAttribute('enctype');
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixDiningContactFormEncoding);
+      else fixDiningContactFormEncoding();
+      window.addEventListener('load', fixDiningContactFormEncoding);
+      document.addEventListener('submit', function(event){
+        if (event.target && event.target.matches && event.target.matches('#dining-contact-form form')) fixDiningContactFormEncoding();
+      }, true);
+    })();
+  </script>
+</div>
+
+{% schema %}
+{
+  "name": "Collection page",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Controls for the main collection product grid."
+    },
+    {
+      "id": "show_collection_title",
+      "type": "checkbox",
+      "label": "Show default collection title",
+      "default": true
+    },
+    {
+      "id": "show_collection_description",
+      "type": "checkbox",
+      "default": true,
+      "label": "Show default collection description"
+    },
+    {
+      "id": "show_collection_image",
+      "type": "checkbox",
+      "default": true,
+      "label": "Show default collection image",
+      "info": "t:sections.main-collection.settings.show_collection_image.info"
+    },
+    {
+      "type": "header",
+      "content": "Collection/product grid"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "default": 4,
+      "label": "Product columns on desktop"
+    },
+    {
+      "type": "range",
+      "id": "columns_tablet",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 3,
+      "label": "Product columns on tablet"
+    },
+    {
+      "type": "range",
+      "id": "columns_mobile",
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "default": 2,
+      "label": "Product columns on mobile"
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 24,
+      "step": 4,
+      "default": 12,
+      "label": "Products per page"
+    },
+    {
+      "type": "checkbox",
+      "id": "product_grid_preview_enable",
+      "label": "Enable product-card image preview",
+      "info": "t:sections.main-collection.settings.product_grid_preview_enable.info"
+    },
+    {
+      "type": "header",
+      "content": "Collection/product grid"
+    },
+    {
+      "id": "enable_filtering",
+      "type": "checkbox",
+      "label": "Enable filtering",
+      "default": false,
+      "info": "t:sections.main-collection.settings.enable_filtering.info"
+    },
+    {
+      "type": "select",
+      "id": "filter_type",
+      "label": "Filter type",
+      "default": "regular",
+      "options": [
+        {
+          "value": "regular",
+          "label": "t:sections.main-collection.settings.filter_type.options__1"
+        },
+        {
+          "value": "tags",
+          "label": "t:sections.main-collection.settings.filter_type.options__2"
+        }
+      ]
+    },
+    {
+      "id": "enable_sorting",
+      "type": "checkbox",
+      "label": "Enable sorting",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_labels",
+      "label": "Show product labels",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Collection/product grid"
+    },
+    {
+      "type": "paragraph",
+      "content": "Controls for the main collection product grid."
+    },
+    {
+      "type": "header",
+      "content": "Collection/product grid"
+    },
+    {
+      "type": "header",
+      "content": "Dining page hero"
+    },
+    {
+      "type": "text",
+      "id": "dining_hero_title",
+      "label": "Hero title",
+      "default": "Custom dining tables, made in Christchurch."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_hero_subtitle",
+      "label": "Hero subtitle",
+      "default": "Solid NZ native timber tables, made to order in your size, shape and finish."
+    },
+    {
+      "type": "text",
+      "id": "dining_hero_primary_label",
+      "label": "Hero primary button label",
+      "default": "Start your table enquiry"
+    },
+    {
+      "type": "text",
+      "id": "dining_hero_primary_link",
+      "label": "Hero primary button link",
+      "default": "#dining-contact-form"
+    },
+    {
+      "type": "text",
+      "id": "dining_hero_secondary_label",
+      "label": "Hero secondary button label",
+      "default": "Browse popular styles"
+    },
+    {
+      "type": "text",
+      "id": "dining_hero_secondary_link",
+      "label": "Hero secondary button link",
+      "default": "#table-styles"
+    },
+    {
+      "type": "header",
+      "content": "Dining page introduction"
+    },
+    {
+      "type": "text",
+      "id": "dining_intro_heading",
+      "label": "Intro heading",
+      "default": "Choose your style first. Refine the details with us."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_intro_text",
+      "label": "Intro text",
+      "default": "Start with a look that feels close. Then we help tune the size, tabletop shape, timber, colour and base before anything is made."
+    },
+    {
+      "type": "text",
+      "id": "dining_proof_1",
+      "label": "Proof card 1",
+      "default": "NZ native timber, made in Christchurch"
+    },
+    {
+      "type": "text",
+      "id": "dining_proof_2",
+      "label": "Proof card 2",
+      "default": "Custom size, shape and finish"
+    },
+    {
+      "type": "text",
+      "id": "dining_proof_3",
+      "label": "Proof card 3",
+      "default": "Current lead time: 6-8 weeks"
+    },
+    {
+      "type": "text",
+      "id": "dining_proof_4",
+      "label": "Proof card 4",
+      "default": "Nationwide delivery available"
+    },
+    {
+      "type": "text",
+      "id": "dining_review_text",
+      "label": "Review strip text",
+      "default": "So far, 100% 5-star Google reviews from 80+ New Zealand customers"
+    },
+    {
+      "type": "text",
+      "id": "dining_review_label",
+      "label": "Review strip link label",
+      "default": "Read reviews ↓"
+    },
+    {
+      "type": "header",
+      "content": "Dining page table styles"
+    },
+    {
+      "type": "text",
+      "id": "dining_styles_heading",
+      "label": "Styles heading",
+      "default": "Table styles"
+    },
+    {
+      "type": "textarea",
+      "id": "dining_styles_text",
+      "label": "Styles intro text",
+      "default": "Start with the style closest to what you like. We can adjust the size, shape, timber, colour and base before anything is made."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_styles_note",
+      "label": "Styles design note",
+      "default": "Each design is a starting point, not a fixed template. Length, width and proportions are worked around your room, how many people you seat, and the shape you prefer."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_price_note",
+      "label": "Price note"
+    },
+    {
+      "type": "header",
+      "content": "Dining page shape section"
+    },
+    {
+      "type": "text",
+      "id": "dining_shapes_heading",
+      "label": "Shape section heading",
+      "default": "Tabletop shapes"
+    },
+    {
+      "type": "textarea",
+      "id": "dining_shapes_text",
+      "label": "Shape section intro",
+      "default": "Shape affects seating and room flow. You can choose now, or leave it for us to help with after you enquire."
+    },
+    {
+      "type": "paragraph",
+      "content": "Edit individual tabletop shape cards below as blocks named “Dining shape card”."
+    },
+    {
+      "type": "header",
+      "content": "Dining page enquiry CTA"
+    },
+    {
+      "type": "text",
+      "id": "dining_cta_eyebrow",
+      "label": "CTA eyebrow",
+      "default": "Made to order"
+    },
+    {
+      "type": "text",
+      "id": "dining_cta_heading",
+      "label": "CTA heading",
+      "default": "Make it <em>yours</em>."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_cta_text",
+      "label": "CTA text",
+      "default": "Choose a table style and tabletop shape, then we’ll help confirm the right size, timber, colour and base for your room."
+    },
+    {
+      "type": "text",
+      "id": "dining_cta_primary_label",
+      "label": "CTA primary button label",
+      "default": "Start your table enquiry"
+    },
+    {
+      "type": "text",
+      "id": "dining_cta_secondary_label",
+      "label": "CTA secondary button label",
+      "default": "View common details"
+    },
+    {
+      "type": "text",
+      "id": "dining_phone_heading",
+      "label": "Phone card heading",
+      "default": "Call us"
+    },
+    {
+      "type": "text",
+      "id": "dining_phone_number",
+      "label": "Phone number text",
+      "default": "027 350 2083"
+    },
+    {
+      "type": "text",
+      "id": "dining_phone_text",
+      "label": "Phone card detail",
+      "default": "Quick questions about size, timber, or lead times."
+    },
+    {
+      "type": "text",
+      "id": "dining_showroom_heading",
+      "label": "Showroom card heading",
+      "default": "Book a showroom visit"
+    },
+    {
+      "type": "text",
+      "id": "dining_showroom_text",
+      "label": "Showroom card detail",
+      "default": "See timber and colour options in person."
+    },
+    {
+      "type": "text",
+      "id": "dining_sample_heading",
+      "label": "Sample card heading",
+      "default": "Order timber samples"
+    },
+    {
+      "type": "text",
+      "id": "dining_sample_text",
+      "label": "Sample card detail",
+      "default": "Compare options at home. Delivered for $10."
+    },
+    {
+      "type": "header",
+      "content": "Dining page enquiry form"
+    },
+    {
+      "type": "text",
+      "id": "dining_form_message_label",
+      "label": "Message field label",
+      "default": "Rough table brief"
+    },
+    {
+      "type": "textarea",
+      "id": "dining_form_placeholder",
+      "label": "Message placeholder",
+      "default": "Example: We like the Crossroads style, around 2200mm, probably rectangle, but unsure on timber and colour."
+    },
+    {
+      "type": "text",
+      "id": "dining_photo_heading",
+      "label": "Photo note heading",
+      "default": "No photos needed yet."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_photo_text",
+      "label": "Photo note text",
+      "default": "If room or inspiration photos would help, we’ll let you know where to send them."
+    },
+    {
+      "type": "textarea",
+      "id": "dining_photo_note",
+      "label": "Photo note small text",
+      "default": "Photos are optional."
+    },
+    {
+      "type": "text",
+      "id": "dining_form_button",
+      "label": "Submit button label",
+      "default": "Send my table enquiry"
+    },
+    {
+      "type": "header",
+      "content": "Dining page common details"
+    },
+    {
+      "type": "text",
+      "id": "dining_details_heading",
+      "label": "Details heading",
+      "default": "Helpful details if you’re still deciding"
+    },
+    {
+      "type": "paragraph",
+      "content": "Edit the accordion rows below as blocks named “Dining detail accordion”."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded_content",
+      "label": "t:sections.settings.expanded_content.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "dining_shape",
+      "name": "Dining shape card",
+      "settings": [
+        {
+          "type": "select",
+          "id": "shape_type",
+          "label": "Shape drawing",
+          "default": "rectangle",
+          "options": [
+            {
+              "value": "rectangle",
+              "label": "Rectangle"
+            },
+            {
+              "value": "round",
+              "label": "Round"
+            },
+            {
+              "value": "pebble",
+              "label": "Pebble"
+            },
+            {
+              "value": "danish",
+              "label": "Danish oval"
+            },
+            {
+              "value": "pill",
+              "label": "Pill"
+            },
+            {
+              "value": "custom",
+              "label": "Custom"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Card title",
+          "default": "Rectangle"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Card text",
+          "default": "Straight sides and softened corners. The most flexible starting point for everyday family seating, and usually the simplest shape to keep the starting price down."
+        }
+      ]
+    },
+    {
+      "type": "dining_detail",
+      "name": "Dining detail accordion",
+      "settings": [
+        {
+          "type": "text",
+          "id": "summary",
+          "label": "Accordion heading",
+          "default": "How many people should it seat?"
+        },
+        {
+          "type": "richtext",
+          "id": "body",
+          "label": "Accordion body",
+          "default": "<p>Start with the number of people who use the table most days. Then note whether you need extra space for larger meals.</p>"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

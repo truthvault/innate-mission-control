@@ -1,0 +1,54 @@
+{%- comment -%} Innate pillars - Custom / Local / Regenerative. Clean typographic, no clip-art icons. {%- endcomment -%}
+{{ 'innate-home.css' | asset_url | stylesheet_tag }}
+{%- if section.settings.enabled -%}
+<section class="ih-sec ih-sec--paper ih-pillars">
+  <div class="ih-wrap">
+    <div class="ih-head">
+      {%- if section.settings.eyebrow != blank -%}<p class="ih-eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
+      {%- if section.settings.title != blank -%}<h2 class="ih-h2">{{ section.settings.title }}</h2>{%- endif -%}
+    </div>
+    <div class="ihp-grid">
+      {%- for block in section.blocks -%}
+        <div class="ihp-col" {{ block.shopify_attributes }}>
+          <h3 class="ihp-title">{{ block.settings.title }}</h3>
+          <p class="ihp-text">{{ block.settings.text }}</p>
+          {%- if block.settings.link != blank and block.settings.link_label != blank -%}
+            <a class="ih-link ihp-link" href="{{ block.settings.link }}">{{ block.settings.link_label }}</a>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- endif -%}
+
+<style>
+  .ih-pillars .ihp-grid{display:grid;gap:clamp(1.6rem,3vw,2.6rem)}
+  @media(min-width:760px){.ih-pillars .ihp-grid{grid-template-columns:repeat(3,1fr)}}
+  .ih-pillars .ihp-col{padding-top:1.1rem;border-top:2px solid var(--ih-rust)}
+  .ih-pillars .ihp-title{margin:0 0 .6rem;font:600 clamp(1.35rem,2vw,1.65rem)/1.1 var(--ih-display);color:var(--ih-forest-ink);letter-spacing:-.01em}
+  .ih-pillars .ihp-text{margin:0;color:var(--ih-ink-soft);font-size:.97rem;line-height:1.6}
+  .ih-pillars .ihp-link{margin-top:1rem;font-size:.85rem}
+</style>
+
+{% schema %}
+{
+  "name": "Pillars",
+  "tag": "section",
+  "settings": [
+    {"type":"checkbox","id":"enabled","label":"Show section","default":true},
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Why Innate"},
+    {"type":"text","id":"title","label":"Title","default":"What you can expect."}
+  ],
+  "blocks": [
+    {"type":"pillar","name":"Pillar","settings":[
+      {"type":"text","id":"title","label":"Title","default":"Custom"},
+      {"type":"textarea","id":"text","label":"Text"},
+      {"type":"text","id":"link_label","label":"Link label"},
+      {"type":"url","id":"link","label":"Link"}
+    ]}
+  ],
+  "max_blocks":3,
+  "presets":[{"name":"Pillars","blocks":[{"type":"pillar"},{"type":"pillar"},{"type":"pillar"}]}]
+}
+{% endschema %}

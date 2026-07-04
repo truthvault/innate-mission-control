@@ -1,0 +1,175 @@
+{%- unless template.suffix == 'table-maintain' and page.handle == 'maintaining-your-table' -%}
+<div class="content {% render 'content-classes', scope: section %}">
+  <div class="inner extended with-layout-options centered" style="max-width: {{ section.settings.max_width }}px;">
+    {%- if section.settings.title != blank or section.settings.richtext != blank -%}
+      <div class="heading">
+        {%- if section.settings.title != blank -%}
+          <h2>{{ section.settings.title }}</h2>
+        {%- endif -%}
+        {%- if section.settings.richtext != blank -%}
+          <div class="rte">
+            {{ section.settings.richtext }}
+          </div>
+        {%- endif -%}  
+      </div>
+    {% endif %}
+    {% render 'form-contact' %}
+  </div>
+</div>
+
+{%- endunless -%}
+
+{% schema %}
+{
+  "name": "t:sections.contact-form.name",
+  "class": "section-contact-form section-contact",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "t:sections.contact-page.settings.paragraph.content"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "t:sections.settings.heading.label",
+      "info": "t:sections.settings.heading.info",
+      "default": {
+        "ar": "ابقى على تواصل",
+        "bg": "Свържете се",
+        "ca": "Posar-se en contacte",
+        "cs": "Být v kontaktu",
+        "da": "Tag kontakt",
+        "de": "In Kontakt kommen",
+        "el": "Ερχομαι σε επαφή",
+        "en": "Get in touch",
+        "es": "Ponerse en contacto",
+        "fi": "Ota yhteyttä",
+        "fr": "Entrer en contact",
+        "he": "נהיה בקשר",
+        "hr": "Javite se",
+        "hu": "Felveszi a kapcsolatot",
+        "id": "Berhubungan",
+        "it": "Mettiti in contatto",
+        "ja": "連絡する",
+        "ko": "연락하기",
+        "lt": "Susisiekti",
+        "nb": "Ta kontakt",
+        "nl": "Neem contact op",
+        "pl": "Skontaktuj się",
+        "pt-BR": "Entrar em contato",
+        "pt-PT": "Entrar em contato",
+        "ro": "Intrați în legătură",
+        "ru": "Связаться",
+        "sk": "Ozvite sa",
+        "sl": "Stopite v stik",
+        "sv": "Komma i kontakt",
+        "th": "ได้รับการติดต่อ",
+        "tr": "Temasta olmak",
+        "vi": "Liên lạc",
+        "zh-CN": "保持联系",
+        "zh-TW": "保持聯繫"
+      }
+    },
+    {
+      "type": "richtext",
+      "id": "richtext",
+      "label": "t:sections.contact-form.settings.richtext.label",
+      "info": "t:sections.contact-form.settings.richtext.info",
+      "default": {
+        "ar": "<p>يسعدنا الرد على أي أسئلة قد تكون لديكم حول متجرنا عبر الإنترنت.</p>",
+        "bg": "<p>Щастливи сме да отговорим на всички въпроси, които може да имате относно нашия онлайн магазин.</p>",
+        "ca": "<p>Estarem encantats de respondre qualsevol pregunta que tingueu sobre la nostra botiga en línia.</p>",
+        "cs": "<p>Rádi vám zodpovíme jakékoli dotazy týkající se našeho e-shopu.</p>",
+        "da": "<p>Vi besvarer gerne spørgsmål du måtte have om vores online shop.</p>",
+        "de": "<p>Gerne beantworten wir Ihre Fragen zu unserem Online-Shop.</p>",
+        "el": "<p>Είμαστε στην ευχάριστη θέση να απαντήσουμε σε οποιεσδήποτε ερωτήσεις μπορεί να έχετε σχετικά με το ηλεκτρονικό μας κατάστημα.</p>",
+        "en": "<p>We are happy to answer any questions you may have about our online shop.</p>",
+        "es": "<p>Estamos encantados de responder cualquier pregunta que pueda tener sobre nuestra tienda en línea.</p>",
+        "fi": "<p>Vastaamme mielellämme kaikkiin verkkokauppaamme koskeviin kysymyksiin.</p>",
+        "fr": "<p>Nous sommes heureux de répondre à toutes vos questions concernant notre boutique en ligne.</p>",
+        "he": "<p>נשמח לענות על כל שאלה שיש לך לגבי החנות המקוונת שלנו.</p>",
+        "hr": "<p>Rado ćemo odgovoriti na sva vaša pitanja o našoj online trgovini.</p>",
+        "hu": "<p>Szívesen válaszolunk minden kérdésére webáruházunkkal kapcsolatban.</p>",
+        "id": "<p>Kami dengan senang hati menjawab pertanyaan Anda tentang toko online kami.</p>",
+        "it": "<p>Siamo felici di rispondere a qualsiasi domanda tu possa avere sul nostro negozio online.</p>",
+        "ja": "<p>オンラインショップに関するご質問にお答えいたします。</p>",
+        "ko": "<p>온라인 상점에 대한 모든 질문에 기꺼이 답변해 드리겠습니다.</p>",
+        "lt": "<p>Džiaugiamės galėdami atsakyti į visus klausimus apie mūsų internetinę parduotuvę.</p>",
+        "nb": "<p>Vi svarer gjerne på spørsmål du måtte ha om nettbutikken vår.</p>",
+        "nl": "<p>We beantwoorden graag al uw vragen over onze online winkel.</p>",
+        "pl": "<p>Chętnie odpowiemy na wszelkie pytania dotyczące naszego sklepu internetowego.</p>",
+        "pt-BR": "<p>Estamos felizes em responder a quaisquer perguntas que você possa ter sobre nossa loja online.</p>",
+        "pt-PT": "<p>Estamos felizes em responder a quaisquer perguntas que você possa ter sobre nossa loja online.</p>",
+        "ro": "<p>Suntem bucuroși să răspundem la orice întrebări pe care le aveți despre magazinul nostru online.</p>",
+        "ru": "<p>Мы будем рады ответить на любые ваши вопросы о нашем интернет-магазине.</p>",
+        "sk": "<p>Radi odpovieme na akékoľvek otázky týkajúce sa nášho internetového obchodu.</p>",
+        "sl": "<p>Z veseljem vam odgovorimo na vsa vaša vprašanja o naši spletni trgovini.</p>",
+        "sv": "<p>Vi svarar gärna på alla frågor du kan ha om vår webbutik.</p>",
+        "th": "<p>เรายินดีที่จะตอบทุกคำถามที่คุณอาจมีเกี่ยวกับร้านค้าออนไลน์ของเรา</p>",
+        "tr": "<p>Online mağazamızla ilgili tüm sorularınızı yanıtlamaktan mutluluk duyarız.</p>",
+        "vi": "<p>Chúng tôi sẵn lòng trả lời bất kỳ câu hỏi nào của bạn về cửa hàng trực tuyến của chúng tôi.</p>",
+        "zh-CN": "<p>我们很乐意回答您对我们网上商店的任何问题。</p>",
+        "zh-TW": "<p>我們很樂意回答您對我們網上商店的任何問題。</p>"
+      }
+    },
+    {
+      "type": "checkbox",
+      "id": "add_phone_number",
+      "label": "t:sections.contact-page.settings.add_phone_number.label",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "t:sections.settings.content_max_width.label",
+      "default": 750,
+      "min": 400,
+      "max": 2000,
+      "step": 50,
+      "unit": "px"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_desktop",
+      "label": "t:sections.settings.show_on_desktop.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "t:sections.settings.show_on_mobile.label",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.contact-form.presets.name"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

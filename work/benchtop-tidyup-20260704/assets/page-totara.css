@@ -1,0 +1,695 @@
+/* ==========================================================================
+   Tōtara page - editorial styles
+   Scoped to .totara-page. Relies on theme CSS custom properties for fonts
+   and colours so this page inherits the site's design system.
+   ========================================================================== */
+
+/* -----------------------------------
+   Local variables (scoped, safe to tweak)
+----------------------------------- */
+.totara-page {
+  --totara-measure: 62ch;
+  --totara-measure-wide: 78ch;
+  --totara-gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --totara-rhythm: clamp(1.25rem, 2vw, 1.75rem);
+  --totara-rhythm-lg: clamp(2.5rem, 5vw, 4rem);
+  --totara-rhythm-xl: clamp(4rem, 8vw, 6.5rem);
+  --totara-rule: rgba(var(--color-foreground, 20, 20, 20), 0.14);
+  --totara-muted: rgba(var(--color-foreground, 20, 20, 20), 0.62);
+  --totara-accent: var(--color-foreground);
+  --totara-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --totara-body: "Maven Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  font-family: var(--totara-body);
+  font-weight: 400;
+  font-style: var(--font-body-style);
+  color: rgb(var(--color-foreground, 20, 20, 20));
+  box-sizing: border-box;
+}
+
+.totara-page *,
+.totara-page *::before,
+.totara-page *::after { box-sizing: inherit; }
+
+/* -----------------------------------
+   Base prose (shared by story, paragraph, drawer bodies, CTA body)
+----------------------------------- */
+.totara-prose {
+  font-size: clamp(1.0625rem, 0.95rem + 0.35vw, 1.1875rem);
+  line-height: 1.7;
+}
+
+.totara-prose p {
+  margin: 0 0 1em;
+}
+
+.totara-prose p:last-child { margin-bottom: 0; }
+
+.totara-prose strong { font-weight: 600; }
+
+.totara-prose a {
+  color: currentColor;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
+}
+
+.totara-prose a:hover { text-decoration-thickness: 2px; }
+
+.totara-prose ul,
+.totara-prose ol {
+  margin: 0 0 1em 1.35em;
+  padding: 0;
+  max-width: var(--totara-measure);
+  font-size: 15px;
+  line-height: 21px;
+}
+
+.totara-prose li {
+  margin-bottom: 0.35em;
+  font-size: 15px;
+  line-height: 21px;
+}
+
+/* -----------------------------------
+   Page wrapper + layout
+----------------------------------- */
+.totara-page {
+  margin: 0 auto;
+  padding-inline: var(--totara-gutter);
+  padding-block: var(--totara-rhythm-lg) var(--totara-rhythm-xl);
+  max-width: 1400px;
+}
+
+/* On wide screens, pull the content into a single centred column
+   with room for pull quotes and wider images to breathe. */
+@media (min-width: 900px) {
+  .totara-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--totara-rhythm);
+  }
+  .totara-page > * {
+    max-width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+  .totara-page > .totara-hero,
+  .totara-page > .totara-figure--wide,
+  .totara-page > .totara-figure--full {
+    max-width: none;
+  }
+}
+
+/* -----------------------------------
+   Hero
+----------------------------------- */
+.totara-hero {
+  margin-bottom: var(--totara-rhythm-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--totara-rhythm);
+}
+
+.totara-hero__image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+@media (min-width: 900px) {
+  .totara-hero__image {
+    aspect-ratio: 21 / 9;
+  }
+}
+
+.totara-hero__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.totara-hero__text {
+  max-width: 780px;
+  margin: 0 auto;
+  padding-inline: var(--totara-gutter);
+  text-align: left;
+}
+
+.totara-hero__eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--totara-muted);
+  margin: 0 0 0.75em;
+}
+
+.totara-hero__title {
+  font-family: var(--totara-display);
+  font-weight: 600;
+  font-size: clamp(2.15rem, 3vw, 3.25rem);
+  line-height: 1.08;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+/* -----------------------------------
+   Story block (sits directly under H1)
+----------------------------------- */
+.totara-story {
+  margin-bottom: var(--totara-rhythm-lg);
+}
+
+.totara-story__body {
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.3125rem);
+  line-height: 1.6;
+  color: rgb(var(--color-foreground, 20, 20, 20));
+}
+
+/* -----------------------------------
+   Table of contents
+----------------------------------- */
+.totara-toc {
+  border-top: 1px solid var(--totara-rule);
+  border-bottom: 1px solid var(--totara-rule);
+  padding-block: var(--totara-rhythm);
+  margin-bottom: var(--totara-rhythm-lg);
+}
+
+.totara-toc__heading {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--totara-muted);
+  margin: 0 0 var(--totara-rhythm);
+}
+
+.totara-toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem 2rem;
+  counter-reset: toc-counter;
+}
+
+@media (min-width: 700px) {
+  .totara-toc__list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.totara-toc__item { margin: 0; }
+
+.totara-toc__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  color: currentColor;
+  text-decoration: none;
+  line-height: 1.45;
+  transition: color 180ms ease;
+}
+
+.totara-toc__link:hover { color: var(--totara-accent); }
+
+.totara-toc__num {
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--totara-muted);
+  min-width: 1.5em;
+  font-variant-numeric: tabular-nums;
+}
+
+.totara-toc__label {
+  font-size: 1.0625rem;
+  border-bottom: 1px solid transparent;
+  transition: border-color 180ms ease;
+}
+
+.totara-toc__link:hover .totara-toc__label {
+  border-bottom-color: currentColor;
+}
+
+/* -----------------------------------
+   Floating mini ToC ("Chapters ▾" dropdown)
+   On ≥1100px the inline ToC scrolls away with the page. A small collapsed
+   dropdown lives fixed in the bottom-right corner so readers can jump between
+   chapters without the full ToC overlapping body copy.
+----------------------------------- */
+.totara-toc-mini {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .totara-toc-mini {
+    display: block;
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    right: auto;
+    top: auto;
+    width: auto;
+    margin: 0;
+    max-width: calc(100vw - 3rem);
+    z-index: 10;
+    background: rgb(var(--color-background, 255, 255, 255));
+    border: 1.5px solid currentColor;
+    border-radius: 999px;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.14);
+    backdrop-filter: saturate(180%) blur(8px);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
+  }
+}
+
+.totara-toc-mini[open] {
+  width: 340px;
+  max-width: calc(100vw - 3rem);
+  border-radius: 8px;
+}
+
+.totara-toc-mini__summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.7rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: currentColor;
+  user-select: none;
+}
+
+.totara-toc-mini__summary::-webkit-details-marker { display: none; }
+.totara-toc-mini__summary::marker { content: ''; }
+
+.totara-toc-mini__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 220ms ease;
+  color: var(--totara-muted);
+}
+
+.totara-toc-mini[open] .totara-toc-mini__chevron {
+  transform: rotate(180deg);
+  color: currentColor;
+}
+
+.totara-toc-mini__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0.55rem;
+  border-top: 1px solid var(--totara-rule);
+  max-height: 60vh;
+  overflow-y: auto;
+  counter-reset: toc-mini-counter;
+}
+
+.totara-toc-mini__item { margin: 0; }
+
+.totara-toc-mini__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  padding: 0.4rem 0.9rem;
+  color: currentColor;
+  text-decoration: none;
+  line-height: 1.35;
+  font-size: 0.9rem;
+  transition: background 160ms ease;
+}
+
+.totara-toc-mini__link:hover {
+  background: rgba(var(--color-foreground, 20, 20, 20), 0.04);
+}
+
+.totara-toc-mini__num {
+  font-size: 0.75rem;
+  color: var(--totara-muted);
+  min-width: 1.25em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -----------------------------------
+   Chapter heading
+----------------------------------- */
+.totara-chapter {
+  position: relative;
+  padding-top: var(--totara-rhythm-lg);
+  margin-top: var(--totara-rhythm);
+  border-top: 1px solid var(--totara-rule);
+}
+
+.totara-chapter:first-of-type {
+  border-top: none;
+  padding-top: var(--totara-rhythm);
+}
+
+.totara-chapter__anchor {
+  position: absolute;
+  top: -6rem;
+}
+
+.totara-chapter__eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--totara-muted);
+  margin: 0 0 0.75em;
+}
+
+.totara-chapter__title {
+  font-family: var(--totara-display);
+  font-weight: 600;
+  font-size: clamp(1.55rem, 2.2vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: 0;
+  margin: 0 0 var(--totara-rhythm);
+  max-width: var(--totara-measure-wide);
+}
+
+/* Drop cap on the first paragraph of Chapter 1 only.
+   Applied via :first-of-type within the article, after the first chapter_heading. */
+.totara-chapter + .totara-paragraph:first-of-type .totara-prose p:first-child::first-letter,
+.totara-chapter:first-of-type + .totara-paragraph .totara-prose p:first-child::first-letter {
+  font-family: var(--totara-display);
+  font-weight: 600;
+  float: left;
+  font-size: 3.6em;
+  line-height: 0.95;
+  padding-right: 0.12em;
+  padding-top: 0.05em;
+  color: var(--totara-accent);
+}
+
+/* -----------------------------------
+   Paragraph block
+----------------------------------- */
+.totara-paragraph {
+  margin: 0 auto var(--totara-rhythm);
+}
+
+.totara-paragraph__subheading {
+  font-family: var(--totara-display);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+  margin: 0 0 0.75em;
+}
+
+.totara-paragraph--emphasise {
+  font-size: clamp(1.1875rem, 1.05rem + 0.5vw, 1.375rem);
+  line-height: 1.55;
+}
+
+/* -----------------------------------
+   Figure (image block)
+----------------------------------- */
+.totara-figure {
+  margin: var(--totara-rhythm-lg) auto;
+}
+
+.totara-hero .totara-figure {
+  margin: 0 auto;
+}
+
+.totara-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* Editorial 3:2 crop on standard inline variants; object-fit cover so
+   portrait and landscape sources render with a consistent rhythm. */
+.totara-figure--constrained {
+  max-width: var(--totara-measure-wide);
+}
+
+.totara-figure--wide {
+  max-width: 880px;
+}
+
+.totara-figure--constrained img,
+.totara-figure--wide img {
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+/* Full-bleed goes edge-to-edge at cinematic 16:9 without rounded corners. */
+.totara-figure--full {
+  max-width: 100%;
+  margin-inline: calc(var(--totara-gutter) * -1);
+}
+
+.totara-figure--full img {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+@media (min-width: 1400px) {
+  .totara-figure--full {
+    margin-inline: calc((100vw - 1400px) / -2);
+  }
+}
+
+.totara-figure__caption {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--totara-muted);
+  margin-top: 0.85em;
+  max-width: var(--totara-measure);
+}
+
+/* -----------------------------------
+   Drawer (collapsible)
+----------------------------------- */
+.totara-drawer {
+  border-top: 1px solid var(--totara-rule);
+  border-bottom: 1px solid var(--totara-rule);
+  margin-block: var(--totara-rhythm);
+}
+
+.totara-drawer + .totara-drawer { margin-top: -1px; }
+
+.totara-drawer__summary {
+  list-style: none;
+  cursor: pointer;
+  padding-block: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  user-select: none;
+}
+
+.totara-drawer__summary::-webkit-details-marker { display: none; }
+.totara-drawer__summary::marker { content: ''; }
+
+.totara-drawer__label {
+  flex: 1;
+}
+
+.totara-drawer__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  transition: transform 220ms ease;
+  color: var(--totara-muted);
+}
+
+.totara-drawer[open] .totara-drawer__chevron {
+  transform: rotate(180deg);
+  color: currentColor;
+}
+
+.totara-drawer__body {
+  padding-block: 0 1.5rem;
+}
+
+/* Subtle open animation */
+.totara-drawer[open] .totara-drawer__body {
+  animation: totara-drawer-fade 220ms ease both;
+}
+
+@keyframes totara-drawer-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* -----------------------------------
+   Pull quote
+----------------------------------- */
+.totara-pullquote {
+  margin: var(--totara-rhythm-lg) 0;
+  padding: 0 0 0 1.5rem;
+  border-left: 2px solid var(--totara-accent);
+  max-width: var(--totara-measure-wide);
+}
+
+.totara-pullquote__text {
+  font-family: var(--totara-display);
+  font-weight: 600;
+  font-size: clamp(1.375rem, 1.15rem + 0.9vw, 1.75rem);
+  line-height: 1.3;
+  letter-spacing: 0;
+  margin: 0 0 0.5em;
+}
+
+.totara-pullquote__attribution {
+  font-style: normal;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--totara-muted);
+}
+
+/* -----------------------------------
+   CTA
+----------------------------------- */
+.totara-cta {
+  margin-top: var(--totara-rhythm-xl);
+  padding-top: var(--totara-rhythm-lg);
+  padding-bottom: var(--totara-rhythm-lg);
+  border-top: 1px solid var(--totara-rule);
+  text-align: left;
+}
+
+.totara-cta__body {
+  margin-bottom: var(--totara-rhythm);
+}
+
+.totara-cta__body p {
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
+  line-height: 1.55;
+  max-width: var(--totara-measure-wide);
+}
+
+.totara-cta__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  border-radius: var(--buttons-radius, 2px);
+  background: rgb(var(--color-button, 20, 20, 20));
+  color: rgb(var(--color-button-text, 255, 255, 255));
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.totara-cta__button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+/* -----------------------------------
+   Care drawer (sits at very bottom)
+----------------------------------- */
+.totara-drawer--care {
+  margin-top: var(--totara-rhythm-lg);
+}
+
+/* -----------------------------------
+   Back-to-top button (fixed, stacked above the mini ToC pill on ≥1100px)
+----------------------------------- */
+.totara-backtotop {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .totara-backtotop {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 5.5rem;
+    left: 1.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+    background: rgb(var(--color-foreground, 20, 20, 20));
+    color: rgb(var(--color-background, 255, 255, 255));
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    font: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease, transform 180ms ease, box-shadow 180ms ease;
+    z-index: 9;
+  }
+
+  .totara-backtotop.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.totara-backtotop:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.totara-backtotop:focus-visible {
+  outline: 2px solid var(--totara-accent);
+  outline-offset: 3px;
+}
+
+/* -----------------------------------
+   Print
+----------------------------------- */
+@media print {
+  .totara-toc { position: static; }
+  .totara-toc-mini { display: none !important; }
+  .totara-backtotop { display: none !important; }
+  .totara-drawer { border: none; }
+  .totara-drawer__body { display: block !important; }
+  .totara-drawer__chevron { display: none; }
+  .totara-cta__button { display: none; }
+}
+
+/* -----------------------------------
+   Reduced motion
+----------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .totara-drawer[open] .totara-drawer__body { animation: none; }
+  .totara-drawer__chevron { transition: none; }
+  .totara-toc-mini__chevron { transition: none; }
+  .totara-backtotop { transition: none; }
+  .totara-cta__button { transition: none; }
+}
+/* Keep approved SEO context links subtle in the Northland tōtara intro sentence. */
+.totara-story__body a[href="/collections/dining-tables"],
+.totara-story__body a[href="/pages/boardroom-tables"],
+.totara-story__body a[href="/pages/timber-panels"] {
+  color: inherit;
+  text-decoration: none;
+}
+.totara-story__body a[href="/collections/dining-tables"]:hover,
+.totara-story__body a[href="/collections/dining-tables"]:focus,
+.totara-story__body a[href="/pages/boardroom-tables"]:hover,
+.totara-story__body a[href="/pages/boardroom-tables"]:focus,
+.totara-story__body a[href="/pages/timber-panels"]:hover,
+.totara-story__body a[href="/pages/timber-panels"]:focus {
+  color: inherit;
+  text-decoration: none;
+}

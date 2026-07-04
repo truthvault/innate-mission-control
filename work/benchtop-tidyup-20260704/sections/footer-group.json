@@ -1,0 +1,83 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "type": "footer",
+  "name": "t:sections.footer-group.name",
+  "sections": {
+    "announcement_bar_jbR3pY": {
+      "type": "announcement-bar",
+      "disabled": true,
+      "name": "t:sections.announcement-bar.name",
+      "settings": {
+        "home_page_only": true,
+        "top_banner_text": "Proudly made in Christchurch and Picton, delivered nationwide.",
+        "announcement_link": "",
+        "color_announcement_text": "#ffffff",
+        "color_announcement_bg": "#212529"
+      }
+    },
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "a20e02a2-b917-4bc5-bea9-3daf72612e33": {
+          "type": "menu",
+          "settings": {
+            "menu_title": "Shop",
+            "menu": "footer-menu-products"
+          }
+        },
+        "footer-0": {
+          "type": "menu",
+          "settings": {
+            "menu_title": "Learn",
+            "menu": "footer-menu-about"
+          }
+        },
+        "313b2729-8852-4eff-b3d9-13afc21db049": {
+          "type": "menu",
+          "settings": {
+            "menu_title": "Help",
+            "menu": "customer-service"
+          }
+        },
+        "footer-3": {
+          "type": "social",
+          "settings": {
+            "align": "right"
+          }
+        },
+        "innate-contact-footer": {
+          "type": "text",
+          "settings": {
+            "title": "Contact us",
+            "richtext": "<p>281 Queen Elizabeth II Drive, Christchurch<br\/><a href=\"tel:+64273502083\">027 350 2083<\/a><br\/><a href=\"mailto:hello@innatefurniture.co.nz\">hello@innatefurniture.co.nz<\/a><\/p>"
+          }
+        }
+      },
+      "block_order": [
+        "a20e02a2-b917-4bc5-bea9-3daf72612e33",
+        "footer-0",
+        "313b2729-8852-4eff-b3d9-13afc21db049",
+        "innate-contact-footer",
+        "footer-3"
+      ],
+      "settings": {
+        "footer_show_payments": false,
+        "enable_follow_on_shop": true,
+        "show_language_selector": false,
+        "show_country_selector": false
+      }
+    }
+  },
+  "order": [
+    "announcement_bar_jbR3pY",
+    "footer"
+  ]
+}

@@ -1,0 +1,25 @@
+{%- if product.handle == 'product-sample' -%}
+<section class="innate-samples-species-section">
+  <style>
+    #shopify-section-{{ section.id }} .innate-samples-species-inner{max-width:1180px;margin:0 auto;padding:2.5rem 20px 1.5rem;}
+    #shopify-section-{{ section.id }} .innate-samples-species-grid{display:grid;grid-template-columns:1fr;gap:1.5rem;margin:1.5rem 0 2.25rem;}
+    #shopify-section-{{ section.id }} .innate-samples-species-card{border-top:1px solid rgba(40,50,41,.22);padding-top:1rem;}
+    #shopify-section-{{ section.id }} .innate-samples-species-card img{display:block;width:100%;aspect-ratio:2 / 1;height:auto;object-fit:cover;margin-bottom:1rem;background:#f6f1e8;border:1px solid rgba(40,50,41,.12);}
+    @media screen and (min-width:780px){#shopify-section-{{ section.id }} .innate-samples-species-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:1.75rem;}}
+  </style>
+  <div class="innate-samples-species-inner rte">
+    <h2>Compare the timber species</h2>
+    <p>Not sure which timber suits your space? Start with the species first, then compare the colour finishes in your own light.</p>
+    <div class="innate-samples-species-grid">
+      <div class="innate-samples-species-card"><img src="https://cdn.shopify.com/s/files/1/0307/3094/4571/files/rimu-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043193&width=1000" alt="West Coast Rimu tabletop sample in Clear finish" loading="lazy" width="2048" height="1024"><h3>Rimu — warm, golden and character-rich</h3><p>Rimu ranges from golden honey and amber through to caramel and richer brown tones. Its flowing grain, darker streaks and small natural marks give it a warm, character-rich look with plenty of depth and variation.</p><p>Our rimu is salvaged from Cyclone Ita-felled West Coast forest, where a limited amount of fallen timber was permitted for recovery and use.</p></div>
+      <div class="innate-samples-species-card"><img src="https://cdn.shopify.com/s/files/1/0307/3094/4571/files/totara-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043363&width=1000" alt="Northland Tōtara tabletop sample in Clear finish" loading="lazy" width="2048" height="1024"><h3>Northland Tōtara — honeyed warmth with natural character</h3><p>Tōtara ranges from pale straw and honey-gold through to soft tan, peach and occasional reddish-brown tones. Its grain is generally fine and gently flowing, with knots, darker flecks and richer heartwood variation adding natural character.</p><p>Our tōtara work is connected to Northland farm-tōtara and native timber pathways developed through landowners, researchers, foresters, Tāne’s Tree Trust and MPI-supported systems.</p></div>
+      <div class="innate-samples-species-card"><img src="https://cdn.shopify.com/s/files/1/0307/3094/4571/files/beech-tabletop-topdown-website-normalized-v2-4096x2048-2026-06-08.jpg?v=1781043485&width=1000" alt="West Coast Beech tabletop sample in Clear finish" loading="lazy" width="2048" height="1024"><h3>West Coast Beech — warm, clean and naturally varied</h3><p>Beech has a warm palette of pale honey, peach, caramel and golden-brown tones, often with darker natural streaks. Its fine, flowing grain and occasional knots give it a clean, contemporary look without feeling plain or uniform.</p><p>It is a practical New Zealand hardwood option for contemporary tables, tops and commercial spaces where you want native timber with a cleaner, more modern feel.</p></div>
+    </div>
+    <h2>How to compare samples at home</h2>
+    <ul><li>View them in natural daylight and evening light.</li><li>Place them beside your flooring, kitchen, wall colour or existing furniture.</li><li>Compare both colour and grain, not just light and dark tone.</li><li>Expect natural variation from board to board.</li><li>If you’re unsure, send us a photo of your space and we’ll help narrow it down.</li></ul>
+  </div>
+</section>
+{%- endif -%}
+{% schema %}
+{"name":"Samples species","settings":[],"presets":[{"name":"Samples species"}]}
+{% endschema %}

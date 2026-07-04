@@ -1,0 +1,356 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+<style>
+  .feature-spotlight {
+    background: var(--bench-paper);
+    padding: var(--bench-pad-y) var(--bench-pad-x);
+  }
+
+  .feature-spotlight__inner {
+    max-width: var(--bench-max-wide);
+    margin: 0 auto;
+    display: grid;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: center;
+  }
+
+  @media (min-width: 880px) {
+    .feature-spotlight__inner {
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    }
+    .feature-spotlight--media-right .feature-spotlight__inner {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    }
+    .feature-spotlight--media-right .feature-spotlight__media {
+      order: 2;
+    }
+  }
+
+  .feature-spotlight--single .feature-spotlight__inner {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1100px;
+  }
+
+  @media (min-width: 880px) {
+    .feature-spotlight--single .feature-spotlight__inner {
+      grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+      gap: clamp(2.5rem, 5vw, 4rem);
+    }
+  }
+
+  .feature-spotlight__media {
+    margin: 0;
+    position: relative;
+    aspect-ratio: 5 / 4;
+    overflow: hidden;
+    background: var(--bench-cream);
+    border-radius: 2px;
+  }
+
+  .feature-spotlight__photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .feature-spotlight__caption {
+    font-family: var(--bench-display);
+    font-style: italic;
+    font-variation-settings: "opsz" 96, "SOFT" 100;
+    font-size: .92rem;
+    line-height: 1.4;
+    color: var(--bench-ink-soft);
+    margin: .75rem 0 0;
+    max-width: 38ch;
+  }
+
+  .feature-spotlight__body {
+    display: grid;
+    gap: 1.1rem;
+    max-width: 38rem;
+    align-content: center;
+  }
+
+  .feature-spotlight__heading {
+    font-size: clamp(1.95rem, 3vw, 3.05rem);
+    letter-spacing: 0;
+    line-height: 1.08;
+    color: var(--bench-forest-ink);
+    margin: 0;
+  }
+
+  .feature-spotlight__heading em,
+  .feature-spotlight__heading i {
+    font-style: italic;
+    color: var(--bench-forest);
+  }
+
+  .feature-spotlight__text {
+    color: var(--bench-ink-soft);
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: var(--bench-prose);
+  }
+
+  .feature-spotlight__text p { margin: 0 0 .85em; }
+  .feature-spotlight__text p:last-child { margin-bottom: 0; }
+
+  .feature-spotlight__list {
+    color: var(--bench-ink-soft);
+    font-size: 1rem;
+    line-height: 1.55;
+    margin: .25rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: .55rem;
+    max-width: var(--bench-prose);
+  }
+
+  .feature-spotlight__list ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .55rem;
+  }
+
+  .feature-spotlight__list li {
+    position: relative;
+    padding-left: 1.25rem;
+  }
+
+  .feature-spotlight__list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: .68em;
+    width: .45rem;
+    height: 1px;
+    background: var(--bench-forest);
+  }
+
+  .feature-spotlight__inset {
+    margin: 1.25rem 0 0;
+    display: grid;
+    grid-template-columns: minmax(0, 9rem) 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: .9rem;
+    border: 1px solid var(--bench-line);
+    border-radius: 2px;
+    background: var(--bench-cream-soft);
+  }
+
+  .feature-spotlight__inset figure {
+    margin: 0;
+    overflow: hidden;
+    border-radius: 2px;
+    background: var(--bench-cream);
+  }
+
+  .feature-spotlight__inset img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .feature-spotlight__inset-caption {
+    font-family: var(--bench-body);
+    font-size: .85rem;
+    line-height: 1.45;
+    color: var(--bench-ink-soft);
+    margin: 0;
+  }
+</style>
+
+<section
+  {% if section.settings.anchor_id != blank %}id="{{ section.settings.anchor_id }}"{% endif %}
+  class="feature-spotlight {% if section.settings.inset_image == blank %}feature-spotlight--single{% endif %} feature-spotlight--media-{{ section.settings.image_position }}"
+  data-section-id="{{ section.id }}">
+  <div class="feature-spotlight__inner">
+
+    <figure class="feature-spotlight__media">
+      {%- if section.settings.hero_asset_filename != blank -%}
+        <img
+          class="feature-spotlight__photo"
+          src="{{ section.settings.hero_asset_filename | asset_url }}"
+          alt="{{ section.settings.hero_image_alt | escape }}"
+          loading="lazy"
+          decoding="async"
+        />
+      {%- elsif section.settings.hero_image != blank -%}
+        {{ section.settings.hero_image | image_url: width: 1800 | image_tag:
+            class: 'feature-spotlight__photo',
+            alt: section.settings.hero_image_alt,
+            loading: 'lazy',
+            decoding: 'async',
+            sizes: '(min-width: 880px) 60vw, 100vw',
+            widths: '480, 720, 1080, 1440, 1800'
+        }}
+      {%- endif -%}
+    </figure>
+
+    <div class="feature-spotlight__body">
+      {%- if section.settings.subtitle != blank -%}
+        <p class="bench-eyebrow">{{ section.settings.subtitle | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.heading != blank -%}
+        {%- assign heading_clean = section.settings.heading | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h2 class="bench-display feature-spotlight__heading">{{ heading_clean }}</h2>
+      {%- endif -%}
+
+      {%- if section.settings.body != blank -%}
+        <div class="feature-spotlight__text">{{ section.settings.body }}</div>
+      {%- endif -%}
+
+      {%- if section.settings.feature_list != blank -%}
+        <div class="feature-spotlight__list">{{ section.settings.feature_list }}</div>
+      {%- endif -%}
+
+      {%- if section.settings.hero_image_caption != blank -%}
+        <p class="feature-spotlight__caption">{{ section.settings.hero_image_caption | escape }}</p>
+      {%- endif -%}
+
+      {%- if section.settings.inset_asset_filename != blank or section.settings.inset_image != blank -%}
+        <div class="feature-spotlight__inset">
+          <figure>
+            {%- if section.settings.inset_asset_filename != blank -%}
+              <img
+                src="{{ section.settings.inset_asset_filename | asset_url }}"
+                alt="{{ section.settings.inset_image_alt | escape }}"
+                loading="lazy"
+                decoding="async"
+              />
+            {%- else -%}
+              {{ section.settings.inset_image | image_url: width: 600 | image_tag:
+                  alt: section.settings.inset_image_alt,
+                  loading: 'lazy',
+                  decoding: 'async',
+                  sizes: '160px',
+                  widths: '160, 320, 480'
+              }}
+            {%- endif -%}
+          </figure>
+          {%- if section.settings.inset_caption != blank -%}
+            <p class="feature-spotlight__inset-caption">{{ section.settings.inset_caption | escape }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Feature spotlight",
+  "class": "section-feature-spotlight",
+  "settings": [
+    {
+      "type": "text",
+      "id": "anchor_id",
+      "label": "Anchor ID",
+      "info": "Optional. Renders id=\"...\" on the section so other links can scroll-to it."
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Eyebrow / subtitle",
+      "info": "Small-caps line above the heading. Plain text — type in ALL CAPS to read as small-caps eyebrow.",
+      "default": "POWER + CONNECTIVITY"
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Use <em>...</em> for italic emphasis on a word.",
+      "default": "<p>Built for the way your team <em>meets</em>.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "body",
+      "label": "Body copy"
+    },
+    {
+      "type": "richtext",
+      "id": "feature_list",
+      "label": "Feature list",
+      "info": "Use a <ul><li>…</li></ul> for the bullet list. Optional — leave blank to omit."
+    },
+    {
+      "type": "header",
+      "content": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_asset_filename",
+      "label": "Hero image asset filename",
+      "info": "Theme asset filename (e.g. \"Sharknose Asterix Meeting Table.png\"). Used in place of the image picker when set."
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image (Files / shop_images)",
+      "info": "Used only when the asset filename above is empty."
+    },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Hero image alt text"
+    },
+    {
+      "type": "text",
+      "id": "hero_image_caption",
+      "label": "Hero image caption",
+      "info": "Optional small italic caption rendered beneath the body copy."
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Image position (desktop)",
+      "options": [
+        { "value": "left",  "label": "Image left, text right" },
+        { "value": "right", "label": "Image right, text left" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "header",
+      "content": "Inset detail image (optional)"
+    },
+    {
+      "type": "text",
+      "id": "inset_asset_filename",
+      "label": "Inset image asset filename",
+      "info": "Theme asset filename. Optional small image rendered as a card within the body column."
+    },
+    {
+      "type": "image_picker",
+      "id": "inset_image",
+      "label": "Inset image (Files / shop_images)",
+      "info": "Used only when the asset filename above is empty."
+    },
+    {
+      "type": "text",
+      "id": "inset_image_alt",
+      "label": "Inset image alt text"
+    },
+    {
+      "type": "text",
+      "id": "inset_caption",
+      "label": "Inset caption"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Feature spotlight"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

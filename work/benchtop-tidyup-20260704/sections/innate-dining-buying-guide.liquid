@@ -1,0 +1,37 @@
+<div class="innate-dining-v16 innate-dining-v16--after-products" data-dining-editor-section="buying-guide">
+  <section class="d73-dining-guide" aria-labelledby="dining-buying-guide">
+    <div class="d73-dining-guide__inner">
+      {%- if section.settings.eyebrow != blank -%}<p class="d73-dining-guide__eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
+      <h2 id="dining-buying-guide">{{ section.settings.heading }}</h2>
+      {%- if section.settings.text != blank -%}<p>{{ section.settings.text }}</p>{%- endif -%}
+      <div class="d73-dining-guide__grid">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'article' -%}
+            <article {{ block.shopify_attributes }}>
+              <h3>{{ block.settings.heading }}</h3>
+              {{ block.settings.text }}
+            </article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Dining buying guide",
+  "settings": [
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Dining table guide"},
+    {"type":"text","id":"heading","label":"Heading","default":"Choosing a dining table for your home"},
+    {"type":"textarea","id":"text","label":"Intro text","default":"A good dining table needs to fit the room, the people around it and the way the home is used. At Innate, each dining table is made to order in our Christchurch workshop, so the starting design can be adjusted by size, shape, timber, colour and finish rather than forcing the room to fit a standard table."}
+  ],
+  "blocks": [
+    {"type":"article","name":"Guide card","settings":[
+      {"type":"text","id":"heading","label":"Heading","default":"Size and everyday use"},
+      {"type":"richtext","id":"text","label":"Text","default":"<p>Start with the space around the table, not just the size of the top.</p>"}
+    ]}
+  ],
+  "presets": [{"name":"Dining buying guide"}]
+}
+{% endschema %}

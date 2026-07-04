@@ -1,0 +1,169 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+<style>
+  .bench-hero__support-line {
+    margin: .85rem 0 0;
+    color: rgba(255, 255, 255, .86);
+    font-size: clamp(.92rem, 1vw, 1rem);
+    line-height: 1.55;
+    max-width: min(44rem, 100%);
+  }
+</style>
+<section class="bench-hero" data-section-id="{{ section.id }}">
+  {%- assign hero_alt = section.settings.image_alt | default: 'Custom NZ native timber benchtop' -%}
+  {%- if section.settings.image_asset_filename != blank -%}
+    <div class="bench-hero__media">
+      <img
+        class="bench-hero__photo"
+        src="{{ section.settings.image_asset_filename | asset_url }}"
+        alt="{{ hero_alt | escape }}"
+        loading="eager"
+        fetchpriority="high"
+      />
+    </div>
+  {%- elsif section.settings.image != blank -%}
+    {%- capture hero_srcset -%}
+      {%- assign widths = '720,1080,1440,1920,2400,3024' | split: ',' -%}
+      {%- for w in widths -%}
+        {{ section.settings.image | image_url: width: w }} {{ w }}w{%- unless forloop.last -%},{%- endunless -%}
+      {%- endfor -%}
+    {%- endcapture -%}
+    <div class="bench-hero__media">
+      {{ section.settings.image | image_url: width: 2400 | image_tag:
+          alt: hero_alt,
+          class: 'bench-hero__photo',
+          sizes: '100vw',
+          srcset: hero_srcset,
+          loading: 'eager',
+          fetchpriority: 'high',
+          width: section.settings.image.width,
+          height: section.settings.image.height
+      }}
+    </div>
+  {%- endif -%}
+
+  <div class="bench-hero__overlay" aria-hidden="true"></div>
+
+  <div class="bench-hero__inner">
+    <div class="bench-hero__content">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="bench-hero__eyebrow">{{ section.settings.eyebrow | escape }}</p>
+      {%- endif -%}
+      {%- if section.settings.headline != blank -%}
+        {%- assign headline_clean = section.settings.headline | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h1 class="bench-hero__headline">{{ headline_clean }}</h1>
+      {%- endif -%}
+      {%- if section.settings.subhead != blank -%}
+        <div class="bench-hero__sub">{{ section.settings.subhead }}</div>
+      {%- endif -%}
+      {%- if section.settings.cue != blank -%}
+        <p class="bench-hero__cue">
+          <span>{{ section.settings.cue | escape }}</span>
+        </p>
+      {%- endif -%}
+
+      {%- if section.settings.primary_cta_label != blank and section.settings.primary_cta_url != blank -%}
+        <div class="bench-hero__btns">
+          <a class="bench-hero__btn bench-hero__btn--primary" href="{{ section.settings.primary_cta_url }}">{{ section.settings.primary_cta_label | escape }}</a>
+          {%- if section.settings.secondary_cta_label != blank and section.settings.secondary_cta_url != blank -%}
+            {%- if section.settings.secondary_cta_label.size > 60 -%}
+              {%- assign secondary_support_line = section.settings.secondary_cta_label -%}
+            {%- else -%}
+              <a class="bench-hero__btn bench-hero__btn--secondary" href="{{ section.settings.secondary_cta_url }}">{{ section.settings.secondary_cta_label | escape }}</a>
+            {%- endif -%}
+          {%- endif -%}
+        </div>
+        {%- if secondary_support_line != blank -%}
+          <p class="bench-hero__support-line">{{ secondary_support_line | escape }}</p>
+        {%- endif -%}
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Benchtops hero",
+  "class": "section-benchtops-hero",
+  "settings": [
+    {
+      "type": "text",
+      "id": "image_asset_filename",
+      "label": "Hero image asset filename",
+      "info": "Theme asset filename (e.g. \"Totara Boardroom Hero.png\"). Used in place of the image picker when set."
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Hero image (Files / shop_images)",
+      "info": "Used only when the asset filename above is empty."
+    },
+    {
+      "type": "text",
+      "id": "image_alt",
+      "label": "Hero image alt text",
+      "info": "Describes the image for screen readers and search engines.",
+      "default": "Custom NZ native timber benchtop in a kitchen — Innate Furniture"
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow",
+      "default": "Innate Furniture · Benchtops"
+    },
+    {
+      "type": "richtext",
+      "id": "headline",
+      "label": "Headline",
+      "default": "<p>Custom benchtops in NZ <em>native</em> timber.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "subhead",
+      "label": "Subhead",
+      "default": "<p>Made to your size in West Coast Rimu, Northland Tōtara, or West Coast Beech. Get your <em>full price</em>, freight and GST included, in minutes.</p>"
+    },
+    {
+      "type": "text",
+      "id": "cue",
+      "label": "Scroll cue",
+      "default": "Configure yours ↓"
+    },
+    {
+      "type": "header",
+      "content": "CTAs (optional)"
+    },
+    {
+      "type": "text",
+      "id": "primary_cta_label",
+      "label": "Primary button label"
+    },
+    {
+      "type": "url",
+      "id": "primary_cta_url",
+      "label": "Primary button URL"
+    },
+    {
+      "type": "text",
+      "id": "secondary_cta_label",
+      "label": "Secondary button label"
+    },
+    {
+      "type": "url",
+      "id": "secondary_cta_url",
+      "label": "Secondary button URL"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops hero"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

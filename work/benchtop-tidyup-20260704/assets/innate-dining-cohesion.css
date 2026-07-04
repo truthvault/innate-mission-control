@@ -1,0 +1,524 @@
+/* Dining tables cohesion layer.
+   Text, section order and blocks stay as authored; this file only aligns the page with the approved homepage brand direction. */
+
+.template-collection.template-sufix-special-prices {
+  --dining-forest-ink: var(--innate-forest-ink);
+  --dining-fern: var(--innate-moss);
+  --dining-paper: var(--innate-paper);
+  --dining-warm-white: var(--innate-warm-white);
+  --dining-cream: var(--innate-cream);
+  --dining-line: rgba(22, 56, 50, .12);
+  --dining-muted: rgba(19, 19, 17, .72);
+  --dining-display: var(--innate-display);
+  --dining-body: var(--innate-body);
+}
+
+.template-collection.template-sufix-special-prices,
+.template-collection.template-sufix-special-prices .main,
+.template-collection.template-sufix-special-prices .layout,
+.template-collection.template-sufix-special-prices .innate-dining-v16 {
+  background: var(--dining-paper);
+  color: var(--dining-fern);
+}
+
+.template-collection.template-sufix-special-prices .innate-dining-v16 {
+  --green: var(--dining-forest-ink);
+  --cream: var(--dining-cream);
+  --cream2: var(--dining-paper);
+  --ink: var(--dining-fern);
+  --muted: var(--dining-muted);
+  --line: var(--dining-line);
+  font-family: var(--dining-body);
+}
+
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section {
+  display: none !important;
+}
+
+.template-collection.template-sufix-special-prices .innate-dining-v16,
+.template-collection.template-sufix-special-prices .innate-dining-v16 p,
+.template-collection.template-sufix-special-prices .innate-dining-v16 a,
+.template-collection.template-sufix-special-prices .innate-dining-v16 input,
+.template-collection.template-sufix-special-prices .innate-dining-v16 textarea,
+.template-collection.template-sufix-special-prices .innate-dining-v16 select,
+.template-collection.template-sufix-special-prices .innate-dining-v16 button {
+  font-family: var(--dining-body) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header h1,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section h1,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-title,
+.template-collection.template-sufix-special-prices .d16-display,
+.template-collection.template-sufix-special-prices .d51-size-guide h2,
+.template-collection.template-sufix-special-prices .d53-timber-colour h2,
+.template-collection.template-sufix-special-prices .d54-steel-bases h2,
+.template-collection.template-sufix-special-prices .d16-shape h3,
+.template-collection.template-sufix-special-prices .d64-option strong {
+  font-family: var(--dining-display) !important;
+  font-weight: 600 !important;
+  letter-spacing: -.024em !important;
+  color: var(--dining-forest-ink) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header {
+  background: var(--dining-paper) !important;
+  border-top: 1px solid var(--dining-line) !important;
+  border-bottom: 1px solid var(--dining-line) !important;
+}
+
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section {
+  background: var(--dining-paper) !important;
+  border-top: 1px solid var(--dining-line) !important;
+  border-bottom: 1px solid var(--dining-line) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-wrap,
+.template-collection.template-sufix-special-prices .d51-size-guide__inner,
+.template-collection.template-sufix-special-prices .d53-timber-colour__inner,
+.template-collection.template-sufix-special-prices #dining-table-products {
+  box-sizing: border-box !important;
+  width: min(1280px, calc(100% - clamp(36px, 8vw, 88px))) !important;
+  max-width: 1280px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.template-collection.template-sufix-special-prices .d51-size-guide__inner {
+  grid-template-columns: minmax(0, .42fr) minmax(0, .58fr) !important;
+  gap: clamp(32px, 5vw, 72px) !important;
+  min-width: 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .d51-size-guide__panel {
+  max-width: none !important;
+  min-width: 0 !important;
+  justify-self: stretch !important;
+}
+
+.template-collection.template-sufix-special-prices .d53-timber-colour__inner {
+  grid-template-columns: minmax(280px, .34fr) minmax(0, .66fr) !important;
+}
+
+@media (max-width: 1080px) {
+  .template-collection.template-sufix-special-prices .d53-timber-colour__inner {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .template-collection.template-sufix-special-prices .d53-timber-colour__inner {
+    width: 100% !important;
+  }
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__inner {
+  padding-top: clamp(2.4rem, 4.5vw, 4.8rem) !important;
+  padding-bottom: clamp(2rem, 4vw, 3.6rem) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header h1 {
+  max-width: 700px !important;
+  font-size: clamp(3rem, 4.7vw, 4.9rem) !important;
+  line-height: .97 !important;
+}
+
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section h1 {
+  max-width: 720px !important;
+  color: var(--dining-forest-ink) !important;
+  text-shadow: none !important;
+}
+
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-title {
+  display: block !important;
+  font-size: clamp(3rem, 4.35vw, 4.55rem) !important;
+  line-height: .97 !important;
+  color: var(--dining-forest-ink) !important;
+  text-shadow: none !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__eyebrow,
+.template-collection.template-sufix-special-prices .d16-eyebrow,
+.template-collection.template-sufix-special-prices .d38-info-kicker,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .dining_hero_svg {
+  color: rgba(19, 19, 17, .52) !important;
+  letter-spacing: .14em !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__subhead {
+  color: var(--dining-forest-ink) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__copy,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .banner-text,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-body,
+.template-collection.template-sufix-special-prices .d16-copy,
+.template-collection.template-sufix-special-prices .d16-size-note,
+.template-collection.template-sufix-special-prices .d51-size-guide p,
+.template-collection.template-sufix-special-prices .d53-timber-colour p,
+.template-collection.template-sufix-special-prices .d54-steel-bases__head p,
+.template-collection.template-sufix-special-prices .d16-shape p,
+.template-collection.template-sufix-special-prices .d54-base-card p {
+  color: var(--dining-muted) !important;
+  line-height: 1.64 !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__actions a,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .banner-buttons a,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-actions a,
+.template-collection.template-sufix-special-prices .d16-btn,
+.template-collection.template-sufix-special-prices .d16-cta .d16-enquiry-form button[type="submit"] {
+  border-radius: var(--innate-radius) !important;
+  font-family: var(--dining-body) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__actions,
+.template-collection.template-sufix-special-prices .d66-dining-header__sample-note {
+  box-sizing: border-box !important;
+  width: min(100%, 640px) !important;
+  max-width: 640px !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__actions a {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__sample-note {
+  display: flex !important;
+  justify-content: center !important;
+  gap: .35em !important;
+  margin-top: 12px !important;
+  padding: 14px 18px !important;
+  border: 1px solid var(--dining-line) !important;
+  background: rgba(255, 250, 243, .62) !important;
+  color: rgba(19, 19, 17, .62) !important;
+  text-align: center !important;
+  font-weight: 700 !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__actions a:first-child,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .banner-buttons a:first-child,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-actions a:first-child,
+.template-collection.template-sufix-special-prices .d16-btn,
+.template-collection.template-sufix-special-prices .d16-cta .d16-btn {
+  background: var(--innate-forest) !important;
+  border-color: var(--innate-forest) !important;
+  color: var(--dining-warm-white) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__actions a:not(:first-child),
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .banner-buttons a:not(:first-child),
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-actions a:not(:first-child),
+.template-collection.template-sufix-special-prices .d16-btn--ghost {
+  background: transparent !important;
+  border-color: rgba(22, 56, 50, .28) !important;
+  color: var(--dining-forest-ink) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__visual-frame,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .banner-image,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-media,
+.template-collection.template-sufix-special-prices #dining-table-products .collection-product .image,
+.template-collection.template-sufix-special-prices #dining-table-products .product-image,
+.template-collection.template-sufix-special-prices .d54-base-media img {
+  background: var(--dining-cream) !important;
+  border: 1px solid var(--dining-line) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__visual img,
+.template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section img,
+.template-collection.template-sufix-special-prices #dining-table-products img,
+.template-collection.template-sufix-special-prices .d54-base-media img {
+  filter: none !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__lower,
+.template-collection.template-sufix-special-prices .d16-proof {
+  border-color: var(--dining-line) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__proof div,
+.template-collection.template-sufix-special-prices .d16-proof div {
+  color: rgba(19, 19, 17, .66) !important;
+  border-color: var(--dining-line) !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__proof div {
+  font-size: 12.6px !important;
+  line-height: 1.34 !important;
+}
+
+.template-collection.template-sufix-special-prices .d66-dining-header__proof strong,
+.template-collection.template-sufix-special-prices .d45-process strong {
+  color: var(--dining-forest-ink) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-product-intro,
+.template-collection.template-sufix-special-prices #dining-table-products,
+.template-collection.template-sufix-special-prices .d65-support,
+.template-collection.template-sufix-special-prices .d16-info {
+  background: var(--dining-paper) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-shapes,
+.template-collection.template-sufix-special-prices .d51-size-guide,
+.template-collection.template-sufix-special-prices .d53-timber-colour,
+.template-collection.template-sufix-special-prices .d54-steel-bases {
+  background: var(--dining-paper) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-product-intro,
+.template-collection.template-sufix-special-prices .d16-shapes,
+.template-collection.template-sufix-special-prices .d51-size-guide,
+.template-collection.template-sufix-special-prices .d53-timber-colour,
+.template-collection.template-sufix-special-prices .d65-support,
+.template-collection.template-sufix-special-prices .d16-info {
+  border-top: 1px solid rgba(22, 56, 50, .08) !important;
+}
+
+.template-collection.template-sufix-special-prices .d75-dining-sort__summary,
+.template-collection.template-sufix-special-prices #dining-table-products .d67-card-signals,
+.template-collection.template-sufix-special-prices #dining-table-products .d31-choice-note,
+.template-collection.template-sufix-special-prices #dining-table-products .d16-card-note {
+  display: none !important;
+}
+
+.template-collection.template-sufix-special-prices .d78-show-sort {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-shape,
+.template-collection.template-sufix-special-prices .d51-size-guide__result,
+.template-collection.template-sufix-special-prices .innate-dining-timber-grid,
+.template-collection.template-sufix-special-prices .d54-base-card,
+.template-collection.template-sufix-special-prices #dining-table-products .collection-product {
+  border-color: var(--dining-line) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-shape,
+.template-collection.template-sufix-special-prices .d51-size-guide__result,
+.template-collection.template-sufix-special-prices .innate-dining-timber-grid__lightbox-panel,
+.template-collection.template-sufix-special-prices #dining-table-products .collection-product {
+  background: var(--dining-warm-white) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-cta {
+  background: var(--dining-forest-ink) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-cta .d16-display,
+.template-collection.template-sufix-special-prices .d16-cta .d16-copy,
+.template-collection.template-sufix-special-prices .d16-cta .d16-eyebrow {
+  color: var(--dining-warm-white) !important;
+}
+
+.template-collection.template-sufix-special-prices .d16-cta .d16-enquiry-form input,
+.template-collection.template-sufix-special-prices .d16-cta .d16-enquiry-form textarea,
+.template-collection.template-sufix-special-prices .d16-cta .d20-photo-upload,
+.template-collection.template-sufix-special-prices .d16-cta .d16-contact-card {
+  background: rgba(255, 250, 243, .07) !important;
+  border-color: rgba(255, 250, 243, .20) !important;
+  border-radius: var(--innate-radius) !important;
+}
+
+.template-collection.template-sufix-special-prices .shopify-section.apps {
+  background: var(--dining-paper);
+  overflow: hidden;
+}
+
+.template-collection.template-sufix-special-prices .shopify-section.apps .grp-entangle-item {
+  background: var(--dining-warm-white) !important;
+  border: 1px solid rgba(22, 56, 50, .08) !important;
+  box-shadow: none !important;
+}
+
+.template-collection.template-sufix-special-prices .shopify-section.apps .grp-entangle-rating-container {
+  background: var(--dining-warm-white) !important;
+  border: 1px solid rgba(22, 56, 50, .10) !important;
+  box-shadow: none !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content {
+  background: var(--dining-paper) !important;
+  padding: clamp(1.6rem, 3vw, 2.6rem) 0 clamp(2.2rem, 4.4vw, 4rem) !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom-content {
+  width: min(1280px, calc(100% - clamp(36px, 8vw, 88px))) !important;
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+  background: var(--dining-cream) !important;
+  border: 1px solid rgba(22, 56, 50, .10) !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom-content > .inner {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: clamp(1rem, 1.8vw, 1.35rem) !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .blocks {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, .88fr) !important;
+  gap: clamp(1.4rem, 3vw, 3.2rem) !important;
+  align-items: center !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item {
+  width: auto !important;
+  padding: 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item--image_4AyijE {
+  order: 1 !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item--text_jA9MRP {
+  order: 2 !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item-inner {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item-inner--image {
+  overflow: hidden !important;
+  background: var(--dining-paper) !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item-inner--image > div {
+  padding-top: 62% !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  filter: none !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .custom__item-inner--text {
+  padding: clamp(1.2rem, 2.5vw, 2.8rem) clamp(.4rem, 2vw, 1.6rem) !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content h2 {
+  font-family: var(--dining-display) !important;
+  font-size: clamp(2.2rem, 3.4vw, 3.7rem) !important;
+  line-height: .98 !important;
+  font-weight: 600 !important;
+  letter-spacing: -.024em !important;
+  color: var(--dining-forest-ink) !important;
+  margin: 0 0 1rem !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content .rte,
+.template-collection.template-sufix-special-prices .section-custom-content .rte p {
+  color: var(--dining-muted) !important;
+  font-family: var(--dining-body) !important;
+  font-size: 1rem !important;
+  line-height: 1.6 !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content h6 {
+  margin: 1.1rem 0 0 !important;
+}
+
+.template-collection.template-sufix-special-prices .section-custom-content h6 a {
+  color: var(--dining-forest-ink) !important;
+  font-family: var(--dining-body) !important;
+  font-size: .95rem !important;
+  font-weight: 800 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 4px !important;
+}
+
+.template-collection.template-sufix-special-prices .shopify-section-group-footer-group .footer .top .col h2 {
+  font-family: var(--dining-body);
+  font-size: .82rem;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.template-collection.template-sufix-special-prices .layout,
+.template-collection.template-sufix-special-prices .shopify-section.apps {
+  overflow-x: clip;
+}
+
+@media (max-width: 720px) {
+  .template-collection.template-sufix-special-prices .d66-dining-header h1 {
+    font-size: clamp(2.65rem, 11vw, 3.6rem) !important;
+  }
+
+  .template-collection.template-sufix-special-prices .layout > .shopify-section.banner-with-text-section .d18-hero-title {
+    font-size: clamp(2.65rem, 10.5vw, 3.45rem) !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d66-dining-header__inner {
+    padding-top: 2rem !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d66-dining-header__actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d66-dining-header__sample-note {
+    display: block !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d16-product-intro .d16-copy,
+  .template-collection.template-sufix-special-prices .d16-product-intro .d16-size-note,
+  .template-collection.template-sufix-special-prices .d16-shapes .d16-section-head h2,
+  .template-collection.template-sufix-special-prices .d16-shapes .d16-section-head .d16-copy {
+    white-space: normal !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d51-size-guide {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    overflow-x: hidden !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d51-size-guide__inner {
+    width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d51-size-guide__controls,
+  .template-collection.template-sufix-special-prices .d51-size-guide__size-fields {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .template-collection.template-sufix-special-prices .d51-size-guide__controls > div,
+  .template-collection.template-sufix-special-prices .d51-size-guide select,
+  .template-collection.template-sufix-special-prices .d51-size-guide input,
+  .template-collection.template-sufix-special-prices .d51-size-guide__result,
+  .template-collection.template-sufix-special-prices .d51-size-guide__note {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .template-collection.template-sufix-special-prices .section-custom-content .blocks {
+    grid-template-columns: 1fr !important;
+  }
+
+  .template-collection.template-sufix-special-prices .section-custom-content .custom__item-inner--text {
+    padding: .4rem 0 .6rem !important;
+  }
+}

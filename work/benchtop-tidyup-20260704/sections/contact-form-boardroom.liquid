@@ -1,0 +1,395 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+<style>
+  .boardroom-form {
+    background: var(--bench-paper);
+    padding: var(--bench-pad-y) var(--bench-pad-x);
+  }
+
+  .boardroom-form__inner {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .boardroom-form__head {
+    margin-bottom: clamp(1.75rem, 4vw, 2.5rem);
+    display: grid;
+    gap: 1rem;
+  }
+
+  .boardroom-form__heading {
+    font-size: clamp(1.95rem, 3vw, 3.05rem);
+    letter-spacing: 0;
+    line-height: 1.08;
+    color: var(--bench-forest-ink);
+    margin: 0;
+  }
+
+  .boardroom-form__heading em,
+  .boardroom-form__heading i {
+    font-style: italic;
+    color: var(--bench-forest);
+  }
+
+  .boardroom-form__intro {
+    color: var(--bench-ink-soft);
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: var(--bench-prose);
+  }
+
+  .boardroom-form__intro p { margin: 0 0 .85em; }
+  .boardroom-form__intro p:last-child { margin-bottom: 0; }
+
+  .boardroom-form form {
+    display: grid;
+    gap: 1.1rem;
+  }
+
+  .boardroom-form__row {
+    display: grid;
+    gap: .35rem;
+  }
+
+  @media (min-width: 640px) {
+    .boardroom-form__row--two {
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  }
+
+  .boardroom-form__row label {
+    font-family: var(--bench-body);
+    font-size: .82rem;
+    font-weight: 500;
+    letter-spacing: .04em;
+    color: var(--bench-forest-ink);
+  }
+
+  .boardroom-form__row .req {
+    color: var(--bench-forest);
+    margin-left: .15em;
+  }
+
+  .boardroom-form__row input[type="text"],
+  .boardroom-form__row input[type="email"],
+  .boardroom-form__row input[type="tel"],
+  .boardroom-form__row select,
+  .boardroom-form__row textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--bench-body);
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--bench-ink);
+    background: var(--bench-field-bg, #ffffff);
+    border: 1px solid var(--bench-field-border, var(--bench-line-strong));
+    border-radius: 2px;
+    padding: .75rem .9rem;
+    box-shadow: inset 0 0 0 1px rgba(22, 56, 50, .04);
+    transition: border-color .2s var(--bench-ease), box-shadow .2s var(--bench-ease), background .2s var(--bench-ease);
+  }
+
+  .boardroom-form__row input::placeholder,
+  .boardroom-form__row textarea::placeholder {
+    color: var(--bench-field-placeholder, rgba(19, 35, 29, .48));
+  }
+
+  .boardroom-form__row textarea {
+    min-height: 8rem;
+    resize: vertical;
+  }
+
+  .boardroom-form__row input:focus,
+  .boardroom-form__row select:focus,
+  .boardroom-form__row textarea:focus {
+    outline: none;
+    border-color: var(--bench-field-focus, var(--bench-forest));
+    box-shadow: 0 0 0 3px rgba(22, 56, 50, .15);
+  }
+
+  .boardroom-form__row .error {
+    border-color: #b3261e;
+  }
+
+  .boardroom-form__error {
+    font-size: .82rem;
+    color: #b3261e;
+    margin: .15rem 0 0;
+  }
+
+  .boardroom-form__actions {
+    margin-top: .75rem;
+  }
+
+  .boardroom-form__submit {
+    display: inline-flex;
+    align-items: center;
+    gap: .65rem;
+    padding: 1.05rem 2.25rem;
+    background: var(--bench-forest);
+    color: var(--bench-cream);
+    font-family: var(--bench-body);
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: .02em;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background .25s var(--bench-ease), transform .25s var(--bench-ease), box-shadow .25s var(--bench-ease);
+    box-shadow: 0 1px 1px rgba(12, 32, 28, .08), 0 12px 30px -16px rgba(12, 32, 28, .35);
+  }
+
+  .boardroom-form__submit:hover {
+    background: var(--bench-forest-ink);
+    transform: translateY(-1px);
+    box-shadow: 0 1px 1px rgba(12, 32, 28, .12), 0 18px 40px -18px rgba(12, 32, 28, .45);
+  }
+
+  .boardroom-form__submit:focus-visible {
+    outline: 2px solid var(--bench-forest);
+    outline-offset: 4px;
+  }
+
+  .boardroom-form__success {
+    background: var(--bench-cream-soft);
+    border: 1px solid var(--bench-line);
+    border-radius: 2px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .boardroom-form__success h3 {
+    font-family: var(--bench-display);
+    font-style: italic;
+    font-size: 1.4rem;
+    color: var(--bench-forest-ink);
+    margin: 0 0 .35rem;
+  }
+
+  .boardroom-form__success p {
+    color: var(--bench-ink-soft);
+    margin: 0;
+  }
+</style>
+
+<section
+  {% if section.settings.anchor_id != blank %}id="{{ section.settings.anchor_id }}"{% endif %}
+  class="boardroom-form"
+  data-section-id="{{ section.id }}">
+  <div class="boardroom-form__inner">
+
+    <header class="boardroom-form__head">
+      {%- if section.settings.heading != blank -%}
+        {%- assign heading_clean = section.settings.heading | replace: '<p>', '' | replace: '</p>', '' -%}
+        <h2 class="bench-display boardroom-form__heading">{{ heading_clean }}</h2>
+      {%- endif -%}
+      {%- if section.settings.intro != blank -%}
+        <div class="boardroom-form__intro">{{ section.settings.intro }}</div>
+      {%- endif -%}
+    </header>
+
+    {% form 'contact', class: 'boardroom-form__form' %}
+      {% if form.posted_successfully? %}
+        <div class="boardroom-form__success">
+          <h3>Thanks — enquiry received.</h3>
+          <p>We'll be back to you with recommendations and a tailored quote.</p>
+        </div>
+      {% else %}
+
+        <div class="boardroom-form__row">
+          <label for="boardroomFormName">Name <span class="req" aria-hidden="true">*</span></label>
+          <input
+            class="text{% if form.errors contains 'name' %} error{% endif %}"
+            type="text"
+            id="boardroomFormName"
+            name="contact[name]"
+            autocapitalize="words"
+            required aria-required="true"
+            value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}">
+          {% render 'form-field-error', form: form, field: 'name' %}
+        </div>
+
+        <div class="boardroom-form__row">
+          <label for="boardroomFormCompany">Company or project name <span class="req" aria-hidden="true">*</span></label>
+          <input
+            class="text"
+            type="text"
+            id="boardroomFormCompany"
+            name="contact[Company or project name]"
+            required aria-required="true">
+        </div>
+
+        <div class="boardroom-form__row boardroom-form__row--two">
+          <div class="boardroom-form__row">
+            <label for="boardroomFormEmail">Email <span class="req" aria-hidden="true">*</span></label>
+            <input
+              class="text{% if form.errors contains 'email' %} error{% endif %}"
+              type="email"
+              id="boardroomFormEmail"
+              name="contact[email]"
+              autocorrect="off"
+              autocapitalize="off"
+              required aria-required="true"
+              value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}">
+            {% render 'form-field-error', form: form, field: 'email' %}
+          </div>
+
+          <div class="boardroom-form__row">
+            <label for="boardroomFormPhone">Phone</label>
+            <input
+              class="text{% if form.errors contains 'phone' %} error{% endif %}"
+              type="tel"
+              id="boardroomFormPhone"
+              name="contact[phone]"
+              value="{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}">
+            {% render 'form-field-error', form: form, field: 'phone' %}
+          </div>
+        </div>
+
+        <div class="boardroom-form__row">
+          <label for="boardroomFormCity">City or site location <span class="req" aria-hidden="true">*</span></label>
+          <input
+            class="text"
+            type="text"
+            id="boardroomFormCity"
+            name="contact[City or site location]"
+            required aria-required="true">
+        </div>
+
+        <div class="boardroom-form__row boardroom-form__row--two">
+          <div class="boardroom-form__row">
+            <label for="boardroomFormSeats">Estimated number of seats <span class="req" aria-hidden="true">*</span></label>
+            <select id="boardroomFormSeats" name="contact[Estimated seats]" required aria-required="true">
+              <option value="">Choose…</option>
+              <option>6–8</option>
+              <option>8–10</option>
+              <option>10–12</option>
+              <option>12–14</option>
+              <option>14–16</option>
+              <option>16–20</option>
+              <option>20+</option>
+            </select>
+          </div>
+
+          <div class="boardroom-form__row">
+            <label for="boardroomFormRoom">Approximate room size</label>
+            <input
+              class="text"
+              type="text"
+              id="boardroomFormRoom"
+              name="contact[Approximate room size]"
+              placeholder="length × width in mm, or describe">
+          </div>
+        </div>
+
+        <div class="boardroom-form__row boardroom-form__row--two">
+          <div class="boardroom-form__row">
+            <label for="boardroomFormShape">Preferred shape</label>
+            <select id="boardroomFormShape" name="contact[Preferred shape]">
+              <option value="">Not sure yet</option>
+              <option>Rectangular</option>
+              <option>Pill</option>
+              <option>Danish Oval</option>
+              <option>Pebble</option>
+            </select>
+          </div>
+
+          <div class="boardroom-form__row">
+            <label for="boardroomFormTimber">Preferred timber and finish</label>
+            <select id="boardroomFormTimber" name="contact[Preferred timber and finish]">
+              <option value="">Not sure yet</option>
+              <option>Clear Rimu</option>
+              <option>Country Bark Tōtara</option>
+              <option>Darkwash Beech</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="boardroom-form__row">
+          <label for="boardroomFormPower">Power and connectivity requirements</label>
+          <textarea
+            class="text"
+            id="boardroomFormPower"
+            name="contact[Power and connectivity requirements]"
+            rows="3"
+            placeholder="Integrated power, USB, AV cabling, etc."></textarea>
+        </div>
+
+        <div class="boardroom-form__row">
+          <label for="boardroomFormDelivery">Target delivery date</label>
+          <input
+            class="text"
+            type="text"
+            id="boardroomFormDelivery"
+            name="contact[Target delivery date]"
+            placeholder="Approx month or quarter is fine">
+        </div>
+
+        <div class="boardroom-form__row">
+          <label for="boardroomFormBody">Anything else we should know</label>
+          <textarea
+            class="text{% if form.errors contains 'body' %} error{% endif %}"
+            id="boardroomFormBody"
+            name="contact[body]"
+            rows="4"></textarea>
+          {% render 'form-field-error', form: form, field: 'body' %}
+        </div>
+
+        {% render 'form-errors', form: form %}
+
+        <div class="boardroom-form__actions">
+          <button class="boardroom-form__submit" name="commit" type="submit">
+            <span>{{ section.settings.submit_label | default: 'Send enquiry' | escape }}</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+      {% endif %}
+    {% endform %}
+
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Boardroom enquiry form",
+  "class": "section-contact-form-boardroom section-contact",
+  "settings": [
+    {
+      "type": "text",
+      "id": "anchor_id",
+      "label": "Anchor ID",
+      "info": "Renders id=\"...\" on the section so other links can scroll-to it.",
+      "default": "commercial-enquiry"
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading",
+      "info": "Use <em>...</em> for italic emphasis on a word.",
+      "default": "<p>Get a boardroom table <em>quote</em>.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "intro",
+      "label": "Intro copy",
+      "default": "<p>Tell us about your project. We come back with a tailored recommendation and quote.</p>"
+    },
+    {
+      "type": "text",
+      "id": "submit_label",
+      "label": "Submit button label",
+      "default": "Send enquiry"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Boardroom enquiry form"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

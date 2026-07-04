@@ -1,0 +1,92 @@
+{{ 'innate-dining-editor-sections.css' | asset_url | stylesheet_tag }}
+{%- liquid
+  assign featured_product = section.settings.featured_product
+  if featured_product == blank
+    for product in collection.products
+      if product.handle == 'oval-solid-wood-dining-table-nz'
+        assign featured_product = product
+      endif
+    endfor
+  endif
+-%}
+<div class="innate-dining-v16" data-dining-editor-section="header">
+  <section class="d66-dining-header" aria-labelledby="d66-dining-title">
+    <div class="d66-dining-header__inner">
+      <div>
+        {%- if section.settings.eyebrow != blank -%}<p class="d66-dining-header__eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
+        <h1 id="d66-dining-title">{{ section.settings.heading }}</h1>
+        {%- if section.settings.subhead != blank -%}<p class="d66-dining-header__subhead">{{ section.settings.subhead }}</p>{%- endif -%}
+        {%- if section.settings.copy_1 != blank -%}<p class="d66-dining-header__copy">{{ section.settings.copy_1 }}</p>{%- endif -%}
+        {%- if section.settings.copy_2 != blank -%}<p class="d66-dining-header__copy">{{ section.settings.copy_2 }}</p>{%- endif -%}
+        <div class="d66-dining-header__actions" aria-label="{{ section.settings.actions_label | escape }}">
+          {%- if section.settings.primary_label != blank -%}<a href="{{ section.settings.primary_link }}">{{ section.settings.primary_label }}</a>{%- endif -%}
+          {%- if section.settings.secondary_label != blank -%}<a href="{{ section.settings.secondary_link }}">{{ section.settings.secondary_label }}</a>{%- endif -%}
+        </div>
+        {%- if section.settings.sample_note != blank -%}<p class="d66-dining-header__sample-note">{{ section.settings.sample_note }}{% if section.settings.sample_link_label != blank %} <a href="{{ section.settings.sample_link }}">{{ section.settings.sample_link_label }}</a>{% endif %}</p>{%- endif -%}
+      </div>
+      {%- if featured_product != blank and featured_product.featured_media != blank -%}
+        <a class="d66-dining-header__visual" href="{{ featured_product.url | within: collection }}" aria-label="View {{ featured_product.title | escape }}">
+          <div class="d66-dining-header__visual-frame">
+            {%- assign featured_image = featured_product.featured_media.preview_image -%}
+            <img
+              src="{{ featured_image | image_url: width: 900 }}"
+              srcset="{{ featured_image | image_url: width: 520 }} 520w, {{ featured_image | image_url: width: 760 }} 760w, {{ featured_image | image_url: width: 980 }} 980w, {{ featured_image | image_url: width: 1200 }} 1200w"
+              sizes="(max-width: 920px) calc(100vw - 36px), 42vw"
+              alt="{{ featured_image.alt | default: featured_product.title | escape }}"
+              width="{{ featured_image.width }}"
+              height="{{ featured_image.height }}"
+              loading="eager"
+              decoding="async"
+              fetchpriority="high">
+          </div>
+          <span class="d66-dining-header__visual-caption"><span><strong>{{ section.settings.visual_caption_title }}</strong> {{ section.settings.visual_caption_text }}</span><span>{{ section.settings.visual_link_label }}</span></span>
+        </a>
+      {%- endif -%}
+      <div class="d66-dining-header__lower">
+        <div class="d66-dining-header__proof">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'proof' -%}
+              <div {{ block.shopify_attributes }}>{% if block.settings.show_stars %}<span class="d66-review-stars" aria-hidden="true">★★★★★</span>{% endif %}<strong>{{ block.settings.title }}</strong>{{ block.settings.text }}{% if block.settings.link_label != blank %} <a href="{{ block.settings.link_url }}">{{ block.settings.link_label }}</a>{% endif %}{{ block.settings.suffix }}</div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Dining header",
+  "settings": [
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Dining tables"},
+    {"type":"text","id":"heading","label":"Heading","default":"Dining tables made to order"},
+    {"type":"textarea","id":"subhead","label":"Subheading","default":"Made in Christchurch from traceable NZ timber and delivered NZ-wide, each table is sized around your room, seating and daily use."},
+    {"type":"textarea","id":"copy_1","label":"First paragraph","default":"Browse round, oval, rectangular and custom dining table styles, then choose the size, timber, colour, finish and base that suits your room."},
+    {"type":"textarea","id":"copy_2","label":"Second paragraph","default":"We work with New Zealand timbers including West Coast Beech, West Coast Rimu and Northland Tōtara, alongside locally made NZ steel bases where the design calls for it. Order timber samples, visit the showroom by appointment, or send a rough table brief for a custom dining table made to fit your space."},
+    {"type":"text","id":"actions_label","label":"Button group accessibility label","default":"Dining table page shortcuts"},
+    {"type":"text","id":"primary_label","label":"Primary button label","default":"Start a table quote"},
+    {"type":"text","id":"primary_link","label":"Primary button link","default":"#dining-enquiry"},
+    {"type":"text","id":"secondary_label","label":"Secondary button label","default":"Order timber samples"},
+    {"type":"text","id":"secondary_link","label":"Secondary button link","default":"/products/product-sample"},
+    {"type":"textarea","id":"sample_note","label":"Sample note text","default":"Not sure on timber or colour?"},
+    {"type":"text","id":"sample_link_label","label":"Sample note link label","default":"Order timber samples"},
+    {"type":"text","id":"sample_link","label":"Sample note link","default":"/products/product-sample"},
+    {"type":"product","id":"featured_product","label":"Feature image product"},
+    {"type":"text","id":"visual_caption_title","label":"Image caption title","default":"Oval Crossroads"},
+    {"type":"text","id":"visual_caption_text","label":"Image caption text","default":"softer movement around the room."},
+    {"type":"text","id":"visual_link_label","label":"Image link label","default":"View listing"}
+  ],
+  "blocks": [
+    {"type":"proof","name":"Proof point","settings":[
+      {"type":"checkbox","id":"show_stars","label":"Show review stars","default":false},
+      {"type":"text","id":"title","label":"Title","default":"Custom choices"},
+      {"type":"text","id":"text","label":"Text","default":"Choose the shape, timber, finish and base, with samples available before you commit."},
+      {"type":"text","id":"link_label","label":"Link label"},
+      {"type":"text","id":"link_url","label":"Link URL"},
+      {"type":"text","id":"suffix","label":"Text after link"}
+    ]}
+  ],
+  "presets": [{"name":"Dining header"}]
+}
+{% endschema %}

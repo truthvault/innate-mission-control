@@ -1,0 +1,340 @@
+<section class="contact-overhaul" data-contact-overhaul>
+  {{ 'innate-contact-overhaul.css' | asset_url | stylesheet_tag }}
+
+  {%- liquid
+    assign people_primary_asset = section.settings.people_image_asset | strip
+    assign people_secondary_asset = section.settings.people_secondary_image_asset | strip
+    assign has_people_primary = false
+    assign has_people_secondary = false
+
+    if section.settings.people_image != blank or people_primary_asset != blank
+      assign has_people_primary = true
+    endif
+
+    if section.settings.people_secondary_image != blank or people_secondary_asset != blank
+      assign has_people_secondary = true
+    endif
+  -%}
+
+  <div class="contact-overhaul__hero">
+    <div class="contact-overhaul__inner">
+      <div class="contact-overhaul__hero-grid">
+        <div class="contact-overhaul__hero-copy">
+          {%- if section.settings.eyebrow != blank -%}
+            <p class="contact-overhaul__eyebrow">{{ section.settings.eyebrow }}</p>
+          {%- endif -%}
+          <h1 class="contact-overhaul__title">{{ section.settings.heading }}</h1>
+          {%- if section.settings.intro != blank -%}
+            <div class="contact-overhaul__intro">{{ section.settings.intro }}</div>
+          {%- endif -%}
+          <div class="contact-overhaul__hero-actions">
+            <a class="contact-overhaul__button" href="#message">{{ section.settings.primary_action_label }}</a>
+            <a class="contact-overhaul__button contact-overhaul__button--secondary" href="#visit">{{ section.settings.secondary_action_label }}</a>
+          </div>
+        </div>
+        {%- if has_people_primary or has_people_secondary -%}
+          <aside class="contact-overhaul__hero-people" aria-label="{{ section.settings.people_eyebrow | escape }}">
+            <div class="contact-overhaul__portrait-grid{% unless has_people_secondary %} contact-overhaul__portrait-grid--single{% endunless %}">
+              {%- if has_people_primary -%}
+                <figure class="contact-overhaul__portrait">
+                  {%- if people_primary_asset != blank -%}
+                    <img src="{{ people_primary_asset | asset_url }}" alt="{{ section.settings.people_image_alt | escape }}" width="900" height="1124" loading="eager">
+                  {%- else -%}
+                    {{ section.settings.people_image | image_url: width: 1000 | image_tag: loading: 'eager', sizes: '(min-width: 980px) 17vw, 50vw', widths: '320, 480, 640, 800, 1000', alt: section.settings.people_image_alt }}
+                  {%- endif -%}
+                </figure>
+              {%- endif -%}
+
+              {%- if has_people_secondary -%}
+                <figure class="contact-overhaul__portrait">
+                  {%- if people_secondary_asset != blank -%}
+                    <img src="{{ people_secondary_asset | asset_url }}" alt="{{ section.settings.people_secondary_image_alt | escape }}" width="900" height="1352" loading="eager">
+                  {%- else -%}
+                    {{ section.settings.people_secondary_image | image_url: width: 1000 | image_tag: loading: 'eager', sizes: '(min-width: 980px) 17vw, 50vw', widths: '320, 480, 640, 800, 1000', alt: section.settings.people_secondary_image_alt }}
+                  {%- endif -%}
+                </figure>
+              {%- endif -%}
+            </div>
+            <div class="contact-overhaul__hero-people-copy">
+              <p class="contact-overhaul__label">{{ section.settings.people_eyebrow }}</p>
+              {%- if section.settings.people_heading != blank -%}
+                <h2>{{ section.settings.people_heading }}</h2>
+              {%- endif -%}
+              <div>{{ section.settings.people_text }}</div>
+            </div>
+          </aside>
+        {%- endif -%}
+      </div>
+
+      <aside class="contact-overhaul__direct" aria-label="Direct contact details">
+        <div class="contact-overhaul__direct-heading">
+          <p class="contact-overhaul__label">{{ section.settings.direct_eyebrow }}</p>
+          <h2>{{ section.settings.direct_heading }}</h2>
+        </div>
+        <div class="contact-overhaul__direct-list">
+          <a class="contact-overhaul__direct-link" href="tel:{{ section.settings.phone_href }}">
+            <span>{{ section.settings.phone_label }}</span>
+            <span>{{ section.settings.phone_display }}</span>
+          </a>
+          <a class="contact-overhaul__direct-link" href="mailto:{{ section.settings.email }}">
+            <span>{{ section.settings.email_label }}</span>
+            <span>{{ section.settings.email }}</span>
+          </a>
+          <a class="contact-overhaul__direct-link" href="#visit">
+            <span>{{ section.settings.visit_label }}</span>
+            <span>{{ section.settings.visit_display }}</span>
+          </a>
+        </div>
+        {%- if section.settings.direct_note != blank -%}
+          <p class="contact-overhaul__direct-note">{{ section.settings.direct_note }}</p>
+        {%- endif -%}
+      </aside>
+
+      <div class="contact-overhaul__sample-callout">
+        <div>
+          <p class="contact-overhaul__label">{{ section.settings.sample_eyebrow }}</p>
+          <h2>{{ section.settings.sample_heading }}</h2>
+        </div>
+        <p>{{ section.settings.sample_text }}</p>
+        <a class="contact-overhaul__text-link" href="{{ section.settings.sample_link }}">{{ section.settings.sample_link_label }}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="contact-overhaul__nav">
+    <div class="contact-overhaul__inner">
+      <div class="contact-overhaul__nav-head">
+        <h2 class="contact-overhaul__section-title">{{ section.settings.routes_heading }}</h2>
+        <p>{{ section.settings.routes_text }}</p>
+      </div>
+      <div class="contact-overhaul__cards">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'route' -%}
+            <a class="contact-overhaul__card" href="{{ block.settings.link }}" {{ block.shopify_attributes }}>
+              <strong>{{ block.settings.title }}</strong>
+              <span>{{ block.settings.text }}</span>
+              <em>{{ block.settings.action }}</em>
+            </a>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </div>
+
+  <div id="visit" class="contact-overhaul__visit">
+    <div class="contact-overhaul__inner contact-overhaul__visit-grid">
+      <div class="contact-overhaul__visit-copy">
+        <p class="contact-overhaul__label">{{ section.settings.visit_eyebrow }}</p>
+        <h2 class="contact-overhaul__section-title">{{ section.settings.visit_heading }}</h2>
+        <div>{{ section.settings.visit_text }}</div>
+      </div>
+      <div class="contact-overhaul__map-panel" data-contact-map-loader="{{ section.id }}">
+        <p class="contact-overhaul__map-title">{{ section.settings.map_title }}</p>
+        <p class="contact-overhaul__map-address">{{ section.settings.map_address }}</p>
+        <div class="contact-overhaul__map-actions">
+          <button type="button" class="contact-overhaul__map-button" data-contact-map-load>{{ section.settings.map_load_label }}</button>
+          <a class="contact-overhaul__map-link" href="{{ section.settings.map_link }}" target="_blank" rel="noopener">{{ section.settings.map_link_label }}</a>
+        </div>
+        <div class="contact-overhaul__map-frame" hidden>
+          <iframe data-src="{{ section.settings.map_embed_url }}" title="{{ section.settings.map_iframe_title | escape }}" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
+      </div>
+      {%- if section.settings.booking_enabled -%}
+        <div class="contact-overhaul__booking-wrap">
+          <script src="https://embed.ycb.me" async="true" data-domain="{{ section.settings.booking_domain }}" data-content="all"></script>
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+
+  <div id="message" class="contact-overhaul__form-section">
+    <div class="contact-overhaul__inner contact-overhaul__form-grid">
+      <div class="contact-overhaul__form-copy">
+        <p class="contact-overhaul__label">{{ section.settings.form_eyebrow }}</p>
+        <h2 class="contact-overhaul__form-title">{{ section.settings.form_heading }}</h2>
+        <div>{{ section.settings.form_intro }}</div>
+        <ul class="contact-overhaul__hint-list">
+          <li>{{ section.settings.form_hint_1 }}</li>
+          <li>{{ section.settings.form_hint_2 }}</li>
+          <li>{{ section.settings.form_hint_3 }}</li>
+        </ul>
+      </div>
+
+      <div class="contact-overhaul__form">
+        {% form 'contact' %}
+          {%- if form.posted_successfully? -%}
+            <div class="contact-overhaul__form-success" role="status">{{ section.settings.form_success }}</div>
+          {%- else -%}
+            {%- if form.errors -%}
+              <div class="contact-overhaul__form-errors" role="alert">{{ form.errors | default_errors }}</div>
+            {%- endif -%}
+            <input type="hidden" name="contact[Subject]" value="{{ section.settings.form_subject }}">
+            <div class="contact-overhaul__field contact-overhaul__field--half">
+              <label for="contactOverhaulName">{{ section.settings.name_label }}</label>
+              <input id="contactOverhaulName" type="text" name="contact[name]" autocomplete="name" required value="{% if form.name %}{{ form.name }}{% elsif customer %}{{ customer.name }}{% endif %}">
+            </div>
+            <div class="contact-overhaul__field contact-overhaul__field--half">
+              <label for="contactOverhaulEmail">{{ section.settings.email_field_label }}</label>
+              <input id="contactOverhaulEmail" type="email" name="contact[email]" autocomplete="email" required value="{% if form.email %}{{ form.email }}{% elsif customer %}{{ customer.email }}{% endif %}">
+            </div>
+            <div class="contact-overhaul__field contact-overhaul__field--half">
+              <label for="contactOverhaulPhone">{{ section.settings.phone_field_label }}</label>
+              <input id="contactOverhaulPhone" type="tel" name="contact[phone]" autocomplete="tel" value="{% if form.phone %}{{ form.phone }}{% elsif customer %}{{ customer.phone }}{% endif %}">
+            </div>
+            <div class="contact-overhaul__field contact-overhaul__field--half">
+              <label for="contactOverhaulInterest">{{ section.settings.interest_label }}</label>
+              <select id="contactOverhaulInterest" name="contact[Interested in]">
+                <option value="">{{ section.settings.interest_placeholder }}</option>
+                <option>{{ section.settings.interest_option_1 }}</option>
+                <option>{{ section.settings.interest_option_2 }}</option>
+                <option>{{ section.settings.interest_option_3 }}</option>
+                <option>{{ section.settings.interest_option_4 }}</option>
+                <option>{{ section.settings.interest_option_5 }}</option>
+              </select>
+            </div>
+            <div class="contact-overhaul__field contact-overhaul__field--half">
+              <label for="contactOverhaulLocation">{{ section.settings.location_label }}</label>
+              <input id="contactOverhaulLocation" type="text" name="contact[Location]" placeholder="{{ section.settings.location_placeholder }}">
+            </div>
+            <div class="contact-overhaul__field contact-overhaul__field--half">
+              <label for="contactOverhaulTiming">{{ section.settings.timing_label }}</label>
+              <input id="contactOverhaulTiming" type="text" name="contact[Timing]" placeholder="{{ section.settings.timing_placeholder }}">
+            </div>
+            <div class="contact-overhaul__field contact-overhaul__wide">
+              <label for="contactOverhaulMessage">{{ section.settings.message_label }}</label>
+              <textarea id="contactOverhaulMessage" name="contact[body]" placeholder="{{ section.settings.message_placeholder }}" required>{% if form.body %}{{ form.body }}{% endif %}</textarea>
+            </div>
+            <div class="contact-overhaul__form-actions">
+              <button class="contact-overhaul__button" type="submit">{{ section.settings.button_label }}</button>
+            </div>
+          {%- endif -%}
+        {% endform %}
+      </div>
+    </div>
+  </div>
+
+  {%- if section.settings.supplier_note != blank -%}
+    <div class="contact-overhaul__supplier">
+      <div class="contact-overhaul__inner">{{ section.settings.supplier_note }}</div>
+    </div>
+  {%- endif -%}
+</section>
+
+<script>
+  (function() {
+    var root = document.querySelector('[data-contact-map-loader="{{ section.id }}"]');
+    if (!root) return;
+    var button = root.querySelector('[data-contact-map-load]');
+    var frame = root.querySelector('.contact-overhaul__map-frame');
+    var iframe = root.querySelector('iframe[data-src]');
+    if (!button || !frame || !iframe) return;
+    button.addEventListener('click', function() {
+      iframe.src = iframe.getAttribute('data-src');
+      frame.hidden = false;
+      button.hidden = true;
+    });
+  }());
+</script>
+
+{% schema %}
+{
+  "name": "Contact overhaul",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Hero eyebrow", "default": "Contact Innate" },
+    { "type": "text", "id": "heading", "label": "Hero heading", "default": "Start with the room." },
+    { "type": "richtext", "id": "intro", "label": "Hero intro", "default": "<p>You do not need a finished specification before getting in touch. Most custom tables and benchtops start with a room, a rough size, a photo, or a timber you like.</p><p>Send what you know and we will help narrow the practical choices: size, shape, base, timber, finish, timing and delivery.</p>" },
+    { "type": "text", "id": "primary_action_label", "label": "Primary action label", "default": "Send an enquiry" },
+    { "type": "text", "id": "secondary_action_label", "label": "Secondary action label", "default": "Book a showroom visit" },
+    { "type": "text", "id": "direct_eyebrow", "label": "Direct card eyebrow", "default": "Direct details" },
+    { "type": "text", "id": "direct_heading", "label": "Direct card heading", "default": "Talk to Guido" },
+    { "type": "text", "id": "phone_label", "label": "Phone label", "default": "Call" },
+    { "type": "text", "id": "phone_display", "label": "Phone display", "default": "027 350 2083" },
+    { "type": "text", "id": "phone_href", "label": "Phone href digits", "default": "+64273502083" },
+    { "type": "text", "id": "email_label", "label": "Email label", "default": "Email" },
+    { "type": "text", "id": "email", "label": "Email address", "default": "hello@innatefurniture.co.nz" },
+    { "type": "text", "id": "visit_label", "label": "Visit link label", "default": "Visit" },
+    { "type": "text", "id": "visit_display", "label": "Visit link text", "default": "Book the showroom" },
+    { "type": "textarea", "id": "direct_note", "label": "Direct note", "default": "Quick questions about size, timber, lead times or where to start are completely fine." },
+    { "type": "text", "id": "sample_eyebrow", "label": "Sample eyebrow", "default": "Timber samples" },
+    { "type": "text", "id": "sample_heading", "label": "Sample heading", "default": "Choosing timber or finish?" },
+    { "type": "textarea", "id": "sample_text", "label": "Sample text", "default": "Order samples if you want to compare timber and finish options at home before deciding." },
+    { "type": "text", "id": "sample_link_label", "label": "Sample link label", "default": "Order timber samples" },
+    { "type": "text", "id": "sample_link", "label": "Sample link", "default": "/products/product-sample" },
+    { "type": "text", "id": "routes_heading", "label": "Route heading", "default": "What do you need help with?" },
+    { "type": "textarea", "id": "routes_text", "label": "Route intro", "default": "Choose the closest starting point. You can still send a general message if none of these fit cleanly." },
+    { "type": "text", "id": "form_eyebrow", "label": "Form eyebrow", "default": "Send a message" },
+    { "type": "text", "id": "form_heading", "label": "Form heading", "default": "Tell us what you already know." },
+    { "type": "richtext", "id": "form_intro", "label": "Form intro", "default": "<p>Rough is useful. Finished specifications can come later.</p><p>If you have photos of the space, email them to <a href=\"mailto:hello@innatefurniture.co.nz\">hello@innatefurniture.co.nz</a> after sending the form.</p>" },
+    { "type": "text", "id": "form_hint_1", "label": "Form hint 1", "default": "Approximate size, room dimensions or number of people." },
+    { "type": "text", "id": "form_hint_2", "label": "Form hint 2", "default": "Timber, colour, base style or product page you like." },
+    { "type": "text", "id": "form_hint_3", "label": "Form hint 3", "default": "Timing, delivery location and anything practical we should know." },
+    { "type": "text", "id": "form_subject", "label": "Form subject", "default": "Website contact enquiry" },
+    { "type": "text", "id": "form_success", "label": "Form success message", "default": "Thanks, your message has been sent. We’ll come back to you soon." },
+    { "type": "text", "id": "name_label", "label": "Name label", "default": "Name" },
+    { "type": "text", "id": "email_field_label", "label": "Email field label", "default": "Email" },
+    { "type": "text", "id": "phone_field_label", "label": "Phone field label", "default": "Phone" },
+    { "type": "text", "id": "interest_label", "label": "Interest field label", "default": "Interested in" },
+    { "type": "text", "id": "interest_placeholder", "label": "Interest placeholder", "default": "Choose one" },
+    { "type": "text", "id": "interest_option_1", "label": "Interest option 1", "default": "Custom dining or home furniture" },
+    { "type": "text", "id": "interest_option_2", "label": "Interest option 2", "default": "Benchtops or timber supply" },
+    { "type": "text", "id": "interest_option_3", "label": "Interest option 3", "default": "Boardroom or office table" },
+    { "type": "text", "id": "interest_option_4", "label": "Interest option 4", "default": "Hospitality or commercial project" },
+    { "type": "text", "id": "interest_option_5", "label": "Interest option 5", "default": "Showroom visit or general question" },
+    { "type": "text", "id": "location_label", "label": "Location label", "default": "Location" },
+    { "type": "text", "id": "location_placeholder", "label": "Location placeholder", "default": "City or delivery area" },
+    { "type": "text", "id": "timing_label", "label": "Timing label", "default": "Timing" },
+    { "type": "text", "id": "timing_placeholder", "label": "Timing placeholder", "default": "Approx month or deadline" },
+    { "type": "text", "id": "message_label", "label": "Message label", "default": "Rough brief" },
+    { "type": "textarea", "id": "message_placeholder", "label": "Message placeholder", "default": "Example: We need a table for six, around 2200mm long, probably rimu or tōtara, Christchurch delivery. Not sure on base style yet." },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Send enquiry" },
+    { "type": "text", "id": "visit_eyebrow", "label": "Visit eyebrow", "default": "Workshop showroom" },
+    { "type": "text", "id": "visit_heading", "label": "Visit heading", "default": "Book a showroom visit." },
+    { "type": "richtext", "id": "visit_text", "label": "Visit text", "default": "<p>The showroom sits beside the workshop at 281 Queen Elizabeth II Drive in Christchurch. Choose a time below to see finished tables, look through timber samples, and talk through what you are making.</p>" },
+    { "type": "checkbox", "id": "booking_enabled", "label": "Show YouCanBookMe calendar", "default": true },
+    { "type": "text", "id": "booking_domain", "label": "YouCanBookMe domain", "default": "innatefurniture" },
+    { "type": "text", "id": "map_title", "label": "Map title", "default": "Find the Christchurch workshop showroom" },
+    { "type": "text", "id": "map_address", "label": "Map address", "default": "281 Queen Elizabeth II Drive, Mairehau, Christchurch 8052" },
+    { "type": "text", "id": "map_load_label", "label": "Map load label", "default": "Load map" },
+    { "type": "text", "id": "map_link_label", "label": "Map link label", "default": "Open in Google Maps" },
+    { "type": "text", "id": "map_link", "label": "Map link", "default": "https://maps.app.goo.gl/F9utc223fJn62NP36" },
+    { "type": "textarea", "id": "map_embed_url", "label": "Map embed URL", "default": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3479.052275924413!2d172.64177661245765!3d-43.48537667883263!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6d318bfcf338b9b5%3A0x3a66ff84b7adf937!2s281%20Queen%20Elizabeth%20II%20Drive%2C%20Mairehau%2C%20Christchurch%208052!5e1!3m2!1sen!2snz!4v1776293539610!5m2!1sen!2snz" },
+    { "type": "text", "id": "map_iframe_title", "label": "Map iframe title", "default": "Map to Innate Furniture workshop showroom" },
+    { "type": "image_picker", "id": "people_image", "label": "Primary people image" },
+    { "type": "text", "id": "people_image_asset", "label": "Primary theme asset filename" },
+    { "type": "text", "id": "people_image_alt", "label": "Primary people image alt text", "default": "Guido at Innate Furniture" },
+    { "type": "image_picker", "id": "people_secondary_image", "label": "Secondary people image" },
+    { "type": "text", "id": "people_secondary_image_asset", "label": "Secondary theme asset filename" },
+    { "type": "text", "id": "people_secondary_image_alt", "label": "Secondary people image alt text", "default": "Nick at Innate Furniture" },
+    { "type": "text", "id": "people_eyebrow", "label": "People eyebrow", "default": "Who you’ll deal with" },
+    { "type": "text", "id": "people_heading", "label": "People heading" },
+    { "type": "richtext", "id": "people_text", "label": "People text", "default": "<p>Most enquiries start with Guido, then move into the Christchurch workshop with Nick, Dylan and the team when the practical details are clear.</p>" },
+    { "type": "richtext", "id": "supplier_note", "label": "Supplier note", "default": "<p>Suppliers can reach Nick directly on <a href=\"tel:+64220209901\">022 020 9901</a>.</p>" }
+  ],
+  "blocks": [
+    {
+      "type": "route",
+      "name": "Enquiry route",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Custom furniture" },
+        { "type": "textarea", "id": "text", "label": "Text", "default": "Dining tables, benches, coffee tables and one-off pieces for the home." },
+        { "type": "text", "id": "action", "label": "Action text", "default": "Start enquiry" },
+        { "type": "text", "id": "link", "label": "Link", "default": "#message" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Contact overhaul",
+      "blocks": [
+        { "type": "route", "settings": { "title": "Custom dining and home furniture", "text": "Tables, benches and one-off furniture made to suit your room.", "action": "Send a furniture enquiry", "link": "#message" } },
+        { "type": "route", "settings": { "title": "Benchtops and timber supply", "text": "Timber benchtops, slabs and practical material questions.", "action": "Send a timber enquiry", "link": "#message" } },
+        { "type": "route", "settings": { "title": "Boardroom and commercial", "text": "Office tables, hospitality furniture, fit-out pieces and larger projects.", "action": "Send a project enquiry", "link": "#message" } },
+        { "type": "route", "settings": { "title": "Visit the showroom", "text": "See finished tables, timber samples and the Christchurch workshop.", "action": "Book a visit", "link": "#visit" } }
+      ]
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

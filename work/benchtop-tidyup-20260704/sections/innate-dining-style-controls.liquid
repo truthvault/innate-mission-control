@@ -1,0 +1,83 @@
+{%- liquid
+  assign visible_count = 0
+  for product in collection.products
+    unless product.handle == 'product-sample'
+      assign visible_count = visible_count | plus: 1
+    endunless
+  endfor
+  assign count_noun = section.settings.count_plural
+  if visible_count == 1
+    assign count_noun = section.settings.count_single
+  endif
+-%}
+<div class="innate-dining-v16" data-dining-editor-section="style-controls">
+  <section class="d16-product-intro" id="table-styles" aria-label="{{ section.settings.aria_label | escape }}">
+    <div class="d16-wrap d16-product-intro__grid">
+      <div><h2 class="d16-display">{{ section.settings.heading }}</h2></div>
+      <div>
+        {%- if section.settings.text != blank -%}<p class="d16-copy">{{ section.settings.text }}</p>{%- endif -%}
+        {%- if section.settings.price_note != blank -%}<p class="d17-price-note">{{ section.settings.price_note }}</p>{%- endif -%}
+      </div>
+    </div>
+    <div class="d75-dining-sort d78-show-sort" aria-label="{{ section.settings.controls_label | escape }}" data-d78-show-sort>
+      <div class="d75-dining-sort__summary"><strong><span data-d78-visible-count>{{ visible_count }}</span> <span data-d78-count-noun>{{ count_noun }}</span></strong></div>
+      <div class="d78-show-sort__filters" role="group" aria-label="{{ section.settings.filters_label | escape }}">
+        <span class="d78-show-sort__label">{{ section.settings.filter_prefix }}</span>
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'filter' -%}
+            <button type="button" class="d78-filter-button{% if block.settings.filter_value == 'all' %} is-active{% endif %}" data-d78-filter="{{ block.settings.filter_value }}" aria-pressed="{% if block.settings.filter_value == 'all' %}true{% else %}false{% endif %}" {{ block.shopify_attributes }}>{{ block.settings.label }}</button>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      <form class="d75-dining-sort__control" action="{{ collection.url }}" method="get" data-d81-client-sort-form>
+        <label for="d75-dining-sort-by">{{ section.settings.sort_label }}</label>
+        <select id="d75-dining-sort-by" name="sort_by" aria-label="{{ section.settings.sort_aria_label | escape }}">
+          <option value="manual">{{ section.settings.sort_manual }}</option>
+          <option value="price-ascending">{{ section.settings.sort_price_ascending }}</option>
+          <option value="price-descending">{{ section.settings.sort_price_descending }}</option>
+          <option value="created-descending">{{ section.settings.sort_newest }}</option>
+        </select>
+        <noscript><button type="submit">{{ section.settings.apply_label }}</button></noscript>
+      </form>
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Dining style controls",
+  "settings": [
+    {"type":"text","id":"aria_label","label":"Section accessibility label","default":"Dining table styles"},
+    {"type":"text","id":"heading","label":"Heading","default":"Browse dining table styles"},
+    {"type":"textarea","id":"text","label":"Text","default":"Choose a starting style below, then customise the size, timber, colour and base to suit your room."},
+    {"type":"textarea","id":"price_note","label":"Price note"},
+    {"type":"text","id":"controls_label","label":"Controls accessibility label","default":"Dining table controls"},
+    {"type":"text","id":"filters_label","label":"Filter group accessibility label","default":"Show dining table designs by type"},
+    {"type":"text","id":"filter_prefix","label":"Filter prefix","default":"Show:"},
+    {"type":"text","id":"count_single","label":"Single item count noun","default":"dining table design"},
+    {"type":"text","id":"count_plural","label":"Plural item count noun","default":"dining table designs"},
+    {"type":"text","id":"sort_label","label":"Sort label","default":"Sort by"},
+    {"type":"text","id":"sort_aria_label","label":"Sort accessibility label","default":"Sort dining table designs"},
+    {"type":"text","id":"sort_manual","label":"Featured sort label","default":"Featured"},
+    {"type":"text","id":"sort_price_ascending","label":"Price ascending label","default":"Price: low to high"},
+    {"type":"text","id":"sort_price_descending","label":"Price descending label","default":"Price: high to low"},
+    {"type":"text","id":"sort_newest","label":"Newest label","default":"Newest"},
+    {"type":"text","id":"apply_label","label":"No-script apply button label","default":"Apply"}
+  ],
+  "blocks": [
+    {"type":"filter","name":"Filter button","settings":[
+      {"type":"text","id":"label","label":"Button label","default":"All"},
+      {"type":"select","id":"filter_value","label":"Filter value","default":"all","options":[
+        {"value":"all","label":"All"},
+        {"value":"round","label":"Round"},
+        {"value":"oval","label":"Oval"},
+        {"value":"pebble","label":"Pebble"},
+        {"value":"rectangular","label":"Rectangular"},
+        {"value":"steel-base","label":"Steel base"},
+        {"value":"timber-base","label":"Timber base"}
+      ]}
+    ]}
+  ],
+  "presets": [{"name":"Dining style controls"}]
+}
+{% endschema %}

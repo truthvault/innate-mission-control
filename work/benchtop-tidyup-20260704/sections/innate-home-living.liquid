@@ -1,0 +1,1056 @@
+{% liquid
+  assign hero_handles = section.settings.hero_product_handles | split: '|'
+  assign sample_handle = section.settings.sample_product_handle | default: 'product-sample'
+  assign collection_products_classes = ''
+  capture collection_products_classes
+    render 'get-collection-products-classes'
+  endcapture
+%}
+
+<section class="home-living" data-section-id="{{ section.id }}" data-section-type="home-living-collection">
+  {% paginate collection.products by 50 %}
+    <div class="home-living-hero">
+      <div class="home-living-wrap home-living-hero__grid">
+        <div class="home-living-hero__copy">
+          {% if section.settings.hero_eyebrow != blank %}
+            <p class="home-living-eyebrow">{{ section.settings.hero_eyebrow }}</p>
+          {% endif %}
+          {% if section.settings.hero_heading != blank %}
+            <h1>{{ section.settings.hero_heading }}</h1>
+          {% endif %}
+          {% if section.settings.hero_text != blank %}
+            <div class="home-living-copy">{{ section.settings.hero_text | newline_to_br }}</div>
+          {% endif %}
+          <div class="home-living-actions">
+            {% if section.settings.hero_primary_label != blank and section.settings.hero_primary_link != blank %}
+              <a class="home-living-button" href="{{ section.settings.hero_primary_link }}">{{ section.settings.hero_primary_label }}</a>
+            {% endif %}
+            {% if section.settings.hero_secondary_label != blank and section.settings.hero_secondary_link != blank %}
+              <a class="home-living-button home-living-button--ghost" href="{{ section.settings.hero_secondary_link }}">{{ section.settings.hero_secondary_label }}</a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="home-living-mosaic" aria-label="{{ section.settings.hero_mosaic_label | escape }}">
+          {% for target_handle in hero_handles limit: 4 %}
+            {% assign clean_handle = target_handle | strip %}
+            {% for home_product in collection.products %}
+              {% if home_product.handle == clean_handle and home_product.featured_media %}
+                <a class="home-living-mosaic__item" href="{{ home_product.url | within: collection }}">
+                  {{ home_product.featured_media.preview_image | image_url: width: 900 | image_tag: loading: 'eager', widths: '360, 540, 720, 900', alt: home_product.featured_media.preview_image.alt | default: home_product.title }}
+                  <span>{{ home_product.title }}</span>
+                </a>
+                {% break %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="home-living-nav">
+      <div class="home-living-wrap home-living-nav__inner">
+        {% for block in section.blocks %}
+          {% if block.type == 'anchor' and block.settings.label != blank and block.settings.target != blank %}
+            <a href="#{{ block.settings.target | handleize }}" {{ block.shopify_attributes }}>{{ block.settings.label }}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="home-living-intro">
+      <div class="home-living-wrap home-living-intro__grid">
+        <div>
+          {% if section.settings.intro_eyebrow != blank %}
+            <p class="home-living-eyebrow">{{ section.settings.intro_eyebrow }}</p>
+          {% endif %}
+          {% if section.settings.intro_heading != blank %}
+            <h2>{{ section.settings.intro_heading }}</h2>
+          {% endif %}
+        </div>
+        {% if section.settings.intro_text != blank %}
+          <div class="home-living-copy">{{ section.settings.intro_text | newline_to_br }}</div>
+        {% endif %}
+      </div>
+
+      <div class="home-living-wrap home-living-proof">
+        {% for block in section.blocks %}
+          {% if block.type == 'proof' %}
+            <article class="home-living-proof__item" {{ block.shopify_attributes }}>
+              {% if block.settings.title != blank %}
+                <h3>{{ block.settings.title }}</h3>
+              {% endif %}
+              {% if block.settings.text != blank %}
+                <p>{{ block.settings.text }}</p>
+              {% endif %}
+            </article>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="home-living-products">
+      {% for block in section.blocks %}
+        {% if block.type == 'product_group' %}
+          {% assign group_handles = block.settings.product_handles | replace: ', ', '|' | replace: ',', '|' | split: '|' %}
+          <section class="home-living-group" id="{{ block.settings.anchor_id | handleize }}" {{ block.shopify_attributes }}>
+            <div class="home-living-wrap home-living-group__head">
+              <div>
+                {% if block.settings.eyebrow != blank %}
+                  <p class="home-living-eyebrow">{{ block.settings.eyebrow }}</p>
+                {% endif %}
+                {% if block.settings.heading != blank %}
+                  <h2>{{ block.settings.heading }}</h2>
+                {% endif %}
+              </div>
+              {% if block.settings.text != blank %}
+                <div class="home-living-copy">{{ block.settings.text | newline_to_br }}</div>
+              {% endif %}
+            </div>
+            <div class="home-living-wrap">
+              <div class="collection-products {{ collection_products_classes }}">
+                {% assign rendered_group_count = 0 %}
+                {% for target_handle in group_handles %}
+                  {% assign clean_handle = target_handle | strip %}
+                  {% if clean_handle != blank %}
+                    {% for home_product in collection.products %}
+                      {% if home_product.handle == clean_handle %}
+                        {% render 'collection-product', product: home_product, sizes: '(max-width: 620px) 50vw, (max-width: 960px) 33vw, 25vw' %}
+                        {% assign rendered_group_count = rendered_group_count | plus: 1 %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </div>
+              {% if block.settings.note != blank %}
+                <p class="home-living-group__note">{{ block.settings.note }}</p>
+              {% endif %}
+              {% if rendered_group_count == 0 %}
+                <p class="home-living-group__note">{{ block.settings.empty_text }}</p>
+              {% endif %}
+            </div>
+          </section>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="home-living-materials">
+      <div class="home-living-wrap home-living-materials__grid">
+        <div>
+          {% if section.settings.materials_eyebrow != blank %}
+            <p class="home-living-eyebrow">{{ section.settings.materials_eyebrow }}</p>
+          {% endif %}
+          {% if section.settings.materials_heading != blank %}
+            <h2>{{ section.settings.materials_heading }}</h2>
+          {% endif %}
+        </div>
+        {% if section.settings.materials_text != blank %}
+          <div class="home-living-copy">{{ section.settings.materials_text | newline_to_br }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="home-living-samples" id="{{ section.settings.sample_anchor | handleize }}">
+      <div class="home-living-wrap home-living-samples__grid">
+        <div>
+          {% if section.settings.sample_eyebrow != blank %}
+            <p class="home-living-eyebrow">{{ section.settings.sample_eyebrow }}</p>
+          {% endif %}
+          {% if section.settings.sample_heading != blank %}
+            <h2>{{ section.settings.sample_heading }}</h2>
+          {% endif %}
+          {% if section.settings.sample_text != blank %}
+            <div class="home-living-copy">{{ section.settings.sample_text | newline_to_br }}</div>
+          {% endif %}
+        </div>
+        {% for home_product in collection.products %}
+          {% if home_product.handle == sample_handle %}
+            <div class="home-living-sample-card">
+              {% render 'collection-product', product: home_product, sizes: '(max-width: 720px) 100vw, 420px' %}
+            </div>
+            {% break %}
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="home-living-faq" id="{{ section.settings.faq_anchor | handleize }}">
+      <div class="home-living-wrap home-living-faq__grid">
+        <div>
+          {% if section.settings.faq_eyebrow != blank %}
+            <p class="home-living-eyebrow">{{ section.settings.faq_eyebrow }}</p>
+          {% endif %}
+          {% if section.settings.faq_heading != blank %}
+            <h2>{{ section.settings.faq_heading }}</h2>
+          {% endif %}
+        </div>
+        <div class="home-living-accordion">
+          {% for block in section.blocks %}
+            {% if block.type == 'faq' %}
+              <details {{ block.shopify_attributes }}>
+                <summary>{{ block.settings.question }}</summary>
+                <div>{{ block.settings.answer }}</div>
+              </details>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="home-living-cta">
+      <div class="home-living-wrap home-living-cta__grid">
+        <div>
+          {% if section.settings.cta_eyebrow != blank %}
+            <p class="home-living-eyebrow">{{ section.settings.cta_eyebrow }}</p>
+          {% endif %}
+          {% if section.settings.cta_heading != blank %}
+            <h2>{{ section.settings.cta_heading }}</h2>
+          {% endif %}
+        </div>
+        <div>
+          {% if section.settings.cta_text != blank %}
+            <div class="home-living-copy">{{ section.settings.cta_text | newline_to_br }}</div>
+          {% endif %}
+          <div class="home-living-actions">
+            {% for block in section.blocks %}
+              {% if block.type == 'cta_link' and block.settings.label != blank and block.settings.link != blank %}
+                <a class="home-living-button{% if block.settings.style == 'ghost' %} home-living-button--ghost{% endif %}" href="{{ block.settings.link }}" {{ block.shopify_attributes }}>{{ block.settings.label }}</a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endpaginate %}
+</section>
+
+{% stylesheet %}
+  .home-living {
+    --hl-green: #283229;
+    --hl-cream: #fffaf3;
+    --hl-warm: #f4eee5;
+    --hl-line: rgba(40, 50, 41, 0.14);
+    --hl-muted: rgba(40, 50, 41, 0.74);
+    background: var(--hl-cream);
+    color: var(--hl-green);
+  }
+
+  .home-living * {
+    box-sizing: border-box;
+  }
+
+  .home-living-wrap {
+    width: min(1160px, calc(100% - 36px));
+    margin: 0 auto;
+  }
+
+  .home-living-eyebrow {
+    margin: 0 0 10px;
+    color: rgba(40, 50, 41, 0.6);
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: 0.13em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .home-living h1,
+  .home-living h2 {
+    margin: 0;
+    color: var(--hl-green);
+    font-family: Fraunces, Georgia, serif;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 0.98;
+  }
+
+  .home-living h1 {
+    max-width: 760px;
+    font-size: clamp(42px, 5.4vw, 78px);
+  }
+
+  .home-living h2 {
+    max-width: 680px;
+    font-size: clamp(34px, 4.2vw, 58px);
+  }
+
+  .home-living-copy {
+    color: var(--hl-muted);
+    font-size: clamp(16px, 1.16vw, 19px);
+    line-height: 1.58;
+  }
+
+  .home-living-copy p:first-child {
+    margin-top: 0;
+  }
+
+  .home-living-copy p:last-child {
+    margin-bottom: 0;
+  }
+
+  .home-living-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .home-living-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 12px 19px;
+    border: 1px solid var(--hl-green);
+    border-radius: 999px;
+    background: var(--hl-green);
+    color: var(--hl-cream) !important;
+    font-weight: 850;
+    line-height: 1.1;
+    text-decoration: none !important;
+  }
+
+  .home-living-button--ghost {
+    background: transparent;
+    color: var(--hl-green) !important;
+  }
+
+  .home-living-hero {
+    padding: clamp(46px, 7vw, 88px) 0 clamp(34px, 5vw, 72px);
+    background: var(--hl-cream);
+  }
+
+  .home-living-hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(340px, 1.08fr);
+    gap: clamp(28px, 5vw, 74px);
+    align-items: center;
+  }
+
+  .home-living-hero__copy .home-living-copy {
+    max-width: 660px;
+    margin-top: 18px;
+  }
+
+  .home-living-mosaic {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .home-living-mosaic__item {
+    position: relative;
+    min-height: 190px;
+    overflow: hidden;
+    background: var(--hl-warm);
+    color: var(--hl-cream) !important;
+    text-decoration: none !important;
+  }
+
+  .home-living-mosaic__item:first-child {
+    grid-row: span 2;
+  }
+
+  .home-living-mosaic img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 190px;
+    object-fit: cover;
+    object-position: center;
+    filter: saturate(0.96) contrast(1.02);
+    transition: transform 0.34s ease;
+  }
+
+  .home-living-mosaic__item:hover img {
+    transform: scale(1.02);
+  }
+
+  .home-living-mosaic__item:after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 46%, rgba(0, 0, 0, 0.42));
+    pointer-events: none;
+  }
+
+  .home-living-mosaic span {
+    position: absolute;
+    right: 15px;
+    bottom: 13px;
+    left: 15px;
+    z-index: 1;
+    color: var(--hl-cream);
+    font-size: 14px;
+    font-weight: 850;
+    line-height: 1.25;
+  }
+
+  .home-living-nav {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    border-top: 1px solid var(--hl-line);
+    border-bottom: 1px solid var(--hl-line);
+    background: rgba(255, 250, 243, 0.94);
+    backdrop-filter: blur(10px);
+  }
+
+  .home-living-nav__inner {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .home-living-nav a {
+    flex: 0 0 auto;
+    color: var(--hl-green) !important;
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1;
+    text-decoration: none !important;
+    white-space: nowrap;
+  }
+
+  .home-living-nav a:after {
+    content: "";
+    display: block;
+    height: 1px;
+    margin-top: 5px;
+    background: currentColor;
+    opacity: 0.36;
+  }
+
+  .home-living-intro,
+  .home-living-materials,
+  .home-living-faq {
+    padding: clamp(42px, 6vw, 76px) 0;
+    border-top: 1px solid var(--hl-line);
+    background: var(--hl-warm);
+  }
+
+  .home-living-intro__grid,
+  .home-living-materials__grid,
+  .home-living-faq__grid,
+  .home-living-cta__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(300px, 1.1fr);
+    gap: clamp(24px, 5vw, 72px);
+    align-items: start;
+  }
+
+  .home-living-proof {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: clamp(28px, 4vw, 42px);
+  }
+
+  .home-living-proof__item {
+    min-height: 128px;
+    padding: 18px;
+    border: 1px solid var(--hl-line);
+    background: var(--hl-cream);
+  }
+
+  .home-living-proof__item h3 {
+    margin: 0 0 8px;
+    color: var(--hl-green);
+    font-size: 16px;
+    font-weight: 850;
+    line-height: 1.25;
+  }
+
+  .home-living-proof__item p {
+    margin: 0;
+    color: var(--hl-muted);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .home-living-products {
+    background: var(--hl-cream);
+  }
+
+  .home-living-group {
+    padding: clamp(44px, 6vw, 78px) 0;
+    border-top: 1px solid var(--hl-line);
+    scroll-margin-top: 86px;
+  }
+
+  .home-living-group__head {
+    display: grid;
+    grid-template-columns: minmax(0, 0.88fr) minmax(300px, 1.12fr);
+    gap: clamp(22px, 4.6vw, 66px);
+    align-items: end;
+    margin-bottom: 28px;
+  }
+
+  .home-living-products .collection-products {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: clamp(18px, 2.4vw, 32px) !important;
+    align-items: start !important;
+  }
+
+  .home-living-products .collection-product,
+  .home-living-sample-card .collection-product {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    text-align: left !important;
+    text-decoration: none !important;
+  }
+
+  .home-living-products .collection-product .inner,
+  .home-living-products .collection-product .info,
+  .home-living-products .collection-product .metas,
+  .home-living-sample-card .collection-product .inner,
+  .home-living-sample-card .collection-product .info,
+  .home-living-sample-card .collection-product .metas {
+    width: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .home-living-products .collection-product .image,
+  .home-living-sample-card .collection-product .image {
+    aspect-ratio: 4 / 3 !important;
+    height: auto !important;
+    margin-bottom: 13px !important;
+    overflow: hidden !important;
+    background: var(--hl-warm) !important;
+  }
+
+  .home-living-products .collection-product img,
+  .home-living-sample-card .collection-product img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: saturate(0.96) contrast(1.02);
+  }
+
+  .home-living-products .gradient,
+  .home-living-products .vendor,
+  .home-living-sample-card .gradient,
+  .home-living-sample-card .vendor {
+    display: none !important;
+  }
+
+  .home-living-products .line,
+  .home-living-sample-card .line {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 5px !important;
+  }
+
+  .home-living-products .collection-product-title .title,
+  .home-living-sample-card .collection-product-title .title {
+    color: var(--hl-green) !important;
+    font-family: Maven Pro, Arial, sans-serif !important;
+    font-size: clamp(16px, 1.12vw, 19px) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.26 !important;
+    text-transform: none !important;
+  }
+
+  .home-living-products .collection-product-price,
+  .home-living-sample-card .collection-product-price {
+    order: 2;
+    color: var(--hl-muted) !important;
+    font-size: 14px !important;
+  }
+
+  .home-living-group__note {
+    max-width: 760px;
+    margin: 22px 0 0;
+    color: var(--hl-muted);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .home-living-materials {
+    background: var(--hl-warm);
+  }
+
+  .home-living-samples {
+    padding: clamp(44px, 6vw, 78px) 0;
+    border-top: 1px solid var(--hl-line);
+    background: var(--hl-cream);
+    scroll-margin-top: 86px;
+  }
+
+  .home-living-samples__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(300px, 0.72fr);
+    gap: clamp(24px, 5vw, 72px);
+    align-items: center;
+  }
+
+  .home-living-sample-card {
+    padding: 16px;
+    border: 1px solid var(--hl-line);
+    background: var(--hl-warm);
+  }
+
+  .home-living-accordion {
+    border-top: 1px solid rgba(40, 50, 41, 0.22);
+  }
+
+  .home-living-accordion details {
+    border-bottom: 1px solid rgba(40, 50, 41, 0.22);
+  }
+
+  .home-living-accordion summary {
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 20px 0;
+    color: var(--hl-green);
+    cursor: pointer;
+    font-weight: 850;
+    line-height: 1.3;
+    list-style: none;
+  }
+
+  .home-living-accordion summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .home-living-accordion summary:after {
+    content: "+";
+    flex: 0 0 auto;
+    color: rgba(40, 50, 41, 0.62);
+    font-family: Fraunces, Georgia, serif;
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 0.8;
+  }
+
+  .home-living-accordion details[open] summary:after {
+    content: "-";
+  }
+
+  .home-living-accordion div {
+    padding-bottom: 20px;
+    color: var(--hl-muted);
+    line-height: 1.58;
+  }
+
+  .home-living-accordion p {
+    margin-top: 0;
+  }
+
+  .home-living-cta {
+    padding: clamp(48px, 7vw, 86px) 0;
+    border-top: 1px solid rgba(255, 250, 243, 0.2);
+    background: var(--hl-green);
+    color: var(--hl-cream);
+  }
+
+  .home-living-cta h2,
+  .home-living-cta .home-living-eyebrow,
+  .home-living-cta .home-living-copy {
+    color: var(--hl-cream);
+  }
+
+  .home-living-cta .home-living-copy {
+    opacity: 0.86;
+  }
+
+  .home-living-cta .home-living-button {
+    border-color: var(--hl-cream);
+    background: var(--hl-cream);
+    color: var(--hl-green) !important;
+  }
+
+  .home-living-cta .home-living-button--ghost {
+    background: transparent;
+    color: var(--hl-cream) !important;
+  }
+
+  @media (max-width: 960px) {
+    .home-living-hero__grid,
+    .home-living-intro__grid,
+    .home-living-materials__grid,
+    .home-living-faq__grid,
+    .home-living-cta__grid,
+    .home-living-group__head,
+    .home-living-samples__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .home-living-products .collection-products,
+    .home-living-proof {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .home-living-wrap {
+      width: min(100% - 28px, 1160px);
+    }
+
+    .home-living h1 {
+      font-size: clamp(38px, 11vw, 52px);
+    }
+
+    .home-living h2 {
+      font-size: clamp(31px, 9vw, 42px);
+    }
+
+    .home-living-mosaic,
+    .home-living-products .collection-products,
+    .home-living-proof {
+      grid-template-columns: 1fr !important;
+    }
+
+    .home-living-mosaic__item:first-child {
+      grid-row: auto;
+    }
+
+    .home-living-nav {
+      top: 0;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Home and Living page",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Hero"
+    },
+    {
+      "type": "text",
+      "id": "hero_eyebrow",
+      "label": "Hero eyebrow",
+      "default": "Home & Living"
+    },
+    {
+      "type": "text",
+      "id": "hero_heading",
+      "label": "Hero heading",
+      "default": "Furniture for the rooms you use every day."
+    },
+    {
+      "type": "textarea",
+      "id": "hero_text",
+      "label": "Hero text",
+      "default": "Made to order in our Christchurch workshop from NZ native timber, steel, leather and glass. Choose a finished piece, or use it as a starting point for a custom size."
+    },
+    {
+      "type": "text",
+      "id": "hero_primary_label",
+      "label": "Primary button label",
+      "default": "Browse furniture"
+    },
+    {
+      "type": "text",
+      "id": "hero_primary_link",
+      "label": "Primary button link",
+      "default": "#featured-pieces"
+    },
+    {
+      "type": "text",
+      "id": "hero_secondary_label",
+      "label": "Secondary button label",
+      "default": "Talk to us"
+    },
+    {
+      "type": "text",
+      "id": "hero_secondary_link",
+      "label": "Secondary button link",
+      "default": "/pages/contact"
+    },
+    {
+      "type": "textarea",
+      "id": "hero_product_handles",
+      "label": "Hero product handles",
+      "default": "heirloom-chair|custom-mirror|timber-console-unit|coffee-table"
+    },
+    {
+      "type": "text",
+      "id": "hero_mosaic_label",
+      "label": "Hero image group accessibility label",
+      "default": "Featured Home and Living products"
+    },
+    {
+      "type": "header",
+      "content": "Intro"
+    },
+    {
+      "type": "text",
+      "id": "intro_eyebrow",
+      "label": "Intro eyebrow",
+      "default": "Made to order"
+    },
+    {
+      "type": "text",
+      "id": "intro_heading",
+      "label": "Intro heading",
+      "default": "Start with the product. Refine the size, timber and finish with us."
+    },
+    {
+      "type": "textarea",
+      "id": "intro_text",
+      "label": "Intro text",
+      "default": "Most pieces here can be adjusted before they are made. Send through the size you need, the room it is for, or the look you are trying to match, and we will confirm what is practical before anything goes into production."
+    },
+    {
+      "type": "header",
+      "content": "Materials"
+    },
+    {
+      "type": "text",
+      "id": "materials_eyebrow",
+      "label": "Materials eyebrow",
+      "default": "Timber, colour and finish"
+    },
+    {
+      "type": "text",
+      "id": "materials_heading",
+      "label": "Materials heading",
+      "default": "The same material language as our dining tables, applied across the home."
+    },
+    {
+      "type": "textarea",
+      "id": "materials_text",
+      "label": "Materials text",
+      "default": "Our core timber options are West Coast Rimu, Northland Tōtara and West Coast Beech. Timber samples are available if you want to compare colour and grain at home before choosing a finish."
+    },
+    {
+      "type": "header",
+      "content": "Samples"
+    },
+    {
+      "type": "text",
+      "id": "sample_anchor",
+      "label": "Samples anchor",
+      "default": "samples"
+    },
+    {
+      "type": "text",
+      "id": "sample_product_handle",
+      "label": "Sample product handle",
+      "default": "product-sample"
+    },
+    {
+      "type": "text",
+      "id": "sample_eyebrow",
+      "label": "Samples eyebrow",
+      "default": "Samples"
+    },
+    {
+      "type": "text",
+      "id": "sample_heading",
+      "label": "Samples heading",
+      "default": "Compare colour and grain at home."
+    },
+    {
+      "type": "textarea",
+      "id": "sample_text",
+      "label": "Samples text",
+      "default": "Timber samples sit outside the main furniture grid, so the page stays focused on finished pieces while still making material decisions easy."
+    },
+    {
+      "type": "header",
+      "content": "FAQ"
+    },
+    {
+      "type": "text",
+      "id": "faq_anchor",
+      "label": "FAQ anchor",
+      "default": "questions"
+    },
+    {
+      "type": "text",
+      "id": "faq_eyebrow",
+      "label": "FAQ eyebrow",
+      "default": "Questions"
+    },
+    {
+      "type": "text",
+      "id": "faq_heading",
+      "label": "FAQ heading",
+      "default": "Useful details before you enquire."
+    },
+    {
+      "type": "header",
+      "content": "Final CTA"
+    },
+    {
+      "type": "text",
+      "id": "cta_eyebrow",
+      "label": "CTA eyebrow",
+      "default": "Custom requests welcome"
+    },
+    {
+      "type": "text",
+      "id": "cta_heading",
+      "label": "CTA heading",
+      "default": "Need a different size, finish or use case?"
+    },
+    {
+      "type": "textarea",
+      "id": "cta_text",
+      "label": "CTA text",
+      "default": "Send us the product you are considering and the change you have in mind. We will let you know what is practical, what it changes, and what details we need to quote properly."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "anchor",
+      "name": "Anchor link",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Featured"
+        },
+        {
+          "type": "text",
+          "id": "target",
+          "label": "Target section ID",
+          "default": "featured-pieces"
+        }
+      ]
+    },
+    {
+      "type": "proof",
+      "name": "Proof point",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Title",
+          "default": "Christchurch made"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Text",
+          "default": "Made by Innate Furniture in Christchurch."
+        }
+      ]
+    },
+    {
+      "type": "product_group",
+      "name": "Product group",
+      "settings": [
+        {
+          "type": "text",
+          "id": "anchor_id",
+          "label": "Section ID",
+          "default": "featured-pieces"
+        },
+        {
+          "type": "text",
+          "id": "eyebrow",
+          "label": "Eyebrow",
+          "default": "Featured"
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Featured pieces"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Text",
+          "default": "A few strong starting points for living rooms, entries and shared spaces."
+        },
+        {
+          "type": "textarea",
+          "id": "product_handles",
+          "label": "Product handles",
+          "info": "Use pipe-separated handles in the order they should appear.",
+          "default": "heirloom-chair|custom-mirror|timber-console-unit|rimu-live-edge-console-unit"
+        },
+        {
+          "type": "textarea",
+          "id": "note",
+          "label": "Group note"
+        },
+        {
+          "type": "text",
+          "id": "empty_text",
+          "label": "Empty group text",
+          "default": "No matching products are currently published in this collection."
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "name": "FAQ row",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Question",
+          "default": "Can you make this to a custom size?"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "Answer",
+          "default": "<p>Most pieces can be adjusted. Send us the size you need and we will confirm what is practical before anything is made.</p>"
+        }
+      ]
+    },
+    {
+      "type": "cta_link",
+      "name": "CTA link",
+      "settings": [
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label",
+          "default": "Contact us"
+        },
+        {
+          "type": "text",
+          "id": "link",
+          "label": "Link",
+          "default": "/pages/contact"
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "Style",
+          "default": "solid",
+          "options": [
+            {
+              "value": "solid",
+              "label": "Solid"
+            },
+            {
+              "value": "ghost",
+              "label": "Outline"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Home and Living page"
+    }
+  ]
+}
+{% endschema %}

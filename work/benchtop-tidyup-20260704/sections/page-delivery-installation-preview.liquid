@@ -1,0 +1,144 @@
+{% comment %}
+  Innate delivery and installation page section.
+  Live customer-facing trust page section.
+{% endcomment %}
+<!-- delivery-mobile-polish 2026-06-20T11:13:02Z -->
+
+<style>
+  .delivery-preview{--forest:#163832;--forest-ink:#0c201c;--ink:#131311;--soft:rgba(19,19,17,.72);--line:rgba(22,56,50,.16);--paper:#fbfaf6;--warm:#f7f2ea;--cream:#f3ede3;background:var(--paper);color:var(--ink);font-family:"Maven Pro",system-ui,-apple-system,"Segoe UI",sans-serif;}
+  .delivery-preview *{box-sizing:border-box;}
+  .delivery-preview__wrap{max-width:1240px;margin:0 auto;padding:clamp(30px,4.8vw,68px) clamp(20px,5vw,64px);} 
+  .delivery-preview__hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:clamp(28px,5vw,72px);align-items:center;border-bottom:1px solid var(--line);padding-bottom:clamp(34px,5vw,68px);}
+  .delivery-preview__eyebrow,.delivery-preview__kicker{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#9a4f35;font-weight:700;margin:0 0 12px;}
+  .delivery-preview h1,.delivery-preview h2,.delivery-preview h3{font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif;color:var(--forest-ink);font-weight:600;letter-spacing:-.015em;margin:0;}
+  .delivery-preview h1{font-size:clamp(42px,6.5vw,78px);line-height:.99;max-width:11.5ch;}
+  .delivery-preview__lead{font-size:clamp(18px,2vw,23px);line-height:1.45;max-width:43rem;color:var(--soft);margin:22px 0 0;}
+  .delivery-preview__actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;}
+  .delivery-preview__btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:12px 18px;border:1px solid var(--forest);text-decoration:none;font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:.84rem;border-radius:4px;}
+  .delivery-preview__btn--primary{background:var(--forest);color:#fffaf0;}
+  .delivery-preview__btn--secondary{background:transparent;color:var(--forest);}
+  .delivery-preview__panel{background:linear-gradient(135deg,var(--cream),#fffaf3);border:1px solid var(--line);padding:clamp(22px,3vw,34px);box-shadow:0 18px 50px rgba(22,56,50,.08);}
+  .delivery-preview__panel h2{font-size:clamp(28px,3vw,42px);line-height:1.02;margin-bottom:14px;}
+  .delivery-preview__photo{margin:0 0 20px;}
+  .delivery-preview__photo img{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:contain;object-position:center center;border:1px solid var(--line);background:#f3ede3;}
+  .delivery-preview__photo figcaption{margin-top:8px;font-size:.82rem;line-height:1.35;color:var(--soft);}
+
+  .delivery-preview__panel p{font-size:1rem;line-height:1.6;color:var(--soft);margin:0;}
+  .delivery-preview__proof{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px;}
+  .delivery-preview__proof span{display:block;background:rgba(255,255,255,.62);border:1px solid var(--line);padding:12px;font-size:.86rem;line-height:1.35;color:var(--forest-ink);}
+  .delivery-preview__grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(28px,5vw,72px);padding:clamp(42px,6vw,82px) 0;border-bottom:1px solid var(--line);}
+  .delivery-preview__sticky{align-self:start;position:sticky;top:100px;}
+  .delivery-preview__sticky h2{font-size:clamp(32px,4vw,54px);line-height:1;}
+  .delivery-preview__sticky p{font-size:1.05rem;line-height:1.62;color:var(--soft);max-width:35rem;}
+  .delivery-preview__steps{display:grid;gap:16px;}
+  .delivery-preview__step{background:#fffaf3;border:1px solid var(--line);padding:clamp(20px,3vw,30px);display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:start;}
+  .delivery-preview__num{width:40px;height:40px;border-radius:50%;background:var(--forest);color:#fffaf0;display:grid;place-items:center;font-weight:800;font-size:.86rem;}
+  .delivery-preview__step h3{font-size:clamp(23px,2.4vw,33px);line-height:1.05;margin-bottom:8px;}
+  .delivery-preview__step p,.delivery-preview__step li{font-size:1rem;line-height:1.6;color:var(--soft);margin:0;}
+  .delivery-preview__step ul{margin:0;padding-left:1.15rem;}
+  .delivery-preview__cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:clamp(42px,6vw,78px) 0;border-bottom:1px solid var(--line);}
+  .delivery-preview__card{background:var(--warm);border:1px solid var(--line);padding:clamp(22px,3vw,32px);}
+  .delivery-preview__card h2{font-size:clamp(28px,3vw,40px);line-height:1.02;margin-bottom:12px;}
+  .delivery-preview__card p{font-size:1rem;line-height:1.62;color:var(--soft);margin:0;}
+  .delivery-preview__faq{padding:clamp(42px,6vw,76px) 0;border-bottom:1px solid var(--line);}
+  .delivery-preview__faq h2{font-size:clamp(34px,4.5vw,58px);line-height:1;margin-bottom:20px;}
+  .delivery-preview__faq-grid{display:grid;gap:10px;}
+  .delivery-preview__faq-item{background:#fffaf3;border:1px solid var(--line);padding:20px 22px;}
+  .delivery-preview__faq-item h3{font-size:clamp(22px,2.2vw,30px);line-height:1.06;margin-bottom:8px;}
+  .delivery-preview__faq-item p{margin:0;color:var(--soft);line-height:1.6;}
+  .delivery-preview__final{padding:clamp(42px,6vw,76px) 0 0;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;}
+  .delivery-preview__final h2{font-size:clamp(32px,4vw,54px);line-height:1;}
+  .delivery-preview__final p{color:var(--soft);line-height:1.6;max-width:45rem;margin:10px 0 0;}
+  @media(max-width:860px){.delivery-preview__hero,.delivery-preview__grid,.delivery-preview__cards,.delivery-preview__final{grid-template-columns:1fr}.delivery-preview__sticky{position:static}.delivery-preview__proof{grid-template-columns:1fr}.delivery-preview h1{max-width:100%;font-size:clamp(38px,10.2vw,50px);line-height:1.04}.delivery-preview__lead{font-size:17px;line-height:1.5}.delivery-preview__final{align-items:start}.delivery-preview__actions{display:grid;margin-top:22px}.delivery-preview__btn{width:100%}}
+  @media(max-width:620px){.delivery-preview{--soft:rgba(19,19,17,.8)}.delivery-preview__hero>div{width:100%;min-width:0}.delivery-preview h1{display:block;width:100%;max-width:none!important;font-size:clamp(33px,8.7vw,40px)!important;line-height:1.08}.delivery-preview__lead{max-width:100%;margin-top:16px;font-size:16px;line-height:1.55}.delivery-preview__actions{margin-top:18px;gap:10px}.delivery-preview__btn{min-height:48px;font-size:.82rem}.delivery-preview__grid,.delivery-preview__cards,.delivery-preview__faq{padding-top:50px;padding-bottom:50px}.delivery-preview__final{padding-top:50px;padding-bottom:10px}.delivery-preview__sticky h2,.delivery-preview__final h2{font-size:clamp(30px,8vw,38px);line-height:1.06}.delivery-preview__card h2{font-size:clamp(26px,7vw,34px);line-height:1.06}.delivery-preview__faq h2{font-size:clamp(32px,8vw,42px);line-height:1.04}.delivery-preview__step p,.delivery-preview__card p,.delivery-preview__faq-item p,.delivery-preview__panel p,.delivery-preview__final p{font-size:1rem;line-height:1.68}.delivery-preview__photo figcaption{font-size:.9rem;line-height:1.45}.delivery-preview__proof{gap:8px;margin-top:18px}.delivery-preview__proof span{background:transparent;border:0;border-left:2px solid rgba(22,56,50,.22);padding:6px 0 6px 12px;font-size:.94rem;line-height:1.45}.delivery-preview__steps{gap:12px}.delivery-preview__step{grid-template-columns:38px 1fr;gap:14px;padding:18px}.delivery-preview__num{width:34px;height:34px;font-size:.78rem}.delivery-preview__step h3{font-size:clamp(22px,6.4vw,28px);line-height:1.08}.delivery-preview__cards{gap:12px}.delivery-preview__card,.delivery-preview__faq-item{padding:20px}.delivery-preview__faq-grid{gap:12px}.delivery-preview__faq-item h3{font-size:clamp(21px,6vw,26px);line-height:1.12}.delivery-preview__final .delivery-preview__btn{margin-top:4px}}
+  @media(max-width:520px){.delivery-preview__eyebrow,.delivery-preview__kicker{font-size:.72rem;letter-spacing:.09em}.delivery-preview__wrap{padding-left:22px;padding-right:22px;padding-top:24px}.delivery-preview__hero{gap:28px;padding-top:0;padding-bottom:42px}.delivery-preview__panel{padding:16px}.delivery-preview__photo{margin-bottom:18px}.delivery-preview__photo img{border-color:rgba(22,56,50,.18)}.delivery-preview__grid{padding-top:48px}.delivery-preview__cards{padding-top:44px}.delivery-preview__faq{padding-top:48px}.delivery-preview__final{padding-top:48px}.delivery-preview__final p{margin-bottom:8px}}
+</style>
+
+<div class="delivery-preview">
+  <div class="delivery-preview__wrap">
+    <section class="delivery-preview__hero">
+      <div>
+        <p class="delivery-preview__eyebrow">{{ section.settings.eyebrow }}</p>
+        <h1>{{ section.settings.heading }}</h1>
+        <p class="delivery-preview__lead">{{ section.settings.lead }}</p>
+        <div class="delivery-preview__actions">
+          <a class="delivery-preview__btn delivery-preview__btn--primary" href="{{ section.settings.primary_link }}">{{ section.settings.primary_label }}</a>
+          <a class="delivery-preview__btn delivery-preview__btn--secondary" href="{{ section.settings.secondary_link }}">{{ section.settings.secondary_label }}</a>
+        </div>
+      </div>
+      <aside class="delivery-preview__panel">
+        <figure class="delivery-preview__photo">
+          <img src="{{ 'delivery-team-pinpoint-preview.jpg' | asset_url }}" alt="Pinpoint delivery team beside the truck for an Innate furniture delivery" loading="lazy" width="1800" height="1200">
+          <figcaption>Real delivery support, planned around the piece and the place it is going.</figcaption>
+        </figure>
+
+        <p class="delivery-preview__kicker">{{ section.settings.panel_kicker }}</p>
+        <h2>{{ section.settings.panel_heading }}</h2>
+        <p>{{ section.settings.panel_text }}</p>
+        <div class="delivery-preview__proof" aria-label="Delivery planning proof points">
+          <span>Access checked early.</span>
+          <span>Handling matched to the piece.</span>
+          <span>Assembly plan confirmed.</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="delivery-preview__grid">
+      <div class="delivery-preview__sticky">
+        <p class="delivery-preview__eyebrow">How it works</p>
+        <h2>Large furniture needs a plan, not guesswork.</h2>
+        <p>A custom table, benchtop or commercial piece has weight, size, corners, doorways, stairs and real rooms to consider. We work through those details before the piece leaves the workshop.</p>
+      </div>
+      <div class="delivery-preview__steps">
+        <article class="delivery-preview__step"><span class="delivery-preview__num">01</span><div><h3>We confirm the destination.</h3><p>For smaller items this may be straightforward. For larger pieces, we may check the delivery address, timing, room location and whether there are lifts, stairs, tight corners or site access requirements.</p></div></article>
+        <article class="delivery-preview__step"><span class="delivery-preview__num">02</span><div><h3>We choose the right handling path.</h3><p>Some pieces can travel by courier or standard freight. Larger furniture is handled through freight or furniture-moving partners suited to the piece and destination.</p></div></article>
+        <article class="delivery-preview__step"><span class="delivery-preview__num">03</span><div><h3>We decide how it should arrive.</h3><p>Many pieces are made and checked in the workshop before delivery. Depending on the design, size and access, some items travel assembled and others are safer to deliver in parts and assemble on site.</p></div></article>
+        <article class="delivery-preview__step"><span class="delivery-preview__num">04</span><div><h3>We make the handover calm.</h3><p>The aim is simple: protect the furniture, protect the room, and avoid surprises at the door.</p></div></article>
+      </div>
+    </section>
+
+    <section class="delivery-preview__cards">
+      <article class="delivery-preview__card"><h2>What we may ask you.</h2><p>Helpful details include the delivery address and suburb, whether the room is upstairs, lift or stairwell details, driveway or parking access, photos of tricky access points, and any site timing restrictions.</p></article>
+      <article class="delivery-preview__card"><h2>For commercial and trade projects.</h2><p>For boardrooms, hospitality venues and fit-outs, delivery is usually coordinated around the project timeline, access windows and other trades. If a site has induction, lift booking, loading dock or after-hours requirements, tell us early.</p></article>
+      <article class="delivery-preview__card"><h2>What delivery costs.</h2><p>Delivery cost depends on the item, destination and handling required. Where possible we give an estimate early. For larger or unusual pieces, we may confirm the best freight or furniture-moving option before locking in the final figure.</p></article>
+      <article class="delivery-preview__card"><h2>Built in Christchurch, delivered NZ-wide.</h2><p>Innate furniture is made in Christchurch and delivered throughout New Zealand. The delivery method changes with the piece, but the planning happens before the order is finalised.</p></article>
+    </section>
+
+    <section class="delivery-preview__faq">
+      <p class="delivery-preview__eyebrow">Questions we expect</p>
+      <h2>Delivery FAQs.</h2>
+      <div class="delivery-preview__faq-grid">
+        {% for block in section.blocks %}
+          <article class="delivery-preview__faq-item" {{ block.shopify_attributes }}><h3>{{ block.settings.question }}</h3><p>{{ block.settings.answer }}</p></article>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="delivery-preview__final">
+      <div><p class="delivery-preview__eyebrow">Next step</p><h2>Send us the room and destination.</h2><p>If you are unsure, send the room, delivery location and any access details you already know. We will tell you what needs checking before we build.</p></div>
+      <a class="delivery-preview__btn delivery-preview__btn--primary" href="/pages/contact">Talk to us about delivery</a>
+    </section>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Delivery page",
+  "settings": [
+    {"type":"text","id":"eyebrow","label":"Eyebrow","default":"Delivery and installation"},
+    {"type":"text","id":"heading","label":"Heading","default":"Delivery planned before we build."},
+    {"type":"textarea","id":"lead","label":"Lead","default":"Large custom furniture should not arrive as a surprise. We confirm size, access and delivery method before the piece leaves the workshop."},
+    {"type":"text","id":"primary_label","label":"Primary button label","default":"Talk to us about a project"},
+    {"type":"url","id":"primary_link","label":"Primary button link"},
+    {"type":"text","id":"secondary_label","label":"Secondary button label","default":"View dining tables"},
+    {"type":"url","id":"secondary_link","label":"Secondary button link"},
+    {"type":"text","id":"panel_kicker","label":"Panel kicker","default":"What changes for larger pieces"},
+    {"type":"text","id":"panel_heading","label":"Panel heading","default":"Delivery is part of the job."},
+    {"type":"textarea","id":"panel_text","label":"Panel text","default":"A custom table, benchtop or commercial piece is not like a courier parcel. Before we build, we talk through where the piece is going, how it will get there, and whether anything needs to be planned around access."}
+  ],
+  "blocks": [
+    {"type":"faq","name":"FAQ","settings":[{"type":"text","id":"question","label":"Question","default":"Do you deliver outside Christchurch?"},{"type":"textarea","id":"answer","label":"Answer","default":"Yes. Innate is based in Christchurch and delivers furniture across New Zealand. The delivery method depends on the piece, destination and access."}]}
+  ],
+  "presets": [{"name":"Delivery page"}]
+}
+{% endschema %}

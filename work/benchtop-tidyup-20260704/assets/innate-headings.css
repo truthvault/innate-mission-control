@@ -1,0 +1,278 @@
+/* innate-headings.css
+ * h2 overrides to maintain visual weight after h1→h2 cascade fix.
+ * Mirrors the h1 rules in colors.css for .hero-heading, .banner-heading, .collections-item-title.
+ */
+
+/* Banner */
+.banner-with-text > .info h2.banner-heading {
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  font-weight: var(--font-header-weight);
+  text-transform: var(--font-header-text-transform);
+  font-size: calc(40px * var(--font-header-scale));
+  line-height: calc(45px * var(--font-header-scale));
+  color: var(--color-body-text);
+  font-weight: var(--font-header-weight-bolder);
+  word-wrap: break-word;
+}
+
+/* Hero */
+.hero .info h2.hero-heading {
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  font-weight: var(--font-header-weight);
+  text-transform: var(--font-header-text-transform);
+  font-size: calc(50px * var(--font-header-scale));
+  line-height: calc(56px * var(--font-header-scale));
+  color: var(--color-body-text);
+  font-weight: var(--font-header-weight-bolder);
+  margin: 0 auto;
+}
+
+/* Collections tile title */
+.collections-items a.collections-item h2.collections-item-title {
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  font-weight: var(--font-header-weight);
+  text-transform: var(--font-header-text-transform);
+  font-size: calc(26px * var(--font-header-scale));
+  line-height: calc(30px * var(--font-header-scale));
+  color: var(--color-body-text);
+  position: absolute;
+  bottom: 20px;
+  display: inline;
+  z-index: 2;
+}
+.collections-items a.collections-item.left h2.collections-item-title {
+  left: calc(var(--small-padding) + 15px);
+  max-width: calc(100% - var(--small-padding) - 15px);
+}
+.collections-items a.collections-item.center h2.collections-item-title {
+  left: var(--small-padding);
+  right: 0;
+  text-align: center;
+  max-width: none;
+  max-width: calc(100% - var(--small-padding));
+}
+.collections-items a.collections-item.right h2.collections-item-title {
+  right: 15px;
+  left: 15px;
+  max-width: calc(100% - 30px);
+  text-align: right;
+}
+.collections-items a.collections-item.with-underline h2.collections-item-title {
+  text-decoration: underline;
+}
+.collections-items.interactive a.collections-item h2.collections-item-title {
+  opacity: 0;
+  transition: opacity 200ms cubic-bezier(0.2, 0.3, 0.25, 0.9) 0s;
+}
+.collections-items.interactive a.collections-item:hover h2.collections-item-title {
+  opacity: 1;
+}
+
+/* Responsive: banner */
+@media (max-width: 768px) {
+  .banner-with-text > .info h2.banner-heading {
+    font-size: calc(32px * var(--font-header-scale));
+    line-height: calc(40px * var(--font-header-scale));
+  }
+}
+
+/* Responsive: hero */
+@media (max-width: 768px) {
+  .hero .info h2.hero-heading {
+    font-size: calc(30px * var(--font-header-scale));
+    line-height: calc(36px * var(--font-header-scale));
+  }
+}
+
+/* Responsive: collections tile — 620px */
+@media (max-width: 620px) {
+  .collections-items a.collections-item h2.collections-item-title {
+    font-size: calc(22px * var(--font-header-scale));
+    line-height: calc(28px * var(--font-header-scale));
+  }
+}
+
+/* Responsive: collections tile — 420px */
+@media (max-width: 420px) {
+  .content.list-collections .collections-items a.collections-item.left h2.collections-item-title {
+    left: var(--small-padding);
+  }
+  .content.list-collections .collections-items a.collections-item.center h2.collections-item-title {
+    left: 0;
+  }
+  .content.list-collections .collections-items a.collections-item.right h2.collections-item-title {
+    right: var(--small-padding);
+  }
+  .collections-items a.collections-item h2.collections-item-title {
+    bottom: 10px;
+  }
+}
+
+/* Footer column titles — theme only styles h1 in footer; add h2 */
+.footer .top .col h2 { color: var(--color-footer-top-accent); }
+
+/* Quickview preserves title visual weight after h1 → span demotion in product-blocks.liquid */
+.product.preview .item .item-info a.title .with-link {
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  font-weight: var(--font-header-weight-bolder);
+  font-size: calc(26px * var(--font-header-scale));
+  line-height: 1.2;
+  color: var(--color-body-text);
+}
+
+/* Hero heading — match h1 styling to existing h2.hero-heading so tag change doesn't alter visuals */
+.hero .info h1.hero-heading {
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  text-transform: var(--font-header-text-transform);
+  font-size: calc(50px * var(--font-header-scale));
+  line-height: calc(56px * var(--font-header-scale));
+  color: var(--color-body-text);
+  font-weight: var(--font-header-weight-bolder);
+  margin: 0px auto;
+}
+
+/* Phase 1d — match h1 rendering to existing h2 rendering on section-level headings so tag change doesn't alter visuals */
+
+/* banner-with-text — preserve banner-heading look when promoted to h1 */
+h1.banner-heading {
+  font: inherit;
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  text-transform: var(--font-header-text-transform);
+  font-weight: var(--font-header-weight-bolder);
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+/* rich-text — bare h2 was just using base heading styles; mirror on h1 */
+.rich-text h1 {
+  font-family: var(--font-header-family);
+  font-style: var(--font-header-style);
+  text-transform: var(--font-header-text-transform);
+  font-weight: var(--font-header-weight-bolder);
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+}
+
+/* Accordion +/− indicator — swap "+" to "−" when open.
+   Specificity beats `.accordion .accordion-header h3` (0,2,1) which sets font-size on the original `+` text. */
+details summary .accordion-header .plus {
+  font-size: 0;
+  line-height: 19px;
+}
+details summary .accordion-header .plus::before {
+  content: "+";
+  font-size: 16px;
+  line-height: 1;
+}
+details[open] summary .accordion-header .plus::before {
+  content: "−";
+}
+
+/* Product variant pickers — slim refresh.
+   - Drop the duplicated selected-value next to the option name (active pill already shows it)
+   - Drop the trailing colon
+   - Trim pill-button border, padding, font-size
+   - Tighten vertical rhythm between option groups
+   Specificity matches existing colors.css rules; innate-headings.css loads after, so we win on cascade. */
+.product .item .item-info .selector-wrapper > label .value.js {
+  display: none;
+}
+.product .item .item-info .selector-wrapper > label span.name:after {
+  content: none;
+}
+.product .item .item-info .selector-wrapper > label {
+  font-size: calc(15px * var(--font-header-scale));
+  margin-bottom: 6px;
+}
+.product .item .item-info .selector-wrapper {
+  margin-top: 12px;
+}
+.product .item .item-info .selector-wrapper fieldset label {
+  border-width: 1px;
+  padding: 5px 13px;
+  margin: 0 4px 6px 0;
+  font-size: calc(13px * var(--font-base-scale));
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+/* Disabled (theme considers unavailable) — block clicks and bump visibility a touch.
+   Innate's tables are made-to-order so this should be rare; when it appears it indicates
+   a Shopify variant-data drift that needs admin-side cleanup. Defensive either way:
+   killing pointer-events stops customers from selecting non-existent variants. */
+.product .item .item-info .selector-wrapper fieldset label.disabled {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+/* Variant pill hover — invert colours to match the CTA buttons.
+   Skip the inversion when the option is disabled (sold-out / unavailable). */
+.product .item .item-info .selector-wrapper fieldset label:hover {
+  background-color: var(--color-body-text);
+  color: var(--color-body-text-neg);
+  border-color: var(--color-body-text);
+}
+.product .item .item-info .selector-wrapper fieldset input:disabled + label:hover,
+.product .item .item-info .selector-wrapper fieldset label.disabled:hover {
+  background-color: transparent;
+  color: var(--color-body-text);
+  border-color: var(--color-body-text);
+  cursor: default;
+}
+
+/* Product page — thumbnails grid: 3 across instead of 5, for bigger thumbnails on bottom-layout galleries.
+   Right/left sidebar layouts and the 620-750px tablet variant set their own grid columns at higher
+   specificity, so this only affects the default (bottom-layout) row. */
+.product .item .item-media .gallery .thumbs {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Product page — make the main image clickable for zoom (in addition to the magnifying-glass button).
+   media.liquid wraps the <img> in `<a class="zoom-image" data-mfp-src="...">`; Magnific Popup
+   auto-binds to all `[data-mfp-src]` (colors.js), so the click handler comes for free. */
+.product .item .item-media .frame .media a.zoom-image {
+  display: block;
+  cursor: zoom-in;
+}
+
+/* Product page — keep the image column anchored at the top of the row.
+   Theme sets both .item-media and .item-info to `position: sticky` (colors.css ~7657).
+   When the info column grows past viewport height (e.g. opening an accordion),
+   the image column stops sticking at top:10px and rides the flex row's
+   bottom edge instead, so opening an accordion drags the images down.
+   Static positioning keeps images visually fixed in flow; info stays sticky. */
+.product.sticky .item .item-media {
+  position: static;
+  top: auto;
+}
+
+/* d74 dining FAQ icon override for stale full-page cache: keep FAQ icons light, not dark filled blobs */
+body #dining-common-details .d16-accordion details > summary::after,
+body #dining-common-details .d16-accordion details > summary::before {
+  opacity: 1 !important;
+  background: rgba(248, 244, 238, 0.72) !important;
+  border: 1px solid rgba(40, 50, 41, 0.16) !important;
+  color: rgba(40, 50, 41, 0.72) !important;
+  box-shadow: none !important;
+}
+body #dining-common-details .d16-accordion details > summary::after {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 999px !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+body #dining-common-details .d16-accordion details[open] > summary::after,
+body #dining-common-details .d16-accordion details.d18-user-open > summary::after {
+  content: "–" !important;
+}

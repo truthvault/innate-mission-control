@@ -1,0 +1,478 @@
+{%- comment -%} healthscan-cache-bust-20260604 {%- endcomment -%}
+{{ 'innate-about-overhaul.css' | asset_url | stylesheet_tag }}
+
+{%- liquid
+  assign proof_blocks = section.blocks | where: 'type', 'proof'
+  assign pathway_blocks = section.blocks | where: 'type', 'pathway'
+  assign capability_blocks = section.blocks | where: 'type', 'capability'
+  assign value_blocks = section.blocks | where: 'type', 'value'
+  assign gallery_blocks = section.blocks | where: 'type', 'gallery_image'
+  assign action_blocks = section.blocks | where: 'type', 'action'
+-%}
+
+<section class="about-overhaul" data-section-id="{{ section.id }}">
+  <div class="about-overhaul__hero">
+    <div class="about-overhaul__hero-copy">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="about-overhaul__eyebrow">{{ section.settings.eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.heading != blank -%}
+        <h1>{{ section.settings.heading }}</h1>
+      {%- endif -%}
+      {%- if section.settings.intro != blank -%}
+        <div class="about-overhaul__rte about-overhaul__hero-rte">
+          {{ section.settings.intro }}
+        </div>
+      {%- endif -%}
+
+      {%- if proof_blocks.size > 0 -%}
+        <div class="about-overhaul__proof" aria-label="Innate Furniture proof points">
+          {%- for block in proof_blocks -%}
+            <div class="about-overhaul__proof-item" {{ block.shopify_attributes }}>
+              {%- if block.settings.label != blank -%}
+                <strong>{{ block.settings.label }}</strong>
+              {%- endif -%}
+              {%- if block.settings.text != blank -%}
+                <span>{{ block.settings.text }}</span>
+              {%- endif -%}
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.hero_image != blank -%}
+      <figure class="about-overhaul__hero-media" style="--about-image-position: {{ section.settings.hero_image_focus | default: 'center center' }};">
+        {%- assign hero_alt = section.settings.hero_image.alt | default: section.settings.heading -%}
+        {{ section.settings.hero_image
+          | image_url: width: 1600
+          | image_tag:
+            class: 'about-overhaul__image',
+            loading: 'eager',
+            sizes: '(min-width: 990px) 48vw, 100vw',
+            alt: hero_alt
+        }}
+      </figure>
+    {%- endif -%}
+  </div>
+
+  <div class="about-overhaul__pathways">
+    <div class="about-overhaul__section-head about-overhaul__section-head--split">
+      <div>
+        {%- if section.settings.pathways_eyebrow != blank -%}
+          <p class="about-overhaul__eyebrow">{{ section.settings.pathways_eyebrow }}</p>
+        {%- endif -%}
+        {%- if section.settings.pathways_heading != blank -%}
+          <h2>{{ section.settings.pathways_heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.pathways_text != blank -%}
+        <div class="about-overhaul__rte">
+          {{ section.settings.pathways_text }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if pathway_blocks.size > 0 -%}
+      <div class="about-overhaul__pathway-grid">
+        {%- for block in pathway_blocks -%}
+          {%- liquid
+            assign pathway_href = block.settings.link | default: '#'
+            case pathway_href
+              when '/pages/benchtops'
+                assign pathway_href = '/pages/timber-panels'
+              when '/pages/commercial'
+                assign pathway_href = '/pages/commercial-1'
+              when '/collections/outdoor-furniture'
+                assign pathway_href = '/collections/outdoor'
+              when '/pages/contact-us'
+                assign pathway_href = '/pages/contact'
+              when '/pages/totara'
+                assign pathway_href = '/pages/northland-totara'
+              when '/products/timber-samples'
+                assign pathway_href = '/products/product-sample'
+            endcase
+          -%}
+          <a class="about-overhaul__pathway" href="{{ pathway_href }}" {{ block.shopify_attributes }}>
+            {%- if block.settings.title != blank -%}
+              <span class="about-overhaul__pathway-title">{{ block.settings.title }}</span>
+            {%- endif -%}
+            {%- if block.settings.text != blank -%}
+              <span class="about-overhaul__pathway-text">{{ block.settings.text }}</span>
+            {%- endif -%}
+            {%- if block.settings.action != blank -%}
+              <span class="about-overhaul__pathway-action">{{ block.settings.action }}</span>
+            {%- endif -%}
+          </a>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+
+  <div class="about-overhaul__capability">
+    <div class="about-overhaul__capability-copy">
+      {%- if section.settings.capability_eyebrow != blank -%}
+        <p class="about-overhaul__eyebrow">{{ section.settings.capability_eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.capability_heading != blank -%}
+        <h2>{{ section.settings.capability_heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.capability_text != blank -%}
+        <div class="about-overhaul__rte">
+          {{ section.settings.capability_text }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    <div class="about-overhaul__capability-list">
+      {%- for block in capability_blocks -%}
+        <div class="about-overhaul__capability-row" {{ block.shopify_attributes }}>
+          {%- if block.settings.title != blank -%}
+            <strong>{{ block.settings.title }}</strong>
+          {%- endif -%}
+          {%- if block.settings.text != blank -%}
+            <span>{{ block.settings.text }}</span>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div class="about-overhaul__values">
+    <div class="about-overhaul__section-head about-overhaul__section-head--split">
+      <div>
+        {%- if section.settings.values_eyebrow != blank -%}
+          <p class="about-overhaul__eyebrow">{{ section.settings.values_eyebrow }}</p>
+        {%- endif -%}
+        {%- if section.settings.values_heading != blank -%}
+          <h2>{{ section.settings.values_heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.values_text != blank -%}
+        <div class="about-overhaul__rte">
+          {{ section.settings.values_text }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    <div class="about-overhaul__value-list">
+      {%- for block in value_blocks -%}
+        <details class="about-overhaul__value" {% if block.settings.open_default %}open{% endif %} {{ block.shopify_attributes }}>
+          <summary>
+            <span>
+              {%- if block.settings.kicker != blank -%}
+                <small>{{ block.settings.kicker }}</small>
+              {%- endif -%}
+              {%- if block.settings.title != blank -%}
+                <strong>{{ block.settings.title }}</strong>
+              {%- endif -%}
+            </span>
+            <span class="about-overhaul__value-icon" aria-hidden="true"></span>
+          </summary>
+          <div class="about-overhaul__value-body">
+            {%- if block.settings.image != blank -%}
+              <figure class="about-overhaul__value-media" style="--about-image-position: {{ block.settings.image_focus | default: 'center center' }};">
+                {%- assign value_alt = block.settings.image.alt | default: block.settings.title -%}
+                {{ block.settings.image
+                  | image_url: width: 1000
+                  | image_tag:
+                    class: 'about-overhaul__image',
+                    loading: 'lazy',
+                    sizes: '(min-width: 990px) 26vw, 100vw',
+                    alt: value_alt
+                }}
+              </figure>
+            {%- endif -%}
+            {%- if block.settings.body != blank -%}
+              <div class="about-overhaul__rte">
+                {{ block.settings.body }}
+              </div>
+            {%- endif -%}
+          </div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+
+  <div class="about-overhaul__people">
+    <div class="about-overhaul__people-copy">
+      {%- if section.settings.people_eyebrow != blank -%}
+        <p class="about-overhaul__eyebrow">{{ section.settings.people_eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.people_heading != blank -%}
+        <h2>{{ section.settings.people_heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.people_text != blank -%}
+        <div class="about-overhaul__rte">
+          {{ section.settings.people_text }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if gallery_blocks.size > 0 -%}
+      <div class="about-overhaul__gallery">
+        {%- for block in gallery_blocks limit: 3 -%}
+          {%- liquid
+            assign gallery_asset = block.settings.image_asset | strip
+            assign has_gallery_image = false
+            if block.settings.image != blank or gallery_asset != blank
+              assign has_gallery_image = true
+            endif
+          -%}
+          {%- if has_gallery_image -%}
+            <figure class="about-overhaul__gallery-item about-overhaul__gallery-item--{{ forloop.index }}{% if block.settings.image_shape == 'portrait' %} about-overhaul__gallery-item--portrait{% endif %}" style="--about-image-position: {{ block.settings.image_focus | default: 'center center' }};" {{ block.shopify_attributes }}>
+              {%- assign gallery_alt = block.settings.image_alt | default: block.settings.image.alt | default: block.settings.caption -%}
+              {%- if gallery_asset != blank -%}
+                <img class="about-overhaul__image" src="{{ gallery_asset | asset_url }}" alt="{{ gallery_alt | escape }}" width="900" height="1200" loading="eager">
+              {%- else -%}
+                {{ block.settings.image
+                  | image_url: width: 1200
+                  | image_tag:
+                    class: 'about-overhaul__image',
+                    loading: 'eager',
+                    sizes: '(min-width: 990px) 32vw, 100vw',
+                    alt: gallery_alt
+                }}
+              {%- endif -%}
+              {%- if block.settings.caption != blank -%}
+                <figcaption>{{ block.settings.caption }}</figcaption>
+              {%- endif -%}
+            </figure>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+
+  <div class="about-overhaul__reviews">
+    <div class="about-overhaul__section-head about-overhaul__section-head--split">
+      <div>
+        {%- if section.settings.reviews_eyebrow != blank -%}
+          <p class="about-overhaul__eyebrow">{{ section.settings.reviews_eyebrow }}</p>
+        {%- endif -%}
+        {%- if section.settings.reviews_heading != blank -%}
+          <h2>{{ section.settings.reviews_heading }}</h2>
+        {%- endif -%}
+      </div>
+      {%- if section.settings.reviews_text != blank -%}
+        <div class="about-overhaul__rte">
+          {{ section.settings.reviews_text }}
+        </div>
+      {%- endif -%}
+    </div>
+    <div class="about-overhaul__reviews-slot" data-about-reviews-slot></div>
+  </div>
+
+  <div class="about-overhaul__closing">
+    <div>
+      {%- if section.settings.closing_eyebrow != blank -%}
+        <p class="about-overhaul__eyebrow">{{ section.settings.closing_eyebrow }}</p>
+      {%- endif -%}
+      {%- if section.settings.closing_heading != blank -%}
+        <h2>{{ section.settings.closing_heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.closing_text != blank -%}
+        <div class="about-overhaul__rte">
+          {{ section.settings.closing_text }}
+        </div>
+      {%- endif -%}
+    </div>
+
+    {%- if action_blocks.size > 0 -%}
+      <div class="about-overhaul__actions">
+        {%- for block in action_blocks -%}
+          {%- liquid
+            assign action_href = block.settings.link | default: '#'
+            case action_href
+              when '/pages/benchtops'
+                assign action_href = '/pages/timber-panels'
+              when '/pages/commercial'
+                assign action_href = '/pages/commercial-1'
+              when '/collections/outdoor-furniture'
+                assign action_href = '/collections/outdoor'
+              when '/pages/contact-us'
+                assign action_href = '/pages/contact'
+              when '/pages/totara'
+                assign action_href = '/pages/northland-totara'
+              when '/products/timber-samples'
+                assign action_href = '/products/product-sample'
+            endcase
+          -%}
+          <a class="about-overhaul__button {% if forloop.first %}about-overhaul__button--primary{% endif %}" href="{{ action_href }}" {{ block.shopify_attributes }}>
+            {{ block.settings.label }}
+          </a>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</section>
+
+<script>
+  (function () {
+    var attempts = 0;
+    function moveReviews() {
+      attempts += 1;
+      var reviewSlot = document.querySelector('[data-about-reviews-slot]');
+      var reviewSection = document.querySelector('.template-sufix-about .shopify-section.apps');
+      if (reviewSlot && reviewSection && !reviewSlot.contains(reviewSection)) {
+        reviewSlot.appendChild(reviewSection);
+        return;
+      }
+      if (attempts < 20) {
+        window.setTimeout(moveReviews, 250);
+      }
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', moveReviews, { once: true });
+    } else {
+      moveReviews();
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "About overhaul",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Made here, made to last." },
+    { "type": "richtext", "id": "intro", "label": "Intro" },
+    { "type": "image_picker", "id": "hero_image", "label": "Hero image" },
+    {
+      "type": "select",
+      "id": "hero_image_focus",
+      "label": "Hero image crop focus",
+      "default": "center center",
+      "options": [
+        { "value": "center center", "label": "Centre" },
+        { "value": "center top", "label": "Top" },
+        { "value": "center bottom", "label": "Bottom" },
+        { "value": "left center", "label": "Left" },
+        { "value": "right center", "label": "Right" }
+      ]
+    },
+    { "type": "header", "content": "Pathways" },
+    { "type": "text", "id": "pathways_eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "pathways_heading", "label": "Heading" },
+    { "type": "richtext", "id": "pathways_text", "label": "Text" },
+    { "type": "header", "content": "Capability" },
+    { "type": "text", "id": "capability_eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "capability_heading", "label": "Heading" },
+    { "type": "richtext", "id": "capability_text", "label": "Text" },
+    { "type": "header", "content": "Values" },
+    { "type": "text", "id": "values_eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "values_heading", "label": "Heading" },
+    { "type": "richtext", "id": "values_text", "label": "Text" },
+    { "type": "header", "content": "People and workshop" },
+    { "type": "text", "id": "people_eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "people_heading", "label": "Heading" },
+    { "type": "richtext", "id": "people_text", "label": "Text" },
+    { "type": "header", "content": "Reviews" },
+    { "type": "text", "id": "reviews_eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "reviews_heading", "label": "Heading" },
+    { "type": "richtext", "id": "reviews_text", "label": "Text" },
+    { "type": "header", "content": "Closing" },
+    { "type": "text", "id": "closing_eyebrow", "label": "Eyebrow" },
+    { "type": "text", "id": "closing_heading", "label": "Heading" },
+    { "type": "richtext", "id": "closing_text", "label": "Text" }
+  ],
+  "blocks": [
+    {
+      "type": "proof",
+      "name": "Proof point",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label" },
+        { "type": "text", "id": "text", "label": "Text" }
+      ]
+    },
+    {
+      "type": "pathway",
+      "name": "Pathway",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "textarea", "id": "text", "label": "Text" },
+        { "type": "text", "id": "action", "label": "Action" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    },
+    {
+      "type": "capability",
+      "name": "Capability row",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "textarea", "id": "text", "label": "Text" }
+      ]
+    },
+    {
+      "type": "value",
+      "name": "Value accordion",
+      "settings": [
+        { "type": "text", "id": "kicker", "label": "Kicker" },
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "richtext", "id": "body", "label": "Body" },
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        {
+          "type": "select",
+          "id": "image_focus",
+          "label": "Image crop focus",
+          "default": "center center",
+          "options": [
+            { "value": "center center", "label": "Centre" },
+            { "value": "center top", "label": "Top" },
+            { "value": "center bottom", "label": "Bottom" },
+            { "value": "left center", "label": "Left" },
+            { "value": "right center", "label": "Right" }
+          ]
+        },
+        { "type": "checkbox", "id": "open_default", "label": "Open by default", "default": false }
+      ]
+    },
+    {
+      "type": "gallery_image",
+      "name": "Gallery image",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "image_asset", "label": "Theme asset filename" },
+        { "type": "text", "id": "image_alt", "label": "Alt text" },
+        { "type": "text", "id": "caption", "label": "Caption" },
+        {
+          "type": "select",
+          "id": "image_shape",
+          "label": "Image shape",
+          "default": "landscape",
+          "options": [
+            { "value": "landscape", "label": "Landscape" },
+            { "value": "portrait", "label": "Portrait" }
+          ]
+        },
+        {
+          "type": "select",
+          "id": "image_focus",
+          "label": "Image crop focus",
+          "default": "center center",
+          "options": [
+            { "value": "center center", "label": "Centre" },
+            { "value": "center top", "label": "Top" },
+            { "value": "center bottom", "label": "Bottom" },
+            { "value": "left center", "label": "Left" },
+            { "value": "right center", "label": "Right" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "action",
+      "name": "Closing action",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Label" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "About overhaul"
+    }
+  ]
+}
+{% endschema %}

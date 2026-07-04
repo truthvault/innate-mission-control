@@ -1,0 +1,111 @@
+<div class="innate-dining-v16 innate-dining-v16--after-products" data-dining-editor-section="size-guide">
+  <section class="d51-size-guide" aria-label="{{ section.settings.aria_label | escape }}" data-mode="people" data-shape="rectangle">
+    <div class="d51-size-guide__inner">
+      <div>
+        <h2>{{ section.settings.heading }}</h2>
+        {%- if section.settings.text != blank -%}<p>{{ section.settings.text }}</p>{%- endif -%}
+      </div>
+      <div class="d51-size-guide__panel">
+        <div class="d51-size-guide__controls">
+          <div>
+            <label for="D51Shape">{{ section.settings.shape_label }}</label>
+            <select id="D51Shape">
+              <option value="rectangle">{{ section.settings.shape_rectangle }}</option>
+              <option value="round">{{ section.settings.shape_round }}</option>
+              <option value="oval">{{ section.settings.shape_oval }}</option>
+            </select>
+          </div>
+          <div>
+            <label>{{ section.settings.mode_label }}</label>
+            <div class="d51-mode" role="radiogroup" aria-label="{{ section.settings.mode_aria_label | escape }}">
+              <label><input type="radio" name="d51-mode" value="people" checked> {{ section.settings.mode_people }}</label>
+              <label><input type="radio" name="d51-mode" value="size"> {{ section.settings.mode_size }}</label>
+            </div>
+          </div>
+          <div class="d51-size-guide__people-field">
+            <label for="D51People">{{ section.settings.people_label }}</label>
+            <input id="D51People" type="number" min="2" max="14" step="1" value="6" inputmode="numeric">
+          </div>
+          <div class="d51-size-guide__size-fields">
+            <div>
+              <label for="D51Length">{{ section.settings.length_label }}</label>
+              <input id="D51Length" type="number" min="800" max="5000" step="50" value="2400" inputmode="numeric">
+            </div>
+            <div class="d51-width-field">
+              <label for="D51Width">{{ section.settings.width_label }}</label>
+              <input id="D51Width" type="number" min="700" max="1600" step="50" value="1000" inputmode="numeric">
+            </div>
+          </div>
+        </div>
+        <div class="d51-size-guide__result" id="D51Result" aria-live="polite"></div>
+        {%- if section.settings.note != blank -%}<p class="d51-size-guide__note">{{ section.settings.note }}</p>{%- endif -%}
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+  (function(){
+    var guide = document.querySelector('.d51-size-guide');
+    if (!guide || guide.dataset.d51Ready === 'true') return;
+    guide.dataset.d51Ready = 'true';
+    var shape = document.getElementById('D51Shape');
+    var people = document.getElementById('D51People');
+    var length = document.getElementById('D51Length');
+    var width = document.getElementById('D51Width');
+    var result = document.getElementById('D51Result');
+    var modes = guide.querySelectorAll('input[name="d51-mode"]');
+    function longRange(n){ if (n <= 4) return '1400–1600mm long'; if (n <= 6) return '1800–2200mm long'; if (n <= 8) return '2400–2800mm long'; if (n <= 10) return '3000–3400mm long'; return '3600mm+ long'; }
+    function roundRange(n){ if (n <= 4) return '1000–1200mm diameter'; if (n <= 6) return '1300–1500mm diameter'; if (n <= 8) return '1600–1800mm diameter'; return '1900–2100mm+ diameter'; }
+    function seatsFromLength(mm){ if (mm < 1700) return '4 people comfortably'; if (mm < 2300) return '6 people comfortably'; if (mm < 2900) return '8 people comfortably'; if (mm < 3500) return '10 people comfortably'; return '12+ people, depending on chair width'; }
+    function seatsFromRound(mm){ if (mm < 1250) return '4 people comfortably'; if (mm < 1550) return '6 people comfortably'; if (mm < 1850) return '8 people comfortably'; return '10+ people, depending on chair width'; }
+    function mode(){ var checked = guide.querySelector('input[name="d51-mode"]:checked'); return checked ? checked.value : 'people'; }
+    function render(){
+      var currentShape = shape.value;
+      var currentMode = mode();
+      guide.setAttribute('data-mode', currentMode);
+      guide.setAttribute('data-shape', currentShape);
+      if (currentMode === 'people') {
+        var n = Math.max(2, Math.min(14, parseInt(people.value || '6', 10)));
+        if (currentShape === 'round') result.innerHTML = '<strong>For ' + n + ' people</strong>Start around ' + roundRange(n) + ' for a round table.';
+        else if (currentShape === 'oval') result.innerHTML = '<strong>For ' + n + ' people</strong>Start around ' + longRange(n) + '. Standard width is 1000mm for oval and pill tables; pebble tables are usually 1100–1200mm wide, depending on the length and curve.';
+        else result.innerHTML = '<strong>For ' + n + ' people</strong>Start around ' + longRange(n) + '. Standard width is 1000mm.';
+      } else {
+        var l = parseInt(length.value || '2400', 10);
+        var w = parseInt(width.value || '1000', 10);
+        if (currentShape === 'round') result.innerHTML = '<strong>At ' + l + 'mm diameter</strong>This usually seats ' + seatsFromRound(l) + '.';
+        else if (currentShape === 'oval') result.innerHTML = '<strong>At about ' + l + ' × ' + w + 'mm</strong>This usually seats ' + seatsFromLength(l) + '. Oval and pill tables are normally 1000mm wide; pebble tables often need 1100–1200mm, depending on the length and curve.';
+        else result.innerHTML = '<strong>At about ' + l + ' × ' + w + 'mm</strong>This usually seats ' + seatsFromLength(l) + ', with chair width and base position affecting comfort.';
+      }
+    }
+    shape.addEventListener('change', render);
+    people.addEventListener('input', render);
+    length.addEventListener('input', render);
+    width.addEventListener('input', render);
+    modes.forEach(function(el){ el.addEventListener('change', render); });
+    render();
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Dining size guide",
+  "settings": [
+    {"type":"text","id":"aria_label","label":"Section accessibility label","default":"Table size guide"},
+    {"type":"text","id":"heading","label":"Heading","default":"Table size guide"},
+    {"type":"textarea","id":"text","label":"Text","default":"Choose a shape, then enter either your table size or how many people you want to seat."},
+    {"type":"text","id":"shape_label","label":"Shape label","default":"Shape"},
+    {"type":"text","id":"shape_rectangle","label":"Rectangle option","default":"Rectangle"},
+    {"type":"text","id":"shape_round","label":"Round option","default":"Round"},
+    {"type":"text","id":"shape_oval","label":"Oval option","default":"Oval / pill / pebble"},
+    {"type":"text","id":"mode_label","label":"Mode label","default":"I know"},
+    {"type":"text","id":"mode_aria_label","label":"Mode accessibility label","default":"Choose size guide mode"},
+    {"type":"text","id":"mode_people","label":"People mode label","default":"People"},
+    {"type":"text","id":"mode_size","label":"Size mode label","default":"Table size"},
+    {"type":"text","id":"people_label","label":"People field label","default":"People"},
+    {"type":"text","id":"length_label","label":"Length field label","default":"Length / diameter mm"},
+    {"type":"text","id":"width_label","label":"Width field label","default":"Width mm"},
+    {"type":"textarea","id":"note","label":"Note","default":"A starting point only. Chair width, room layout and walking space around the table all affect the final size. All sizes and shapes are fully customisable."}
+  ],
+  "presets": [{"name":"Dining size guide"}]
+}
+{% endschema %}

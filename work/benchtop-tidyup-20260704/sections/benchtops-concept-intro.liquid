@@ -1,0 +1,80 @@
+{{ 'page-benchtops-concept.css' | asset_url | stylesheet_tag }}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..650;1,9..144,300..650&family=Inter:wght@400;500;600;700;800&display=swap">
+
+<script>
+  document.documentElement.classList.add('bench-concept-template');
+</script>
+
+<div class="bench-concept bench-concept--intro" data-section-id="{{ section.id }}">
+  <section class="bench-studio-open" aria-label="Custom timber benchtops quote studio introduction">
+    {%- assign hero_alt = section.settings.hero_image_alt | default: 'Custom NZ native timber benchtop in a kitchen' -%}
+    <div class="bench-studio-open__inner">
+      <div class="bench-studio-open__copy">
+        <p class="bench-concept__eyebrow">Custom timber benchtops NZ</p>
+        <h1>Design your NZ timber benchtop before you email us.</h1>
+        <p>Build a made-to-size quote with Rimu, Tōtara or West Coast Beech, then send it to our Christchurch workshop for review.</p>
+        <div class="bench-studio-open__actions" aria-label="Benchtop page actions">
+          <a class="bench-concept__btn bench-concept__btn--primary" href="#innate-benchtop-configurator-section">Start designing</a>
+          <a class="bench-concept__btn bench-concept__btn--secondary" href="/products/product-sample">Order samples</a>
+        </div>
+      </div>
+
+      <div class="bench-studio-open__facts" aria-label="Benchtop proof points">
+        <span><strong>Native timber</strong><em>Rimu, Tōtara, Beech</em></span>
+        <span><strong>Made in Christchurch</strong><em>Workshop checked before cutting</em></span>
+        <span><strong>Delivered nationwide</strong><em>Freight estimated in the quote</em></span>
+      </div>
+
+      {%- if section.settings.hero_image != blank -%}
+        {%- capture hero_srcset -%}
+          {%- assign widths = '720,1080,1440,1920,2400' | split: ',' -%}
+          {%- for w in widths -%}
+            {{ section.settings.hero_image | image_url: width: w }} {{ w }}w{%- unless forloop.last -%},{%- endunless -%}
+          {%- endfor -%}
+        {%- endcapture -%}
+        <figure class="bench-studio-open__image">
+          <span>Christchurch made</span>
+          <strong>Price the practical stuff first. We confirm the craft details after.</strong>
+          {{ section.settings.hero_image | image_url: width: 2400 | image_tag:
+            alt: hero_alt,
+            class: 'bench-studio-open__photo',
+            sizes: '(min-width: 900px) 42vw, 100vw',
+            srcset: hero_srcset,
+            loading: 'eager',
+            fetchpriority: 'high',
+            width: section.settings.hero_image.width,
+            height: section.settings.hero_image.height
+          }}
+        </figure>
+      {%- endif -%}
+    </div>
+  </section>
+</div>
+
+{% schema %}
+{
+  "name": "Benchtops concept intro",
+  "class": "section-benchtops-concept-intro",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "text",
+      "id": "hero_image_alt",
+      "label": "Hero image alt text",
+      "default": "Custom NZ native timber benchtop in a kitchen"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Benchtops concept intro"
+    }
+  ]
+}
+{% endschema %}

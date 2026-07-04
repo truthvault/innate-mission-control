@@ -1,0 +1,812 @@
+/* ============================================================
+   Benchtops landing — catalogue editorial
+   Scoped to :is(.template-sufix-benchtops, .template-sufix-boardroom-tables) + .bench-* classes.
+   Type: Cormorant Garamond (display) + Maven Pro (body, theme-loaded).
+   ============================================================ */
+
+:root {
+  --bench-forest:        var(--innate-forest);
+  --bench-forest-ink:    var(--innate-forest-ink);
+  --bench-cream:         var(--innate-cream);
+  --bench-cream-soft:    var(--innate-cream-soft);
+  --bench-paper:         var(--innate-paper);
+  --bench-ink:           var(--innate-ink);
+  --bench-ink-soft:      rgba(19, 19, 17, .7);
+  --bench-ink-faint:     rgba(19, 19, 17, .42);
+  --bench-line:          rgba(22, 56, 50, .14);
+  --bench-line-strong:   rgba(22, 56, 50, .28);
+  --bench-field-bg:      #ffffff;
+  --bench-field-border:  rgba(22, 56, 50, .32);
+  --bench-field-focus:   var(--innate-moss);
+  --bench-field-placeholder: rgba(19, 35, 29, .48);
+
+  --bench-display: var(--innate-display);
+  --bench-body:    var(--innate-body);
+
+  --bench-max:       1280px;
+  --bench-max-wide:  1440px;
+  --bench-prose:     56ch;
+
+  --bench-pad-x:        clamp(1.25rem, 5vw, 4rem);
+  --bench-pad-y:        clamp(2.5rem, 5vw, 4.5rem);
+  --bench-pad-y-tight:  clamp(1.5rem, 3vw, 2.5rem);
+  --bench-pad-y-band:   clamp(2rem, 4vw, 3.25rem);
+
+  --bench-ease: cubic-bezier(.22, .61, .36, 1);
+}
+
+/* ─────────── Page wrap + type primitives ─────────── */
+
+.bench-page {
+  font-family: var(--bench-body);
+  color: var(--bench-ink);
+  font-size: 17px;
+  line-height: 1.55;
+  background: var(--bench-paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.bench-page :where(p) { margin: 0; }
+.bench-page :where(h1, h2, h3, h4) { margin: 0; }
+
+.bench-display {
+  font-family: var(--bench-display);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--bench-forest-ink);
+  line-height: 1.08;
+}
+
+.bench-eyebrow {
+  font-family: var(--bench-body);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--innate-rust);
+  margin: 0 0 .9rem;
+}
+
+/* ─────────── Hero ─────────── */
+
+.bench-hero {
+  position: relative;
+  width: 100%;
+  min-height: clamp(480px, 70vh, 700px);
+  overflow: hidden;
+  background: var(--bench-forest-ink);
+  color: var(--innate-paper);
+  isolation: isolate;
+  display: flex;
+}
+
+.bench-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bench-hero__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.bench-hero__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(12, 32, 28, .15) 0%,
+      rgba(12, 32, 28, .05) 35%,
+      rgba(12, 32, 28, .55) 80%,
+      rgba(12, 32, 28, .82) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(12, 32, 28, .4) 0%,
+      rgba(12, 32, 28, .1) 50%,
+      transparent 100%
+    );
+}
+
+.bench-hero__inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: var(--bench-max-wide);
+  margin: 0 auto;
+  padding: var(--bench-pad-x);
+  padding-top: clamp(3rem, 9vh, 5rem);
+  padding-bottom: clamp(2rem, 5vh, 3.5rem);
+  display: flex;
+  align-items: flex-end;
+}
+
+.bench-hero__content {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 760px;
+}
+
+/* High-specificity colour locks so theme heading rules can't override. */
+.bench-hero .bench-hero__eyebrow,
+.bench-hero p.bench-hero__eyebrow {
+  font-family: var(--bench-body);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--innate-warm-white) !important;
+  margin: 0;
+}
+
+.bench-hero h1.bench-hero__headline {
+  font-family: var(--bench-display);
+  font-weight: 600;
+  font-size: clamp(2.45rem, 4.4vw, 4.35rem);
+  letter-spacing: 0;
+  line-height: 1.06;
+  color: var(--innate-paper) !important;
+  margin: 0;
+}
+
+.bench-hero h1.bench-hero__headline em,
+.bench-hero h1.bench-hero__headline i {
+  font-style: italic;
+  color: var(--bench-cream) !important;
+}
+
+.bench-hero .bench-hero__sub {
+  font-family: var(--bench-body);
+  font-size: clamp(1.05rem, 1.6vw, 1.18rem);
+  line-height: 1.55;
+  color: rgba(251, 248, 242, .9) !important;
+  max-width: 56ch;
+}
+
+.bench-hero .bench-hero__sub p {
+  margin: 0;
+  color: inherit !important;
+}
+
+.bench-hero .bench-hero__sub em,
+.bench-hero .bench-hero__sub i {
+  font-family: var(--bench-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.06em;
+  color: var(--bench-cream) !important;
+}
+
+.bench-hero .bench-hero__cue {
+  font-family: var(--bench-body);
+  font-size: .76rem;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(251, 248, 242, .68) !important;
+  margin: .25rem 0 0;
+}
+
+.bench-hero__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .9rem;
+  margin-top: .5rem;
+}
+
+.bench-hero__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  font-family: var(--bench-body);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: .02em;
+  text-decoration: none;
+  border-radius: var(--innate-radius);
+  transition: background .25s var(--bench-ease), color .25s var(--bench-ease), transform .25s var(--bench-ease), box-shadow .25s var(--bench-ease);
+  border: 1px solid transparent;
+}
+
+.bench-hero__btn--primary {
+  background: var(--innate-glass-bg);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  border: 1px solid var(--innate-glass-border);
+  color: var(--innate-warm-white);
+}
+
+.bench-hero__btn--primary:hover {
+  background: rgba(12, 32, 28, .52);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 1px rgba(12, 32, 28, .18), 0 18px 40px -18px rgba(12, 32, 28, .65);
+}
+
+.bench-hero__btn--secondary {
+  background: transparent;
+  color: var(--innate-paper);
+  border-color: rgba(251, 248, 242, .55);
+}
+
+.bench-hero__btn--secondary:hover {
+  background: rgba(251, 248, 242, .12);
+  border-color: rgba(251, 248, 242, .85);
+  transform: translateY(-1px);
+}
+
+.bench-hero__btn:focus-visible {
+  outline: 2px solid var(--bench-cream);
+  outline-offset: 4px;
+}
+
+/* ─────────── Configurator CTA ───────────
+   The page no longer embeds the configurator in an iframe. Instead this
+   section is a focused CTA that opens the standalone Vercel app. The
+   configurator runs at full viewport on its own URL — cleaner for the
+   tool, lighter for the page. */
+
+.bench-cta {
+  background: var(--bench-cream);
+  padding: clamp(3rem, 6vw, 5rem) var(--bench-pad-x);
+  text-align: center;
+}
+
+.bench-cta__inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.5rem);
+}
+
+.bench-cta__heading {
+  font-size: clamp(2.05rem, 3.2vw, 3.25rem);
+  letter-spacing: 0;
+  line-height: 1.06;
+  margin: 0;
+}
+
+.bench-cta__heading em,
+.bench-cta__heading i {
+  font-style: italic;
+  color: var(--bench-forest);
+}
+
+.bench-cta__sub {
+  color: var(--bench-ink-soft);
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+  line-height: 1.55;
+  max-width: 52ch;
+  margin: 0 auto;
+}
+
+.bench-cta__sub p { margin: 0; }
+
+.bench-cta__sub em,
+.bench-cta__sub i {
+  font-family: var(--bench-display);
+  font-style: italic;
+  color: var(--bench-forest);
+}
+
+.bench-cta__action {
+  margin: clamp(.5rem, 1vw, 1rem) 0 0;
+}
+
+.bench-cta__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  padding: 1.05rem 2.25rem;
+  background: var(--bench-forest);
+  color: var(--bench-cream);
+  font-family: var(--bench-body);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: .02em;
+  text-decoration: none;
+  border-radius: var(--innate-radius);
+  transition: background .25s var(--bench-ease), transform .25s var(--bench-ease), box-shadow .25s var(--bench-ease);
+  box-shadow: 0 1px 1px rgba(12, 32, 28, .08), 0 12px 30px -16px rgba(12, 32, 28, .35);
+}
+
+.bench-cta__btn:hover {
+  background: var(--bench-forest-ink);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 1px rgba(12, 32, 28, .12), 0 18px 40px -18px rgba(12, 32, 28, .45);
+}
+
+.bench-cta__btn:focus-visible {
+  outline: 2px solid var(--bench-forest);
+  outline-offset: 4px;
+}
+
+.bench-cta__btn-label { display: inline-block; }
+
+.bench-cta__btn-arrow {
+  display: inline-block;
+  transition: transform .25s var(--bench-ease);
+}
+
+.bench-cta__btn:hover .bench-cta__btn-arrow {
+  transform: translateX(3px);
+}
+
+.bench-cta__caption {
+  font-family: var(--bench-body);
+  font-size: .8rem;
+  color: var(--bench-ink-faint);
+  letter-spacing: .04em;
+  margin: .25rem 0 0;
+}
+
+/* ─────────── Timber species ─────────── */
+
+.bench-species {
+  background: var(--bench-paper);
+  padding: var(--bench-pad-y) var(--bench-pad-x);
+}
+
+.bench-species__head {
+  max-width: var(--bench-max);
+  margin: 0 auto clamp(2rem, 4vw, 3rem);
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 880px) {
+  .bench-species__head {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: end;
+  }
+}
+
+.bench-species__heading {
+  font-size: clamp(1.95rem, 3vw, 3.15rem);
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.bench-species__heading em,
+.bench-species__heading i {
+  font-style: italic;
+  color: var(--bench-forest);
+}
+
+.bench-species__sub {
+  color: var(--bench-ink-soft);
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: var(--bench-prose);
+}
+
+.bench-species__sub p { margin: 0; }
+
+/* Each species is a wide editorial spread — photo dominant
+   on one side, copy on the other. Alternates left/right. */
+.bench-spread {
+  max-width: var(--bench-max-wide);
+  margin: 0 auto;
+  display: grid;
+  gap: clamp(1.5rem, 3.5vw, 2.75rem);
+  padding: clamp(1.75rem, 3.5vw, 2.75rem) 0;
+  border-top: 1px solid var(--bench-line);
+  align-items: center;
+}
+
+.bench-spread:last-of-type {
+  border-bottom: 1px solid var(--bench-line);
+}
+
+@media (min-width: 880px) {
+  .bench-spread {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+  .bench-spread--media-right {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+  .bench-spread--media-right .bench-spread__media {
+    order: 2;
+  }
+}
+
+.bench-spread__media {
+  margin: 0;
+  position: relative;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  background: var(--bench-cream);
+  border-radius: var(--innate-radius);
+}
+
+.bench-spread__photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.6s var(--bench-ease);
+  transform: scale(1.01);
+}
+
+.bench-spread:hover .bench-spread__photo {
+  transform: scale(1.04);
+}
+
+.bench-spread__body {
+  display: grid;
+  gap: 1rem;
+  max-width: 38rem;
+  align-content: center;
+}
+
+.bench-spread h3.bench-spread__name {
+  font-family: var(--bench-display);
+  font-weight: 600;
+  font-size: clamp(2.05rem, 3.35vw, 3.35rem);
+  letter-spacing: 0;
+  line-height: 1.05;
+  color: var(--bench-forest-ink);
+  margin: 0;
+}
+
+.bench-spread h3.bench-spread__name em,
+.bench-spread h3.bench-spread__name i {
+  font-style: italic;
+  color: var(--bench-forest-ink);
+}
+
+.bench-spread__text {
+  color: var(--bench-ink-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: var(--bench-prose);
+}
+
+.bench-spread__text p { margin: 0; }
+
+.bench-spread__meta {
+  font-family: var(--bench-body);
+  font-size: .76rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--bench-ink-faint);
+  font-weight: 500;
+  margin-top: .35rem;
+}
+
+/* Boardroom shapes — show the full table render, no crop. The shape
+   images are wide (~2 : 1 to 2.5 : 1) and would lose the ends in the
+   default 5:4 'cover' frame used by Benchtops timber spreads. */
+.template-sufix-boardroom-tables .bench-spread__media {
+  aspect-ratio: 5 / 2;
+  background: var(--bench-paper);
+}
+
+.template-sufix-boardroom-tables .bench-spread__photo {
+  object-fit: contain;
+  transform: none;
+}
+
+.template-sufix-boardroom-tables .bench-spread:hover .bench-spread__photo {
+  transform: none;
+}
+
+/* ─────────── How it works ─────────── */
+
+.bench-steps {
+  background: var(--bench-cream-soft);
+  padding: var(--bench-pad-y) var(--bench-pad-x);
+}
+
+.bench-steps__head {
+  max-width: var(--bench-max);
+  margin: 0 auto clamp(1.75rem, 4vw, 2.75rem);
+  display: grid;
+  gap: .85rem;
+}
+
+.bench-steps__heading {
+  font-size: clamp(1.8rem, 2.8vw, 2.65rem);
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+
+.bench-steps__heading em,
+.bench-steps__heading i {
+  font-style: italic;
+  color: var(--bench-forest);
+}
+
+.bench-steps__list {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: var(--bench-max);
+  display: grid;
+  gap: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+@media (min-width: 880px) {
+  .bench-steps__list {
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(1.5rem, 4vw, 3rem);
+  }
+}
+
+.bench-steps__step {
+  display: grid;
+  gap: .75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--bench-line-strong);
+}
+
+.bench-steps__num {
+  font-family: var(--bench-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.9rem, 3vw, 2.55rem);
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--bench-forest);
+}
+
+.bench-steps__title {
+  font-family: var(--bench-body);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: .005em;
+  color: var(--bench-forest-ink);
+}
+
+.bench-steps__text {
+  color: var(--bench-ink-soft);
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: 36ch;
+}
+
+/* ─────────── Delivery band ─────────── */
+
+.bench-band {
+  background: var(--bench-forest);
+  color: var(--innate-cream);
+  padding: var(--bench-pad-y-band) var(--bench-pad-x);
+  text-align: center;
+}
+
+.bench-band__line {
+  font-family: var(--bench-display);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 2.5vw, 1.9rem);
+  letter-spacing: 0;
+  line-height: 1.3;
+  max-width: 38ch;
+  margin: 0 auto;
+}
+
+.bench-band__line em,
+.bench-band__line i {
+  font-style: italic;
+}
+
+/* ─────────── FAQ refinements ─────────── */
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq {
+  background: var(--bench-paper);
+  padding: var(--bench-pad-y) var(--bench-pad-x);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .inner {
+  max-width: 880px !important;
+  margin: 0 auto;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .faq-header {
+  text-align: left;
+  margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .faq-title {
+  font-family: var(--bench-display);
+  font-weight: 600;
+  font-size: clamp(1.8rem, 2.8vw, 2.65rem);
+  letter-spacing: 0;
+  line-height: 1.08;
+  color: var(--bench-forest-ink);
+  text-align: left;
+  margin: 0;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion {
+  border-top: 0;
+  display: block;
+  margin-top: 10px;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion:first-of-type {
+  margin-top: 0;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion details {
+  padding: 0;
+  border: 1px solid rgba(40, 50, 41, .13);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .48);
+  overflow: hidden;
+  box-shadow: 0 10px 26px rgba(40, 50, 41, .035);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion details[open] {
+  background: #fffaf2;
+  border-color: rgba(40, 50, 41, .18);
+  box-shadow: 0 16px 34px rgba(40, 50, 41, .055);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .title {
+  font-family: var(--bench-body);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.25;
+  color: var(--bench-forest-ink);
+  flex: 1;
+  margin: 0;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .plus {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(40, 50, 41, .16);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  margin: 0;
+  background: rgba(248, 244, 238, .72);
+  color: transparent;
+  font-size: 0;
+  line-height: 1;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion details[open] .plus {
+  transform: none;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .plus::before,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion details[open] .plus::before {
+  content: "+";
+  font-family: var(--bench-body);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1;
+  color: rgba(40, 50, 41, .68);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion details[open] .plus::before {
+  content: "–";
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte {
+  color: var(--bench-ink-soft);
+  font-size: 15.5px;
+  line-height: 1.62;
+  max-width: var(--bench-prose);
+  margin: 0;
+  padding: 0 22px 20px;
+  font-family: var(--bench-body);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte p {
+  margin: 0 0 2px;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte li {
+  color: rgba(40, 50, 41, .76);
+  font-size: 15.5px;
+  line-height: 1.62;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte ul,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte ol {
+  margin: 0;
+  padding-left: 20px;
+  color: rgba(40, 50, 41, .76);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte ol {
+  display: grid;
+  gap: 7px;
+}
+
+@media (max-width: 720px) {
+  :is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion-header {
+    padding: 16px 18px;
+  }
+
+  :is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .faq .accordion .rte {
+    padding: 0 18px 18px;
+  }
+}
+
+/* ─────────── Theme layout neutralisation ─────────── */
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .layout,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) #MainContent,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .main {
+  padding: 0;
+  max-width: none;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) main,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) [role="main"] {
+  background: var(--bench-paper);
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .section-main-page,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .shopify-section--main-page,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .shopify-section[data-section-type="main-page"] {
+  display: none !important;
+}
+
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .shopify-section + .shopify-section { margin: 0; }
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .shopify-section { background: transparent; }
+
+/* Google Reviews app block — strip the theme's default white panel
+   so the widget reads against the page's natural cream/paper surround. */
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .shopify-section.apps,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .shopify-section.apps .content.apps,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .content.apps.color-section-bg-is-white,
+:is(.template-sufix-benchtops, .template-sufix-boardroom-tables) .content.apps.color-body-bg-is-white {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* ─────────── Page-load reveal ─────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .bench-hero__eyebrow,
+  .bench-hero__headline,
+  .bench-hero__sub,
+  .bench-hero__cue,
+  .bench-hero__btns {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: bench-reveal 1s var(--bench-ease) forwards;
+  }
+  .bench-hero__eyebrow  { animation-delay: .15s; }
+  .bench-hero__headline { animation-delay: .3s;  }
+  .bench-hero__sub      { animation-delay: .55s; }
+  .bench-hero__cue      { animation-delay: .8s;  }
+  .bench-hero__btns     { animation-delay: .85s; }
+}
+
+@keyframes bench-reveal {
+  to { opacity: 1; transform: translateY(0); }
+}

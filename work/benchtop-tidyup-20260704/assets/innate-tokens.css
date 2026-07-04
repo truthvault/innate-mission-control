@@ -1,0 +1,39 @@
+/* Innate global design tokens — THE single source of truth (P2 foundation, 2026-07-04).
+   Values per brand-kit.md + P0 rulings (acceptance-specs.md). Per-page token families
+   (--bench-*, --out-*, --dining-*, --cp-*, --hosp-*, --about-*, --contact-*, --home-*,
+   --materials-*, *-display/*-body) are ALIASES of these — never redefine them with raw values.
+   Loaded first from layout/theme.liquid. Do not add page-specific rules here. */
+
+:root {
+  /* Colour */
+  --innate-forest:       #163832;  /* primary CTAs (flat ground), links, active states */
+  --innate-forest-ink:   #0c201c;  /* headings on light bg, dark bands, glass tint base */
+  --innate-ink:          #131311;  /* body text */
+  --innate-moss:         #283229;  /* sanctioned dark neutral (text/bands/UI) — never a CTA bg */
+  --innate-paper:        #fbf8f2;  /* page background */
+  --innate-warm-white:   #fffaf3;  /* cards, inner surfaces, text on dark */
+  --innate-cream:        #f3ede3;  /* deliberate feature bands */
+  --innate-cream-soft:   #f7f2ea;  /* alternate card background */
+  --innate-rust:         #9a4f35;  /* eyebrow/small accents only */
+  --innate-line:         rgba(22, 56, 50, .14);
+  --innate-line-strong:  rgba(22, 56, 50, .28);
+
+  /* Type */
+  --innate-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --innate-body: "Maven Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Components */
+  --innate-radius: 3px;            /* buttons/inputs sitewide; filter chips 999px exempt */
+  --innate-glass-bg: rgba(12, 32, 28, .34);
+  --innate-glass-border: rgba(255, 250, 243, .32);
+}
+
+/* Tier-2 CTA: glass on photography/dark bands (recipe canonised from homepage .hero-corner). */
+.innate-btn-glass {
+  background: var(--innate-glass-bg) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+  backdrop-filter: blur(5px) !important;
+  border: 1px solid var(--innate-glass-border) !important;
+  color: var(--innate-warm-white) !important;
+  border-radius: var(--innate-radius) !important;
+}

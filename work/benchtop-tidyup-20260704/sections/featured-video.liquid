@@ -1,0 +1,130 @@
+{%- unless template.suffix == 'table-maintain' and page.handle == 'maintaining-your-table' -%}
+<div class="content featured-video  {% render 'content-classes', scope: section %}" data-section-id="{{ section.id }}" data-section-type="featured-video" {% if section.settings.video_controls %}data-show-controls{% endif %}>
+  {% if section.settings.heading != blank %}
+    <h2 class="shopify-section-title">{{ section.settings.heading | escape }}</h2>
+  {% endif %}
+  <div class="video {% if section.settings.video == blank %}youtube{% endif %}">
+    {% if section.settings.video != blank %}
+      {% liquid
+        if section.settings.video_autoplay
+          assign muted = true
+          assign controls = section.settings.video_controls
+        else
+          assign muted = section.settings.video_muted
+          assign controls = false
+        endif
+        echo section.settings.video | video_tag: image_size: '2000x', autoplay: section.settings.video_autoplay, loop: section.settings.video_loop, muted: muted, controls: controls
+      %}
+    {% else %}
+      <iframe data-type="youtube" src="//www.youtube.com/embed/_9VUPq3SxOc?rel=0&showinfo=0&vq=720&enablejsapi=1" width="850" height="480" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-forms allow-scripts allow-pointer-lock allow-same-origin allow-top-navigation allow-presentation" aria-label="{{ 'general.accessibility.video_player' | t }}"></iframe>      
+    {% endif %}
+    <div class="cover" {% if section.settings.video_autoplay %}style="display: none;"{% endif %}>
+      {%- if section.settings.video == blank -%}
+        {{ 'collection-2' | placeholder_svg_tag: 'placeholder-svg' }}
+      {%- endif -%}
+      <div class="play">
+        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" height="100px" width="100px"
+           viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">
+          <path class="stroke-solid" d="M49.9,2.5C23.6,2.8,2.1,24.4,2.5,50.4C2.9,76.5,24.7,98,50.3,97.5c26.4-0.6,47.4-21.8,47.2-47.7
+            C97.3,23.7,75.7,2.3,49.9,2.5"/>
+          <path class="icon" d="M38,69c-1,0.5-1.8,0-1.8-1.1V32.1c0-1.1,0.8-1.6,1.8-1.1l34,18c1,0.5,1,1.4,0,1.9L38,69z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+{%- endunless -%}
+
+{% schema %}
+{
+  "name": "t:sections.featured-video.name",
+  "class": "section-featured-video",
+  "settings": [
+    {
+      "type": "video",
+      "id": "video",
+      "label": "t:sections.featured-video.settings.video.label"
+    },
+    {
+      "type": "checkbox",
+      "id": "video_controls",
+      "label": "t:sections.featured-video.settings.video_controls.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "video_muted",
+      "label": "t:sections.featured-video.settings.video_muted.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "video_loop",
+      "label": "t:sections.featured-video.settings.video_loop.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "video_autoplay",
+      "label": "t:sections.featured-video.settings.video_autoplay.label",
+      "info": "t:sections.featured-video.settings.video_autoplay.info",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "t:sections.settings.heading.label",
+      "info": "t:sections.settings.heading.info"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded_content",
+      "label": "t:sections.settings.expanded_content.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_desktop",
+      "label": "t:sections.settings.show_on_desktop.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "t:sections.settings.show_on_mobile.label",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "t:sections.featured-video.presets.name"
+    }
+  ],
+  "disabled_on": {
+    "groups": ["header", "footer"]
+  }
+}
+{% endschema %}

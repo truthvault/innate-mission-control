@@ -43,7 +43,7 @@ function StockMatrixMobile({ title, cells }: { title: string; cells: SampleStock
                 <div key={`${title}-${species}-${finish}-mobile`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 10, alignItems: "center", minHeight: 48, padding: "8px 10px", borderTop: `1px solid ${DT.border}`, background: level === "out" ? "rgba(153,27,27,0.035)" : level === "low" ? "rgba(217,119,6,0.035)" : "transparent" }}>
                   <div>
                     <div style={{ fontFamily: DT.sans, color: DT.textPrimary, fontSize: 12, fontWeight: 900 }}>{finish}</div>
-                    <div style={{ marginTop: 2, fontFamily: DT.sans, color: DT.textFaint, fontSize: 10, fontWeight: 800 }}>{cell ? "Tracked" : "No stock row"}</div>
+                    {!cell && <div style={{ marginTop: 2, fontFamily: DT.sans, color: DT.textFaint, fontSize: 10, fontWeight: 800 }}>No stock row</div>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontFamily: DT.serif, color: meta.color, fontSize: 24, lineHeight: 1, fontWeight: 800 }}>{cell?.count ?? 0}</span>
@@ -80,7 +80,7 @@ function StockMatrix({ title, cells }: { title: string; cells: SampleStockCell[]
               const content = (
                 <>
                   <span style={{ fontFamily: DT.serif, color: meta.color, fontSize: 26, lineHeight: 1, fontWeight: 700 }}>{cell?.count ?? 0}</span>
-                  <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}><StatusPill level={level} /><span style={{ fontSize: 10, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 700 }}>{cell ? "Tracked" : "No stock row"}</span></span>
+                  <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}><StatusPill level={level} />{!cell && <span style={{ fontSize: 10, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 700 }}>No stock row</span>}</span>
                 </>
               );
               if (!cell) return <div key={`${species}-${finish}`} title={`No stock row found for ${title} / ${species} / ${finish}`} style={cellStyle}>{content}</div>;
@@ -118,7 +118,7 @@ function TopUpQueue({ cells }: { cells: SampleStockCell[] }) {
                 <div style={{ fontSize: 13, color: DT.textPrimary, fontWeight: 700, fontFamily: DT.sans }}>{cell.sampleType}: {cell.species} / {cell.finish}</div>
                 <div style={{ fontSize: 11, color: DT.textSecondary, fontFamily: DT.sans, marginTop: 2 }}>{cell.count === 0 ? "No stock ready" : `${cell.count} ready, top up soon`}</div>
               </div>
-              <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}><StatusPill level={cell.level} /><span style={{ fontSize: 10, color: DT.textFaint, fontFamily: DT.sans, fontWeight: 700 }}>Tracked</span></span>
+              <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}><StatusPill level={cell.level} /></span>
             </div>
           ))}
         </div>
@@ -211,7 +211,6 @@ export default function SampleStockClient({ board, syncedAt, source, mondayError
       mondayError={mondayError}
     >
         <style>{SAMPLE_STOCK_MOBILE_CSS}</style>
-        <p data-sample-copy="true" style={{ margin: "-8px 0 18px", color: DT.textSecondary, fontFamily: DT.sans, fontSize: 13 }}>Sample stock feed showing ready, low, and out pieces by type, species, and finish.</p>
 
         {board ? (
           <>

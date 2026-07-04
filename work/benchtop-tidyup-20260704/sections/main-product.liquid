@@ -1,0 +1,1542 @@
+{% comment %} Home & Living product cache refresh: 2026-06-18T10:38Z. {% endcomment %}
+{% render 'product', product: product, enable_history_state: true %}
+
+<script type="application/ld+json">
+  {{ product | structured_data }}
+</script>
+
+{% schema %}
+{
+  "name": "t:sections.main-product.name",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable_sticky_info",
+      "label": "t:sections.main-product.settings.enable_sticky_info.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "first_variant_media_enabled",
+      "label": "t:sections.main-product.settings.first_variant_media_enabled.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_variants",
+      "label": "t:sections.main-product.settings.hide_variants.label",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "t:sections.main-product.settings.header.content"
+    },
+    {
+      "type": "paragraph",
+      "content": "t:sections.main-product.settings.header.info"
+    },
+    {
+      "type": "select",
+      "id": "desktop_media_position",
+      "label": "t:sections.main-product.settings.desktop_media_position.label",
+      "default": "left",
+      "options": [
+        {
+          "value": "left",
+          "label": "t:sections.main-product.settings.desktop_media_position.options__1"
+        },
+        {
+          "value": "right",
+          "label": "t:sections.main-product.settings.desktop_media_position.options__2"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "desktop_media_size",
+      "label": "t:sections.main-product.settings.desktop_media_size.label",
+      "default": "medium",
+      "options": [
+        {
+          "value": "small",
+          "label": "t:sections.main-product.settings.desktop_media_size.options__1"
+        },
+        {
+          "value": "medium",
+          "label": "t:sections.main-product.settings.desktop_media_size.options__2"
+        },
+        {
+          "value": "large",
+          "label": "t:sections.main-product.settings.desktop_media_size.options__3"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "desktop_media_layout",
+      "label": "t:sections.main-product.settings.desktop_media_layout.label",
+      "default": "bottom",
+      "options": [
+        {
+          "value": "stack",
+          "label": "t:sections.main-product.settings.desktop_media_layout.options__1"
+        },
+        {
+          "value": "bottom",
+          "label": "t:sections.main-product.settings.desktop_media_layout.options__2"
+        },
+        {
+          "value": "left",
+          "label": "t:sections.main-product.settings.desktop_media_layout.options__3"
+        },
+        {
+          "value": "right",
+          "label": "t:sections.main-product.settings.desktop_media_layout.options__4"
+        },
+        {
+          "value": "hidden",
+          "label": "t:sections.main-product.settings.desktop_media_layout.options__5"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "mobile_media_layout",
+      "label": "t:sections.main-product.settings.mobile_media_layout.label",
+      "default": "hidden",
+      "options": [
+        {
+          "value": "bottom",
+          "label": "t:sections.main-product.settings.mobile_media_layout.options__1"
+        },
+        {
+          "value": "hidden",
+          "label": "t:sections.main-product.settings.mobile_media_layout.options__2"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "zoom_enable",
+      "label": "t:sections.main-product.settings.zoom_enable.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_video_looping",
+      "label": "t:sections.main-product.settings.enable_video_looping.label",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "t:sections.settings.header.content"
+    },
+    {
+      "type": "range",
+      "id": "content_max_width",
+      "label": "t:sections.settings.content_max_width.label",
+      "default": 1100,
+      "min": 600,
+      "max": 5000,
+      "step": 50,
+      "unit": "px"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_background",
+      "label": "t:sections.settings.show_background.label",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "expanded",
+      "label": "t:sections.settings.expanded.label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "collapsed",
+      "label": "t:sections.settings.collapsed.label",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    },
+    {
+      "type": "inventory",
+      "name": "t:sections.main-product.blocks.inventory.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:sections.main-product.blocks.inventory.content"
+        },
+        {
+          "type": "range",
+          "id": "low_inventory_threshold",
+          "min": 0,
+          "max": 20,
+          "step": 1,
+          "label": "t:sections.main-product.blocks.inventory.settings.low_inventory_threshold.label",
+          "default": 5
+        },
+        {
+          "type": "color",
+          "id": "in_stock_color",
+          "label": "t:sections.main-product.blocks.inventory.settings.in_stock_color.label",
+          "default": "#54c63a"
+        },
+        {
+          "type": "color",
+          "id": "low_stock_color",
+          "label": "t:sections.main-product.blocks.inventory.settings.low_stock_color.label",
+          "default": "#F4AF29"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "t:sections.main-product.blocks.text.name",
+      "settings": [
+        {
+          "id": "text",
+          "type": "richtext",
+          "default": {
+            "ar": "<p>قالب نص</p>",
+            "bg": "<p>Текстов блок</p>",
+            "ca": "<p>Bloc de text</p>",
+            "cs": "<p>Textový blok</p>",
+            "da": "<p>Tekstblok</p>",
+            "de": "<p>Textblock</p>",
+            "el": "<p>Μπλοκ κειμένου</p>",
+            "en": "<p>Text block</p>",
+            "es": "<p>Bloque de texto</p>",
+            "fi": "<p>Tekstilohko</p>",
+            "fr": "<p>Bloc de texte</p>",
+            "he": "<p>חוסם טקסט</p>",
+            "hr": "<p>Blok teksta</p>",
+            "hu": "<p>Szövegblokk</p>",
+            "id": "<p>Blok teks</p>",
+            "it": "<p>Blocco di testo</p>",
+            "ja": "<p>テキストブロック</p>",
+            "ko": "<p>텍스트 블록</p>",
+            "lt": "<p>Teksto blokas</p>",
+            "nb": "<p>Tekstblokk</p>",
+            "nl": "<p>Tekstblok</p>",
+            "pl": "<p>Blok tekstowy</p>",
+            "pt-BR": "<p>Bloco de texto</p>",
+            "pt-PT": "<p>Bloco de texto</p>",
+            "ro": "<p>Bloc de text</p>",
+            "ru": "<p>Текстовый блок</p>",
+            "sk": "<p>Blok textu</p>",
+            "sl": "<p>Besedilni blok</p>",
+            "sv": "<p>Textblock</p>",
+            "th": "<p>บล็อคข้อความ</p>",
+            "tr": "<p>Metin bloğu</p>",
+            "vi": "<p> Khối văn bản </p>",
+            "zh-CN": "<p>文本块</p>",
+            "zh-TW": "<p>文本塊</p>"
+          },
+          "label": "t:sections.main-product.blocks.text.settings.text.label"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "subtitle",
+      "name": "t:sections.main-product.blocks.subtitle.name",
+      "settings": [
+        {
+          "id": "text",
+          "type": "text",
+          "default": {
+            "ar": "العنوان الفرعي",
+            "bg": "субтитри",
+            "ca": "Subtítol",
+            "cs": "Titulky",
+            "da": "Undertekst",
+            "de": "Untertitel",
+            "el": "Υπότιτλος",
+            "en": "Subtitle",
+            "es": "Subtitular",
+            "fi": "Tekstitys",
+            "fr": "Sous-titre",
+            "he": "כתוביות",
+            "hr": "Titl",
+            "hu": "Felirat",
+            "id": "Subjudul",
+            "it": "Sottotitolo",
+            "ja": "字幕",
+            "ko": "부제",
+            "lt": "Subtitrai",
+            "nb": "Undertekst",
+            "nl": "Ondertitel",
+            "pl": "Podtytuł",
+            "pt-BR": "Legenda",
+            "pt-PT": "Legenda",
+            "ro": "Subtitlu",
+            "ru": "Подзаголовок",
+            "sk": "Podnadpis",
+            "sl": "Podnaslov",
+            "sv": "Texta",
+            "th": "คำบรรยาย",
+            "tr": "Alt yazı",
+            "vi": "Phụ đề",
+            "zh-CN": "字幕",
+            "zh-TW": "字幕"
+          },
+          "label": "t:sections.main-product.blocks.subtitle.settings.text.label"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "title",
+      "name": "t:sections.main-product.blocks.title.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "price",
+      "name": "t:sections.main-product.blocks.price.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "checkbox",
+          "id": "show_tax_included",
+          "label": "t:sections.main-product.blocks.price.settings.show_tax_included.label",
+          "info": "t:sections.main-product.blocks.price.settings.show_tax_included.info",
+          "default": true
+        },
+        {
+          "type": "checkbox",
+          "id": "show_shipping_policy",
+          "label": "t:sections.main-product.blocks.price.settings.show_shipping_policy.label",
+          "info": "t:sections.main-product.blocks.price.settings.show_shipping_policy.info",
+          "default": true
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "vendor",
+      "name": "t:sections.main-product.blocks.vendor.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "sku",
+      "limit": 1,
+      "name": "t:sections.main-product.blocks.sku.name",
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "barcode",
+      "limit": 1,
+      "name": "t:sections.main-product.blocks.barcode.name",
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "quantity_selector",
+      "name": "t:sections.main-product.blocks.quantity_selector.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "dining_timber_picker",
+      "name": "Dining timber picker",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Timber"
+        },
+        {
+          "type": "select",
+          "id": "picker_type",
+          "label": "Picker style",
+          "options": [
+            {
+              "value": "dropdown",
+              "label": "Dropdown"
+            },
+            {
+              "value": "radios",
+              "label": "Buttons"
+            }
+          ],
+          "default": "radios"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_variant_label",
+          "label": "Show heading and selected value",
+          "default": true
+        },
+        {
+          "type": "text",
+          "id": "swatches_selector",
+          "label": "Swatch option name"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "dining_sample_cta",
+      "name": "Dining timber sample CTA",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Compare colour and grain at home"
+        },
+        {
+          "type": "text",
+          "id": "text_before",
+          "label": "Text before link",
+          "default": "Not sure which timber suits your space?"
+        },
+        {
+          "type": "text",
+          "id": "link_label",
+          "label": "Link label",
+          "default": "Order timber samples"
+        },
+        {
+          "type": "url",
+          "id": "link_url",
+          "label": "Link"
+        },
+        {
+          "type": "text",
+          "id": "text_after",
+          "label": "Text after link",
+          "default": " — $10 including nationwide courier."
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "dining_size_picker",
+      "name": "Dining table length",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading",
+          "default": "Table length"
+        },
+        {
+          "type": "select",
+          "id": "picker_type",
+          "label": "Picker style",
+          "options": [
+            {
+              "value": "dropdown",
+              "label": "Dropdown"
+            },
+            {
+              "value": "radios",
+              "label": "Buttons"
+            }
+          ],
+          "default": "radios"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_variant_label",
+          "label": "Show heading and selected value",
+          "default": true
+        },
+        {
+          "type": "text",
+          "id": "swatches_selector",
+          "label": "Swatch option name"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "variant_picker",
+      "name": "t:sections.main-product.blocks.variant_picker.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "select",
+          "id": "picker_type",
+          "label": "t:sections.main-product.blocks.variant_picker.settings.picker_type.label",
+          "options": [
+            {
+              "value": "dropdown",
+              "label": "t:sections.main-product.blocks.variant_picker.settings.picker_type.options__1.label"
+            },
+            {
+              "value": "radios",
+              "label": "t:sections.main-product.blocks.variant_picker.settings.picker_type.options__2.label"
+            }
+          ],
+          "default": "radios"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_variant_label",
+          "label": "t:sections.main-product.blocks.variant_picker.settings.show_variant_label.label",
+          "default": true
+        },
+        {
+          "type": "header",
+          "content": "t:sections.main-product.blocks.variant_picker.settings.swatches_selector.header"
+        },
+        {
+          "type": "text",
+          "id": "swatches_selector",
+          "label": "t:sections.main-product.blocks.variant_picker.settings.swatches_selector.label",
+          "info": "t:sections.main-product.blocks.variant_picker.settings.swatches_selector.info"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.main-product.blocks.variant_picker.settings.popup_selector.header"
+        },
+        {
+          "type": "text",
+          "id": "popup_selector",
+          "label": "t:sections.main-product.blocks.variant_picker.settings.popup_selector.label",
+          "info": "t:sections.main-product.blocks.variant_picker.settings.popup_selector.info",
+          "default": {
+            "ar": "مقاس",
+            "bg": "размер",
+            "ca": "Talla",
+            "cs": "Velikost",
+            "da": "Størrelse",
+            "de": "Größe",
+            "el": "Μέγεθος",
+            "en": "Size",
+            "es": "Talla",
+            "fi": "Koko",
+            "fr": "Taille",
+            "he": "גודל",
+            "hr": "Veličina",
+            "hu": "Méret",
+            "id": "Ukuran",
+            "it": "Misurare",
+            "ja": "サイズ",
+            "ko": "크기",
+            "lt": "Dydis",
+            "nb": "Størrelse",
+            "nl": "Maat",
+            "pl": "Rozmiar",
+            "pt-BR": "Tamanho",
+            "pt-PT": "Tamanho",
+            "ro": "mărimea",
+            "ru": "Размер",
+            "sk": "Veľkosť",
+            "sl": "Velikost",
+            "sv": "Storlek",
+            "th": "ขนาด",
+            "tr": "Boy",
+            "vi": "Kích thước",
+            "zh-CN": "尺寸",
+            "zh-TW": "尺寸"
+          }
+        },
+        {
+          "type": "text",
+          "id": "popup_text",
+          "label": "t:sections.main-product.blocks.variant_picker.settings.popup_text.label",
+          "default": {
+            "ar": "دليل المقاسات",
+            "bg": "Ръководство за размери",
+            "ca": "Guia de talles",
+            "cs": "Průvodce velikostí",
+            "da": "Størrelsesguide",
+            "de": "Größentabelle",
+            "el": "Οδηγός μεγέθους",
+            "en": "Size guide",
+            "es": "Guia de tallas",
+            "fi": "Koko opas",
+            "fr": "Guide des tailles",
+            "he": "מדריך מידות",
+            "hr": "Vodič za veličinu",
+            "hu": "Mérettáblázat",
+            "id": "Panduan ukuran",
+            "it": "Guida alle taglie",
+            "ja": "サイズガイド",
+            "ko": "사이즈 안내",
+            "lt": "Dydžių vadovas",
+            "nb": "Størrelsesguide",
+            "nl": "Maattabel",
+            "pl": "Tabela rozmiarów",
+            "pt-BR": "Guia de tamanho",
+            "pt-PT": "Guia de tamanho",
+            "ro": "Ghid marimi",
+            "ru": "Руководство по размерам",
+            "sk": "Sprievodca veľkosťou",
+            "sl": "Vodnik po velikosti",
+            "sv": "Storleksguide",
+            "th": "คู่มือขนาด",
+            "tr": "Ölçü Rehberi",
+            "vi": "Hướng dẫn kích thước",
+            "zh-CN": "尺码指南",
+            "zh-TW": "尺碼指南"
+          }
+        },
+        {
+          "type": "page",
+          "id": "popup_page",
+          "label": "t:sections.main-product.blocks.variant_picker.settings.popup_page.label",
+          "info": "t:sections.main-product.blocks.variant_picker.settings.popup_page.info"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "buy_buttons",
+      "name": "t:sections.main-product.blocks.buy_buttons.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "checkbox",
+          "id": "show_dynamic_checkout",
+          "label": "t:sections.main-product.blocks.buy_buttons.settings.show_dynamic_checkout.label",
+          "info": "t:sections.main-product.blocks.buy_buttons.settings.show_dynamic_checkout.info",
+          "default": true
+        },
+        {
+          "type": "checkbox",
+          "id": "show_pickup_availability",
+          "label": "t:sections.main-product.blocks.buy_buttons.settings.show_pickup_availability.label",
+          "info": "t:sections.main-product.blocks.buy_buttons.settings.show_pickup_availability.info",
+          "default": true
+        },
+        {
+          "type": "checkbox",
+          "id": "show_gift_card_recipient",
+          "default": false,
+          "label": "t:sections.main-product.blocks.buy_buttons.settings.show_gift_card_recipient.label",
+          "info": "t:sections.main-product.blocks.buy_buttons.settings.show_gift_card_recipient.info"
+        },
+        {
+          "type": "header",
+          "content": "Dining table freight and enquiry"
+        },
+        {
+          "type": "text",
+          "id": "dining_freight_placeholder",
+          "label": "Freight address placeholder",
+          "default": "Start typing your delivery address"
+        },
+        {
+          "type": "text",
+          "id": "dining_freight_button_label",
+          "label": "Freight button label",
+          "default": "Check freight"
+        },
+        {
+          "type": "text",
+          "id": "dining_enquiry_heading",
+          "label": "Enquiry heading",
+          "default": "Want to chat about this table?"
+        },
+        {
+          "type": "text",
+          "id": "dining_enquiry_text",
+          "label": "Enquiry text",
+          "default": "Give us a bell or send us your details and we'll be in touch."
+        },
+        {
+          "type": "text",
+          "id": "dining_enquiry_submit_label",
+          "label": "Enquiry form submit label",
+          "default": "Send enquiry to Innate"
+        },
+        {
+          "type": "text",
+          "id": "dining_enquiry_open_label",
+          "label": "Open form button label",
+          "default": "Open enquiry form ↓"
+        },
+        {
+          "type": "text",
+          "id": "dining_enquiry_close_label",
+          "label": "Close form button label",
+          "default": "Close enquiry form ↑"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "sales_point",
+      "name": "t:sections.main-product.blocks.sales_point.name",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "t:sections.main-product.blocks.sales_point.settings.icon.label",
+          "default": "globe",
+          "options": [
+            {
+              "value": "none",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__1.label"
+            },
+            {
+              "value": "box",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__2.label"
+            },
+            {
+              "value": "chat_bubble",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__3.label"
+            },
+            {
+              "value": "check_mark",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__4.label"
+            },
+            {
+              "value": "dryer",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__5.label"
+            },
+            {
+              "value": "eye",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__6.label"
+            },
+            {
+              "value": "heart",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__7.label"
+            },
+            {
+              "value": "iron",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__8.label"
+            },
+            {
+              "value": "leaf",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__9.label"
+            },
+            {
+              "value": "leather",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__10.label"
+            },
+            {
+              "value": "lock",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__11.label"
+            },
+            {
+              "value": "map_pin",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__12.label"
+            },
+            {
+              "value": "pants",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__13.label"
+            },
+            {
+              "value": "plane",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__14.label"
+            },
+            {
+              "value": "price_tag",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__15.label"
+            },
+            {
+              "value": "question_mark",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__16.label"
+            },
+            {
+              "value": "return",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__17.label"
+            },
+            {
+              "value": "ruler",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__18.label"
+            },
+            {
+              "value": "shirt",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__19.label"
+            },
+            {
+              "value": "shoe",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__20.label"
+            },
+            {
+              "value": "silhouette",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__21.label"
+            },
+            {
+              "value": "star",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__22.label"
+            },
+            {
+              "value": "truck",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__23.label"
+            },
+            {
+              "value": "washing",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__24.label"
+            },
+            {
+              "value": "globe",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__globe.label"
+            }
+          ]
+        },
+        {
+          "id": "text",
+          "type": "text",
+          "label": "t:sections.main-product.blocks.sales_point.settings.text.label",
+          "default": {
+            "ar": "حرية الملاحة في جميع أنحاء العالم",
+            "bg": "Безплатна доставка по целия свят",
+            "ca": "Enviament gratuït a tot el món",
+            "cs": "Doprava zdarma po celém světě",
+            "da": "Gratis verdensomspændende forsendelse",
+            "de": "Weltweiter Gratisversand",
+            "el": "Δωρεάν αποστολή σε όλο τον κόσμο",
+            "en": "Free worldwide shipping",
+            "es": "Envío gratis a todo el mundo",
+            "fi": "Ilmainen toimitus maailmanlaajuisesti",
+            "fr": "Livraison gratuite à travers le monde",
+            "he": "משלוח עולמי חינם",
+            "hr": "Besplatna dostava diljem svijeta",
+            "hu": "Ingyenes kiszállítás az egész világon",
+            "id": "Pengiriman gratis ke seluruh dunia",
+            "it": "Spedizione gratuita in tutto il mondo",
+            "ja": "全世界送料無料",
+            "ko": "전 세계 무료 배송",
+            "lt": "Nemokamas pristatymas visame pasaulyje",
+            "nb": "Gratis verdensomspennende frakt",
+            "nl": "Gratis wereldwijde verzending",
+            "pl": "Bezpłatna wysyłka na całym świecie",
+            "pt-BR": "Frete grátis mundial",
+            "pt-PT": "Frete grátis mundial",
+            "ro": "Livrare gratuită în toată lumea",
+            "ru": "Бесплатная доставка по всему миру",
+            "sk": "Bezplatná celosvetová doprava",
+            "sl": "Brezplačna dostava po vsem svetu",
+            "sv": "Fri frakt över hela världen",
+            "th": "จัดส่งฟรีทั่วโลก",
+            "tr": "Uluslararası bedava gönderim",
+            "vi": "Miễn phí vận chuyển toàn cầu",
+            "zh-CN": "全球免费送货",
+            "zh-TW": "全球免費送貨"
+          }
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "description",
+      "name": "t:sections.main-product.blocks.description.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "image",
+      "name": "t:sections.main-product.blocks.image.name",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "t:sections.main-product.blocks.image.settings.image.label"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": false
+        }
+      ]
+    },
+    {
+      "type": "contact_form",
+      "name": "t:sections.main-product.blocks.contact_form.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:sections.contact-page.settings.paragraph.content"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:sections.settings.heading.label",
+          "default": {
+            "ar": "أسألنا أي شيء",
+            "bg": "Попитайте ни каквото и да било",
+            "ca": "Pregunta'ns qualsevol cosa",
+            "cs": "Zeptejte se nás na cokoliv",
+            "da": "Spørg os hvad som helst",
+            "de": "Fragen Sie uns etwas",
+            "el": "Ρωτήστε μας οτιδήποτε",
+            "en": "Ask us anything",
+            "es": "Pregúntenos cualquier cosa",
+            "fi": "Kysy meiltä mitä tahansa",
+            "fr": "Demandez-nous n'importe quoi",
+            "he": "תשאל אותנו כל דבר",
+            "hr": "Pitajte nas bilo što",
+            "hu": "Kérdezz tőlünk bármit",
+            "id": "Tanya kami apa saja",
+            "it": "chiedeteci qualsiasi cosa",
+            "ja": "何でもお尋ねください",
+            "ko": "무엇이든 물어보세요",
+            "lt": "Paklausk mūsų bet ko",
+            "nb": "Spør oss om hva som helst",
+            "nl": "Vraag ons alles",
+            "pl": "Zapytaj nas o co kolwiek",
+            "pt-BR": "Pergunte-nos qualquer coisa",
+            "pt-PT": "Pergunte-nos qualquer coisa",
+            "ro": "Intreaba-ne orice",
+            "ru": "Спросите нас что-нибудь",
+            "sk": "Opýtajte sa nás na čokoľvek",
+            "sl": "Vprašajte nas karkoli",
+            "sv": "Fråga oss vad som helst",
+            "th": "ถามอะไรก็ได้",
+            "tr": "Bize herşeyi sor",
+            "vi": "Hỏi chúng tôi bất cứ điều gì",
+            "zh-CN": "问我们什么",
+            "zh-TW": "問我們什麼"
+          }
+        },
+        {
+          "type": "richtext",
+          "id": "richtext",
+          "label": "t:sections.contact-form.settings.richtext.label",
+          "default": {
+            "ar": "<p>يسعدنا الرد على أي أسئلة قد تكون لديك حول منتجنا.</ p>",
+            "bg": "<p>Щастливи сме да отговорим на всички въпроси, които може да имате относно нашия продукт.</p>",
+            "ca": "<p>Estem encantats de respondre qualsevol pregunta que tingueu sobre el nostre producte.</p>",
+            "cs": "<p>Rádi vám odpovíme na jakékoli dotazy týkající se našeho produktu.</p>",
+            "da": "<p>Vi besvarer gerne alle spørgsmål, du måtte have om vores produkt.</p>",
+            "de": "<p>Wir beantworten gerne Ihre Fragen zu unserem Produkt.</p>",
+            "el": "<p>Είμαστε στην ευχάριστη θέση να απαντήσουμε σε οποιεσδήποτε ερωτήσεις μπορεί να έχετε σχετικά με το προϊόν μας.</p>",
+            "en": "<p>We are happy to answer any questions you may have about our product.</p>",
+            "es": "<p>Estamos encantados de responder cualquier pregunta que pueda tener sobre nuestro producto.</p>",
+            "fi": "<p>Vastaamme mielellämme tuotteitamme koskeviin kysymyksiin.</p>",
+            "fr": "<p>Nous sommes heureux de répondre à toutes vos questions sur notre produit.</p>",
+            "he": "<p>אנו שמחים לענות על כל שאלה שיש לך לגבי המוצר שלנו.</p>",
+            "hr": "<p>Rado ćemo odgovoriti na sva vaša pitanja o našem proizvodu.</p>",
+            "hu": "<p>Szívesen válaszolunk minden kérdésére a termékünkkel kapcsolatban.</p>",
+            "id": "<p>Kami dengan senang hati menjawab pertanyaan apa pun yang Anda miliki tentang produk kami.</p>",
+            "it": "<p>Siamo felici di rispondere a qualsiasi domanda tu possa avere sul nostro prodotto.</p>",
+            "ja": "<p>当社の製品に関するご質問には、喜んでお答えいたします。</p>",
+            "ko": "<p>저희 제품에 대한 모든 질문에 기꺼이 답변해 드리겠습니다.</p>",
+            "lt": "<p>Džiaugiamės galėdami atsakyti į visus klausimus apie mūsų produktą.</p>",
+            "nb": "<p>Vi svarer gjerne på alle spørsmål du måtte ha om produktet vårt.</p>",
+            "nl": "<p>We beantwoorden graag al uw vragen over ons product.</p>",
+            "pl": "<p>Chętnie odpowiemy na wszelkie pytania dotyczące naszego produktu.</p>",
+            "pt-BR": "<p>Estamos felizes em responder a quaisquer perguntas que você possa ter sobre nosso produto.</p>",
+            "pt-PT": "<p>Estamos felizes em responder a quaisquer perguntas que você possa ter sobre nosso produto.</p>",
+            "ro": "<p>Suntem bucuroși să răspundem la orice întrebări pe care le aveți despre produsul nostru.</p>",
+            "ru": "<p>Мы будем рады ответить на любые ваши вопросы о нашем продукте.</p>",
+            "sk": "<p>S radosťou vám odpovieme na akékoľvek otázky týkajúce sa nášho produktu.</p>",
+            "sl": "<p>Z veseljem vam bomo odgovorili na vsa vaša vprašanja o našem izdelku.</p>",
+            "sv": "<p>Vi svarar gärna på alla frågor du kan ha om vår produkt.</p>",
+            "th": "<p>เรายินดีที่จะตอบทุกคำถามที่คุณอาจมีเกี่ยวกับผลิตภัณฑ์ของเรา</p>",
+            "tr": "<p>Ürünümüzle ilgili tüm sorularınızı yanıtlamaktan mutluluk duyarız.</p>",
+            "vi": "<p>Chúng tôi sẵn lòng trả lời bất kỳ câu hỏi nào của bạn về sản phẩm của chúng tôi.</p>",
+            "zh-CN": "<p>我们很乐意回答您对我们产品的任何问题。</p>",
+            "zh-TW": "<p>我們很樂意回答您對我們產品的任何問題。</p>"
+          }
+        },
+        {
+          "type": "checkbox",
+          "id": "add_phone_number",
+          "label": "t:sections.contact-page.settings.add_phone_number.label",
+          "default": false
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "complementary",
+      "name": "t:sections.main-product.blocks.complementary_products.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:sections.main-product.blocks.complementary_products.settings.paragraph.content"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "t:sections.settings.heading.label",
+          "default": {
+            "ar": "أزواج بشكل جيد مع",
+            "bg": "Съчетава се добре с",
+            "ca": "Combina bé amb",
+            "cs": "Dobře se páruje s",
+            "da": "Passer godt med",
+            "de": "Passt gut zu",
+            "el": "Ταιριάζει καλά με",
+            "en": "Pairs well with",
+            "es": "Combina bien con",
+            "fi": "Sopii hyvin pariksi",
+            "fr": "Se marie bien avec",
+            "he": "משתלב היטב עם",
+            "hr": "Dobro se slaže s",
+            "hu": "Jól párosítható",
+            "id": "Berpasangan dengan baik dengan",
+            "it": "Si abbina bene con",
+            "ja": "よく合う",
+            "ko": "와 잘 어울린다",
+            "lt": "Puikiai dera su",
+            "nb": "Passer godt sammen med",
+            "nl": "Past goed bij",
+            "pl": "Dobrze się paruje z",
+            "pt-BR": "Combina bem com",
+            "pt-PT": "Combina bem com",
+            "ro": "Se asortează bine cu",
+            "ru": "Хорошо сочетается с",
+            "sk": "Dobre sa páruje s",
+            "sl": "Dobro se ujema z",
+            "sv": "Passar bra med",
+            "th": "จับคู่ได้ดีกับ",
+            "tr": "İle iyi eşleşir",
+            "vi": "Kết hợp tốt với",
+            "zh-CN": "搭配得很好",
+            "zh-TW": "搭配得很好"
+          }
+        },
+        {
+          "type": "select",
+          "id": "columns",
+          "label": "t:sections.main-product.blocks.complementary_products.settings.columns.label",
+          "default": "automatic",
+          "options": [
+            {
+              "value": "automatic",
+              "label": "t:sections.main-product.blocks.complementary_products.settings.columns.options__1"
+            },
+            {
+              "value": "4",
+              "label": "t:sections.main-product.blocks.complementary_products.settings.columns.options__2"
+            },
+            {
+              "value": "3",
+              "label": "t:sections.main-product.blocks.complementary_products.settings.columns.options__3"
+            },
+            {
+              "value": "2",
+              "label": "t:sections.main-product.blocks.complementary_products.settings.columns.options__4"
+            }
+          ]
+        },
+        {
+          "type": "header",
+          "content": "t:sections.main-product.blocks.complementary_products.settings.product_card_header.content"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:sections.main-product.blocks.complementary_products.settings.product_card_paragraph.content"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "share",
+      "name": "t:sections.main-product.blocks.share.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:sections.main-product.blocks.share.settings.featured_image_info.content"
+        },
+        {
+          "type": "paragraph",
+          "content": "t:sections.main-product.blocks.share.settings.title_info.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "facebook_sharing_products",
+          "label": "t:sections.main-product.blocks.share.settings.facebook_sharing_products.label",
+          "default": true
+        },
+        {
+          "type": "checkbox",
+          "id": "twitter_sharing_products",
+          "label": "t:sections.main-product.blocks.share.settings.twitter_sharing_products.label",
+          "default": true
+        },
+        {
+          "type": "checkbox",
+          "id": "pinterest_sharing_products",
+          "label": "t:sections.main-product.blocks.share.settings.pinterest_sharing_products.label",
+          "default": true
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "custom_liquid",
+      "name": "t:sections.main-product.blocks.custom_liquid.name",
+      "settings": [
+        {
+          "type": "liquid",
+          "id": "custom_liquid",
+          "label": "t:sections.main-product.blocks.custom_liquid.settings.custom_liquid.label",
+          "info": "t:sections.main-product.blocks.custom_liquid.settings.custom_liquid.info"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "collapsible_tab",
+      "name": "t:sections.main-product.blocks.collapsible_tab.name",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "info": "t:sections.main-product.blocks.collapsible_tab.settings.heading.info",
+          "label": "t:sections.main-product.blocks.collapsible_tab.settings.heading.label",
+          "default": {
+            "ar": "عنوان علامة التبويب",
+            "bg": "Заглавие на раздела",
+            "ca": "Títol de la pestanya",
+            "cs": "Název karty",
+            "da": "Fanetitel",
+            "de": "Tab-Titel",
+            "el": "Τίτλος καρτέλας",
+            "en": "Tab title",
+            "es": "Título de la pestaña",
+            "fi": "Välilehden otsikko",
+            "fr": "Titre de l'onglet",
+            "he": "כותרת הכרטיסייה",
+            "hr": "Naslov kartice",
+            "hu": "Lap címe",
+            "id": "Judul tab",
+            "it": "Titolo della scheda",
+            "ja": "タブタイトル",
+            "ko": "탭 제목",
+            "lt": "Skirtuko pavadinimas",
+            "nb": "Fanetittel",
+            "nl": "Tabtitel",
+            "pl": "Tytuł karty",
+            "pt-BR": "Título da guia",
+            "pt-PT": "Título da guia",
+            "ro": "Titlul filei",
+            "ru": "Название вкладки",
+            "sk": "Názov karty",
+            "sl": "Naslov zavihka",
+            "sv": "Flikens titel",
+            "th": "ชื่อแท็บ",
+            "tr": "Sekme başlığı",
+            "vi": "Tiêu đề tab",
+            "zh-CN": "标签标题",
+            "zh-TW": "標籤標題"
+          }
+        },
+        {
+          "type": "richtext",
+          "id": "content",
+          "label": "t:sections.main-product.blocks.collapsible_tab.settings.content.label",
+          "info": "t:sections.main-product.blocks.collapsible_tab.settings.content.info",
+          "default": {
+            "ar": "<p> محتوى علامة التبويب </p>",
+            "bg": "<p>Съдържание на раздел</p>",
+            "ca": "<p>Contingut de la pestanya</p>",
+            "cs": "<p>Obsah karty</p>",
+            "da": "<p>Faneindhold</p>",
+            "de": "<p>Tab-Inhalt</p>",
+            "el": "<p>Περιεχόμενο καρτέλας</p>",
+            "en": "<p>Tab content</p>",
+            "es": "<p>Contenido de la pestaña</p>",
+            "fi": "<p>Välilehden sisältö</p>",
+            "fr": "<p>Contenu de l'onglet</p>",
+            "he": "<p>תוכן כרטיסייה</p>",
+            "hr": "<p>Sadržaj kartice</p>",
+            "hu": "<p>Tartalom lap</p>",
+            "id": "<p>Konten tab</p>",
+            "it": "<p>Contenuto della scheda</p>",
+            "ja": "<p>タブコンテンツ</p>",
+            "ko": "<p>탭 콘텐츠</p>",
+            "lt": "<p>Skirtuko turinys</p>",
+            "nb": "<p>Faneinnhold</p>",
+            "nl": "<p>Tabbladinhoud</p>",
+            "pl": "<p>Zawartość karty</p>",
+            "pt-BR": "<p>Conteúdo da guia</p>",
+            "pt-PT": "<p>Conteúdo da guia</p>",
+            "ro": "<p>Conținutul filei</p>",
+            "ru": "<p>Содержимое вкладки</p>",
+            "sk": "<p>Obsah karty</p>",
+            "sl": "<p>Vsebina zavihka</p>",
+            "sv": "<p>Flikinnehåll</p>",
+            "th": "<p>เนื้อหาแท็บ</p>",
+            "tr": "<p>Sekme içeriği</p>",
+            "vi": "<p> Nội dung tab </p>",
+            "zh-CN": "<p>标签内容</p>",
+            "zh-TW": "<p>標籤內容</p>"
+          }
+        },
+        {
+          "type": "page",
+          "id": "page",
+          "label": "t:sections.main-product.blocks.collapsible_tab.settings.page.label"
+        },
+        {
+          "type": "select",
+          "id": "icon",
+          "options": [
+            {
+              "value": "none",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__1.label"
+            },
+            {
+              "value": "box",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__2.label"
+            },
+            {
+              "value": "chat_bubble",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__3.label"
+            },
+            {
+              "value": "check_mark",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__4.label"
+            },
+            {
+              "value": "dryer",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__5.label"
+            },
+            {
+              "value": "eye",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__6.label"
+            },
+            {
+              "value": "heart",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__7.label"
+            },
+            {
+              "value": "iron",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__8.label"
+            },
+            {
+              "value": "leaf",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__9.label"
+            },
+            {
+              "value": "leather",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__10.label"
+            },
+            {
+              "value": "lock",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__11.label"
+            },
+            {
+              "value": "map_pin",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__12.label"
+            },
+            {
+              "value": "pants",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__13.label"
+            },
+            {
+              "value": "plane",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__14.label"
+            },
+            {
+              "value": "price_tag",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__15.label"
+            },
+            {
+              "value": "question_mark",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__16.label"
+            },
+            {
+              "value": "return",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__17.label"
+            },
+            {
+              "value": "ruler",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__18.label"
+            },
+            {
+              "value": "shirt",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__19.label"
+            },
+            {
+              "value": "shoe",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__20.label"
+            },
+            {
+              "value": "silhouette",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__21.label"
+            },
+            {
+              "value": "star",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__22.label"
+            },
+            {
+              "value": "truck",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__23.label"
+            },
+            {
+              "value": "washing",
+              "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.options__24.label"
+            }
+          ],
+          "default": "check_mark",
+          "label": "t:sections.main-product.blocks.collapsible_tab.settings.icon.label"
+        },
+        {
+          "type": "checkbox",
+          "id": "is_open",
+          "label": "t:sections.main-product.blocks.collapsible_tab.settings.is_open.label",
+          "default": false
+        },
+        {
+          "type": "checkbox",
+          "id": "dining_table_only",
+          "label": "Show only on dining table products",
+          "default": false
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "rating",
+      "name": "t:sections.main-product.blocks.rating.name",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "paragraph",
+          "content": "t:sections.main-product.blocks.rating.settings.paragraph.content"
+        },
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    },
+    {
+      "type": "divider",
+      "name": "t:sections.main-product.blocks.divider.name",
+      "settings": [
+        {
+          "type": "header",
+          "content": "t:sections.settings.header_block.content"
+        },
+        {
+          "type": "checkbox",
+          "id": "increase_space_before_block",
+          "label": "t:sections.settings.increase_space.label",
+          "default": true
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
