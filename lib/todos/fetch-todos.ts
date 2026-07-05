@@ -5,16 +5,17 @@ export type TodoBucket = "today" | "waiting" | "explore" | "other";
 
 export type Todo = {
   id: string;
-  title: string;
-  detail?: string;
-  bucket: TodoBucket;
-  priority: string;
+  action: string; // plain-english next step (what to DO)
+  context?: string; // background
   owner?: string;
-  dueDate?: string;
+  urgency: "now" | "today" | "soon" | "waiting" | "approve" | "call";
+  timeEstimate: string; // "2 min" | "~15 min" | "Project"
+  size: "quick" | "medium" | "big";
+  isP1: boolean;
 };
 
 export type TodosResult = {
-  top: Todo[]; // P1 priorities (urgent) across every bucket — the real focus list
+  top: Todo[]; // P1 priorities across every bucket — the real focus list
   today: Todo[];
   waiting: Todo[];
   someday: Todo[];
@@ -33,13 +34,17 @@ function str(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function timeFor(size: string): string {
+  return size === "quick" ? "2 min" : size === "big" ? "Project" : "~15 min";
+}
+
 export async function listTodos(): Promise<TodosResult> {
   const empty: TodosResult = { top: [], today: [], waiting: [], someday: [], total: 0 };
   const supabase = supabaseConfig();
   if (!supabase) return { ...empty, error: "Supabase not configured" };
 
   const params = new URLSearchParams({
-    select: "id,title,detail,bucket,status,priority,owner,due_date",
+    select: "id,title,detail,bucket,status,priority,owner,metadata",
     "metadata->>source": "eq.mail_desk",
     status: "neq.archived",
     order: "priority.desc,updated_at.desc",
@@ -47,32 +52,42 @@ export async function listTodos(): Promise<TodosResult> {
 
   try {
     const response = await fetch(`${supabase.url}/rest/v1/action_items?${params}`, {
-      headers: {
-        apikey: supabase.serviceKey,
-        Authorization: `Bearer ${supabase.serviceKey}`,
-      },
+      headers: { apikey: supabase.serviceKey, Authorization: `Bearer ${supabase.serviceKey}` },
       cache: "no-store",
     });
     if (!response.ok) return { ...empty, error: `Supabase ${response.status}` };
     const rows = (await response.json()) as Record<string, unknown>[];
 
-    const todos: Todo[] = rows.map((r) => ({
-      id: String(r.id),
-      title: str(r.title) || "(untitled)",
-      detail: str(r.detail),
-      bucket: (str(r.bucket) as TodoBucket) || "other",
-      priority: str(r.priority) || "normal",
-      owner: str(r.owner),
-      dueDate: str(r.due_date),
-    }));
+    const todos: Todo[] = rows.map((r) => {
+      const meta = (r.metadata as Record<string, unknown>) || {};
+      const bucket = (str(r.bucket) as TodoBucket) || "other";
+      const state = str(meta.mail_desk_state) || "";
+      const size = (str(meta.size) as Todo["size"]) || "medium";
+      const isP1 = str(r.priority) === "urgent";
+      let urgency: Todo["urgency"];
+      if (state === "drafted") urgency = "approve";
+      else if (state === "call_not_email") urgency = "call";
+      else if (isP1) urgency = "now";
+      else if (bucket === "waiting") urgency = "waiting";
+      else if (bucket === "today") urgency = "today";
+      else urgency = "soon";
+      return {
+        id: String(r.id),
+        action: str(r.title) || "(no action)",
+        context: str(r.detail),
+        owner: str(r.owner),
+        urgency,
+        timeEstimate: timeFor(size),
+        size,
+        isP1,
+      };
+    });
 
-    const isUrgent = (t: Todo) => t.priority === "urgent";
     return {
-      // P1/urgent items lead, regardless of bucket — a blocked $10k job still shows.
-      top: todos.filter(isUrgent),
-      today: todos.filter((t) => t.bucket === "today" && !isUrgent(t)),
-      waiting: todos.filter((t) => t.bucket === "waiting" && !isUrgent(t)),
-      someday: todos.filter((t) => t.bucket === "explore" || t.bucket === "other"),
+      top: todos.filter((t) => t.isP1),
+      today: todos.filter((t) => !t.isP1 && (t.urgency === "today" || t.urgency === "approve" || t.urgency === "call")),
+      waiting: todos.filter((t) => !t.isP1 && t.urgency === "waiting"),
+      someday: todos.filter((t) => t.urgency === "soon"),
       total: todos.length,
     };
   } catch (err) {

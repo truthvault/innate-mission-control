@@ -117,15 +117,25 @@ function Row({ title, meta, tone = "grey", pillLabel }: { title: string; meta: s
   );
 }
 
-function TodoLine({ todo }: { todo: Todo }) {
-  const tone: Tone = todo.priority === "urgent" ? "red" : todo.priority === "high" ? "amber" : "grey";
-  const palette: Record<Tone, string> = { red: DT.clay, amber: DT.goldInk, grey: DT.textMuted, green: DT.green, teal: DT.teal };
+const URGENCY: Record<Todo["urgency"], { label: string; color: string; bg: string }> = {
+  now: { label: "NOW", color: "#fff", bg: DT.clay },
+  today: { label: "TODAY", color: DT.goldInk, bg: "rgba(200,169,110,0.20)" },
+  approve: { label: "APPROVE", color: DT.green, bg: "rgba(63,111,63,0.14)" },
+  call: { label: "CALL", color: DT.teal, bg: DT.tealSoft },
+  waiting: { label: "WAITING", color: DT.textMuted, bg: "rgba(0,0,0,0.05)" },
+  soon: { label: "SOON", color: DT.textMuted, bg: "rgba(0,0,0,0.04)" },
+};
+
+function TodoCard({ todo }: { todo: Todo }) {
+  const u = URGENCY[todo.urgency];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "8px minmax(0,1fr)", gap: 8, alignItems: "start", borderTop: `1px solid ${DT.border}`, paddingTop: 8 }}>
-      <span style={{ width: 8, height: 8, borderRadius: 999, background: palette[tone], marginTop: 5 }} />
+    <div style={{ display: "grid", gridTemplateColumns: "auto minmax(0,1fr) auto", gap: 10, alignItems: "start", borderTop: `1px solid ${DT.border}`, paddingTop: 10 }}>
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 58, height: 20, borderRadius: 6, background: u.bg, color: u.color, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, letterSpacing: "0.06em" }}>{u.label}</span>
       <div style={{ minWidth: 0 }}>
-        <span style={{ display: "block", fontFamily: DT.sans, color: DT.textPrimary, fontSize: 13, lineHeight: 1.3 }}>{todo.title}</span>
+        <span style={{ display: "block", fontFamily: DT.sans, color: DT.textPrimary, fontSize: 14, fontWeight: 700, lineHeight: 1.3 }}>{todo.action}</span>
+        <span style={{ display: "block", marginTop: 2, fontFamily: DT.sans, color: DT.textMuted, fontSize: 11, lineHeight: 1.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{todo.owner}{todo.context ? ` · ${todo.context}` : ""}</span>
       </div>
+      <span style={{ fontFamily: DT.sans, color: DT.textFaint, fontSize: 10, fontWeight: 900, whiteSpace: "nowrap", marginTop: 2 }}>{todo.timeEstimate}</span>
     </div>
   );
 }
@@ -178,21 +188,21 @@ export default async function TodayPage() {
           {todos.top.length > 0 && (
             <>
               <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.clay, textTransform: "uppercase", letterSpacing: "0.08em" }}>Do these first</div>
-              {todos.top.map((t) => <TodoLine key={t.id} todo={t} />)}
+              {todos.top.map((t) => <TodoCard key={t.id} todo={t} />)}
             </>
           )}
           {todos.today.length > 0 && (
             <>
-              <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Also on you</div>
-              {todos.today.slice(0, 10).map((t) => <TodoLine key={t.id} todo={t} />)}
+              <div style={{ marginTop: 8, fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Also on you</div>
+              {todos.today.slice(0, 8).map((t) => <TodoCard key={t.id} todo={t} />)}
             </>
           )}
           {!todos.top.length && !todos.today.length && (
             <Row title={todos.error ? "To-do list unavailable" : "Nothing on you right now"} meta={todos.error || "Your Innate to-do list is clear."} tone={todos.error ? "amber" : "green"} />
           )}
-          {todos.today.length > 10 && <Row title={`+ ${todos.today.length - 10} more`} meta="Full list in the Hermes Mail Desk" tone="grey" />}
-          {todos.waiting.length > 0 && <Row title={`${todos.waiting.length} waiting on customer / Nick`} meta="No action from you yet" tone="grey" pillLabel="Waiting" />}
-          {todos.someday.length > 0 && <Row title={`${todos.someday.length} someday / strategic`} meta="SEO plan, job descriptions, core-focus and more" tone="grey" pillLabel="Later" />}
+          {todos.today.length > 8 && <Row title={`+ ${todos.today.length - 8} more on you`} meta="Full list in the Hermes Mail Desk" tone="grey" pillLabel={`+${todos.today.length - 8}`} />}
+          {todos.waiting.length > 0 && <Row title={`${todos.waiting.length} waiting on customer / Nick`} meta="Nothing for you to do yet" tone="grey" pillLabel="Waiting" />}
+          {todos.someday.length > 0 && <Row title={`${todos.someday.length} someday / bigger projects`} meta="SEO plan, job descriptions, core-focus, automation" tone="grey" pillLabel="Later" />}
         </Panel>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
