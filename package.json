@@ -37,7 +37,8 @@
     "reconcile:order-intake": "node scripts/reconcile-order-intake.mjs && python3 scripts/sync-akahu-order-payments.py --refresh && node scripts/reconcile-order-intake.mjs",
     "test:sms-bridge": "node --experimental-strip-types scripts/test-sms-slack-bridge.mjs",
     "check:theme-drift": "node scripts/check-theme-drift.mjs",
-    "qa:crawl": "node scripts/qa-crawl.mjs"
+    "qa:crawl": "node scripts/qa-crawl.mjs",
+    "check:no-ai-runtime": "node scripts/check-no-ai-runtime.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
