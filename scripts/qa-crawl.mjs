@@ -108,7 +108,12 @@ for (const route of ROUTES) {
     const settled = await pageSnapshot(page);
 
     const ratio = textDiffRatio(early.text, settled.text);
-    if (ratio > 0.35) note(route, "flash", `content changed ${(ratio * 100).toFixed(0)}% between first paint and settle`);
+    // A first paint that shows an honest loading placeholder ("Loading…",
+    // "Checking…") resolving to content is expected, not a jarring flash. Only
+    // flag when the first paint was already real content that then got replaced
+    // (the "wrong view for a second then jumps" pattern Guido cares about).
+    const earlyWasLoading = /\bloading\b|\bchecking\b|checking pending/i.test(early.text);
+    if (ratio > 0.35 && !earlyWasLoading) note(route, "flash", `content changed ${(ratio * 100).toFixed(0)}% between first paint and settle`);
     if (settled.overflow > 4) note(route, "overflow", `${settled.overflow}px horizontal overflow`);
 
     const clickables = await page.$$eval("button, [role=button], summary", (els) =>
