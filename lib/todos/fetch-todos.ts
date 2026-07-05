@@ -14,6 +14,7 @@ export type Todo = {
 };
 
 export type TodosResult = {
+  top: Todo[]; // P1 priorities (urgent) across every bucket — the real focus list
   today: Todo[];
   waiting: Todo[];
   someday: Todo[];
@@ -33,7 +34,7 @@ function str(value: unknown): string | undefined {
 }
 
 export async function listTodos(): Promise<TodosResult> {
-  const empty: TodosResult = { today: [], waiting: [], someday: [], total: 0 };
+  const empty: TodosResult = { top: [], today: [], waiting: [], someday: [], total: 0 };
   const supabase = supabaseConfig();
   if (!supabase) return { ...empty, error: "Supabase not configured" };
 
@@ -65,9 +66,12 @@ export async function listTodos(): Promise<TodosResult> {
       dueDate: str(r.due_date),
     }));
 
+    const isUrgent = (t: Todo) => t.priority === "urgent";
     return {
-      today: todos.filter((t) => t.bucket === "today"),
-      waiting: todos.filter((t) => t.bucket === "waiting"),
+      // P1/urgent items lead, regardless of bucket — a blocked $10k job still shows.
+      top: todos.filter(isUrgent),
+      today: todos.filter((t) => t.bucket === "today" && !isUrgent(t)),
+      waiting: todos.filter((t) => t.bucket === "waiting" && !isUrgent(t)),
       someday: todos.filter((t) => t.bucket === "explore" || t.bucket === "other"),
       total: todos.length,
     };

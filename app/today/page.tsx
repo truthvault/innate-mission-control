@@ -173,14 +173,25 @@ export default async function TodayPage() {
 
         <Panel
           title="My to-dos"
-          subtitle={todos.error ? `Could not load (${todos.error})` : `${todos.today.length} on you now · ${todos.waiting.length} waiting · ${todos.someday.length} someday`}
+          subtitle={todos.error ? `Could not load (${todos.error})` : `${todos.top.length} top priorit${todos.top.length === 1 ? "y" : "ies"} · ${todos.today.length} also on you · ${todos.waiting.length} waiting · ${todos.someday.length} someday`}
         >
-          {todos.today.length ? (
-            todos.today.slice(0, 12).map((t) => <TodoLine key={t.id} todo={t} />)
-          ) : (
+          {todos.top.length > 0 && (
+            <>
+              <div style={{ fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.clay, textTransform: "uppercase", letterSpacing: "0.08em" }}>Do these first</div>
+              {todos.top.map((t) => <TodoLine key={t.id} todo={t} />)}
+            </>
+          )}
+          {todos.today.length > 0 && (
+            <>
+              <div style={{ marginTop: 6, fontFamily: DT.sans, fontSize: 10, fontWeight: 900, color: DT.textMuted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Also on you</div>
+              {todos.today.slice(0, 10).map((t) => <TodoLine key={t.id} todo={t} />)}
+            </>
+          )}
+          {!todos.top.length && !todos.today.length && (
             <Row title={todos.error ? "To-do list unavailable" : "Nothing on you right now"} meta={todos.error || "Your Innate to-do list is clear."} tone={todos.error ? "amber" : "green"} />
           )}
-          {todos.today.length > 12 && <Row title={`+ ${todos.today.length - 12} more on your list`} meta="Full list in the Hermes Mail Desk" tone="grey" />}
+          {todos.today.length > 10 && <Row title={`+ ${todos.today.length - 10} more`} meta="Full list in the Hermes Mail Desk" tone="grey" />}
+          {todos.waiting.length > 0 && <Row title={`${todos.waiting.length} waiting on customer / Nick`} meta="No action from you yet" tone="grey" pillLabel="Waiting" />}
           {todos.someday.length > 0 && <Row title={`${todos.someday.length} someday / strategic`} meta="SEO plan, job descriptions, core-focus and more" tone="grey" pillLabel="Later" />}
         </Panel>
 
