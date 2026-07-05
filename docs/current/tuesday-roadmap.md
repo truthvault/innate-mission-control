@@ -25,6 +25,20 @@ If it must keep working → it belongs in the engine → it is deterministic cod
 AI. If it is genuinely just help → it is copilot → a human confirms it, and a
 manual path always exists alongside it.
 
+## The approval law (binding, shared with Hermes)
+
+Every feature here obeys the same approval policy Hermes runs under
+(`/Users/mack-mini/.hermes/reference/platform/approval_policy.md`; also in this
+repo's `AGENTS.md`). Two rules override any "reduce workload" goal:
+
+- **Nothing is sent to a customer from automation, ever.** Agents prepare drafts;
+  Guido does the final send himself.
+- **Nothing durable, live, or customer-visible happens without Guido's approval** —
+  including creating and loading a production plan.
+
+So the shape of every step below is: **prepare / draft → Guido approves → act.**
+"Automatic" means the *preparation* is automatic, not the commitment.
+
 ## Current state (verified 2026-07-05)
 
 - **The live app has zero AI in it.** Runtime code (`app/`, `lib/`) makes no calls
@@ -71,34 +85,38 @@ trustworthy. It is not until this lands. Deterministic; no AI.
 ### 2. Orders build themselves (auto-intake + auto-plan)
 
 When a deposit is confirmed paid (Xero invoice + Akahu match — already
-deterministic), Tuesday should, with no human step:
+deterministic), Tuesday should **prepare a DRAFT production plan** from the process
+templates — POs, timber pull, laminate wait, CNC gate, coats, cure, QC, pack,
+dispatch — with dates computed from supplier lead times and Nick/Dylan availability.
 
-1. create/confirm the order (mostly built), and
-2. **generate the full production task plan from the process templates** —
-   POs, timber pull, laminate wait, CNC gate, coats, cure, QC, pack, dispatch —
-   with dates computed from supplier lead times and Nick/Dylan availability.
+The draft sits in a clearly-marked "proposed plan" state. **Guido (or Nick)
+approves it in one tap; only then does it become the live workshop plan.** Nothing
+auto-loads unreviewed — that is the hard rule (see the approval law above).
 
 The plan logic already exists as deterministic code (`lib/production/
 workshop-process-rules.ts`). This is code reading a template, **not an AI guessing.**
 
-**Result:** Nick opens the board and the plan is already there and correct. Kills
-the duplicate-order class and deletes Guido's manual setup time. Deterministic; no AI.
+**Result:** the moment a deposit lands, the plan is drafted and waiting for a
+one-tap approval, instead of Guido building it by hand. Kills the manual setup time
+and the duplicate-order class, while keeping a human in the loop. Deterministic; no AI.
 
 ### 3. Milestone triggers → customer updates (mostly engine)
 
-Deterministic triggers on stage changes send **templated** emails (Resend, no AI):
+Deterministic triggers on stage changes **prepare a templated draft** (plain text +
+merge fields, no AI) and surface it for a one-tap send **that Guido makes himself**:
 
-- `deposit_paid` → "order confirmed, here's what happens next"
-- `qc` / `ready` → "your table's ready, let's arrange delivery"
-- `dispatched` → tracking + care instructions
+- `deposit_paid` → draft "order confirmed, here's what happens next"
+- `qc` / `ready` → draft "your table's ready, let's arrange delivery"
+- `dispatched` → draft tracking + care instructions
 
-Templates are plain text with merge fields. Zero AI, and they cover the common
-cases — which is most of them.
+**Hard rule (approval law above): nothing is sent to a customer from automation.**
+The trigger writes the draft and puts it in Guido's approve-and-send queue; the send
+is always a human tap. Templates cover the common cases; AI may polish a
+non-standard one, and if AI is gone the templates and manual path still work.
 
-**Copilot layer (optional):** for the non-standard message, AI drafts it and Guido
-approves in one tap. If the AI is unavailable, the templates and the manual path
-still work. This is the biggest single cut to Guido's workload (slow follow-up is
-Innate's stated top revenue risk) and it degrades gracefully.
+**Result:** follow-ups stop depending on Guido's memory — the right message is
+pre-written and waiting for his tap — without ever sending unreviewed. This is the
+biggest single cut to his workload (slow follow-up is Innate's top revenue risk).
 
 ### 4. The dead-simple workshop view (engine)
 

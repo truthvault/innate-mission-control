@@ -2,6 +2,40 @@
 
 These rules exist because Innate's live Shopify site, staging themes, and old local theme folders can drift apart.
 
+## Agent approval rules — BINDING, shared with Hermes (read first)
+
+Every agent working in this repo (Claude, Codex, any worker) operates under the
+**same** approval policy as Hermes. Canonical source of truth — read and apply it,
+do not rely on memory:
+
+- `/Users/mack-mini/.hermes/reference/platform/approval_policy.md`
+- `/Users/mack-mini/.hermes/AGENTS.md`
+
+Hard rules (these override any convenience or "reduce workload" goal):
+
+1. **No external sends, ever, from automation** — no email, SMS, Xero invoice/quote
+   send, customer message, or payment. Agents PREPARE drafts; Guido does the final
+   send himself. Never build a feature or script that sends to a customer without a
+   per-item human approval step.
+2. **Approval before anything durable, live, or customer-visible** — deploys,
+   publishes, record create/edit/delete in Gmail/Xero/Monday/Shopify/GitHub/Vercel,
+   cron/config/provider changes, migrations, restarts, deletes. This includes
+   generating and loading a production plan: prepare → show Guido → he approves →
+   then it becomes real. Nothing auto-loads into the workshop unreviewed.
+3. **Draft boundary** — internal drafts (local file/preview/dry-run) are free.
+   Anything that creates or updates a visible external record is a state change and
+   needs approval.
+4. **Supabase/Tuesday writes** need exact approval, except the narrow standing
+   exception (a customer-touchpoint record Guido reports/requests/confirms — smallest
+   matching write + read-back). Schema changes / broad migrations still need approval.
+5. **Proof gates** — no "done/fixed/ready" without direct proof from the exact source
+   touched, not from a verifier changed in the same run.
+6. **Deterministic scripts first, then AI.** The app runtime contains no AI
+   (`npm run check:no-ai-runtime`). AI only suggests; a human confirms; a manual path
+   always exists. See `docs/current/tuesday-roadmap.md` (engine vs copilot).
+
+Design rule for every Tuesday feature: **draft / prepare → Guido approves → act.**
+
 ## Start Here
 
 Read these current docs before website work:
