@@ -8,6 +8,7 @@ import { getOrdersWithFallback } from "@/lib/monday/fetch-orders";
 import { getPlanWithFallback } from "@/lib/monday/fetch-plan";
 import { DAYS, PEOPLE, type PlanRow } from "@/lib/monday/production-plan-mapping";
 import type { UiOrder } from "@/lib/monday/mapping";
+import { listTodos, type Todo } from "@/lib/todos/fetch-todos";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,7 @@ function taskCount(rows: PlanRow[]) {
 
 function StatusPill({ tone, children }: { tone: Tone; children: string }) {
   const palette: Record<Tone, { color: string; bg: string; border: string }> = {
-    green: { color: "#28633c", bg: "rgba(63,111,63,0.10)", border: "rgba(63,111,63,0.22)" },
+    green: { color: DT.green, bg: "rgba(63,111,63,0.10)", border: "rgba(63,111,63,0.22)" },
     amber: { color: DT.goldInk, bg: "rgba(200,169,110,0.16)", border: "rgba(200,169,110,0.35)" },
     red: { color: DT.clay, bg: "rgba(180,76,56,0.11)", border: "rgba(180,76,56,0.28)" },
     teal: { color: DT.teal, bg: DT.tealSoft, border: "rgba(12,124,122,0.24)" },
@@ -116,11 +117,25 @@ function Row({ title, meta, tone = "grey", pillLabel }: { title: string; meta: s
   );
 }
 
+function TodoLine({ todo }: { todo: Todo }) {
+  const tone: Tone = todo.priority === "urgent" ? "red" : todo.priority === "high" ? "amber" : "grey";
+  const palette: Record<Tone, string> = { red: DT.clay, amber: DT.goldInk, grey: DT.textMuted, green: DT.green, teal: DT.teal };
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "8px minmax(0,1fr)", gap: 8, alignItems: "start", borderTop: `1px solid ${DT.border}`, paddingTop: 8 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 999, background: palette[tone], marginTop: 5 }} />
+      <div style={{ minWidth: 0 }}>
+        <span style={{ display: "block", fontFamily: DT.sans, color: DT.textPrimary, fontSize: 13, lineHeight: 1.3 }}>{todo.title}</span>
+      </div>
+    </div>
+  );
+}
+
 export default async function TodayPage() {
-  const [leads, ordersResult, plan] = await Promise.all([
+  const [leads, ordersResult, plan, todos] = await Promise.all([
     listLeads(200),
     getOrdersWithFallback(),
     getPlanWithFallback(),
+    listTodos(),
   ]);
   const leadActions = leads.rows.filter(leadNeedsToday).sort((a, b) => (b.estimatedValue || 0) - (a.estimatedValue || 0)).slice(0, 2);
   const activeOrders = ordersResult.items.filter(activeOrder);
@@ -155,6 +170,19 @@ export default async function TodayPage() {
             Source-backed control only. No messages, records, invoices, or customer data are changed here.
           </p>
         </section>
+
+        <Panel
+          title="My to-dos"
+          subtitle={todos.error ? `Could not load (${todos.error})` : `${todos.today.length} on you now · ${todos.waiting.length} waiting · ${todos.someday.length} someday`}
+        >
+          {todos.today.length ? (
+            todos.today.slice(0, 12).map((t) => <TodoLine key={t.id} todo={t} />)
+          ) : (
+            <Row title={todos.error ? "To-do list unavailable" : "Nothing on you right now"} meta={todos.error || "Your Innate to-do list is clear."} tone={todos.error ? "amber" : "green"} />
+          )}
+          {todos.today.length > 12 && <Row title={`+ ${todos.today.length - 12} more on your list`} meta="Full list in the Hermes Mail Desk" tone="grey" />}
+          {todos.someday.length > 0 && <Row title={`${todos.someday.length} someday / strategic`} meta="SEO plan, job descriptions, core-focus and more" tone="grey" pillLabel="Later" />}
+        </Panel>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
           <Panel title="Leads needing Guido" subtitle={`${leadActions.length} priority lead${leadActions.length === 1 ? "" : "s"}`} actionHref="/leads" actionLabel="Open leads">
