@@ -42,7 +42,7 @@ making Tuesday do far more.
 
 ## The foundation — in order, all ENGINE, all AI-free
 
-### 1. One order, two truths (data model) — the unlock
+### 1. One order, two truths (data model) — the unlock  ✅ STEP 1a DONE (2026-07-05)
 
 **Problem:** `orders.status` tries to express two independent things at once —
 *where's the payment* and *where's the workshop*. Payment automation and workshop
@@ -62,6 +62,8 @@ fixes to Fowler/Kidd reverted to `awaiting_payment` within minutes).
 task history; change the intake/reconcile code to write only `payment_stage`;
 change the board to read and show both. Keep `status` as a derived convenience for
 one release, then retire it.
+
+**Progress:** columns `payment_stage` + `workshop_stage` added to `orders` and backfilled on live DB 2026-07-05 (migration order_stage_split_add_columns; SQL in reference/tuesday/supabase-order-stage-split-schema-2026-07-05.sql). Additive, reversible, app still reads `status` unchanged. STILL TODO: board reads/shows both; intake writes ONLY payment_stage; board advances workshop_stage on task completion; then retire `status`.
 
 **Why first:** every screen and every automation below assumes the state is
 trustworthy. It is not until this lands. Deterministic; no AI.
