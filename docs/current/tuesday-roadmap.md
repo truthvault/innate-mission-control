@@ -28,8 +28,9 @@ manual path always exists alongside it.
 ## Current state (verified 2026-07-05)
 
 - **The live app has zero AI in it.** Runtime code (`app/`, `lib/`) makes no calls
-  to Anthropic, OpenAI, or any LLM — verified by grep and now enforced in CI (see
-  the guard below). It talks only to Innate's business systems.
+  to Anthropic, OpenAI, or any LLM — verified by grep and by the guard script
+  below (`npm run check:no-ai-runtime`; CI wiring pending, see Enforcement). It
+  talks only to Innate's business systems.
 - **CI, `/api/health`, rollback, and the Hermes maintenance watchdog** are all
   deterministic and Claude-independent.
 - The only Claude dependency that ever existed (the morning report, via Claude's
