@@ -9174,9 +9174,8 @@ function MonthViewState({
   useEffect(() => {
     void loadOrderWorkflows().catch(() => undefined);
   }, [loadOrderWorkflows]);
-  const handleAllWorkflowRealtimeChange = useCallback((payload: { new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
-    const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
-    const orderId = Number(row?.order_id ?? 0);
+  const handleAllWorkflowRealtimeChange = useCallback((signal?: { order_id?: string | number | null }) => {
+    const orderId = Number(signal?.order_id ?? 0);
     if (orderId > 0) void loadOrderWorkflows().catch(() => undefined);
   }, [loadOrderWorkflows]);
   useRealtimeRefresh({

@@ -2,29 +2,31 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type RealtimeRefreshStatus = "disabled" | "connecting" | "connected" | "refreshing" | "error";
+
+// Data-less change signal broadcast by the DB trigger (see
+// supabase/migrations/*_secure_realtime_broadcast.sql). Carries no row data —
+// consumers use it only to trigger a server-side refetch.
+export type RealtimeChangeSignal = { table: string; op: "INSERT" | "UPDATE" | "DELETE" | string; order_id?: string | number | null };
 
 type RealtimeRefreshConfig = {
   channelName: string;
   table: string;
   schema?: string;
   event?: "*" | "INSERT" | "UPDATE" | "DELETE";
+  /** Retained for API compatibility; scoping is now table-level via the broadcast topic. */
   filter?: string;
   enabled?: boolean;
   debounceMs?: number;
   refreshOnChange?: boolean;
-  onChange?: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void;
+  onChange?: (signal: RealtimeChangeSignal) => void;
 };
 
 export function useRealtimeRefresh({
   channelName,
   table,
-  schema = "public",
-  event = "*",
-  filter,
   enabled = true,
   debounceMs = 900,
   refreshOnChange = true,
@@ -35,6 +37,9 @@ export function useRealtimeRefresh({
   const [message, setMessage] = useState("");
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Topic is table-scoped and matches the DB trigger's `rt:<table>` broadcast.
+  const topic = useMemo(() => `rt:${table}`, [table]);
+  // Kept for cleanup/debug parity with prior channel naming.
   const stableChannelName = useMemo(() => channelName.replace(/[^a-zA-Z0-9:_-]/g, "-"), [channelName]);
 
   useEffect(() => {
@@ -62,24 +67,24 @@ export function useRealtimeRefresh({
       };
     }
 
+    // Private channel: only holders of the anon key (behind the app's auth gate)
+    // may subscribe, per the realtime.messages RLS policy. No table data flows.
+    supabase.client.realtime.setAuth();
     deferStatus("connecting");
 
     const channel = supabase.client
-      .channel(stableChannelName)
-      .on(
-        "postgres_changes",
-        { event, schema, table, ...(filter ? { filter } : {}) },
-        (payload) => {
-          onChange?.(payload);
-          if (!refreshOnChange) return;
-          if (refreshTimer.current) clearTimeout(refreshTimer.current);
-          setStatus("refreshing");
-          refreshTimer.current = setTimeout(() => {
-            router.refresh();
-            setStatus("connected");
-          }, debounceMs);
-        },
-      )
+      .channel(topic, { config: { private: true } })
+      .on("broadcast", { event: "change" }, (message) => {
+        const signal = (message.payload ?? {}) as RealtimeChangeSignal;
+        onChange?.(signal);
+        if (!refreshOnChange) return;
+        if (refreshTimer.current) clearTimeout(refreshTimer.current);
+        setStatus("refreshing");
+        refreshTimer.current = setTimeout(() => {
+          router.refresh();
+          setStatus("connected");
+        }, debounceMs);
+      })
       .subscribe((nextStatus) => {
         if (nextStatus === "SUBSCRIBED") {
           setStatus("connected");
@@ -95,7 +100,7 @@ export function useRealtimeRefresh({
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       supabase.client.removeChannel(channel);
     };
-  }, [debounceMs, enabled, event, filter, onChange, refreshOnChange, router, schema, stableChannelName, table]);
+  }, [debounceMs, enabled, onChange, refreshOnChange, router, stableChannelName, topic]);
 
   return { status, message, enabled: enabled && status !== "disabled" };
 }
