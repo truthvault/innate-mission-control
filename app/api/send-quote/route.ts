@@ -93,15 +93,34 @@ function buildShareUrl(request: Request, quoteHash: string) {
 function panelRows(q: SendQuotePayload["quote"]) {
   return q.panels.map((p, i) => `${i + 1}. ${p.label || "Panel"} · ${p.length} × ${p.width} × ${p.thickness} mm · qty ${p.quantity}${p.cutouts?.length ? ` · ${p.cutouts.length} cutout${p.cutouts.length > 1 ? "s" : ""}` : ""}`).join("\n");
 }
-function textBody(payload: SendQuotePayload, shareUrl: string) {
+function textBody(payload: SendQuotePayload, shareUrl: string, audience: "customer" | "internal" = "customer") {
   const dispatchWeek = formatDispatchWeek(new Date(), payload.totals.leadTimeWeeks);
   const destination = destinationText(payload);
-  const intro = payload.path === "self" ? `Hi ${greetFirstName(payload.customer.name)},\n\nHere's your benchtop quote from Innate Furniture.` : payload.path === "other" ? `${payload.customer.name} has shared a benchtop quote with you from Innate Furniture.` : `New benchtop lead from ${payload.customer.name}.`;
-  return [intro, "", shareUrl, "", `Quote ${payload.quoteNo}`, `Timber: ${payload.quote.species}`, `Finish: ${finishLabel(payload.quote.finish)}`, `Colour: ${colourLabel(payload.quote.colour)}`, "Panels:", panelRows(payload.quote), `Delivery: ${payload.totals.shipping.label}${payload.totals.shipping.cost > 0 ? ` · ${nzd(payload.totals.shipping.cost)}` : ""}`, destination ? `Deliver to: ${destination}` : "", `Dispatch: Estimated ${dispatchWeek}`, `Total: ${nzd(payload.totals.grand)} incl GST`, "", "— Innate Furniture · Ōtautahi Christchurch"].filter(Boolean).join("\n");
+  const customerIntro = payload.path === "other"
+    ? `${payload.customer.name} has shared a benchtop quote with you from Innate Furniture.`
+    : `Hi ${greetFirstName(payload.customer.name)},\n\nHere's a copy of your benchtop quote from Innate Furniture.`;
+  const internalIntro = `New benchtop lead from ${payload.customer.name}.`;
+  return [audience === "internal" ? internalIntro : customerIntro, "", shareUrl, "", `Quote ${payload.quoteNo}`, `Timber: ${payload.quote.species}`, `Finish: ${finishLabel(payload.quote.finish)}`, `Colour: ${colourLabel(payload.quote.colour)}`, "Panels:", panelRows(payload.quote), `Delivery: ${payload.totals.shipping.label}${payload.totals.shipping.cost > 0 ? ` · ${nzd(payload.totals.shipping.cost)}` : ""}`, destination ? `Deliver to: ${destination}` : "", `Dispatch: Estimated ${dispatchWeek}`, `Total: ${nzd(payload.totals.grand)} incl GST`, "", audience === "customer" ? "This isn't an order. We'll check the practical details with you before anything is made." : "", "— Innate Furniture · Ōtautahi Christchurch"].filter(Boolean).join("\n");
 }
-function htmlBody(payload: SendQuotePayload, shareUrl: string) {
+function htmlBody(payload: SendQuotePayload, shareUrl: string, audience: "customer" | "internal" = "customer") {
   const dispatchWeek = formatDispatchWeek(new Date(), payload.totals.leadTimeWeeks);
-  return `<!doctype html><html><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f5ef;color:#141210;line-height:1.55"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:32px;border-radius:12px"><img src="${LOGO_URL}" alt="Innate Furniture" width="180" style="display:block;border:0;height:auto;width:180px;max-width:100%;margin-bottom:12px"><h1 style="font-size:20px">Benchtop quote · ${esc(payload.quoteNo)}</h1><p>${payload.path === "workshop" ? `New benchtop lead from <strong>${esc(payload.customer.name)}</strong>.` : `Hi ${esc(greetFirstName(payload.customer.name))}, here's your benchtop quote.`}</p><p><a href="${esc(shareUrl)}" style="display:inline-block;padding:12px 20px;background:#22201a;color:#f5f3ee;text-decoration:none;border-radius:6px;font-weight:600">Open interactive quote</a></p><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td>Timber</td><td>${esc(payload.quote.species)}</td></tr><tr><td>Finish</td><td>${esc(finishLabel(payload.quote.finish))}</td></tr><tr><td>Colour</td><td>${esc(colourLabel(payload.quote.colour))}</td></tr><tr><td>Delivery</td><td>${esc(payload.totals.shipping.label)}${payload.totals.shipping.cost > 0 ? ` · ${esc(nzd(payload.totals.shipping.cost))}` : ""}</td></tr><tr><td>Dispatch</td><td>Estimated ${esc(dispatchWeek)}</td></tr><tr><td>Total</td><td><strong>${esc(nzd(payload.totals.grand))} incl GST</strong></td></tr></table><pre style="white-space:pre-wrap;font-family:inherit">${esc(panelRows(payload.quote))}</pre><p style="color:#14121099;font-size:12px">Innate Furniture · 281 Queen Elizabeth II Drive, Christchurch</p></div></body></html>`;
+  const intro = audience === "internal"
+    ? `New benchtop lead from <strong>${esc(payload.customer.name)}</strong>.`
+    : `Hi ${esc(greetFirstName(payload.customer.name))}, here's a copy of your benchtop quote from Innate Furniture.`;
+  const footer = audience === "customer"
+    ? "<p style=\"color:#141210cc\">This isn't an order. We'll check the practical details with you before anything is made.</p>"
+    : "";
+  return `<!doctype html><html><body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f5ef;color:#141210;line-height:1.55"><div style="max-width:560px;margin:0 auto;background:#ffffff;padding:32px;border-radius:12px"><img src="${LOGO_URL}" alt="Innate Furniture" width="180" style="display:block;border:0;height:auto;width:180px;max-width:100%;margin-bottom:12px"><h1 style="font-size:20px">Benchtop quote · ${esc(payload.quoteNo)}</h1><p>${intro}</p><p><a href="${esc(shareUrl)}" style="display:inline-block;padding:12px 20px;background:#22201a;color:#f5f3ee;text-decoration:none;border-radius:6px;font-weight:600">Open interactive quote</a></p><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><td>Timber</td><td>${esc(payload.quote.species)}</td></tr><tr><td>Finish</td><td>${esc(finishLabel(payload.quote.finish))}</td></tr><tr><td>Colour</td><td>${esc(colourLabel(payload.quote.colour))}</td></tr><tr><td>Delivery</td><td>${esc(payload.totals.shipping.label)}${payload.totals.shipping.cost > 0 ? ` · ${esc(nzd(payload.totals.shipping.cost))}` : ""}</td></tr><tr><td>Dispatch</td><td>Estimated ${esc(dispatchWeek)}</td></tr><tr><td>Total</td><td><strong>${esc(nzd(payload.totals.grand))} incl GST</strong></td></tr></table><pre style="white-space:pre-wrap;font-family:inherit">${esc(panelRows(payload.quote))}</pre>${footer}<p style="color:#14121099;font-size:12px">Innate Furniture · 281 Queen Elizabeth II Drive, Christchurch</p></div></body></html>`;
+}
+function uniqueEmails(values: Array<string | undefined>, exclude: string[] = []) {
+  const excluded = new Set(exclude.map((v) => v.trim().toLowerCase()));
+  const seen = new Set<string>();
+  return values.flatMap((v) => {
+    const email = v?.trim();
+    if (!email || excluded.has(email.toLowerCase()) || seen.has(email.toLowerCase())) return [];
+    seen.add(email.toLowerCase());
+    return [email];
+  });
 }
 function jsonResponse(request: Request, body: Record<string, unknown>, status = 200) {
   return Response.json(body, { status, headers: freightCorsHeaders(request, "POST, OPTIONS") });
@@ -119,10 +138,12 @@ export async function POST(request: Request) {
   if (err || !payload) return jsonResponse(request, { ok: false, error: err || "Invalid JSON" }, 400);
 
   const shareUrl = buildShareUrl(request, payload.quoteHash);
-  const text = textBody(payload, shareUrl);
-  const html = htmlBody(payload, shareUrl);
+  const customerText = textBody(payload, shareUrl, "customer");
+  const customerHtml = htmlBody(payload, shareUrl, "customer");
+  const internalText = textBody(payload, shareUrl, "internal");
+  const internalHtml = htmlBody(payload, shareUrl, "internal");
   if (payload.dryRun || request.headers.get("x-innate-dry-run") === "true") {
-    return jsonResponse(request, { ok: true, dryRun: true, subject: subjectLine(payload), textPreview: text.slice(0, 500), htmlBytes: html.length });
+    return jsonResponse(request, { ok: true, dryRun: true, subject: subjectLine(payload), textPreview: customerText.slice(0, 500), htmlBytes: customerHtml.length });
   }
 
   const apiKey = process.env.RESEND_API_KEY;
@@ -131,14 +152,23 @@ export async function POST(request: Request) {
   const innate = process.env.INNATE_EMAIL || "hello@innatefurniture.co.nz";
   if (!apiKey || !fromEmail) return jsonResponse(request, { ok: false, error: "Email service not configured" }, 503);
 
-  const primaryTo = payload.path === "self" ? payload.customer.email : payload.path === "workshop" ? innate : payload.recipient!.email;
-  const cc = payload.path === "workshop" ? [payload.customer.email, payload.customer.additionalEmail].filter((v): v is string => !!v && v !== innate) : undefined;
-  const result = await sendResendEmail(apiKey, { from: `${fromName} <${fromEmail}>`, to: [primaryTo], cc, reply_to: payload.path === "other" ? payload.customer.email : innate, subject: subjectLine(payload), text, html });
+  const from = `${fromName} <${fromEmail}>`;
+  if (payload.path === "workshop") {
+    const customerRecipients = uniqueEmails([payload.customer.email, payload.customer.additionalEmail], [innate]);
+    const internalResult = await sendResendEmail(apiKey, { from, to: [innate], reply_to: payload.customer.email, subject: subjectLine(payload), text: internalText, html: internalHtml });
+    if (!internalResult.ok) return jsonResponse(request, { ok: false, error: internalResult.error || "Internal email send failed" }, 502);
+    const customerResult = customerRecipients.length
+      ? await sendResendEmail(apiKey, { from, to: customerRecipients, reply_to: innate, subject: customerSubject(payload), text: customerText, html: customerHtml })
+      : { ok: true };
+    if (!customerResult.ok) return jsonResponse(request, { ok: false, error: customerResult.error || "Customer email send failed" }, 502);
+    return jsonResponse(request, { ok: true });
+  }
+
+  const primaryTo = payload.path === "self" ? payload.customer.email : payload.recipient!.email;
+  const result = await sendResendEmail(apiKey, { from, to: [primaryTo], reply_to: payload.path === "other" ? payload.customer.email : innate, subject: subjectLine(payload), text: customerText, html: customerHtml });
   if (!result.ok) return jsonResponse(request, { ok: false, error: result.error || "Email send failed" }, 502);
 
-  if (payload.path !== "workshop") {
-    await sendResendEmail(apiKey, { from: `${fromName} <${fromEmail}>`, to: [innate], reply_to: payload.customer.email, subject: workshopSubject(payload), text, html });
-  }
+  await sendResendEmail(apiKey, { from, to: [innate], reply_to: payload.customer.email, subject: workshopSubject(payload), text: internalText, html: internalHtml });
   return jsonResponse(request, { ok: true });
 }
 
@@ -152,6 +182,9 @@ function subjectLine(payload: SendQuotePayload) {
 function workshopSubject(payload: SendQuotePayload) {
   const first = payload.quote.panels[0];
   return `[FYI] ${payload.quoteNo} · ${payload.quote.species} ${first.length}×${first.width}×${first.thickness} · ${payload.customer.name}`;
+}
+function customerSubject(payload: SendQuotePayload) {
+  return `Your ${payload.quote.species} benchtop quote from Innate Furniture`;
 }
 async function sendResendEmail(apiKey: string, body: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
   const response = await fetch("https://api.resend.com/emails", {
