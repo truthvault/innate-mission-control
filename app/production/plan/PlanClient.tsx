@@ -421,7 +421,7 @@ function planViewModeHref(mode: ProductionPlanMode) {
 }
 type PersonFilter = "all" | Person;
 type OrderDayFilter = "allWeek" | "today" | DayKey;
-type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "materials" | "noDate" | "costing";
+type RailFilter = "all" | "onTrack" | "watch" | "blocked" | "thisWeek" | "nextWeek" | "dueSoon" | "materials" | "noDate" | "costing" | "noPlan";
 type RailSort = "soonest" | "latest" | "customer";
 type OrderWorkflowState = {
   orderId: number;
@@ -753,10 +753,26 @@ function orderTrustSignal(order: UiOrder, tasks: Array<{ done?: boolean; schedul
       source: "Last checked: Monday orders/production plan",
     };
   }
-  if (order.paymentStage === "ready_for_balance" || order.paymentStage === "awaiting_balance_payment") {
+  if (order.paymentStage === "awaiting_balance_payment" && order.depositPaidAt) {
+    return {
+      label: "Deposit paid — balance later",
+      detail: order.paymentNextAction || "Workshop can proceed; balance is an admin gate before dispatch, not a build blocker.",
+      tone: "good" as SignalTone,
+      source: "Last checked: Supabase payment lifecycle",
+    };
+  }
+  if (order.paymentStage === "ready_for_balance") {
     return {
       label: WORKSHOP_PROCESS_RULES.trust.readyForDispatchAdminLabel,
       detail: order.paymentNextAction || "Guido admin needed before release.",
+      tone: "warn" as SignalTone,
+      source: "Last checked: Supabase payment lifecycle",
+    };
+  }
+  if (order.paymentStage === "awaiting_balance_payment") {
+    return {
+      label: "Balance due before dispatch",
+      detail: order.paymentNextAction || "Balance is an admin/dispatch gate; check deposit evidence before treating this as a workshop blocker.",
       tone: "warn" as SignalTone,
       source: "Last checked: Supabase payment lifecycle",
     };
@@ -1013,8 +1029,12 @@ function InfoDot({ title }: { title: string }) {
 
 function paymentStageBadge(order: UiOrder) {
   if (!order.paymentStageLabel) return null;
+  if (order.paymentStage === "awaiting_balance_payment" && order.depositPaidAt && order.balanceAmountDue != null) {
+    return `Deposit paid · balance later ${formatXeroMoney(order.balanceAmountDue)}`;
+  }
+  if (order.paymentStage === "awaiting_balance_payment" && order.depositPaidAt) return "Deposit paid · balance later";
   if (order.paymentStage === "awaiting_balance_payment" && order.balanceAmountDue != null) {
-    return `${order.paymentStageLabel} · ${formatXeroMoney(order.balanceAmountDue)}`;
+    return `Balance before dispatch · ${formatXeroMoney(order.balanceAmountDue)}`;
   }
   if (order.paymentStage === "balance_paid" && order.balanceInvoiceNumber) return `Balance paid · ${order.balanceInvoiceNumber}`;
   if (order.paymentStage === "ready_for_balance") return "Ready for balance invoice";
@@ -1235,6 +1255,23 @@ function nextOrderPrompt(order: UiOrder) {
   const health = orderHealth(order);
   if (health === "blocked" || health === "watch") return orderHealthReason(order);
   return "No urgent attention flagged.";
+}
+
+function nickWarningForOrder(order: UiOrder) {
+  const text = `${order.notes || ""}\n${order.paymentNextAction || ""}\n${order.deliveryLocation || ""}`.toLowerCase();
+  if (/\b(hold|wait|do not|don't|dont)\b/.test(text) || /customer not ready|not ready until|storage/.test(text)) return "Hold / wait";
+  if (/scope|confirm|tbc|check|question|before\s+(cut|machine|start|dispatch)/.test(text)) return "Ask Guido";
+  if (/separate|stools?|extra|variation|quantity|deposit/.test(text) && /stools?|deposit|variation|quantity/.test(text)) return "Separate scope";
+  if (order.rawMondayStatus === "To Process") return "Load before workshop";
+  return null;
+}
+
+function orderHasWorkshopPlan(tasks: WorkshopTask[]) {
+  return tasks.some((task) => task.text.trim().length > 0);
+}
+
+function orderNeedsNickCheck(order: UiOrder, tasks: WorkshopTask[]) {
+  return Boolean(nickWarningForOrder(order)) || !orderHasWorkshopPlan(tasks) || orderHealth(order) !== "onTrack";
 }
 
 function addWorkingDays(date: string | null, days: number) {
@@ -1695,6 +1732,51 @@ function appTaskFallsInWeek(task: AppPlanTask, week: PlanWeek) {
   return range.start.getTime() <= date.getTime() && date.getTime() <= range.end.getTime();
 }
 
+function NickReadinessQueue({
+  orders,
+  filter,
+  onFilterChange,
+  tasksForOrder,
+}: {
+  orders: UiOrder[];
+  filter: RailFilter;
+  onFilterChange: (filter: RailFilter) => void;
+  tasksForOrder: (order: UiOrder) => WorkshopTask[];
+}) {
+  const active = activeProductionOrders(orders);
+  const noPlan = active.filter((order) => !orderHasWorkshopPlan(tasksForOrder(order))).length;
+  const needsCheck = active.filter((order) => orderNeedsNickCheck(order, tasksForOrder(order))).length;
+  const dueNow = active.filter((order) => orderDueThisWeek(order) || orderDueNextWeek(order)).length;
+  const cards: Array<{ label: string; value: number; detail: string; filter: RailFilter; tone: SignalTone }> = [
+    { label: "Build / prepare", value: dueNow, detail: "Due this or next week", filter: "dueSoon", tone: dueNow ? "teal" : "neutral" },
+    { label: "Ask / hold", value: needsCheck, detail: "Warnings, blocked, or unclear", filter: "watch", tone: needsCheck ? "warn" : "good" },
+    { label: "Not scheduled", value: noPlan, detail: "Active order has no plan row", filter: "noPlan", tone: noPlan ? "danger" : "good" },
+  ];
+  return (
+    <section data-nick-readiness-queue="true" style={{ marginTop: 9, border: `1px solid rgba(12,124,122,0.16)`, background: "linear-gradient(135deg, rgba(231,243,242,0.58), rgba(255,253,249,0.94))", borderRadius: 12, padding: 9 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: DT.sans, fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.teal }}>Nick first</div>
+          <div style={{ marginTop: 2, fontFamily: DT.sans, fontSize: 11, lineHeight: 1.35, fontWeight: 900, color: DT.textMuted }}>Use this before the full board: do / ask / schedule.</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 5 }}>
+        {cards.map((card) => {
+          const colours = signalStyle(card.tone);
+          const selected = filter === card.filter;
+          return (
+            <button key={card.label} type="button" aria-pressed={selected} onClick={() => onFilterChange(selected ? "all" : card.filter)} style={{ minWidth: 0, minHeight: 58, border: `1px solid ${selected ? "rgba(12,124,122,0.30)" : colours.border}`, background: selected ? "rgba(255,255,255,0.92)" : colours.bg, color: colours.color, borderRadius: 8, padding: "7px 5px", fontFamily: DT.sans, cursor: "pointer", touchAction: "manipulation", display: "grid", gap: 2, justifyItems: "center", alignContent: "center", textAlign: "center" }}>
+              <span style={{ fontSize: 8.2, fontWeight: 900, color: selected ? DT.teal : colours.color, textTransform: "uppercase", letterSpacing: "0.035em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip", maxWidth: "100%" }}>{card.label}</span>
+              <span style={{ fontFamily: DT.serif, fontSize: 19, lineHeight: 0.98, color: colours.color, fontWeight: 900 }}>{card.value}</span>
+              <span style={{ fontSize: 8.5, lineHeight: 1.15, fontWeight: 800, color: DT.textMuted }}>{card.detail}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function OrderRail({
   orders,
   orderCostings,
@@ -1759,9 +1841,11 @@ function OrderRail({
       if (filter === "blocked" && orderHealth(order) !== "blocked") return false;
       if (filter === "thisWeek" && !orderDueThisWeek(order)) return false;
       if (filter === "nextWeek" && !orderDueNextWeek(order)) return false;
+      if (filter === "dueSoon" && !(orderDueThisWeek(order) || orderDueNextWeek(order))) return false;
       if (filter === "materials" && order.rawMondayStatus !== "Materials Ordered") return false;
       if (filter === "noDate" && order.shipDate) return false;
       if (filter === "costing" && costingIsFullyApproved(orderCostings?.matches[order.id])) return false;
+      if (filter === "noPlan" && orderHasWorkshopPlan(tasksForOrder(order))) return false;
       if (!normalizedQuery) return true;
       return normalizeOrderText(`${order.customer} ${orderItemLabel(order)} ${orderStatusLabel(order)} ${order.deliveryLocation ?? ""}`).includes(normalizedQuery);
     });
@@ -1774,7 +1858,7 @@ function OrderRail({
       if (bTime === null) return -1;
       return sort === "latest" ? bTime - aTime : aTime - bTime;
     });
-  }, [activeOrders, filter, orderCostings?.matches, query, sort]);
+  }, [activeOrders, filter, orderCostings?.matches, query, sort, tasksForOrder]);
   const railWidth = 318;
   return (
     <aside
@@ -1850,6 +1934,7 @@ function OrderRail({
           {newOrderCard}
           {newOrderCard && <ApprovedOrdersDivider />}
           <ApprovedOrdersSectionHeader count={activeOrders.length} />
+          <NickReadinessQueue orders={activeOrders} filter={filter} onFilterChange={onFilterChange} tasksForOrder={tasksForOrder} />
           <div style={{ marginTop: 9, display: "grid", gridTemplateColumns: compactRail ? "1fr" : "1fr auto", gap: 6 }}>
             <input
               value={query}
@@ -1872,9 +1957,10 @@ function OrderRail({
             <ProductionPulseRow orders={activeOrders} orderCostings={orderCostings} activeFilter={filter} onFilterChange={onFilterChange} />
           </div>
           <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8, overflowX: "visible", WebkitOverflowScrolling: "touch" }}>
-            {filteredOrders.map((order) => (
-              <OrderRailItem key={order.id} order={order} costing={orderCostings?.matches[order.id]} onSelect={onSelect} isNarrow={isNarrow} />
-            ))}
+            {filteredOrders.map((order) => {
+              const planTaskCount = tasksForOrder(order).length;
+              return <OrderRailItem key={order.id} order={order} costing={orderCostings?.matches[order.id]} onSelect={onSelect} isNarrow={isNarrow} planTaskCount={planTaskCount} />;
+            })}
             {filteredOrders.length === 0 && (
               <div style={{ fontFamily: DT.sans, fontSize: 11, color: DT.textMuted, lineHeight: 1.35, padding: "8px 2px" }}>No active orders match that view.</div>
             )}
@@ -1947,12 +2033,13 @@ function OrderCostingPanel({ costing }: { costing?: OrderCostingMatch }) {
   );
 }
 
-function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder; costing?: OrderCostingMatch; onSelect: (id: number) => void; isNarrow: boolean }) {
+function OrderRailItem({ order, costing, onSelect, isNarrow, planTaskCount }: { order: UiOrder; costing?: OrderCostingMatch; onSelect: (id: number) => void; isNarrow: boolean; planTaskCount: number }) {
   const healthLevel = orderHealth(order);
   const health = HEALTH_META[healthLevel];
   const trust = orderTrustSignal(order);
   const trustStyle = signalStyle(trust.tone);
   const reason = orderHealthReason(order);
+  const warning = nickWarningForOrder(order);
   const showReason = healthLevel !== "onTrack" && !(reason === "No due date" && !order.shipDate);
   return (
     <button
@@ -1992,6 +2079,8 @@ function OrderRailItem({ order, costing, onSelect, isNarrow }: { order: UiOrder;
                 says Blocked/Watch — only show the trust chip when it does not
                 contradict it, and only show costing when there is a real match. */}
             {healthLevel !== "blocked" && <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid ${trustStyle.border}`, background: trustStyle.bg, color: trustStyle.color, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{trust.label}</span>}
+            {warning && <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid rgba(138,91,31,0.24)`, background: "rgba(255,245,223,0.84)", color: DT.goldInk, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{warning}</span>}
+            {planTaskCount === 0 && <span style={{ display: "inline-flex", maxWidth: "100%", border: `1px solid rgba(154,59,47,0.18)`, background: "rgba(154,59,47,0.07)", color: DT.clay, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>No plan row</span>}
             {costing ? <OrderCostingPill costing={costing} /> : null}
           </div>
           {showReason && <div style={{ marginTop: 4, fontFamily: DT.sans, fontSize: 10, color: health.color, fontWeight: 900, lineHeight: 1.25, whiteSpace: "normal", overflowWrap: "anywhere" }}>{reason}</div>}
@@ -10484,6 +10573,7 @@ function MonthViewState({
         <style>{ORDER_JOURNEY_MOBILE_CSS}</style>
         {workshopHeaderControl}
         {isRailNarrow && railNewOrderCard}
+        {isRailNarrow && <NickReadinessQueue orders={activeTuesdayOrders} filter={railFilter} onFilterChange={onRailFilterChange} tasksForOrder={(order) => planTasksForOrder(weeks, order, planTaskLinks)} />}
         {isRailNarrow && <ApprovedOrdersDivider />}
         {isRailNarrow && <ApprovedOrdersSectionHeader count={activeTuesdayOrders.filter((order) => !isCompleteOrder(order)).length} />}
         {isRailNarrow && ENABLE_PRODUCTION_PULSE_ROW && <ProductionPulseRow orders={activeTuesdayOrders} orderCostings={orderCostings} activeFilter={railFilter} onFilterChange={onRailFilterChange} />}
