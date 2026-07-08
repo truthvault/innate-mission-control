@@ -625,6 +625,13 @@ function isShopifySettledSupplyOrder(order: SupabaseOrder, document: FinancialDo
   ].filter(Boolean).join("\n"));
 }
 
+function isUnsentDraftInvoiceDocument(document: FinancialDocumentRow | null, sourceSummary: Record<string, unknown> | null) {
+  const status = String(document?.status || "").toUpperCase();
+  if (status === "DRAFT") return true;
+  const summaryText = JSON.stringify(sourceSummary || {}).toLowerCase();
+  return /\bdraft\b/.test(summaryText) && /not\s+sent|hold\s+off|before\s+sending/.test(summaryText);
+}
+
 async function lifecycleRowsByOrder(orderIds: string[]) {
   try {
     return await listPaymentLifecycleByOrderIds(orderIds);
@@ -651,6 +658,7 @@ export async function listOrderIntakeItems(): Promise<OrderIntakeItem[]> {
     const sourceSummary = review.source_summary || {};
     const document = chooseDisplayDocument(order, documents, lifecycle, sourceSummary);
     if (isShopifySettledSupplyOrder(order, document, sourceSummary)) return [];
+    if (isUnsentDraftInvoiceDocument(document, sourceSummary)) return [];
     const reviewTasks = cleanTasks(review.suggested_tasks);
     const draftTasks = cleanTasks(review.draft_tasks);
     const paymentEvidence = payments.filter((item) => item.order_id === order.id).map((payment) => ({
