@@ -299,10 +299,26 @@ type WorkflowTask = {
   completedBy: WorkshopPerson;
   notes: string;
 };
+type AdHocScheduleTask = {
+  id: string;
+  title: string;
+  notes?: string;
+  kind: "one_off" | "weekly" | "monthly";
+  date?: string;
+  day: DayKey;
+  person: Person;
+  estimatedHours: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+type AdHocScheduleTaskCompletions = Record<string, boolean>;
 type AppPlanTask = {
   id: string;
   orderId: number | null;
   orderUuid?: string;
+  adHocTaskId?: string;
+  adHocInstanceDate?: string;
   title: string;
   detail?: string | null;
   customer?: string | null;
@@ -312,7 +328,7 @@ type AppPlanTask = {
   person: Person;
   done: boolean;
   estimatedHours?: number;
-  source?: "workflow" | "intake";
+  source?: "workflow" | "intake" | "adhoc";
 };
 type AppTaskPatch = { done?: boolean; deleted?: boolean; scheduledDate?: string; day?: DayKey; person?: Person; estimatedHours?: number };
 type OrderIntakeReviewState = "awaiting_payment" | "paid_needs_review" | "needs_review" | "approved";
@@ -403,7 +419,7 @@ type PlanTaskEdits = Record<string, PlanTaskEditValue>;
 type PlanRowOrders = Record<string, string[]>;
 type OrderOverrideValue = { status: "completed"; reason?: string; note?: string; updatedAt?: string; updatedBy?: string };
 type OrderOverrides = Record<string, OrderOverrideValue>;
-type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; orderRowOrders?: PlanRowOrders; orderOverrides?: OrderOverrides; updatedAt?: string };
+type PlanTaskLinkStatePayload = { links?: PlanTaskLinks; taskEdits?: PlanTaskEdits; orderRowOrders?: PlanRowOrders; orderOverrides?: OrderOverrides; adHocTasks?: AdHocScheduleTask[]; adHocTaskCompletions?: AdHocScheduleTaskCompletions; updatedAt?: string };
 type AssignablePlanTask = DraggablePlanTask & { weekTitle: string };
 type CompletedTuesdayItem = { id: string; kind: "order" | "intake" | "unknown"; label: string; detail: string; reason?: string; note?: string; updatedAt?: string };
 type ProductionPlanMode = "schedule" | "orderRows";
@@ -1730,6 +1746,134 @@ function appTaskFallsInWeek(task: AppPlanTask, week: PlanWeek) {
   if (!range) return false;
   const date = new Date(`${task.scheduledDate}T12:00:00`);
   return range.start.getTime() <= date.getTime() && date.getTime() <= range.end.getTime();
+}
+
+function adHocCompletionKey(taskId: string, date: string) {
+  return `${taskId}:${date}`;
+}
+
+function adHocAppTaskFromScheduleTask(task: AdHocScheduleTask, scheduledDate: string, customer: string): AppPlanTask {
+  return {
+    id: `adhoc-${task.id}-${scheduledDate}`,
+    orderId: null,
+    adHocTaskId: task.id,
+    adHocInstanceDate: scheduledDate,
+    title: task.title,
+    detail: task.notes ?? null,
+    customer,
+    owner: task.person === "dylan" ? "Dylan" : "Nick",
+    scheduledDate,
+    day: dateToDayKey(scheduledDate) ?? task.day,
+    person: task.person,
+    done: false,
+    estimatedHours: task.estimatedHours,
+    source: "adhoc" as const,
+  };
+}
+
+function monthlyAdHocTaskDates(task: AdHocScheduleTask, weeks: PlanWeek[]) {
+  if (!task.date) return [];
+  const anchor = new Date(`${task.date}T12:00:00`);
+  if (Number.isNaN(anchor.getTime())) return [];
+  const monthlyDay = anchor.getDate();
+  const dates = new Set<string>();
+  weeks.forEach((week) => {
+    const range = weekRangeFromTitle(week.title);
+    if (!range) return;
+    const cursor = new Date(range.start);
+    cursor.setHours(12, 0, 0, 0);
+    while (cursor <= range.end) {
+      if (cursor.getDate() === monthlyDay && cursor >= anchor) {
+        dates.add(isoDateFromDate(cursor));
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  });
+  return [...dates].sort();
+}
+
+function adHocTasksForPlan(tasks: AdHocScheduleTask[], weeks: PlanWeek[], completions: AdHocScheduleTaskCompletions): AppPlanTask[] {
+  return tasks.flatMap((task) => {
+    if (!task.active) return [];
+    if (task.kind === "one_off") {
+      const scheduledDate = task.date;
+      if (!scheduledDate) return [];
+      const item = adHocAppTaskFromScheduleTask(task, scheduledDate, "Workshop / internal");
+      return [{ ...item, done: Boolean(completions[adHocCompletionKey(task.id, scheduledDate)]) }];
+    }
+    if (task.kind === "monthly") {
+      return monthlyAdHocTaskDates(task, weeks).map((scheduledDate) => {
+        const item = adHocAppTaskFromScheduleTask(task, scheduledDate, "Monthly internal task");
+        return { ...item, done: Boolean(completions[adHocCompletionKey(task.id, scheduledDate)]) };
+      });
+    }
+    return weeks.flatMap((week) => {
+      const option = suggestedDateOptionForWeekDay(week, task.day);
+      if (!option) return [];
+      const item = adHocAppTaskFromScheduleTask(task, option.dateIso, "Recurring internal task");
+      return [{ ...item, day: task.day, done: Boolean(completions[adHocCompletionKey(task.id, option.dateIso)]) }];
+    });
+  });
+}
+
+function ScheduleTaskComposer({ onCreate, disabled = false }: { onCreate: (task: Omit<AdHocScheduleTask, "createdAt" | "updatedAt" | "active">) => void; disabled?: boolean }) {
+  const today = todayNzDateKey();
+  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<AdHocScheduleTask["kind"]>("one_off");
+  const [date, setDate] = useState(today);
+  const [day, setDay] = useState<DayKey>(dateToDayKey(today) ?? "monday");
+  const [person, setPerson] = useState<Person>("nick");
+  const [estimatedHours, setEstimatedHours] = useState("0.5");
+  const [notes, setNotes] = useState("");
+  const canSave = title.trim().length > 0 && (kind === "weekly" || /^\d{4}-\d{2}-\d{2}$/.test(date));
+  return (
+    <section data-schedule-task-composer="true" style={{ ...PRODUCTION_PANEL_STYLE, padding: 12, display: "grid", gap: 10, background: "linear-gradient(135deg, rgba(255,255,255,0.94), rgba(231,243,242,0.42))" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontFamily: DT.sans, fontSize: 9.5, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase", color: DT.textFaint }}>Schedule task</div>
+          <h3 style={{ margin: "2px 0 0", fontFamily: DT.serif, fontSize: 22, lineHeight: 1.02, color: DT.textPrimary }}>Add one-off or recurring work</h3>
+        </div>
+        <span style={{ border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.72)", borderRadius: 999, padding: "5px 8px", color: DT.textMuted, fontSize: 10, fontFamily: DT.sans, fontWeight: 900 }}>Not tied to an order</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))", gap: 7, alignItems: "end" }}>
+        <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Task
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Weekly team meeting" style={processTemplateInputStyle()} />
+        </label>
+        <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Type
+          <select value={kind} onChange={(event) => setKind(event.target.value as AdHocScheduleTask["kind"])} style={processTemplateInputStyle()}>
+            <option value="one_off">One-off</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
+        {kind === "weekly" ? (
+          <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Day
+            <select value={day} onChange={(event) => setDay(event.target.value as DayKey)} style={processTemplateInputStyle()}>{DAYS.map((option) => <option key={option} value={option}>{DAY_LABELS[option]}</option>)}</select>
+          </label>
+        ) : (
+          <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>{kind === "monthly" ? "First date" : "Date"}
+            <input type="date" value={date} onChange={(event) => { setDate(event.target.value); setDay(dateToDayKey(event.target.value) ?? day); }} style={processTemplateInputStyle()} />
+          </label>
+        )}
+        <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Person
+          <select value={person} onChange={(event) => setPerson(event.target.value as Person)} style={processTemplateInputStyle()}><option value="nick">Nick</option><option value="dylan">Dylan</option></select>
+        </label>
+        <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Hours
+          <input type="number" min="0.25" step="0.25" value={estimatedHours} onChange={(event) => setEstimatedHours(event.target.value)} style={processTemplateInputStyle()} />
+        </label>
+        <label style={{ display: "grid", gap: 3, fontFamily: DT.sans, fontSize: 9, fontWeight: 900, color: DT.textMuted }}>Note
+          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional" style={processTemplateInputStyle()} />
+        </label>
+        <button type="button" disabled={disabled || !canSave} onClick={() => {
+          const id = `adhoc-${Date.now().toString(36)}`;
+          const taskDay = kind === "weekly" ? day : dateToDayKey(date) ?? day;
+          onCreate({ id, title: title.trim(), notes: notes.trim() || undefined, kind, date: kind === "weekly" ? undefined : date, day: taskDay, person, estimatedHours: Number(estimatedHours) || 0.5 });
+          setTitle("");
+          setNotes("");
+        }} style={{ ...processTemplateTinyButtonStyle("primary"), minHeight: 42 }}>Add task</button>
+      </div>
+    </section>
+  );
 }
 
 function NickReadinessQueue({
@@ -5089,7 +5233,7 @@ type OrderJourneyTask = BoardPlanTask & {
   notes: string | null;
   assignedViaTuesday?: boolean;
   placement?: PlanTaskPlacement;
-  sourceKind?: "plan" | "workflow" | "intake";
+  sourceKind?: "plan" | "workflow" | "intake" | "adhoc";
   appTask?: AppPlanTask;
 };
 type OrderJourneyRow = {
@@ -5434,13 +5578,13 @@ function buildOrderJourneyRows({
     const week = weeks.find((candidate) => appTaskFallsInWeek(task, candidate));
     if (!week) continue;
     const order = task.orderId ? ordersById.get(task.orderId) ?? null : null;
-    const id = order ? `order:${order.id}` : `${task.source === "intake" ? "intake" : "workflow"}:${task.orderUuid ?? task.orderId ?? normalizeOrderText(task.customer) ?? task.id}`;
+    const id = order ? `order:${order.id}` : `${task.source === "intake" ? "intake" : task.source === "adhoc" ? "adhoc" : "workflow"}:${task.orderUuid ?? task.adHocTaskId ?? task.orderId ?? normalizeOrderText(task.customer) ?? task.id}`;
     const row = rows.get(id) ?? {
       id,
       order,
-      name: order?.customer ?? task.customer ?? "Tuesday order",
+      name: order?.customer ?? task.customer ?? "Tuesday task",
       dueLabel: order ? orderDueSummary(order) : null,
-      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : task.source === "intake" ? "Approved intake tasks" : "Tuesday tasks",
+      statusLabel: order ? `${orderItemLabel(order)} · ${orderStatusLabel(order)}` : task.source === "intake" ? "Approved intake tasks" : task.source === "adhoc" ? "Schedule task" : "Tuesday tasks",
       health: order ? orderHealth(order) : "onTrack",
       hasTasksThisWeek: true,
       tasks: [],
@@ -5449,7 +5593,7 @@ function buildOrderJourneyRows({
     row.tasks.push({
       id: task.id,
       taskKey: task.id,
-      rowId: `${task.source ?? "app"}:${task.orderUuid ?? task.orderId ?? task.id}`,
+      rowId: `${task.source ?? "app"}:${task.orderUuid ?? task.adHocTaskId ?? task.orderId ?? task.id}`,
       rowName: task.customer ?? order?.customer ?? "Tuesday task",
       rowNotes: task.detail ?? null,
       weekId: week.id,
@@ -6871,7 +7015,7 @@ function MobileScheduleAgenda({
           <button type="button" aria-label="Open task details" onClick={(event) => { event.stopPropagation(); onAppTaskOpen?.(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.border}`, background: "rgba(255,255,255,0.76)", color: DT.textMuted, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 12, fontWeight: 900 }}>↗</button>
           {onAppTaskDelete && <button type="button" aria-label="Delete task" title="Delete this task" onClick={(event) => { event.stopPropagation(); if (window.confirm(`Delete "${task.title}"?`)) onAppTaskDelete(task); }} style={{ width: 40, height: 40, border: `1px solid ${DT.clayLine}`, background: "rgba(255,255,255,0.76)", color: DT.clay, borderRadius: 8, padding: 0, fontFamily: DT.sans, fontSize: 13, fontWeight: 800 }}>✕</button>}
         </div>
-        <button type="button" onClick={() => onAppTaskOpen?.(task)} style={{ marginLeft: 23, minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"} · {task.source === "intake" ? "Order" : "Job"}</button>
+        <button type="button" onClick={() => onAppTaskOpen?.(task)} style={{ marginLeft: 23, minWidth: 40, minHeight: 40, display: "flex", alignItems: "center", border: 0, background: "transparent", padding: 0, color: done ? DONE_TASK_VISUAL.text : DT.textMuted, fontFamily: DT.sans, fontSize: 9, fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.customer || selectedOrder?.customer || "Tuesday task"} · {task.source === "intake" ? "Order" : task.source === "adhoc" ? "Schedule" : "Job"}</button>
       </div>
     );
   };
@@ -7166,7 +7310,7 @@ function MonthWeekSection({
                                 </div>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flex: "0 0 auto" }}>
                                   <span style={{ border: "1px solid rgba(110,138,106,0.20)", background: "rgba(110,138,106,0.08)", color: DT.sage, borderRadius: 999, padding: "2px 6px", fontFamily: DT.sans, fontSize: 9, fontWeight: 900, lineHeight: 1 }}>{formatTaskHours(task.estimatedHours ?? 1)}</span>
-                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 900, whiteSpace: "nowrap" }}>{task.done ? "Done" : task.source === "intake" ? "Order" : "Job"}</span>
+                                  <span style={{ color: task.done ? DONE_TASK_VISUAL.title : DT.teal, background: task.done ? DONE_TASK_VISUAL.buttonBg : DT.tealSoft, border: `1px solid ${task.done ? DONE_TASK_VISUAL.buttonBorder : "rgba(12,124,122,0.14)"}`, borderRadius: 999, padding: "1px 5px", fontFamily: DT.sans, fontSize: 8, fontWeight: 900, whiteSpace: "nowrap" }}>{task.done ? "Done" : task.source === "intake" ? "Order" : task.source === "adhoc" ? "Schedule" : "Job"}</span>
                                 </div>
                               </div>
                             </div>
@@ -9175,6 +9319,8 @@ function MonthViewState({
   const [planTaskLinksLoaded, setPlanTaskLinksLoaded] = useState(Boolean(initialPlanTaskLinkState) || qaFixtureMode);
   const [planTaskLinksStorage, setPlanTaskLinksStorage] = useState<PlanTaskLinksStorage>(initialPlanTaskLinksStorage);
   const [orderOverrides, setOrderOverrides] = useState<OrderOverrides>(() => initialPlanTaskLinkState?.orderOverrides ?? {});
+  const [adHocScheduleTasks, setAdHocScheduleTasks] = useState<AdHocScheduleTask[]>(() => initialPlanTaskLinkState?.adHocTasks ?? []);
+  const [adHocTaskCompletions, setAdHocTaskCompletions] = useState<AdHocScheduleTaskCompletions>(() => initialPlanTaskLinkState?.adHocTaskCompletions ?? {});
   const planTaskLinksRealtimeRef = useRef<RealtimeChannel | null>(null);
   const planTaskLinksUpdatedAtRef = useRef<string | null>(initialPlanTaskLinkState?.updatedAt ?? null);
   const [assignmentStatus, setAssignmentStatus] = useState(initialPlanTaskLinksDisabledReason ?? "");
@@ -9344,7 +9490,8 @@ function MonthViewState({
       }];
     });
   }), [activeOrderIntakeItems, activeTuesdayOrders]);
-  const visibleAppTasks = useMemo(() => [...workflowAppTasks, ...approvedIntakeAppTasks], [workflowAppTasks, approvedIntakeAppTasks]);
+  const adHocAppTasks = useMemo(() => adHocTasksForPlan(adHocScheduleTasks, visibleProductionWeeks, adHocTaskCompletions), [adHocScheduleTasks, visibleProductionWeeks, adHocTaskCompletions]);
+  const visibleAppTasks = useMemo(() => [...workflowAppTasks, ...approvedIntakeAppTasks, ...adHocAppTasks], [workflowAppTasks, approvedIntakeAppTasks, adHocAppTasks]);
   const openIntakeItem = useMemo(() => activeOrderIntakeItems.find((item) => item.orderId === openIntakeOrderId) ?? null, [openIntakeOrderId, activeOrderIntakeItems]);
   const activeTask = activeTaskId ? boardTasks.find((task) => task.id === activeTaskId) ?? null : null;
   const activeAppTask = activeAppTaskId ? visibleAppTasks.find((task) => task.id === activeAppTaskId) ?? null : null;
@@ -9589,8 +9736,90 @@ function MonthViewState({
       });
   }
 
+  function saveAdHocTask(task: Omit<AdHocScheduleTask, "createdAt" | "updatedAt" | "active">) {
+    const now = new Date().toISOString();
+    const nextTask: AdHocScheduleTask = { ...task, active: true, createdAt: now, updatedAt: now };
+    setAdHocScheduleTasks((current) => [nextTask, ...current]);
+    setAssignmentStatus("Saving schedule task...");
+    if (qaFixtureMode) {
+      setAssignmentStatus("QA fixture schedule task only - not saved");
+      return;
+    }
+    fetch("/api/production/plan-task-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adHocTask: nextTask }),
+    })
+      .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Schedule task save failed"))))
+      .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+        if (data.storage) setPlanTaskLinksStorage(data.storage);
+        if (data.state) applyPlanTaskLinkState(data.state);
+        broadcastPlanTaskLinkChange(data.state?.updatedAt);
+        setAssignmentStatus("Schedule task saved");
+      })
+      .catch((err) => {
+        setAssignmentStatus(err instanceof Error ? err.message : "Schedule task save failed");
+        loadPlanTaskLinkState("Restored schedule task state");
+      });
+  }
+
+  function updateAdHocAppTask(task: AppPlanTask, patch: AppTaskPatch, origin?: DelightOrigin) {
+    const taskId = task.adHocTaskId;
+    const instanceDate = task.adHocInstanceDate ?? task.scheduledDate;
+    if (!taskId || !instanceDate) return;
+    if (patch.done === true) triggerDelightBurst(origin);
+    if (patch.deleted === true) {
+      setAdHocScheduleTasks((current) => current.filter((item) => item.id !== taskId));
+      setAssignmentStatus(qaFixtureMode ? "QA fixture schedule task removed - not saved" : "Removing schedule task...");
+      if (qaFixtureMode) return;
+      fetch("/api/production/plan-task-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removeAdHocTaskId: taskId }),
+      })
+        .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Schedule task remove failed"))))
+        .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+          if (data.storage) setPlanTaskLinksStorage(data.storage);
+          if (data.state) applyPlanTaskLinkState(data.state);
+          broadcastPlanTaskLinkChange(data.state?.updatedAt);
+          setAssignmentStatus("Schedule task removed");
+        })
+        .catch((err) => {
+          setAssignmentStatus(err instanceof Error ? err.message : "Schedule task remove failed");
+          loadPlanTaskLinkState("Restored schedule task state");
+        });
+      return;
+    }
+    if (typeof patch.done === "boolean") {
+      const key = adHocCompletionKey(taskId, instanceDate);
+      setAdHocTaskCompletions((current) => ({ ...current, [key]: patch.done ?? false }));
+      setAssignmentStatus(qaFixtureMode ? "QA fixture schedule task ticked - not saved" : "Saving schedule task...");
+      if (qaFixtureMode) return;
+      fetch("/api/production/plan-task-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adHocTaskCompletion: { taskId, date: instanceDate, done: patch.done } }),
+      })
+        .then((response) => response.ok ? response.json() : response.json().then((body) => Promise.reject(new Error(body.error || "Schedule task save failed"))))
+        .then((data: { state?: PlanTaskLinkStatePayload; storage?: PlanTaskLinksStorage }) => {
+          if (data.storage) setPlanTaskLinksStorage(data.storage);
+          if (data.state) applyPlanTaskLinkState(data.state);
+          broadcastPlanTaskLinkChange(data.state?.updatedAt);
+          setAssignmentStatus("Schedule task saved");
+        })
+        .catch((err) => {
+          setAssignmentStatus(err instanceof Error ? err.message : "Schedule task save failed");
+          loadPlanTaskLinkState("Restored schedule task state");
+        });
+    }
+  }
+
   function updateAppTask(task: AppPlanTask, patch: AppTaskPatch, origin?: DelightOrigin) {
     const effectivePatch = patch.done === true && !patch.person ? { ...patch, person: task.person } : patch;
+    if (task.source === "adhoc") {
+      updateAdHocAppTask(task, effectivePatch, origin);
+      return;
+    }
     if (effectivePatch.done === true) triggerDelightBurst(origin);
     if (task.source === "intake") {
       patchApprovedIntakeTask(task, effectivePatch);
@@ -9896,6 +10125,8 @@ function MonthViewState({
     setPlanTaskEdits(state?.taskEdits ?? {});
     setOrderRowOrders(state?.orderRowOrders ?? {});
     setOrderOverrides(state?.orderOverrides ?? {});
+    setAdHocScheduleTasks(state?.adHocTasks ?? []);
+    setAdHocTaskCompletions(state?.adHocTaskCompletions ?? {});
     setPlanTaskLinksLoaded(true);
     if (state?.updatedAt) planTaskLinksUpdatedAtRef.current = state.updatedAt;
   }, []);
@@ -10203,6 +10434,10 @@ function MonthViewState({
   }
 
   function selectOrderForAppTask(task: AppPlanTask) {
+    if (task.source === "adhoc") {
+      setAssignmentStatus(`${task.title} · ${formatTaskDateLabel(task.scheduledDate)} · ${PERSON_LABELS[task.person]}`);
+      return;
+    }
     if (task.orderId != null) {
       if (selectedOrderId === task.orderId) {
         setSelectedAssignmentTask(null);
@@ -10217,6 +10452,10 @@ function MonthViewState({
   }
 
   function openAppTask(task: AppPlanTask) {
+    if (task.source === "adhoc") {
+      setAssignmentStatus(`${task.title} · ${task.detail || (task.adHocTaskId ? "Internal schedule task" : "Schedule task")}`);
+      return;
+    }
     if (task.orderId != null) {
       openOrderOverview(task.orderId);
       return;
@@ -10391,16 +10630,16 @@ function MonthViewState({
           const draftHours = editableSteps
             .filter((step) => step.dateIso === option.dateIso && step.person === person)
             .reduce((sum, step) => sum + Number(step.estimatedHours || 0), 0);
-          const intakeHours = approvedIntakeAppTasks
+          const appHours = visibleAppTasks
             .filter((task) => appTaskCountsTowardWorkshopCapacity(task) && task.scheduledDate === option.dateIso && task.person === person && !task.done)
             .reduce((sum, task) => sum + Number(task.estimatedHours || 1), 0);
-          summaries[dateCapacityKey(option.dateIso, person)] = summarizeLaneCapacity({ existingTaskCount, draftHours: draftHours + intakeHours });
+          summaries[dateCapacityKey(option.dateIso, person)] = summarizeLaneCapacity({ existingTaskCount, draftHours: draftHours + appHours });
           summaries[laneCapacityKey(day, person)] = summaries[dateCapacityKey(option.dateIso, person)];
         }
       }
     }
     return summaries;
-  }, [visibleProductionWeeks, editableSteps, boardTasks, approvedIntakeAppTasks]);
+  }, [visibleProductionWeeks, editableSteps, boardTasks, visibleAppTasks]);
 
   const historyControl = previous.length > 0 ? (
     <button
@@ -10581,6 +10820,7 @@ function MonthViewState({
         {planViewMode === "schedule" ? (
           <>
             {newOrderPanel}
+            <ScheduleTaskComposer onCreate={saveAdHocTask} disabled={!planTaskLinksLoaded} />
             {weekSections}
             {historySections}
           </>

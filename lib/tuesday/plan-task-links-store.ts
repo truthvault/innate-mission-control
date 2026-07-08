@@ -31,11 +31,28 @@ export type OrderOverrideValue = {
 };
 export type OrderOverrides = Record<string, OrderOverrideValue>;
 
+export type AdHocScheduleTask = {
+  id: string;
+  title: string;
+  notes?: string;
+  kind: "one_off" | "weekly" | "monthly";
+  date?: string;
+  day: DayKey;
+  person: Person;
+  estimatedHours: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+export type AdHocScheduleTaskCompletions = Record<string, boolean>;
+
 export type PlanTaskLinksState = {
   links: Record<string, PlanTaskLinkValue>;
   taskEdits: Record<string, PlanTaskEditValue>;
   orderRowOrders: PlanRowOrders;
   orderOverrides: OrderOverrides;
+  adHocTasks: AdHocScheduleTask[];
+  adHocTaskCompletions: AdHocScheduleTaskCompletions;
   updatedAt: string;
 };
 
@@ -46,7 +63,7 @@ const SUPABASE_TABLE = process.env.TUESDAY_PLAN_TASK_TABLE || "production_order_
 const SUPABASE_SENTINEL_ORDER_ID = 0;
 
 export function defaultPlanTaskLinksState(): PlanTaskLinksState {
-  return { links: {}, taskEdits: {}, orderRowOrders: {}, orderOverrides: {}, updatedAt: new Date().toISOString() };
+  return { links: {}, taskEdits: {}, orderRowOrders: {}, orderOverrides: {}, adHocTasks: [], adHocTaskCompletions: {}, updatedAt: new Date().toISOString() };
 }
 
 export function planTaskLinksStorage(): PlanTaskLinksStorage {
@@ -87,6 +104,48 @@ function normalizeOrderOverrides(value: unknown): OrderOverrides {
   );
 }
 
+function normalizeAdHocTasks(value: unknown): AdHocScheduleTask[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const source = item as Partial<AdHocScheduleTask>;
+    const id = typeof source.id === "string" && source.id.trim() ? source.id.trim().slice(0, 80) : "";
+    const title = typeof source.title === "string" && source.title.trim() ? source.title.trim().slice(0, 160) : "";
+    const day = source.day;
+    const person = source.person;
+    const kind: AdHocScheduleTask["kind"] = source.kind === "weekly" ? "weekly" : source.kind === "monthly" ? "monthly" : "one_off";
+    if (!id || !title || (day !== "monday" && day !== "tuesday" && day !== "wednesday" && day !== "thursday" && day !== "friday") || (person !== "nick" && person !== "dylan")) return [];
+    const estimated = Number(source.estimatedHours);
+    const estimatedHours = Number.isFinite(estimated) ? Math.max(0.25, Math.min(8, Math.round(estimated * 4) / 4)) : 1;
+    const date = typeof source.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(source.date) ? source.date : undefined;
+    if ((kind === "one_off" || kind === "monthly") && !date) return [];
+    const now = new Date().toISOString();
+    return [{
+      id,
+      title,
+      notes: typeof source.notes === "string" && source.notes.trim() ? source.notes.trim().slice(0, 500) : undefined,
+      kind,
+      date,
+      day,
+      person,
+      estimatedHours,
+      active: source.active !== false,
+      createdAt: typeof source.createdAt === "string" && source.createdAt ? source.createdAt : now,
+      updatedAt: typeof source.updatedAt === "string" && source.updatedAt ? source.updatedAt : now,
+    }];
+  }).slice(0, 250);
+}
+
+function normalizeAdHocTaskCompletions(value: unknown): AdHocScheduleTaskCompletions {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).flatMap(([key, done]) => {
+      const cleanKey = key.trim().slice(0, 128);
+      return cleanKey && typeof done === "boolean" ? [[cleanKey, done] as const] : [];
+    })
+  );
+}
+
 function normalizeState(state: Partial<PlanTaskLinksState> | null | undefined): PlanTaskLinksState {
   return {
     ...defaultPlanTaskLinksState(),
@@ -95,6 +154,8 @@ function normalizeState(state: Partial<PlanTaskLinksState> | null | undefined): 
     taskEdits: state?.taskEdits ?? {},
     orderRowOrders: normalizeOrderRowOrders(state?.orderRowOrders),
     orderOverrides: normalizeOrderOverrides(state?.orderOverrides),
+    adHocTasks: normalizeAdHocTasks(state?.adHocTasks),
+    adHocTaskCompletions: normalizeAdHocTaskCompletions(state?.adHocTaskCompletions),
   };
 }
 

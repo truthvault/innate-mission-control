@@ -12,6 +12,8 @@ import {
   type OrderOverrides,
   type PlanRowOrders,
   type PlanTaskPlacement,
+  type AdHocScheduleTask,
+  type AdHocScheduleTaskCompletions,
 } from "@/lib/tuesday/plan-task-links-store";
 
 // Regression-test marker for the API persistence shape: taskEdits: Record<string, PlanTaskEditValue>
@@ -85,6 +87,44 @@ function cleanOrderOverride(value: unknown): { orderId: string; status: "complet
   return { orderId, status: source.status, reason, note };
 }
 
+function cleanAdHocTask(value: unknown): AdHocScheduleTask | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as Partial<AdHocScheduleTask>;
+  const id = typeof source.id === "string" && source.id.trim() ? source.id.trim().slice(0, 80) : `adhoc-${Date.now()}`;
+  const title = typeof source.title === "string" && source.title.trim() ? source.title.trim().slice(0, 160) : "";
+  const kind = source.kind === "weekly" ? "weekly" : source.kind === "monthly" ? "monthly" : "one_off";
+  const day = source.day;
+  const person = source.person;
+  const date = typeof source.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(source.date) ? source.date : undefined;
+  if (!title || (day !== "monday" && day !== "tuesday" && day !== "wednesday" && day !== "thursday" && day !== "friday") || (person !== "nick" && person !== "dylan")) return null;
+  if ((kind === "one_off" || kind === "monthly") && !date) return null;
+  const rawHours = Number(source.estimatedHours);
+  const estimatedHours = Number.isFinite(rawHours) ? Math.max(0.25, Math.min(8, Math.round(rawHours * 4) / 4)) : 1;
+  const now = new Date().toISOString();
+  return {
+    id,
+    title,
+    notes: typeof source.notes === "string" && source.notes.trim() ? source.notes.trim().slice(0, 500) : undefined,
+    kind,
+    date,
+    day,
+    person,
+    estimatedHours,
+    active: source.active !== false,
+    createdAt: typeof source.createdAt === "string" && source.createdAt ? source.createdAt : now,
+    updatedAt: now,
+  };
+}
+
+function cleanAdHocTaskCompletion(value: unknown): { key: string; done: boolean } | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as { taskId?: unknown; date?: unknown; done?: unknown };
+  const taskId = typeof source.taskId === "string" ? source.taskId.trim().slice(0, 80) : "";
+  const date = typeof source.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(source.date) ? source.date : "";
+  if (!taskId || !date || typeof source.done !== "boolean") return null;
+  return { key: `${taskId}:${date}`, done: source.done };
+}
+
 function linkValueForOrder(orderId: number, placement?: PlanTaskPlacement): PlanTaskLinkValue {
   return placement ? { orderId, placement } : orderId;
 }
@@ -106,7 +146,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown; taskEdit?: unknown; removeTaskEdit?: boolean; orderRowOrder?: unknown; orderOverride?: unknown } | null;
+  const body = await request.json().catch(() => null) as { taskId?: string; legacyTaskId?: string; orderId?: number | null; placement?: unknown; taskEdit?: unknown; removeTaskEdit?: boolean; orderRowOrder?: unknown; orderOverride?: unknown; adHocTask?: unknown; removeAdHocTaskId?: string; adHocTaskCompletion?: unknown } | null;
   const taskId = typeof body?.taskId === "string" ? body.taskId.trim() : "";
   const legacyTaskId = typeof body?.legacyTaskId === "string" ? body.legacyTaskId.trim() : "";
   const hasOrderIdField = Boolean(body && Object.prototype.hasOwnProperty.call(body, "orderId"));
@@ -114,7 +154,10 @@ export async function POST(request: NextRequest) {
   const placement = cleanPlacement(body?.placement);
   const orderRowOrder = cleanOrderRowOrder(body?.orderRowOrder);
   const orderOverride = cleanOrderOverride(body?.orderOverride);
-  if (!taskId && !orderRowOrder && !orderOverride) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
+  const adHocTask = cleanAdHocTask(body?.adHocTask);
+  const removeAdHocTaskId = typeof body?.removeAdHocTaskId === "string" ? body.removeAdHocTaskId.trim().slice(0, 80) : "";
+  const adHocTaskCompletion = cleanAdHocTaskCompletion(body?.adHocTaskCompletion);
+  if (!taskId && !orderRowOrder && !orderOverride && !adHocTask && !removeAdHocTaskId && !adHocTaskCompletion) return NextResponse.json({ error: "Missing taskId" }, { status: 400 });
 
   try {
     if (orderId) {
@@ -130,6 +173,8 @@ export async function POST(request: NextRequest) {
     const taskEdits = { ...current.taskEdits };
     const orderRowOrders: PlanRowOrders = { ...current.orderRowOrders };
     const orderOverrides: OrderOverrides = { ...current.orderOverrides };
+    let adHocTasks: AdHocScheduleTask[] = [...current.adHocTasks];
+    const adHocTaskCompletions: AdHocScheduleTaskCompletions = { ...current.adHocTaskCompletions };
     if (taskId && hasOrderIdField && orderId) {
       links[taskId] = linkValueForOrder(orderId, placement);
       if (legacyTaskId && legacyTaskId !== taskId) delete links[legacyTaskId];
@@ -159,7 +204,22 @@ export async function POST(request: NextRequest) {
         delete orderOverrides[orderOverride.orderId];
       }
     }
-    const state = { links, taskEdits, orderRowOrders, orderOverrides, updatedAt: new Date().toISOString() };
+    if (adHocTask) {
+      const existing = adHocTasks.find((task) => task.id === adHocTask.id);
+      adHocTasks = existing
+        ? adHocTasks.map((task) => task.id === adHocTask.id ? { ...adHocTask, createdAt: task.createdAt } : task)
+        : [adHocTask, ...adHocTasks];
+    }
+    if (removeAdHocTaskId) {
+      adHocTasks = adHocTasks.filter((task) => task.id !== removeAdHocTaskId);
+      for (const key of Object.keys(adHocTaskCompletions)) {
+        if (key.startsWith(`${removeAdHocTaskId}:`)) delete adHocTaskCompletions[key];
+      }
+    }
+    if (adHocTaskCompletion) {
+      adHocTaskCompletions[adHocTaskCompletion.key] = adHocTaskCompletion.done;
+    }
+    const state = { links, taskEdits, orderRowOrders, orderOverrides, adHocTasks, adHocTaskCompletions, updatedAt: new Date().toISOString() };
     const written = await writePlanTaskLinksState(state);
     return NextResponse.json(written);
   } catch (err) {
